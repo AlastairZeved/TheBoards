@@ -3867,3 +3867,42 @@ shape-edge cases pinning each gate leg (984/983 at cover height, 840/839,
 the aspect edge 840×731/840×730, cover landscape, the [11b] window, iPad
 portrait, the Fold in portrait orientation). [11b]'s 980×715 and the cover
 screen's own asserts are the living proof the gate excludes them.
+
+
+## AJ. The update check can be pinned — updateViaCache and the build handshake (issue #164)
+
+### B102. The service worker registers with `updateViaCache: 'none'`, and the app runs a build handshake 20s after launch — it fetches `sw.js` with `cache: 'reload'`, compares the served `todo-boards-v<N>` against its own stamped build, and on a second consecutive mismatch purges every `todo-boards-*` Cache-Storage entry, unregisters the worker, and reloads once (issue #164; the six-day, three-engine stall the issue exposed was the update CHECK being answered from a cache — skipWaiting, `reg.update()`, SWR and now `updateViaCache` all assume the ask reaches the server; the handshake is the layer that verifies it did; keeps B79's no-mid-session-reload law — the heal lands on the reload the handshake itself performs, between thoughts; keeps B21 — data is never touched: Cache Storage and IndexedDB are different stores, and the handshake never opens the latter — and waives nothing)
+
+**The failure no layer owned.** The user's devices (LibreWolf desktop, Samsung
+Internet, IronFox — three engines, two platforms) rendered a pre-v44 shell for
+six days while the deploy was verifiably live: all 15 `ASSETS` returned 200,
+deployed bytes matched `origin/main`, every Pages run succeeded, and a fresh
+Firefox profile got the current build from its very first load. The pinned
+profiles, meanwhile, re-validated a stale answer. Every mechanism in the
+update chain asks the server *through the browser's network stack* — the one
+component that had provably gone wrong. `updateViaCache: 'none'` removes the
+browser's own HTTP cache from the SW-script check; the handshake removes
+trust in everything else on the path: it asks the network DIRECTLY
+(`cache: 'reload'`) and compares answers.
+
+**Two strikes.** One mismatch arms `boards-build-mismatch` in
+`sessionStorage` (dies with the tab — no stale counter); the same wrong
+answer twice in a row means it is not a fluke, and the self-heal runs. A
+single captive-portal response or proxy error page cannot nuke a healthy
+install; an unparseable `sw.js` is ignored, never acted on.
+
+**Data is never touched — by construction.** The self-heal's only writes are
+`caches.delete` on `todo-boards-v*` entries and `registrations.unregister()`.
+Boards live in IndexedDB (`boards-db`), a different store the handshake
+never opens, and B21's read-site defaulting means an old record renders
+correctly under a new build regardless. The worst case is the app
+re-downloading its own files.
+
+**The record.** `sw.js`'s `CACHE` bumps to **v47**; `app.js` stamps
+`OWN_BUILD = 'v47'` bump-adjacent to it — `test/tokens.js` pins both to the
+same version on every shipped change, so a missed stamp fails the suite.
+`test/sw-update.js`'s five scenarios are unchanged and green (the handshake
+never fires when device matches deploy — its healthy path is a no-op); the
+red→green proof lives in the issue: a Firefox profile pinned to a v43
+worker with the new shell deployed records strike `v43`, heals on the
+second load, reinstalls the true worker, and the seeded board survives.
