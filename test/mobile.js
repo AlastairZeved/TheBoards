@@ -642,11 +642,17 @@ async function openCat(page, cat) {
     }
   }
 
-  // ---- 11c. The tablet tier (B96, issue #155) -------------------------------
-  // The unfolded Z Fold 7 (984 CSS px, coarse pointer) takes the wide
+  // ---- 11b2. The tablet tier (B96; shape gate retuned by B101, issue #164) --
+  // The unfolded Z Fold 7 (coarse pointer) takes the wide
   // ARRANGEMENT — rail + calendar panel — under the touch GRAMMAR. Width
   // alone must not flip the grammar (B19's capability law stands): the
   // session is NOT desktop here, and the rail renders scaled, not at 1:1.
+  // B101: the tier is caught by the FOLDABLE SHAPE gate (tall + wide +
+  // square-ish), because the device's real viewport sits below B96's 984
+  // width at common zoom levels — 904x846 and 1092x1030 are the same device
+  // at two zoom levels, and both must be tablet. The boundary assert (983
+  // mobile / 984 tablet) pins B96's width leg; [11b3] pins the shape gate's
+  // edges.
   console.log('\n[11b2] Tablet tier: wide arrangement, touch grammar (B96)');
   {
     const { ctx, page, errors } = await newMobilePage(browser, { width: 984, height: 1450 });
@@ -691,11 +697,81 @@ async function openCat(page, cat) {
     }));
     ok('Back collapses to the standing rail, squeeze lifted (B99)',
       back.railOpen && back.w === 40 && !back.squeeze, JSON.stringify(back));
-    // B100 (issue #157): tablet's picker is the lot-grid — mobile's species.
-    // The tab STAYS on tablet (the owner's ruling: tablet keeps its way into
-    // the grid) and tapping it turns the Parking Lot into the 2x2 grid;
-    // #list-view never shows here. The drill (level 2) is still the rising
-    // panel — html:not(.desktop) — untouched by B100.
+    // B101 (issue #164): the shape gate catches the unfolded Fold at its real
+    // zoom levels. 904x846 is the device at display zoom −2 (the owner's
+    // screenshots' CSS size); 1092x1030 at default. Both must be tablet, and
+    // the 904 session must render the FULL tablet path: rail, retired tab,
+    // B100's lot-grid picker with no overlay, the retired calendar tab.
+    for (const [w, h] of [[904, 846], [1092, 1030]]) {
+      const fold = await newMobilePage(browser, { width: w, height: h });
+      const fg = await fold.page.evaluate(() => ({
+        tablet: document.documentElement.classList.contains('tablet'),
+        wide: document.documentElement.classList.contains('wide'),
+        paneW: document.getElementById('pane').getBoundingClientRect().width,
+        calTabGone: getComputedStyle(document.getElementById('action-calendar')).display === 'none',
+        allTab: getComputedStyle(document.getElementById('action-boards')).display !== 'none',
+        calRailShown: !document.getElementById('cal-rail').hidden,
+      }));
+      ok(`${w}x${h} (unfolded Fold) is tablet: rail ${Math.round(fg.paneW)}px, calendar tab retired, All tab kept (B100)`,
+        fg.tablet && fg.wide && fg.paneW > 100 && fg.calTabGone && fg.allTab && fg.calRailShown,
+        JSON.stringify(fg));
+      await fold.page.evaluate(() => document.getElementById('action-boards').click());
+      await fold.page.waitForTimeout(300);
+      const grid = await fold.page.evaluate(() => ({
+        open: !document.getElementById('lot-menu').hidden,
+        cats: document.querySelectorAll('#lot-menu .cat-button').length,
+        overlay: !document.getElementById('list-view').hidden,
+      }));
+      ok(`${w}x${h}: the picker is the lot-grid (B100), not the overlay`,
+        grid.open && grid.cats === 4 && !grid.overlay, JSON.stringify(grid));
+      ok(`${w}x${h} no page errors`, fold.errors.length === 0, fold.errors.join(' | '));
+      await fold.ctx.close();
+    }
+
+  // ---- 11b3. The foldable shape gate's edges (B101, issue #164) -------------
+  // B101's second MQ leg admits only the unfolded-fold shape: tall (>=650),
+  // wide (>=840), square-ish (aspect <= 23/20). Each edge below is a device
+  // the gate must EXCLUDE — the cover screen in landscape, [11b]'s short-wide
+  // window, iPad portrait (B96's ruling) — and the exact edge value on each
+  // leg. All DPR-invariant.
+  console.log('\n[11b3] Shape-gate edges: the unfolded fold, and nothing else (B101)');
+  {
+    const CASES = [
+      // [w, h, expectTablet, why]
+      [984, 715, true,  'width-leg edge: 984 clears B96\'s width at cover height'],
+      [983, 715, false, '983 at cover height stays mobile (the width leg alone)'],
+      [904, 846, true,  'unfolded Fold at zoom -2 (issue #164\'s screenshots)'],
+      [840, 1092, true, 'width floor edge: 840, square-ish'],
+      [839, 1092, false, '839 is under the width floor (iPad-portrait side, B96)'],
+      [840, 731, true,  'aspect edge: 840/731 = 1.149 <= 23/20'],
+      [840, 730, false, '840/730 = 1.151 > 23/20 — too wide-flat (cover side)'],
+      [840, 650, false, '840x650 = 1.29:1 — the aspect leg is what excludes short-wide'],
+      [700, 650, false, '700 is under the width floor even though square-ish'],
+      [980, 460, false, 'cover screen in landscape stays mobile (B96)'],
+      [980, 715, false, '[11b]\'s short-wide window stays mobile'],
+      [820, 1180, false, 'iPad portrait stays mobile (B96)'],
+      [846, 904, true,  'unfolded Fold in PORTRAIT orientation is tablet too'],
+    ];
+    for (const [w, h, wantTablet, why] of CASES) {
+      const e = await newMobilePage(browser, { width: w, height: h });
+      const got = await e.page.evaluate(() =>
+        document.documentElement.classList.contains('tablet'));
+      ok(`${w}x${h} -> ${wantTablet ? 'tablet' : 'mobile'} (${why})`,
+        got === wantTablet, `got ${got ? 'tablet' : 'mobile'}`);
+      await e.ctx.close();
+    }
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+  }
+
+  // ---- 11b4. The tablet picker is the lot-grid (B100, issue #157) -----------
+  // Same 984x1450 session's next leg (the ctx is open until here): B100
+  // (issue #157) made tablet's picker the lot-grid — mobile's species. The
+  // tab STAYS on tablet (the owner's ruling: tablet keeps its way into the
+  // grid) and tapping it turns the Parking Lot into the 2x2 grid;
+  // #list-view never shows here. The drill (level 2) is still the rising
+  // panel — html:not(.desktop) — untouched by B100.
+  console.log('\n[11b4] The tablet picker is the lot-grid (B100)');
+  {
     await page.evaluate(() => document.getElementById('action-boards').click());
     await page.waitForTimeout(300);
     const pick = await page.evaluate(() => {
@@ -734,7 +810,7 @@ async function openCat(page, cat) {
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
-
+  }
   // ---- 11c. EXPORT_GEO still draws what the board draws (B47/B54) -----------
   // The exporter cannot read computed CSS, so it restates the band a second
   // time and the two can drift. Since B47 the band is content-derived on both

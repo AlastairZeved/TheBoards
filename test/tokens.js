@@ -586,8 +586,11 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is todo-boards-v45 — the bump that ships B100 (issue #157: the lot-grid picker, desktop\'s All-boards tabs retired)',
-    /const CACHE = 'todo-boards-v45';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
+  ok('CACHE is todo-boards-v46 — the bump that ships B101 (issue #164: the foldable shape gate)',
+    /const CACHE = 'todo-boards-v46';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
+  ok('TABLET_MQ carries both legs: B96\'s 984 width AND the B101 foldable shape gate (840 wide, aspect <= 23/20)',
+    /\(min-width: 984px\), \(min-width: 840px\) and \(max-aspect-ratio: 23\/20\)/.test(app),
+    (app.match(/\(min-width: 984px\)[^\n]*/) || [])[0]);
   // --- Issue #140 / B92: import/export and the retired anchor menu ---
   ok('the board-action row carries the third tab (import)', /id="action-import"/.test(html) &&
     /actionImport: document\.getElementById\('action-import'\)/.test(app));
