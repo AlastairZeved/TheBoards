@@ -827,8 +827,11 @@ B100 retires desktop's **All Boards** R1 button too (`html.desktop #cal-boards
 { display: none }`, with the handler guarding): the rail names every board,
 and the panel's row is **Back + Export**, Export taking the right anchor
 (`margin-left: auto`) — which is what mockup 6 drew. The tablet tier renders
-this same rail + panel arrangement under the touch grammar (B96), its All
-tab kept.
+this same rail + panel arrangement under the touch grammar (B96; its gate
+retuned by B101 — B96's 984px width plus the foldable shape gate
+`min-width: 840px and max-aspect-ratio: 23/20`, which admits the unfolded
+Z Fold 7's real viewport at every zoom level — the device reads ≈904×846
+to ≈1092×1030 depending on display zoom, all below 984), its All tab kept.
 
 **The R1 top row.** `--frame` flat tabs in the row-control species. On
 mobile, three, anchored left / center / right: **Back** (the board-action
@@ -1242,7 +1245,8 @@ the Parking Lot turned into the 2×2 grid wherever it exists** (B100, issue
 **Parking Lot turned into a 2×2 grid** of the four category buttons, drawn over
 the lot at its current height (expanded with it) and dismissed back to the lot
 without ever touching the board's parking-lot data (B74; tablet joined by
-B100). The grid reads clockwise from the
+B100, its tier admitted by B101's shape gate — the unfolded fold, at any
+zoom, and nothing else). The grid reads clockwise from the
 top-left: To Do, Notes, Learning, Ideas. A drilled category is then a **panel
 that rises from the Parking Lot to a third of the viewport** (B82, issue #125),
 most recently updated first, opening straight onto that one section — the board

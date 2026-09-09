@@ -215,13 +215,29 @@ const CE = (() => {
    window is wide enough for the rail. Capability — not width, not UA — is what
    excludes tablets: iPadOS reports coarse/none even with a trackpad. One flag +
    one class are the single source of truth; CSS gates on html.desktop only. */
-/* Tablet (B96, issue #155): `min-width: 984px` — the unfolded Z Fold 7's CSS
-   viewport — regardless of pointer. It is the wide ARRANGEMENT tier: it joins
-   `wide` (desktop ∪ tablet), which drives the rail and the calendar panel,
-   while the desktop MQ alone keeps the hover/fine GRAMMAR (B19's capability
-   law, untouched). Re-evaluated live on `change`; a flip runs the same
-   teardown the desktop flip runs (applyMode). */
-const TABLET_MQ = window.matchMedia('(min-width: 984px)');
+/* Tablet (B96, issue #155; retuned by B101, issue #164): two OR-joined MQ
+   legs. Leg 1 is B96's original `min-width: 984px` — it covers tablets and
+   iPad landscape as B96 wrote them. Leg 2 is the FOLDABLE SHAPE gate: B96's
+   width was calibrated believing 984 CSS px WAS the unfolded Z Fold 7, but
+   the device's real Samsung Browser viewport sits BELOW that at common zoom
+   levels (default ≈1092×1030, −2 ≈904×846 — the owner's issue-#164
+   screenshots show 1968 PHYSICAL px rendering the mobile layout), so the
+   unfolded Fold classified mobile and rendered the full-screen calendar with
+   no rail. Width alone cannot fix it: the Fold's cover screen in landscape
+   (~980×460 at default zoom, wider at smaller zooms) must stay mobile
+   (B96), and so must iPad portrait (820×1180, B96). The gate is therefore
+   WIDE (≥840 CSS px — above iPad portrait's 820, below B96's own width leg)
+   and SQUARE-ISH (aspect ≤ 23/20 — the cover screen is ~2.1:1, a short-wide
+   window like [11b]'s 980×715 is 1.37:1; the unfolded inner display is
+   ~1.05:1 and even its portrait orientation is ~0.94:1). No height floor is
+   needed: with w ≥ 840 the aspect ceiling already forces h ≥ 730 — a
+   min-height leg would be dead code, and a gate with a leg that can never
+   bind is a ruling waiting to be misread. Both legs are DPR-invariant, so
+   the gate holds at every zoom level; extreme zooms (−4, ≈728 wide) read as
+   phones by design. The mobile sheet's 880-unit furniture budget (B32)
+   still binds every shape this gate admits (tallest admitted: ≈1030–1092). */
+const TABLET_MQ = window.matchMedia(
+  '(min-width: 984px), (min-width: 840px) and (max-aspect-ratio: 23/20)');
 let isTablet = TABLET_MQ.matches;    // evaluated at load, like isDesktop below
 
 const DESKTOP_MQ = window.matchMedia(

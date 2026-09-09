@@ -3819,3 +3819,51 @@ board. `test/mobile.js` [11b2] gains the tablet picker: the tab opens the
 lot-grid, drilling rises the one-category panel, `history.go(-2)` returns
 the real lot. `UIUX §3.3`'s picker sentence and §10's overlay inventory
 state the retirement.
+
+## AI. The foldable shape gate (issue #164)
+
+### B101. The tablet tier's width gate grows a second leg — the foldable shape: `min-width: 840px` AND `max-aspect-ratio: 23/20` — because B96's 984px was calibrated believing it WAS the unfolded Z Fold 7's CSS viewport, and the device's real Samsung Browser viewport sits below it at common zoom levels, classifying the unfolded Fold mobile and rendering the full-screen calendar with no rail; the shape gate admits the unfolded inner display at every zoom and nothing else (issue #164; retunes B96's width rule, which stays for tablets and iPad landscape; keeps B96's device-class rulings — cover screen mobile, iPad portrait mobile, capability keeps the grammar — and waives nothing)
+
+**The bug was a constant calibrated from the wrong number.** B96 recorded
+`min-width: 984px` as "the unfolded Z Fold 7's CSS viewport" — but 984 was
+never the device; the mockup (`rtcb-7`) drew the unfolded panel at
+~906 CSS px (1812×2176 physical at 2×), and the owner's issue-#164
+screenshots show 1968 *physical* px rendering the MOBILE layout — a CSS
+viewport in the 900s. At default zoom the device reads ≈1092×1030; at −2 it
+reads ≈904×846. Both are below 984, so the unfolded Fold ran the mobile
+grammar: full-screen calendar, All-Boards tab, no rail, no lot-grid picker —
+six days after v45 deployed (deploy verified live; the build was correct,
+the classification was not).
+
+**Why width alone cannot fix it.** Lowering B96's number would admit the
+Fold's cover screen in landscape (~980×460 at default zoom — and wider at
+smaller zooms, past 984's own floor), which B96 explicitly rules mobile.
+The unfolded inner display is distinguished not by width but by SHAPE:
+it is the only target that is simultaneously ≥840 CSS px wide (above iPad
+portrait's 820, which stays mobile per B96) and square-ish — aspect ratio
+≤ 23/20 (~1.15) — while every excluded shape is wide-flat (cover landscape
+~2.1:1, [11b]'s short-wide window 1.37:1) or narrow-tall (iPad portrait
+0.70). Both legs are DPR-invariant, so the gate holds at every zoom level;
+extreme zooms (−4, ≈728 wide) read as phones by design — a trade accepted:
+at that zoom the user has asked for phone-scale everything.
+
+**No height leg.** With `min-width: 840px` the aspect ceiling already forces
+height ≥ 730 — a `min-height` leg would be code that can never bind, and a
+gate with a dead leg is a ruling waiting to be misread. The gate is two
+predicates, both load-bearing.
+
+**The full tablet path rides the classification.** Everything B96/B99/B100
+gave the tier had shipped correctly and was simply never reached: the left
+rail, the standing calendar rail (40px, expanding to the 320px panel under
+the squeeze), the retired calendar tab, and B100's lot-grid picker with the
+retired overlay. `applyMode`'s live `change` listener picks the flip up
+without a reload.
+
+**The record.** `sw.js`'s `CACHE` bumps to **v46**; `test/tokens.js` re-pins
+it and asserts the two-leg MQ text. `test/mobile.js` [11b2] gains the real
+device's zoom levels (904×846, 1092×1030, both through the full tablet path
+to B100's lot-grid) and renames the tier block; [11b3] is new: thirteen
+shape-edge cases pinning each gate leg (984/983 at cover height, 840/839,
+the aspect edge 840×731/840×730, cover landscape, the [11b] window, iPad
+portrait, the Fold in portrait orientation). [11b]'s 980×715 and the cover
+screen's own asserts are the living proof the gate excludes them.
