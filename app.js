@@ -4920,7 +4920,16 @@ boot();
 // update arrives the next time the app opens, when the user expects it and never
 // mid-thought (and it keeps the update path identical to test/sw-update.js's).
 if ('serviceWorker' in navigator) {
-  const register = () => navigator.serviceWorker.register('sw.js').then((reg) => {
+  // B102 (issue #164 finding): the update check itself can be pinned. The
+  // browser may serve sw.js from its own HTTP cache (Firefox honors the
+  // script's max-age for SW script fetches; proxies on the path can do
+  // worse), so reg.update() re-checks against a stale copy and — with SWR
+  // returning the cached shell — an app can sit on an old build for days
+  // across browsers that never share code. updateViaCache:'none' makes the
+  // browser bypass its HTTP cache for the SW script ITSELF (the assets
+  // still ride SWR), removing the one cache layer this code did not own.
+  const register = () => navigator.serviceWorker.register('sw.js',
+    { updateViaCache: 'none' }).then((reg) => {
     reg.update().catch(() => {});
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') reg.update().catch(() => {});
@@ -4928,4 +4937,62 @@ if ('serviceWorker' in navigator) {
   }).catch(() => {});
   if (document.readyState === 'complete') register();
   else window.addEventListener('load', register);
+}
+
+/* The build handshake (B102, issue #164's desktop half). Every layer above —
+   skipWaiting, claim, reg.update(), SWR, updateViaCache — assumes the browser
+   eventually ASKS the server whether anything changed. The one failure no
+   layer here owns is the ask itself being answered from a cache: the user's
+   devices sat on a v43 shell for six days across three engines while every
+   server-side check showed v46 live — the update check was being answered
+   from somewhere between the device and Pages. So the app verifies the
+   contract DIRECTLY: it knows its own build (stamped bump-adjacent to
+   sw.js's CACHE, the one string that names a build), fetches sw.js with
+   cache:'reload' — browser cache AND SWR both bypassed; the network is the
+   authority — and on the second consecutive mismatch deletes every
+   todo-boards cache, unregisters the worker, and reloads once. Two strikes,
+   so one bad response (a captive portal, a proxy error page) cannot nuke a
+   healthy install; the sessionStorage counter dies with the tab. After the
+   reload the freshly-registered worker reinstalls from the network (install
+   IS addAll over the network) and the app is current whatever the in-between
+   layer does. Runs 20s after launch — off the critical path, once per
+   session, and only ever acts on device-vs-deploy disagreement. Offline it
+   does nothing: there is no authority to compare against.
+
+   DATA IS NEVER TOUCHED. The self-heal deletes Cache Storage entries (the
+   `todo-boards-v*` copies of the app shell) and unregisters the worker —
+   nothing else. The boards live in IndexedDB (`boards-db`), a different
+   store the handshake never opens, and B21's read-site defaulting means an
+   old record renders correctly under a new build anyway. Worst case is the
+   app re-downloading its own five files; a board cannot be lost to this
+   path by construction. */
+const OWN_BUILD = 'v47';
+if ('serviceWorker' in navigator && 'caches' in window) {
+  const handshake = () => {
+    fetch('sw.js', { cache: 'reload' }).then((res) => {
+      if (!res.ok) return;
+      return res.text().then((text) => {
+        const m = text.match(/todo-boards-v(\d+)/);
+        if (!m) return;                       // unparseable: never act blind
+        const served = 'v' + m[1];
+        if (served === OWN_BUILD) {
+          sessionStorage.removeItem('boards-build-mismatch');
+          return;                             // healthy: device matches deploy
+        }
+        const seen = sessionStorage.getItem('boards-build-mismatch');
+        if (seen === served) {
+          // twice in a row, same wrong answer: the caches are stale. Self-heal.
+          caches.keys().then((keys) =>
+            Promise.all(keys.filter((k) => k.startsWith('todo-boards-v'))
+              .map((k) => caches.delete(k)))
+          ).then(() => navigator.serviceWorker.getRegistration())
+           .then((reg) => reg && reg.unregister())
+           .then(() => location.reload());
+        } else {
+          sessionStorage.setItem('boards-build-mismatch', served);
+        }
+      });
+    }).catch(() => {});                     // offline: nothing to compare, do nothing
+  };
+  setTimeout(handshake, 20000);
 }
