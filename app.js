@@ -215,29 +215,27 @@ const CE = (() => {
    window is wide enough for the rail. Capability — not width, not UA — is what
    excludes tablets: iPadOS reports coarse/none even with a trackpad. One flag +
    one class are the single source of truth; CSS gates on html.desktop only. */
-/* Tablet (B96, issue #155; retuned by B101, issue #164): two OR-joined MQ
-   legs. Leg 1 is B96's original `min-width: 984px` — it covers tablets and
-   iPad landscape as B96 wrote them. Leg 2 is the FOLDABLE SHAPE gate: B96's
-   width was calibrated believing 984 CSS px WAS the unfolded Z Fold 7, but
-   the device's real Samsung Browser viewport sits BELOW that at common zoom
-   levels (default ≈1092×1030, −2 ≈904×846 — the owner's issue-#164
-   screenshots show 1968 PHYSICAL px rendering the mobile layout), so the
-   unfolded Fold classified mobile and rendered the full-screen calendar with
-   no rail. Width alone cannot fix it: the Fold's cover screen in landscape
-   (~980×460 at default zoom, wider at smaller zooms) must stay mobile
-   (B96), and so must iPad portrait (820×1180, B96). The gate is therefore
-   WIDE (≥840 CSS px — above iPad portrait's 820, below B96's own width leg)
-   and SQUARE-ISH (aspect ≤ 23/20 — the cover screen is ~2.1:1, a short-wide
-   window like [11b]'s 980×715 is 1.37:1; the unfolded inner display is
-   ~1.05:1 and even its portrait orientation is ~0.94:1). No height floor is
-   needed: with w ≥ 840 the aspect ceiling already forces h ≥ 730 — a
-   min-height leg would be dead code, and a gate with a leg that can never
-   bind is a ruling waiting to be misread. Both legs are DPR-invariant, so
-   the gate holds at every zoom level; extreme zooms (−4, ≈728 wide) read as
-   phones by design. The mobile sheet's 880-unit furniture budget (B32)
-   still binds every shape this gate admits (tallest admitted: ≈1030–1092). */
-const TABLET_MQ = window.matchMedia(
-  '(min-width: 984px), (min-width: 840px) and (max-aspect-ratio: 23/20)');
+/* Tablet (B96, issue #155; retuned by B101, re-retuned by B103, issue #164):
+   ONE leg — `min-width: 744px` — orientation-blind. B96 gated tablet mode at
+   984 and called it landscape-only; B101 added a foldable-shape leg (840 +
+   aspect ≤ 23/20) after the unfolded Fold 7's real viewport (~904×846 at
+   zoom −2) failed the 984 floor in landscape. The owner's final ruling
+   (#164, 2026-09-09) removes orientation from the law entirely: "include
+   unfolded foldables, iPads, and other tablets in tablet mode in PORTRAIT —
+   no longer exclusive to landscape." The gate is therefore just a width
+   floor at 744 CSS px — iPad mini portrait's width (744), so every iPad
+   (768/810/820/834/1024) and every Android tablet (≥712, typically 800)
+   qualifies in EITHER orientation, unfolded foldables qualify at every zoom
+   (≈656–1092 wide; below 744 only at extreme zoom, where phone-scale
+   everything is what the zoom asked for), and no phone or fold cover screen
+   in portrait (366–480) can cross it. B96's cover-landscape-mobile ruling
+   and B101's aspect leg are superseded: a 980×460 cover in landscape takes
+   the tablet arrangement (300px rail + sheet) — it is a 980-wide surface,
+   and the owner has ruled width, not orientation, the classifier. Desktop
+   windows narrower than 744 stay mobile-arranged exactly as they do today
+   below 984 (B20/B96 already put 984–1023 mouse windows in the tablet
+   arrangement; this extends the same, working behavior). */
+const TABLET_MQ = window.matchMedia('(min-width: 744px)');
 let isTablet = TABLET_MQ.matches;    // evaluated at load, like isDesktop below
 
 const DESKTOP_MQ = window.matchMedia(
@@ -4966,7 +4964,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v47';
+const OWN_BUILD = 'v48';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

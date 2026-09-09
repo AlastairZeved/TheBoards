@@ -3906,3 +3906,38 @@ never fires when device matches deploy — its healthy path is a no-op); the
 red→green proof lives in the issue: a Firefox profile pinned to a v43
 worker with the new shell deployed records strike `v43`, heals on the
 second load, reinstalls the true worker, and the seeded board survives.
+
+
+## AK. Tablet mode is orientation-blind (issue #164, final ruling)
+
+### B103. The tablet tier is ONE width floor — `min-width: 744px` — with no orientation or aspect term: unfolded foldables, iPads, and Android tablets take the tablet arrangement in PORTRAIT and landscape alike, and B96's cover-landscape-mobile ruling and B101's shape leg are superseded; width, not orientation, is the classifier (issue #164, the owner's ruling of 2026-09-09: "include unfolded foldables screens and iPads, as well as other tablets, to be included in tablet mode when in portrait mode — no longer exclusive to landscape mode"; supersedes B96's device-class widths and B101's shape gate; keeps B96's capability law — grammar is still pointer/hover, untouched; keeps B20/B32's arrangement machinery, B9, B81 — and waives nothing)
+
+**The path here.** B96 gated tablet mode at 984px and landscape-only; the
+unfolded Fold 7's real viewport (~904×846 at zoom −2) failed that floor and
+ran the mobile grammar (#164). B101 added a foldable-shape leg (840 + aspect
+≤ 23/20) — but the Fold in LANDSCAPE at further-reduced zoom reports shapes
+like 910×820 whose aspect still clears 23/20 only barely, and the owner's
+device still missed the gate. The owner then removed the dimension that was
+causing every miss: orientation. "No longer exclusive to landscape."
+
+**The law is now one number: 744 CSS px.** It is iPad mini portrait's width,
+so every iPad (768/810/820/834/1024) and every Android tablet qualifies in
+either orientation; unfolded foldables qualify at every practical zoom
+(≈656–1092 wide — below 744 only at extreme zoom, where phone-scale
+everything is what the zoom asked for); no phone (≤480) or cover-portrait
+(366–380) can cross it. Consequences accepted openly: the cover screen in
+LANDSCAPE (~980×460) now takes the tablet arrangement — it is a 980-wide
+surface and width is the classifier; B32's 880-unit mobile furniture budget
+no longer applies to it, the tablet arrangement's own budget governs. A
+desktop window narrowed below 1024 was already tablet-arranged from 984
+(B96); the floor just extends that working behavior down to 744.
+
+**The record.** `sw.js`'s `CACHE` bumps to **v48**; `OWN_BUILD` re-stamps to
+v48 with it. `test/tokens.js` pins the one-leg MQ text. `test/mobile.js`
+[11b3]'s matrix is rewritten to the orientation-blind law (16 cases: Fold
+landscape AND portrait at two zooms, iPad portrait 768/820/1024, Android
+800×1280, the 744/743 floor edge, cover landscape now tablet, phones and
+cover-portrait still mobile); [11b]'s short-window scenario moves below the
+floor (720×540, 600×450 — the mobile sheet's law under test is unchanged,
+its free-canvas floors re-measured at 60%/50% for the squat shapes).
+`UIUX §3.4`/§10 tier notes move with it.
