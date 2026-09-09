@@ -586,14 +586,14 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is todo-boards-v47 — the bump that ships B102 (issue #164: updateViaCache none + the build handshake)',
-    /const CACHE = 'todo-boards-v47';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v47, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v47';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is todo-boards-v48 — the bump that ships B103 (issue #164: tablet mode is orientation-blind at >=744px)',
+    /const CACHE = 'todo-boards-v48';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v48, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v48';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
-  ok('TABLET_MQ carries both legs: B96\'s 984 width AND the B101 foldable shape gate (840 wide, aspect <= 23/20)',
-    /\(min-width: 984px\), \(min-width: 840px\) and \(max-aspect-ratio: 23\/20\)/.test(app),
-    (app.match(/\(min-width: 984px\)[^\n]*/) || [])[0]);
+  ok('TABLET_MQ is the B103 one-leg width floor: min-width 744px, orientation-blind',
+    /window\.matchMedia\('\(min-width: 744px\)'\)/.test(app),
+    (app.match(/TABLET_MQ = window\.matchMedia\([^)]*\)/) || [])[0]);
   // --- Issue #140 / B92: import/export and the retired anchor menu ---
   ok('the board-action row carries the third tab (import)', /id="action-import"/.test(html) &&
     /actionImport: document\.getElementById\('action-import'\)/.test(app));

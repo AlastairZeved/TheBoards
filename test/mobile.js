@@ -611,8 +611,12 @@ async function openCat(page, cat) {
   // 147px rule. B37 makes it fixed units instead, so the floors here go up and
   // the rule must land at the same 48 at every sheet height.
   console.log('\n[11b] Free canvas survives a short sheet (B37)');
+  // B103: 744+ is the tablet arrangement now, so this mobile-sheet scenario
+  // moved below the floor — short, WIDE-BUT-NARROW windows that remain
+  // mobile-arranged (720 and 600 wide). The law under test is unchanged:
+  // on the mobile sheet the band rule sits at 61 at every sheet height.
   {
-    for (const [w, h, floor] of [[980, 715, 0.65], [800, 600, 0.60]]) {
+    for (const [w, h, floor] of [[720, 540, 0.60], [600, 450, 0.50]]) {
       const { ctx, page, errors } = await newMobilePage(browser, { width: w, height: h });
       const g = await page.evaluate(() => {
         const b = document.querySelector('#board').getBoundingClientRect();
@@ -728,29 +732,32 @@ async function openCat(page, cat) {
       await fold.ctx.close();
     }
 
-  // ---- 11b3. The foldable shape gate's edges (B101, issue #164) -------------
-  // B101's second MQ leg admits only the unfolded-fold shape: tall (>=650),
-  // wide (>=840), square-ish (aspect <= 23/20). Each edge below is a device
-  // the gate must EXCLUDE — the cover screen in landscape, [11b]'s short-wide
-  // window, iPad portrait (B96's ruling) — and the exact edge value on each
-  // leg. All DPR-invariant.
-  console.log('\n[11b3] Shape-gate edges: the unfolded fold, and nothing else (B101)');
+  // ---- 11b3. The orientation-blind width floor (B103, issue #164) -----------
+  // B103: tablet mode is ONE width floor — 744 CSS px (iPad mini portrait) —
+  // with no orientation or aspect term. Unfolded foldables in EITHER
+  // orientation, every iPad and Android tablet in portrait AND landscape,
+  // and (superseding B96) the cover screen in landscape all take the tablet
+  // arrangement; phones and cover-portrait (366–480) cannot cross 744.
+  console.log('\n[11b3] The orientation-blind floor: width 744+, any orientation (B103)');
   {
     const CASES = [
       // [w, h, expectTablet, why]
-      [984, 715, true,  'width-leg edge: 984 clears B96\'s width at cover height'],
-      [983, 715, false, '983 at cover height stays mobile (the width leg alone)'],
-      [904, 846, true,  'unfolded Fold at zoom -2 (issue #164\'s screenshots)'],
-      [840, 1092, true, 'width floor edge: 840, square-ish'],
-      [839, 1092, false, '839 is under the width floor (iPad-portrait side, B96)'],
-      [840, 731, true,  'aspect edge: 840/731 = 1.149 <= 23/20'],
-      [840, 730, false, '840/730 = 1.151 > 23/20 — too wide-flat (cover side)'],
-      [840, 650, false, '840x650 = 1.29:1 — the aspect leg is what excludes short-wide'],
-      [700, 650, false, '700 is under the width floor even though square-ish'],
-      [980, 460, false, 'cover screen in landscape stays mobile (B96)'],
-      [980, 715, false, '[11b]\'s short-wide window stays mobile'],
-      [820, 1180, false, 'iPad portrait stays mobile (B96)'],
-      [846, 904, true,  'unfolded Fold in PORTRAIT orientation is tablet too'],
+      [984, 715, true,  'B96 landscape width'],
+      [904, 846, true,  'unfolded Fold landscape, zoom -2 (issue #164)'],
+      [846, 904, true,  'unfolded Fold PORTRAIT (B103: orientation-blind)'],
+      [1092, 1030, true, 'unfolded Fold landscape, default zoom'],
+      [1030, 1092, true, 'unfolded Fold portrait, default zoom'],
+      [820, 1180, true,  'iPad Air portrait (B96 said mobile; B103 supersedes)'],
+      [1024, 1366, true, 'iPad Pro portrait'],
+      [768, 1024, true,  'standard iPad portrait'],
+      [744, 1134, true,  'iPad mini portrait — the floor edge itself'],
+      [743, 1134, false, 'just under the floor stays mobile'],
+      [800, 1280, true,  'Android tablet portrait'],
+      [980, 460, true,   'cover screen landscape (B96 mobile ruling superseded by B103)'],
+      [980, 715, true,   '[11b] short-wide window takes the tablet arrangement now'],
+      [480, 1000, false, 'largest phones stay mobile'],
+      [384, 846, false,  'a phone'],
+      [366, 880, false,  'cover screen portrait'],
     ];
     for (const [w, h, wantTablet, why] of CASES) {
       const e = await newMobilePage(browser, { width: w, height: h });
