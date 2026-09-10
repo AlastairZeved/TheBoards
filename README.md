@@ -332,9 +332,11 @@ instead (see [Security](#security)).
 
 ## License
 
-UNLICENSED — all rights reserved. © Robert A.Z. Gregory.
+[MIT](LICENSE) © AlastairZeved.
 
-The repository does not currently ship a license file; if you want to use the
-code, open an issue and ask.
+TheBoards is released under the MIT License — the full text is in
+[`LICENSE`](LICENSE). The name TheBoards, the design, and the governing
+records remain the work of their author; if you build on either, an issue
+saying so is always appreciated.
 
 [Back to top](#theboards)
