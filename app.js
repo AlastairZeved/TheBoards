@@ -646,9 +646,8 @@ function persist() {
    expanded (calSqueeze) CAL_PANEL_W takes the rail's place — the panel
    expands FROM the rail, it doesn't add to it. */
 const CAL_RAIL_W = 40;               // the collapsed rail (mockup 6: 40px, right edge)
-function applyLayout() {
-  const vw = window.innerWidth, vh = window.innerHeight;
-  if (isWide) {
+function applyWideLayout(vw, vh) {
+  if (!isWide) return;
     // Wide (B20): the rail takes PANE_W unscaled; the sheet fills the rest.
     // Desktop reached it via B19's MQ; tablet joins by width alone (B96, issue
     // #155 — the unfolded Z Fold 7). Min-anchored scale — neither logical
@@ -671,7 +670,11 @@ function applyLayout() {
     offX = PANE_W;
     offY = 0;
     LEGACY_H = LOGICAL_H;            // desktop geometry is unchanged by B32
-  } else {
+}
+
+function applyMobileLayout(vw, vh) {
+  if (isWide) return;
+  {
     // Mobile (B32, overrides B17): the sheet IS the viewport. B17's fill still
     // holds — a scale of 1 is uniform by construction, so no letterbox and no
     // distortion — but every declared px is now a real px, which is the whole
@@ -683,11 +686,44 @@ function applyLayout() {
     offY = 0;
     LEGACY_H = 900 * vh / vw;        // the height B17 would have produced here
   }
+}
+
+function checkListCapacity() {
+  if (catCap && catPageCap(catFilled, catView ? 1 : undefined) !== catCap) {
+    // Re-paginate the surface that is showing: the open list overlay (drill or
+    // desktop picker) first, else the desktop rail behind it (issue #112 review).
+    if (listOpen) renderListSurface();
+    else if (isWide && el.paneCards) renderPane();
+  }
+}
+
+function repositionNotes() {
+  noteEls.forEach((node, id) => {
+    const note = current && current.notes.find(n => n.id === id);
+    if (note) {
+      node.style.left = renderX(note) + 'px';
+      node.style.top = renderY(note) + 'px';
+      node.style.transform = 'scale(' + effScale(note) + ')';
+      setHitInset(node, note);
+    }
+  });
+  if (selected) updateSelectionUI();
+  updateLinks();                     // links ride the notes' new geometry (B91)
+}
+
+function applyFrameCss() {
   el.board.style.setProperty('--logical-w', LOGICAL_W + 'px');
   el.board.style.setProperty('--logical-h', LOGICAL_H + 'px');
   el.board.style.setProperty('--rs', renderScale);
   el.board.style.setProperty('--offx', offX + 'px');
   el.board.style.setProperty('--offy', offY + 'px');
+}
+
+function applyLayout() {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  if (isWide) applyWideLayout(vw, vh);
+  else applyMobileLayout(vw, vh);
+  applyFrameCss();
   // Both sections size to their content (B47): the band re-measures because a
   // width change re-wraps the zone anchors, the lot because rows may re-cap.
   updateBoardGeometry();
@@ -701,29 +737,14 @@ function applyLayout() {
   // no layout change can move it (B64's restatement of B39) — it is written
   // at creation (makeNoteEl) and by the gestures that change its inputs
   // (rebaseNote, applyNoteScale, the drag).
-  noteEls.forEach((node, id) => {
-    const note = current && current.notes.find(n => n.id === id);
-    if (note) {
-      node.style.left = renderX(note) + 'px';
-      node.style.top = renderY(note) + 'px';
-      node.style.transform = 'scale(' + effScale(note) + ')';
-      setHitInset(node, note);
-    }
-  });
-  if (selected) updateSelectionUI();
-  updateLinks();                     // links ride the notes' new geometry (B91)
+  repositionNotes();
   // Capacity check (issue #58, replacing the #pane-more overflow check B42
   // supersedes): the per-page card budget is measured from the surface's
   // height, so a resize that changes it must re-render — and re-paginate.
   // catCap is 0 until the first render, so boot's renderBoard → applyLayout
   // chain doesn't draw the rail twice back to back. Off-desktop the same
   // check covers a rotation while the list is open (issue #74).
-  if (catCap && catPageCap(catFilled, catView ? 1 : undefined) !== catCap) {
-    // Re-paginate the surface that is showing: the open list overlay (drill or
-    // desktop picker) first, else the desktop rail behind it (issue #112 review).
-    if (listOpen) renderListSurface();
-    else if (isWide && el.paneCards) renderPane();
-  }
+  checkListCapacity();
   // No letterbox now: the toast sits 12px above the screen's bottom edge.
   document.documentElement.style.setProperty('--toast-bottom', '12px');
 }
