@@ -1826,7 +1826,7 @@ function createLotItem() {
 }
 
 /* Commit-on-blur for every editable region; empty new notes/items are discarded. */
-document.addEventListener('focusout', (e) => {
+function onEditFocusOut(e) {
   const t = e.target;
   if (!t.hasAttribute || !t.hasAttribute('contenteditable')) return;
   disableEditing(t);
@@ -1838,12 +1838,13 @@ document.addEventListener('focusout', (e) => {
   // stake — the keyboard's own retraction resize would repeat it, but a
   // rotation or fold has no such second chance.
   if (layoutDeferred) { layoutDeferred = false; requestAnimationFrame(applyLayout); }
-});
+}
+document.addEventListener('focusout', onEditFocusOut);
 
 /* Keyboard/AT users focus a region → enter edit. The pointer path owns taps, so
    auto-edit only when no pointer gesture is in control (otherwise a tabindexed
    note would open the keyboard on pointerdown before drag/long-press resolve). */
-document.addEventListener('focusin', (e) => {
+function onEditFocusIn(e) {
   if (pointers.size) return;
   const t = e.target;
   if (!t.classList) return;
@@ -1868,12 +1869,13 @@ document.addEventListener('focusin', (e) => {
     if (isDesktop) { selectLot(item.id); return; }
     if (item.state === 'active') editText(t.querySelector('.lot-text'));
   }
-});
+}
+document.addEventListener('focusin', onEditFocusIn);
 
 /* Desktop keyboard (additive, issue #4 "mnk"): inert while the menu is open —
    menuKeyHandler owns Escape/Tab/arrows there, and Delete must not destroy the
    selection underneath an open menu (issue #10). */
-document.addEventListener('keydown', (e) => {
+function onDesktopKeydown(e) {
   if (!isDesktop || menuOpen) return;
   // While a link is armed, Escape cancels it and every other key is inert (B91) —
   // no selection exists to Delete/Enter into, and this must win over the grammar.
@@ -1907,10 +1909,11 @@ document.addEventListener('keydown', (e) => {
       }
     }
   }
-});
+}
+document.addEventListener('keydown', onDesktopKeydown);
 
 /* Live growth = capture feedback; debounced persistence (PRD §4 writes). */
-el.board.addEventListener('input', (e) => {
+function onLiveEditInput(e) {
   const t = e.target;
   if (t.classList.contains('note-text')) {
     const note = current.notes.find(n => n.id === t.closest('.note').dataset.id);
@@ -1932,7 +1935,8 @@ el.board.addEventListener('input', (e) => {
     updateBoardGeometry();
     scheduleSave();
   }
-});
+}
+el.board.addEventListener('input', onLiveEditInput);
 
 function commitNote(node) {
   const note = current.notes.find(n => n.id === node.dataset.id);
