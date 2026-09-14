@@ -841,7 +841,20 @@ function setCalSqueeze(on) {
    createNote's bottom clamp and would have been written back by rebaseNote —
    is moot: it now runs once, inside the migration, on the notes it is
    adopting. No note reaching this function lacks rh. */
-const noteK = (note) => Math.min(LOGICAL_W / (note.rw || 900), LOGICAL_H / note.rh);
+/* The similarity transform (B64) as one pure function of the note and its
+   frame — min(W/rw, H/rh), with each frame taking its own min so notes of
+   one authoring cohort keep their figure exactly. The screen resolves it
+   against LOGICAL_W/LOGICAL_H (noteK), the export against EXPORT_W/EXPORT_H
+   (exportK): one LAW shared, not one number — a mixed-cohort board can
+   relate its cohorts differently per frame, inherent to min-k and owned in
+   B64's costs. Stored x/y are read only — B21's "committed positions are
+   permanent" is not ours to break. Legacy notes never reach either path:
+   B93's boot migration adopted every rh-less note onto the single min-k
+   path before first paint (issue #141). */
+const noteKFor = (n, frameW, frameH) =>
+  Math.min(frameW / (n.rw || 900), frameH / n.rh);
+
+const noteK = (note) => noteKFor(note, LOGICAL_W, LOGICAL_H);
 const renderX  = (note) => note.x * noteK(note);
 const effScale = (note) => (note.scale || 1) * noteK(note);
 const renderY  = (note) => note.y * noteK(note);
@@ -908,6 +921,12 @@ function applyNoteWidth(node, note) {
    rule as a tab, so the band closes at the content plus its gap. 61 at the
    two-line floor, 81 at three lines. */
 const BAND_TOP = 14, BAND_LINE = 19.5, BAND_GAP = 8;
+/* The band's law as one pure function of its line count (B47): both the
+   render path (bandRuleY) and the export path (exportRuleY) close at
+   band-top + lines × line-height + gap. The line count itself is each
+   frame's own measure — the screen reads the DOM, the export wraps text on
+   its own sheet (B34) — so only this formula is shared. */
+const bandRuleYFor = (lines) => Math.round(BAND_TOP + lines * BAND_LINE + BAND_GAP);
 function bandRuleY() {
   let lines = 2;                       // the two-line floor
   for (const key of ['components', 'requirements']) {
@@ -916,7 +935,7 @@ function bandRuleY() {
     // reads as whole line boxes (min-height 44 keeps the floor's answer 2).
     if (node) lines = Math.max(lines, Math.round(node.scrollHeight / BAND_LINE));
   }
-  return Math.round(BAND_TOP + lines * BAND_LINE + BAND_GAP);
+  return bandRuleYFor(lines);
 }
 
 /* The Parking Lot's height follows its MEASURED contents from a two-row
@@ -3221,10 +3240,12 @@ function pdfAssemble(streams, title) {
    notes sit above every piece of furniture. */
 const EXPORT_GEO = {
   gutter: 24,
-  // B47's band formula, the same law the screen derives --rule-y from, with
-  // B76's label moved below the rule so it no longer budgets above it:
-  // rule-y = bandTop + max(2, lines) x headLH + bandGap,
-  // resolved per record in exportRuleY() against THIS sheet's zone widths.
+  // B47's band formula, the same law the screen derives --rule-y from (the
+  // shared bandRuleYFor, with B76's label moved below the rule so it no
+  // longer budgets above it), resolved per record in exportRuleY() against
+  // THIS sheet's zone widths. bandTop/bandGap stay literal here: the [11c]
+  // tripwire recomputes the formula from EXPORT_GEO's own source terms, so
+  // they are part of the test contract — they MUST equal BAND_TOP/BAND_GAP.
   bandTop: 14, bandGap: 8,
   compL: 24, compR: 272, reqL: 628, reqR: 876,
   // The compartment starts at the sheet's own top edge (B38, kept by B47) and
@@ -3233,7 +3254,8 @@ const EXPORT_GEO = {
   // Both sections size to their MEASURED content from a floor (UIUX
   // §3.1/§3.2, B73); the lot's ceiling is half the sheet, applied in
   // exportLotH — one law with the screen, the export's own number (B34).
-  lotHead: 34, lotRow: 44, lotHeaderY: 8, lotItemsY: 34,
+  // lotHead/lotRow ARE the screen's LOT_HEAD/LOT_ROW — shared constants.
+  lotHead: LOT_HEAD, lotRow: LOT_ROW, lotHeaderY: 8, lotItemsY: 34,
   headSize: 15, headLH: 19.5,          // title, anchor text, lot header
   labelSize: 13, labelLH: 16.9,        // the band's nomenclature (13 x 1.3, B54)
   labelPadX: 6, labelPadY: 2,          // the tab that frames it below the rule (B76)
@@ -3243,9 +3265,10 @@ const EXPORT_GEO = {
   linkWidth: 1.5,                      // the note-link hairline (issue #142, B91)
 };
 
-/* The band sizes to its tallest zone (B47), on the export's own frame: line
-   counts come from pdfWrap against the 248-unit zones — the same law as the
-   screen, not the same number, because the export is its own sheet (B34). */
+  // The band sizes to its tallest zone (B47), on the export's own frame: line
+  // counts come from pdfWrap against the 248-unit zones — the same law as the
+  // screen, not the same number, because the export is its own sheet (B34).
+  // The rule-y formula itself is the shared bandRuleYFor (B47/B76).
 function exportRuleY(rec) {
   const g = EXPORT_GEO;
   let lines = 2;
@@ -3253,7 +3276,7 @@ function exportRuleY(rec) {
                    { text: rec.requirements, w: g.reqR - g.reqL }]) {
     if (z.text) lines = Math.max(lines, pdfWrap(z.text, true, g.headSize, z.w).length);
   }
-  return Math.round(g.bandTop + lines * g.headLH + g.bandGap);
+  return bandRuleYFor(lines);
 }
 const exportLotH = (rec) => {
   const g = EXPORT_GEO;
@@ -3265,20 +3288,22 @@ const exportLotH = (rec) => {
     const lines = pdfWrap(item.text, false, g.lotSize, EXPORT_W - 2 * g.gutter);
     sum += Math.max(g.lotRow, lines.length * g.lotLH + 4);
   }
-  return Math.min(g.lotHead + Math.max(2 * g.lotRow, sum), Math.round(EXPORT_H * 0.5));
+  return Math.min(g.lotHead + Math.max(2 * g.lotRow, sum),
+                  Math.round(EXPORT_H * LOT_MAX_FRAC));
 };
 
 // The similarity transform (B64), resolved against the export sheet instead
-// of the viewport — noteK with EXPORT_W/EXPORT_H standing in for the frame.
-// One LAW shared with the screen, not one number: each frame takes its own
-// min, so notes of one authoring cohort keep their figure exactly, while a
-// mixed-cohort board can relate its cohorts differently here than on a given
-// screen — inherent to min-k and owned in B64's costs. Stored x/y are read
-// only — B21's "committed positions are permanent" is not ours to break.
-// Legacy notes never reach here: B93's boot migration adopted every rh-less
-// note onto the single min-k path before first paint, so the export reads
-// the same unified geometry the screen renders (issue #141).
-const exportK = (n) => Math.min(EXPORT_W / (n.rw || 900), EXPORT_H / n.rh);
+// of the viewport — exportK is the shared noteKFor with EXPORT_W/EXPORT_H
+// standing in for the frame. One LAW shared with the screen, not one number:
+// each frame takes its own min, so notes of one authoring cohort keep their
+// figure exactly, while a mixed-cohort board can relate its cohorts
+// differently here than on a given screen — inherent to min-k and owned in
+// B64's costs. Stored x/y are read only — B21's "committed positions are
+// permanent" is not ours to break. Legacy notes never reach here: B93's boot
+// migration adopted every rh-less note onto the single min-k path before
+// first paint, so the export reads the same unified geometry the screen
+// renders (issue #141).
+const exportK = (n) => noteKFor(n, EXPORT_W, EXPORT_H);
 const exportX = (n) => n.x * exportK(n);
 const exportY = (n) => n.y * exportK(n);
 
