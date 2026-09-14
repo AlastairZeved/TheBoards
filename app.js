@@ -2927,6 +2927,10 @@ function closeMenu() {
   if (menuKeyHandler) document.removeEventListener('keydown', menuKeyHandler, true);
   if (menuOutsideHandler) document.removeEventListener('pointerdown', menuOutsideHandler, true);
   menuKeyHandler = menuOutsideHandler = null;
+  returnMenuFocus();
+}
+
+function returnMenuFocus() {
   if (menuInvoker) {
     const m = menuInvoker; menuInvoker = null;
     // focus() dispatches focusin synchronously; the flag scopes the multi-
