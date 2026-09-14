@@ -586,8 +586,8 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is todo-boards-v49 — the bump that ships the handleTap dispatch split (#174)',
-    /const CACHE = 'todo-boards-v49';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
+  ok('CACHE is todo-boards-v50 — the bump that ships the #176 refactor (#176)',
+    /const CACHE = 'todo-boards-v50';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
   ok('the build handshake ships: OWN_BUILD stamped v49, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
     /const OWN_BUILD = 'v49';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
