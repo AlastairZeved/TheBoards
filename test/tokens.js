@@ -629,14 +629,14 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('the calendar view carries the standing rail face (B99, mockup 6)',
     /id="cal-rail"/.test(html) && /calRail: document\.getElementById\('cal-rail'\)/.test(app));
   ok('the rail renders at boot on wide — furniture, no press (B99)',
-    /if \(isWide\) \{\s*\n\s*document\.documentElement\.classList\.add\('has-cal-rail'\);\s*\n\s*showCalRail\(\);/.test(app));
+    /if \(viewState\.isWide\) \{\s*\n\s*document\.documentElement\.classList\.add\('has-cal-rail'\);\s*\n\s*showCalRail\(\);/.test(app));
   ok('the rail is the mockup-6 species: vertical label, date, lit dot',
     /writing-mode: vertical-rl/.test(css) && /#cal-rail \.vlabel/.test(css) &&
     /#cal-rail \.cdot/.test(css) && /#cal-rail \.cdate/.test(css) &&
     /\.cdot\.lit/.test(css));
   ok('the collapsed rail reserves 40px from the frame at all times on wide (B99)',
     /const CAL_RAIL_W = 40;/.test(app) &&
-    /const calW = calSqueeze \? CAL_PANEL_W : CAL_RAIL_W;/.test(app));
+    /const calW = viewState\.calSqueeze \? CAL_PANEL_W : CAL_RAIL_W;/.test(app));
   ok('expand re-enters the R6 squeeze; collapse lifts it — the board reflows beside the panel',
     /function expandCalRail[\s\S]*?setCalSqueeze\(true\)/.test(app) &&
     /function collapseCalRail[\s\S]*?setCalSqueeze\(false\)/.test(app));
@@ -647,7 +647,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     !/calRail[\s\S]{0,200}pushState/.test(app));
   ok('rail-up is not "open": the screen grammar rides calExpanded, not the furniture',
     /let calExpanded = false;/.test(app) &&
-    /if \(isWide && calExpanded\) \{ collapseCalRail\(\); return; \}/.test(app));
+    /if \(viewState\.isWide && calExpanded\) \{ collapseCalRail\(\); return; \}/.test(app));
   // --- Issue #156 / B98: the R1 top row is filled and meets the touch floor ---
   ok('the R1 row is filled at boot: each button gets its glyph + label (issue #156, B98)',
     /fillBoardAction\(el\.calBack, GLYPH\.calBack, COPY\.calBack\)/.test(app) &&
@@ -677,8 +677,8 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('import coercion carries the calendar link (cal strict key, calReq finite)',
     /\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$/.test(app) && /calReq: Number\.isFinite/.test(app));
   ok('the squeeze is render-time state: true frame kept, nothing stored (R6)',
-    /let calSqueeze = false/.test(app) && /LOGICAL_W_TRUE/.test(app) &&
-    /note\.rw = LOGICAL_W_TRUE \|\| LOGICAL_W/.test(app));
+    /calSqueeze: false/.test(app) && /LOGICAL_W_TRUE/.test(app) &&
+    /note\.rw = viewState\.LOGICAL_W_TRUE \|\| viewState\.LOGICAL_W/.test(app));
   // --- Issue #152 / B97: existing events are editable in place ---
   ok('an existing event line opens its existing editor on tap, with the caret re-asserted to the end after the native placement (issue #152, B97)',
     /line\.addEventListener\('click', \(e\) => \{\s*\n\s*if \(line\.hasAttribute\('contenteditable'\)\) return;\s*\n\s*e\.preventDefault\(\);\s*\n\s*startCalLineEdit\(line, ev\);\s*\n\s*setTimeout\(\(\) => caretToEnd\(line\), 0\);\s*\n\s*\}\)/.test(app));

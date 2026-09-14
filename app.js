@@ -21,9 +21,24 @@
 'use strict';
 
 /* --- 1. Constants & copy ------------------------------------------------- */
-let   LOGICAL_W = 900;               // mobile: = vw, the sheet is the viewport (B32); desktop: derived per layout (B20)
-let   LOGICAL_H = 1000;              // responsive: recomputed each layout to fill the viewport
-let   LEGACY_H = 1000;               // the LOGICAL_H the pre-B32 build would have produced
+/* The frame the render math reads and writes: one object (issue #176).
+   LOGICAL_W/H/LEGACY_H carry their B32/B20 comments below; the media-query
+   booleans are assigned where the MQs are declared (original order kept). */
+const viewState = {
+  LOGICAL_W: 900,                    // mobile: = vw, the sheet is the viewport (B32); desktop: derived per layout (B20)
+  LOGICAL_H: 1000,                   // responsive: recomputed each layout to fill the viewport
+  LEGACY_H: 1000,                    // the LOGICAL_H the pre-B32 build would have produced
+  renderScale: 1,
+  offX: 0,
+  offY: 0,
+  layoutDeferred: false,
+  editVVFloor: Infinity,
+  calSqueeze: false,
+  LOGICAL_W_TRUE: null,              // set only while squeezed
+  isTablet: false,                   // assigned where TABLET_MQ is declared, as before
+  isDesktop: false,                  // assigned where DESKTOP_MQ is declared, as before
+  isWide: false,                     // desktop ∪ tablet — the arrangement tier
+};
                                      // on this device. Read ONLY by migrateLegacyBoards
                                      // (B93): the render path no longer branches on it —
                                      // boot adopts every rh-less note onto the single
@@ -236,31 +251,31 @@ const CE = (() => {
    below 984 (B20/B96 already put 984–1023 mouse windows in the tablet
    arrangement; this extends the same, working behavior). */
 const TABLET_MQ = window.matchMedia('(min-width: 744px)');
-let isTablet = TABLET_MQ.matches;    // evaluated at load, like isDesktop below
+viewState.isTablet = TABLET_MQ.matches;         // evaluated at load, like isDesktop below
 
 const DESKTOP_MQ = window.matchMedia(
   '(min-width: 1024px) and (hover: hover) and (pointer: fine)');
-let isDesktop = DESKTOP_MQ.matches;
-let isWide = isDesktop || isTablet;   // desktop ∪ tablet — the arrangement tier
-document.documentElement.classList.toggle('desktop', isDesktop);
-document.documentElement.classList.toggle('tablet', isTablet);
-document.documentElement.classList.toggle('wide', isWide);
+viewState.isDesktop = DESKTOP_MQ.matches;
+viewState.isWide = viewState.isDesktop || viewState.isTablet;   // desktop ∪ tablet — the arrangement tier
+document.documentElement.classList.toggle('desktop', viewState.isDesktop);
+document.documentElement.classList.toggle('tablet', viewState.isTablet);
+document.documentElement.classList.toggle('wide', viewState.isWide);
 
 function applyMode() {
-  isDesktop = DESKTOP_MQ.matches;
-  isTablet = !isDesktop && TABLET_MQ.matches;
-  isWide = isDesktop || isTablet;
-  document.documentElement.classList.toggle('desktop', isDesktop);
+  viewState.isDesktop = DESKTOP_MQ.matches;
+  viewState.isTablet = !viewState.isDesktop && TABLET_MQ.matches;
+  viewState.isWide = viewState.isDesktop || viewState.isTablet;
+  document.documentElement.classList.toggle('desktop', viewState.isDesktop);
   // The wide class is the CSS arrangement gate — every `html.desktop` rule
   // that draws the rail or the picker overlay is a wide rule now (B96).
-  document.documentElement.classList.toggle('tablet', isTablet);
-  document.documentElement.classList.toggle('wide', isWide);
+  document.documentElement.classList.toggle('tablet', viewState.isTablet);
+  document.documentElement.classList.toggle('wide', viewState.isWide);
   // Teardown: nothing half-finished survives the flip.
   clearSelection();
   closeMenu();
   if (g) { clearTimeout(g.longPressTimer); g = null; }
   pointers.clear();
-  if (isWide && listOpen) returnToBoard();  // pop the whole list nav → board (B9 intact;
+  if (viewState.isWide && listOpen) returnToBoard();  // pop the whole list nav → board (B9 intact;
                                                // a drill is two levels deep, B74)
   // The calendar across the flip (issue #145): the panel arrangement belongs
   // to the wide grammar, so a flip while it is open closes it and pops its
@@ -280,7 +295,7 @@ function applyMode() {
     if (history.state && history.state.v === 'cal') history.back();
   }
   applyLayout();
-  if (isWide) {
+  if (viewState.isWide) {
     renderPane();
     showCalRail();                   // the rail re-renders on every flip to wide (B99)
   } else {
@@ -498,15 +513,15 @@ async function idbPut(rec) {
    issue #141, recorded as B93. */
 async function migrateLegacyBoards(all) {
   const adopt = (n) => {
-    const wRatio = LOGICAL_W / (n.rw || 900);             // B32's legacy width ratio
+    const wRatio = viewState.LOGICAL_W / (n.rw || 900);             // B32's legacy width ratio
     return {                                              // renderY's legacy branch,
       ...n,                                               // verbatim, incl. the clamp
       x: n.x * wRatio,                                    // that is what renders today
-      y: clamp(n.y * (LOGICAL_H / LEGACY_H),
-               0, Math.max(0, LOGICAL_H - HIT_FLOOR)),
+      y: clamp(n.y * (viewState.LOGICAL_H / viewState.LEGACY_H),
+               0, Math.max(0, viewState.LOGICAL_H - HIT_FLOOR)),
       scale: (n.scale || 1) * wRatio,                     // rebaseNote's fold (B40/B64)
-      rw: LOGICAL_W,
-      rh: LOGICAL_H,                                      // noteK ≡ 1 for this note, forever
+      rw: viewState.LOGICAL_W,
+      rh: viewState.LOGICAL_H,                                      // noteK ≡ 1 for this note, forever
     };
   };
   let adopted = 0;
@@ -540,7 +555,6 @@ async function idbGet(id) {
 
 /* --- 3. State + save queue ----------------------------------------------- */
 let current = null;                  // the open board record (in memory)
-let renderScale = 1, offX = 0, offY = 0;
 
 const noteEls = new Map();           // note.id -> element
 const lotEls = new Map();            // lotItem.id -> element
@@ -647,7 +661,7 @@ function persist() {
    expands FROM the rail, it doesn't add to it. */
 const CAL_RAIL_W = 40;               // the collapsed rail (mockup 6: 40px, right edge)
 function applyWideLayout(vw, vh) {
-  if (!isWide) return;
+  if (!viewState.isWide) return;
     // Wide (B20): the rail takes PANE_W unscaled; the sheet fills the rest.
     // Desktop reached it via B19's MQ; tablet joins by width alone (B96, issue
     // #155 — the unfolded Z Fold 7). Min-anchored scale — neither logical
@@ -660,31 +674,31 @@ function applyWideLayout(vw, vh) {
     // #158): the collapsed rail's 40px is reserved whether or not the panel
     // is open — the standing rail IS the reservation; expanded, the panel
     // takes the rail's place and its full width replaces the 40.
-    const calW = calSqueeze ? CAL_PANEL_W : CAL_RAIL_W;
-    renderScale = Math.min(vh / 1000, (vw - PANE_W - calW) / 900);
-    LOGICAL_H = vh / renderScale;
-    LOGICAL_W = (vw - PANE_W - calW) / renderScale;
-    LOGICAL_W_TRUE = calSqueeze
-      ? (vw - PANE_W - CAL_RAIL_W) / renderScale   // the frame the board returns to on collapse
+    const calW = viewState.calSqueeze ? CAL_PANEL_W : CAL_RAIL_W;
+    viewState.renderScale = Math.min(vh / 1000, (vw - PANE_W - calW) / 900);
+    viewState.LOGICAL_H = vh / viewState.renderScale;
+    viewState.LOGICAL_W = (vw - PANE_W - calW) / viewState.renderScale;
+    viewState.LOGICAL_W_TRUE = viewState.calSqueeze
+      ? (vw - PANE_W - CAL_RAIL_W) / viewState.renderScale   // the frame the board returns to on collapse
       : null;
-    offX = PANE_W;
-    offY = 0;
-    LEGACY_H = LOGICAL_H;            // desktop geometry is unchanged by B32
+    viewState.offX = PANE_W;
+    viewState.offY = 0;
+    viewState.LEGACY_H = viewState.LOGICAL_H;            // desktop geometry is unchanged by B32
 }
 
 function applyMobileLayout(vw, vh) {
-  if (isWide) return;
+  if (viewState.isWide) return;
   {
     // Mobile (B32, overrides B17): the sheet IS the viewport. B17's fill still
     // holds — a scale of 1 is uniform by construction, so no letterbox and no
     // distortion — but every declared px is now a real px, which is the whole
     // point: at 900-and-scale the furniture rendered at ~45% and was unreadable.
-    LOGICAL_W = vw;
-    LOGICAL_H = vh;
-    renderScale = 1;
-    offX = 0;
-    offY = 0;
-    LEGACY_H = 900 * vh / vw;        // the height B17 would have produced here
+    viewState.LOGICAL_W = vw;
+    viewState.LOGICAL_H = vh;
+    viewState.renderScale = 1;
+    viewState.offX = 0;
+    viewState.offY = 0;
+    viewState.LEGACY_H = 900 * vh / vw;        // the height B17 would have produced here
   }
 }
 
@@ -693,7 +707,7 @@ function checkListCapacity() {
     // Re-paginate the surface that is showing: the open list overlay (drill or
     // desktop picker) first, else the desktop rail behind it (issue #112 review).
     if (listOpen) renderListSurface();
-    else if (isWide && el.paneCards) renderPane();
+    else if (viewState.isWide && el.paneCards) renderPane();
   }
 }
 
@@ -712,16 +726,16 @@ function repositionNotes() {
 }
 
 function applyFrameCss() {
-  el.board.style.setProperty('--logical-w', LOGICAL_W + 'px');
-  el.board.style.setProperty('--logical-h', LOGICAL_H + 'px');
-  el.board.style.setProperty('--rs', renderScale);
-  el.board.style.setProperty('--offx', offX + 'px');
-  el.board.style.setProperty('--offy', offY + 'px');
+  el.board.style.setProperty('--logical-w', viewState.LOGICAL_W + 'px');
+  el.board.style.setProperty('--logical-h', viewState.LOGICAL_H + 'px');
+  el.board.style.setProperty('--rs', viewState.renderScale);
+  el.board.style.setProperty('--offx', viewState.offX + 'px');
+  el.board.style.setProperty('--offy', viewState.offY + 'px');
 }
 
 function applyLayout() {
   const vw = window.innerWidth, vh = window.innerHeight;
-  if (isWide) applyWideLayout(vw, vh);
+  if (viewState.isWide) applyWideLayout(vw, vh);
   else applyMobileLayout(vw, vh);
   applyFrameCss();
   // Both sections size to their content (B47): the band re-measures because a
@@ -768,8 +782,6 @@ function applyLayout() {
    too — the whole board would flinch at every keyboard. This deferral is the
    only thing standing between the soft keyboard and all of that. Do not
    weaken it. */
-let layoutDeferred = false;
-let editVVFloor = Infinity;          // smallest visual-viewport height seen this edit (keyboard fully up)
 
 function editingInBoard() {
   const a = document.activeElement;
@@ -787,25 +799,25 @@ function editingInBoard() {
    crosses the threshold even when the browser animates the return in steps. */
 function onViewportResize() {
   const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  if (!isDesktop && editingInBoard()) {
-    if (h <= editVVFloor) { editVVFloor = h; layoutDeferred = true; return; }
-    if (h > editVVFloor + KB_HIDE_SLOP) { document.activeElement.blur(); return; }
-    layoutDeferred = true; return;   // sub-threshold jitter: keep holding
+  if (!viewState.isDesktop && editingInBoard()) {
+    if (h <= viewState.editVVFloor) { viewState.editVVFloor = h; viewState.layoutDeferred = true; return; }
+    if (h > viewState.editVVFloor + KB_HIDE_SLOP) { document.activeElement.blur(); return; }
+    viewState.layoutDeferred = true; return;   // sub-threshold jitter: keep holding
   }
   applyLayout();
 }
 
 /* --- 5. Coordinate + caret helpers --------------------------------------- */
 const toLogical = (clientX, clientY) => {
-  const x = (clientX - offX) / renderScale;
-  const y = (clientY - offY) / renderScale;
+  const x = (clientX - viewState.offX) / viewState.renderScale;
+  const y = (clientY - viewState.offY) / viewState.renderScale;
   // The calendar squeeze (R6 clause 1): while the panel is open the frame is
   // narrowed, so a raw read would write squeezed-frame coordinates that shift
   // when the squeeze lifts. Un-map proportionally into the TRUE frame —
   // the frame the board returns to on close — so a grab's rebaseNote (the one
   // licensed write, B21) stamps where the user sees the note land in the room
   // it returns to. y is untouched (the squeeze is horizontal).
-  return { x: LOGICAL_W_TRUE ? x * (LOGICAL_W_TRUE / LOGICAL_W) : x, y };
+  return { x: viewState.LOGICAL_W_TRUE ? x * (viewState.LOGICAL_W_TRUE / viewState.LOGICAL_W) : x, y };
 };
 
 /* The calendar squeeze (R6): when the calendar panel is open on desktop or
@@ -823,13 +835,11 @@ const toLogical = (clientX, clientY) => {
    board renders exactly where it was. Export ignores the squeeze entirely
    (exportX/exportY read storage; R6's second clause). Overlap during the
    squeeze is accepted (R6, the owner's word) — no auto-untangling. */
-let calSqueeze = false;
-let LOGICAL_W_TRUE = null;           // set only while squeezed
 const CAL_PANEL_W = 320;             // unscaled CSS px the panel takes (mockup 6's ~⅓)
 
 function setCalSqueeze(on) {
-  if (calSqueeze === on) return;
-  calSqueeze = on;
+  if (viewState.calSqueeze === on) return;
+  viewState.calSqueeze = on;
   if (current) applyLayout();
 }
 
@@ -875,7 +885,7 @@ function setCalSqueeze(on) {
 const noteKFor = (n, frameW, frameH) =>
   Math.min(frameW / (n.rw || 900), frameH / n.rh);
 
-const noteK = (note) => noteKFor(note, LOGICAL_W, LOGICAL_H);
+const noteK = (note) => noteKFor(note, viewState.LOGICAL_W, viewState.LOGICAL_H);
 const renderX  = (note) => note.x * noteK(note);
 const effScale = (note) => (note.scale || 1) * noteK(note);
 const renderY  = (note) => note.y * noteK(note);
@@ -896,8 +906,8 @@ function rebaseNote(note) {
   // grab against the TRUE frame — the one the board returns to on close —
   // so the note lands permanently where the user sees it land. (toLogical
   // has already un-mapped the drag's client point into true coordinates.)
-  note.rw = LOGICAL_W_TRUE || LOGICAL_W;
-  note.rh = LOGICAL_H;
+  note.rw = viewState.LOGICAL_W_TRUE || viewState.LOGICAL_W;
+  note.rh = viewState.LOGICAL_H;
   // The wrap cap is NOT silent here, and that is deliberate (B64): under
   // min-k, rw = LOGICAL_W can exceed the old rw·k whenever the height ratio
   // binds, so (rw − x)/scale — B39's cap — can WIDEN at the grab (never
@@ -977,7 +987,7 @@ const lotH = () => {
   for (const node of lotEls.values()) sum += node.offsetHeight;
   return Math.min(
     LOT_HEAD + Math.max(LOT_FLOOR, Math.round(sum)),
-    Math.round(LOGICAL_H * LOT_MAX_FRAC)
+    Math.round(viewState.LOGICAL_H * LOT_MAX_FRAC)
   );
 };
 
@@ -1009,7 +1019,7 @@ function updateBoardGeometry() {
   // fractional (13px × 1.3 + 2px padding ≈ 20.9), so offsetHeight can round it
   // up half a pixel and leave the collar a sub-pixel short of the floor: a
   // half-pixel of headroom keeps the rendered box at or above it.
-  el.boardActions.style.setProperty('--hit', (hitInset(el.boardActions, renderScale) + 0.5) + 'px');
+  el.boardActions.style.setProperty('--hit', (hitInset(el.boardActions, viewState.renderScale) + 0.5) + 'px');
 }
 
 /* §6/B7's law is not the note's alone: any board-space target expands its hit
@@ -1017,13 +1027,13 @@ function updateBoardGeometry() {
    draws at — one arithmetic, both callers. */
 function hitInset(node, k) {
   const physW = node.offsetWidth * k, physH = node.offsetHeight * k;   // logical x draw scale
-  const floor = isDesktop ? HIT_FLOOR_DESKTOP : HIT_FLOOR;
+  const floor = viewState.isDesktop ? HIT_FLOOR_DESKTOP : HIT_FLOOR;
   return Math.max(0, (floor - physW) / 2, (floor - physH) / 2) / (k || 1);
 }
 
 function setHitInset(node, note) {
   // effScale x renderScale is what the note draws at (issue #57).
-  node.style.setProperty('--hit', hitInset(node, effScale(note) * renderScale) + 'px');
+  node.style.setProperty('--hit', hitInset(node, effScale(note) * viewState.renderScale) + 'px');
 }
 
 function placeCaretAtPoint(node, clientX, clientY) {
@@ -1365,7 +1375,7 @@ function pruneLinks(board) {
    commitAction). A persistent hint states the act; clearLink retracts it. */
 function beginLink(id) {
   linkSource = id;
-  showNotice(isDesktop ? COPY.linkHintClick : COPY.linkHintTap, 'link');
+  showNotice(viewState.isDesktop ? COPY.linkHintClick : COPY.linkHintTap, 'link');
 }
 function clearLink() {
   if (linkSource === null) return;
@@ -1524,13 +1534,13 @@ function onPointerDown(e) {
   // Resize is single-selection only, by design (issue #55): with two or more
   // selected the CSS hides the grip, and this guard keeps the gesture honest
   // even if a stray hit reaches the frame.
-  if (isDesktop && target.type === 'sel-frame' && selected && selected.kind === 'note' &&
+  if (viewState.isDesktop && target.type === 'sel-frame' && selected && selected.kind === 'note' &&
       multiSel.size <= 1) {
     startResize(e);
   }
   try { el.board.setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone */ }
 
-  if (!isDesktop && HAS_MENU.has(target.type)) {   // desktop removes click-and-hold entirely (issue #4)
+  if (!viewState.isDesktop && HAS_MENU.has(target.type)) {   // desktop removes click-and-hold entirely (issue #4)
     g.longPressTimer = setTimeout(() => {
       if (!g || g.mode !== 'pending' || g.moved) return;
       g.longPressed = true;
@@ -1697,16 +1707,16 @@ function tapCanvas(x, y) {
   // Creation surfaces deselect first (issue #12 desktop / #41 mobile):
   // with a selection active a tap only dismisses; capture is only primary
   // when nothing is selected or being edited.
-  if (isDesktop && selected) { clearSelection(); return; }
-  if (!isDesktop && engaged) { clearEngaged(); return; }   // mobile: tap-away deselects; a further tap creates (issue #136, B90)
+  if (viewState.isDesktop && selected) { clearSelection(); return; }
+  if (!viewState.isDesktop && engaged) { clearEngaged(); return; }   // mobile: tap-away deselects; a further tap creates (issue #136, B90)
   createNote(x, y);                // capture is instant on both (B27, B81)
 }
 
 /* Creation surface, same #54 law as tapCanvas (see above). */
 function tapLot(x, y) {
   if (isEditing(document.activeElement)) { document.activeElement.blur(); return; }
-  if (isDesktop && selected) { clearSelection(); return; }   // creation surface too
-  if (!isDesktop && engaged) { clearEngaged(); return; }   // mobile: tap-away deselects (issue #136, B90)
+  if (viewState.isDesktop && selected) { clearSelection(); return; }   // creation surface too
+  if (!viewState.isDesktop && engaged) { clearEngaged(); return; }   // mobile: tap-away deselects (issue #136, B90)
   createLotItem();                 // capture is instant on both (B27, B81)
 }
 
@@ -1721,7 +1731,7 @@ function tapNote(target, x, y, shift) {
   const node = target.node;
   const note = current.notes.find(n => n.id === node.dataset.id);
   if (!note) return;
-  if (isDesktop) {
+  if (viewState.isDesktop) {
     // An open editor commits before the click acts (issue #54); on the
     // edited note's own collar the click only dismisses.
     if (commitOpenEditor(node)) return;
@@ -1773,7 +1783,7 @@ function tapLotItem(target, x, y) {
   const node = target.node;
   const item = current.parkingLot.find(i => i.id === node.dataset.id);
   if (!item) return;
-  if (isDesktop) {
+  if (viewState.isDesktop) {
     if (commitOpenEditor(node)) return;
     const key = 'lot:' + item.id, now = Date.now();
     if (selected && selected.kind === 'lot' && selected.id === item.id &&
@@ -1824,8 +1834,8 @@ function createNote(clientX, clientY) {
   // x is floored NOTE_MIN_W back from the right edge (B84): a new note is at
   // least a toolbar wide, so its left edge must leave that much room or the
   // frame would spill off the sheet. y keeps its 4px keep-on-page clamp.
-  const note = { id: uuid(), text: '', x: clamp(pt.x, 0, Math.max(0, LOGICAL_W - NOTE_MIN_W)),
-                 y: clamp(pt.y, 0, LOGICAL_H - 4), rw: LOGICAL_W, rh: LOGICAL_H,
+  const note = { id: uuid(), text: '', x: clamp(pt.x, 0, Math.max(0, viewState.LOGICAL_W - NOTE_MIN_W)),
+                 y: clamp(pt.y, 0, viewState.LOGICAL_H - 4), rw: viewState.LOGICAL_W, rh: viewState.LOGICAL_H,
                  scale: 1.0, state: 'active' };
   current.notes.push(note);                          // top of z-order
   const node = makeNoteEl(note);
@@ -1854,11 +1864,11 @@ function onEditFocusOut(e) {
   if (t.classList.contains('note-text')) commitNote(t.closest('.note'));
   else if (t.classList.contains('lot-text')) commitLot(t.closest('.lot-item'));
   else if (t.classList.contains('anchor')) commitAnchor(t);
-  editVVFloor = Infinity;   // next edit measures its own keyboard-up floor (B80)
+  viewState.editVVFloor = Infinity;   // next edit measures its own keyboard-up floor (B80)
   // A viewport change held back during the edit lands now that nothing is at
   // stake — the keyboard's own retraction resize would repeat it, but a
   // rotation or fold has no such second chance.
-  if (layoutDeferred) { layoutDeferred = false; requestAnimationFrame(applyLayout); }
+  if (viewState.layoutDeferred) { viewState.layoutDeferred = false; requestAnimationFrame(applyLayout); }
 }
 document.addEventListener('focusout', onEditFocusOut);
 
@@ -1874,7 +1884,7 @@ function onEditFocusIn(e) {
   } else if (t.classList.contains('note')) {
     const note = current && current.notes.find(n => n.id === t.dataset.id);
     if (!note) return;
-    if (isDesktop) {
+    if (viewState.isDesktop) {
       // Tab selects; Enter edits (issue #13) — EXCEPT the menu's own focus
       // return (issue #55): closeMenu hands focus back to the right-clicked
       // member, and that hand-back must not collapse the multi-selection the
@@ -1887,7 +1897,7 @@ function onEditFocusIn(e) {
   } else if (t.classList.contains('lot-item')) {
     const item = current && current.parkingLot.find(i => i.id === t.dataset.id);
     if (!item) return;
-    if (isDesktop) { selectLot(item.id); return; }
+    if (viewState.isDesktop) { selectLot(item.id); return; }
     if (item.state === 'active') editText(t.querySelector('.lot-text'));
   }
 }
@@ -1897,7 +1907,7 @@ document.addEventListener('focusin', onEditFocusIn);
    menuKeyHandler owns Escape/Tab/arrows there, and Delete must not destroy the
    selection underneath an open menu (issue #10). */
 function onDesktopKeydown(e) {
-  if (!isDesktop || menuOpen) return;
+  if (!viewState.isDesktop || menuOpen) return;
   // While a link is armed, Escape cancels it and every other key is inert (B91) —
   // no selection exists to Delete/Enter into, and this must win over the grammar.
   if (linkSource !== null) { if (e.key === 'Escape') clearLink(); return; }
@@ -1947,7 +1957,7 @@ function onLiveEditInput(e) {
   } else if (t.classList.contains('anchor')) {
     current[t.dataset.anchor] = t.textContent;
     t.classList.toggle('filled', !!t.textContent.length);
-    if (t.dataset.anchor === 'title' && isDesktop) updateActiveCardTitle();
+    if (t.dataset.anchor === 'title' && viewState.isDesktop) updateActiveCardTitle();
     if (t.dataset.anchor === 'title') syncViewTitle();   // the tab carries the board's name, live (issue #148 item 2)
     // The band sizes to its tallest zone, live (B47) — and the title now has a
     // geometry consequence of its own: the compartment's handle rides its
@@ -1995,7 +2005,7 @@ function removeLotSilently(item, node) {
 function commitAnchor(node) {
   current[node.dataset.anchor] = node.textContent;
   node.classList.toggle('filled', !!node.textContent.length);
-  if (isDesktop && node.dataset.anchor === 'title') renderPane(); // reconcile the date line
+  if (viewState.isDesktop && node.dataset.anchor === 'title') renderPane(); // reconcile the date line
   updateBoardGeometry();      // the band follows its zones (B47), the handle its card (B65)
   saveNow();
 }
@@ -2013,7 +2023,7 @@ function startDrag() {
   // others keep their z-order; every member wears .pressed. Grabbing a
   // non-member falls through to the single path, which collapses the set
   // (selectNote below) — today's behavior.
-  if (isDesktop && multiSel.size > 1 && multiSel.has(note.id)) {
+  if (viewState.isDesktop && multiSel.size > 1 && multiSel.has(note.id)) {
     g.group = [];
     for (const id of selectedNoteIds()) {
       const n = current.notes.find(m => m.id === id);
@@ -2029,8 +2039,8 @@ function startDrag() {
         // the single path below (B40). Members hitting different clamps can
         // compress the group's relative geometry at the sheet edge — accepted
         // (B41): the alternative is a note the group can never park flush.
-        minX: Math.min(0, n.x), maxX: Math.max(n.x, Math.max(0, LOGICAL_W - fw)),
-        minY: Math.min(0, n.y), maxY: Math.max(n.y, Math.max(0, LOGICAL_H - fh)),
+        minX: Math.min(0, n.x), maxX: Math.max(n.x, Math.max(0, viewState.LOGICAL_W - fw)),
+        minY: Math.min(0, n.y), maxY: Math.max(n.y, Math.max(0, viewState.LOGICAL_H - fh)),
       });
       memberNode.classList.add('pressed');
     }
@@ -2039,7 +2049,7 @@ function startDrag() {
     return;
   }
   rebaseNote(note);                  // grab math runs in current-frame units (issue #15)
-  if (isDesktop) { selectNote(note.id); setSelectionHidden(true); }
+  if (viewState.isDesktop) { selectNote(note.id); setSelectionHidden(true); }
   g.grabDX = startLogical.x - note.x;
   g.grabDY = startLogical.y - note.y;
   // Outer x range, fixed once and widened to include the grab position (B40):
@@ -2056,9 +2066,9 @@ function startDrag() {
   const footW = node.offsetWidth * note.scale, footH = node.offsetHeight * note.scale;
   g.dragMinX = Math.min(0, note.x);
   g.dragMaxX = Math.max(note.x,
-    Math.max(0, LOGICAL_W - Math.min(footW, NOTE_MIN_W * note.scale)));
+    Math.max(0, viewState.LOGICAL_W - Math.min(footW, NOTE_MIN_W * note.scale)));
   g.dragMinY = Math.min(0, note.y);
-  g.dragOverY = Math.max(0, note.y + footH - LOGICAL_H);
+  g.dragOverY = Math.max(0, note.y + footH - viewState.LOGICAL_H);
   // Reflow-guard caches (issue #53): the cap the node is wearing right now
   // (the grab rebase re-asserted it — under B64's min-k the rebase can widen
   // the cap, so rebaseNote writes the var before anything here measures) and
@@ -2094,8 +2104,8 @@ function settleDragFoot(note, node, force) {
     g.dragH = node.offsetHeight;
   }
   const footW = g.dragW * note.scale, footH = g.dragH * note.scale;
-  if (note.x + footW > LOGICAL_W) note.x = Math.max(g.dragMinX, LOGICAL_W - footW);
-  note.y = Math.min(note.y, Math.max(g.dragMinY, LOGICAL_H - footH + g.dragOverY));
+  if (note.x + footW > viewState.LOGICAL_W) note.x = Math.max(g.dragMinX, viewState.LOGICAL_W - footW);
+  note.y = Math.min(note.y, Math.max(g.dragMinY, viewState.LOGICAL_H - footH + g.dragOverY));
   node.style.left = note.x + 'px';
   node.style.top = note.y + 'px';
   updateLinks();                     // a dragged note's links follow it live (B91)
@@ -2134,7 +2144,7 @@ function endDrag() {
     g.target.node.classList.remove('pressed');
     saveNow();
     updateLinks();                   // final settle: links land on the dropped notes (B91)
-    if (isDesktop) updateSelectionUI();
+    if (viewState.isDesktop) updateSelectionUI();
     return;
   }
   const note = g.note, node = g.target.node;
@@ -2146,7 +2156,7 @@ function endDrag() {
   node.classList.remove('pressed');
   saveNow();
   reflectToolbarFlip(node, note);    // a drop near the sheet top flips the row (B84)
-  if (isDesktop) updateSelectionUI();  // reposition + unhide at the drop point
+  if (viewState.isDesktop) updateSelectionUI();  // reposition + unhide at the drop point
 }
 
 /* Pinch (PRD §6.3 / UIUX §5): transform scale only, clamp 0.5–2.0 (bounds
@@ -2179,8 +2189,8 @@ function applyNoteScale(note, node, scale) {
   // and pins the note to the corner. Min/max of the same pair inverts the
   // constraint instead — sheet-inside-note where note-inside-sheet is
   // impossible. For a fitting note this is the old clamp unchanged.
-  note.x = clamp(note.x, Math.min(0, LOGICAL_W - footW), Math.max(0, LOGICAL_W - footW));
-  note.y = clamp(note.y, Math.min(0, LOGICAL_H - footH), Math.max(0, LOGICAL_H - footH));
+  note.x = clamp(note.x, Math.min(0, viewState.LOGICAL_W - footW), Math.max(0, viewState.LOGICAL_W - footW));
+  note.y = clamp(note.y, Math.min(0, viewState.LOGICAL_H - footH), Math.max(0, viewState.LOGICAL_H - footH));
   node.style.left = note.x + 'px';
   node.style.top = note.y + 'px';
   setHitInset(node, note);
@@ -2811,7 +2821,7 @@ el.actionCalendar.addEventListener('click', () => {
   // The rail is wide's entry (B99); the tab is mobile's and pushes its own
   // history state { v: 'cal' }: the OS back gesture returns from it (B9,
   // unshadowed), and its OWN Back button is the always-visible route (R1).
-  if (isWide) { showCal(); return; }
+  if (viewState.isWide) { showCal(); return; }
   history.pushState({ v: 'cal' }, '');
   showCal();
 });
@@ -2839,7 +2849,7 @@ el.boardActions.addEventListener('keydown', (e) => {
    still falls through to the browser's own menu, as before; the board card's own
    contextmenu listener (its delete menu, B24) is a different element, untouched. */
 el.board.addEventListener('contextmenu', (ev) => {
-  if (!isDesktop) return;                           // mobile arms Link by long-press
+  if (!viewState.isDesktop) return;                           // mobile arms Link by long-press
   if (linkSource) { ev.preventDefault(); return; }  // already arming: left-click a note to finish
   const noteNode = ev.target.closest('.note');
   if (!noteNode || isEditing(ev.target)) return;    // non-note / text edit keeps the native menu
@@ -3749,8 +3759,8 @@ function normalizeImportedBoard(raw) {
       text: text(n.text).trimEnd(),
       x: Number.isFinite(n.x) ? n.x : 0,
       y: Number.isFinite(n.y) ? n.y : 0,
-      rw: Number.isFinite(n.rw) ? n.rw : LOGICAL_W,
-      rh: Number.isFinite(n.rh) ? n.rh : LOGICAL_H,
+      rw: Number.isFinite(n.rw) ? n.rw : viewState.LOGICAL_W,
+      rh: Number.isFinite(n.rh) ? n.rh : viewState.LOGICAL_H,
       scale: Number.isFinite(n.scale) && n.scale > 0 ? n.scale : 1.0,
       state: n.state === 'complete' ? 'complete' : 'active',
       highlighted: n.highlighted === true,
@@ -3836,7 +3846,7 @@ async function importBoardsJson(file) {
     renderBoard();
   }
   if (listOpen) await renderListSurface();
-  else if (isWide) renderPane();     // the rail re-reads; the sheet is already right
+  else if (viewState.isWide) renderPane();     // the rail re-reads; the sheet is already right
   showNotice(COPY.imported, 'import', UNDO_MS);
 }
 
@@ -3953,11 +3963,11 @@ let dragCancel = null;                 // the live card-drag's teardown, if one 
    #112 / B74): the drill shows one category alone, so it must not subtract the
    furniture of three sections that are not there. */
 function catPageCap(filled, drawn) {
-  const host = isDesktop ? el.paneCards : el.listRows;
+  const host = viewState.isDesktop ? el.paneCards : el.listRows;
   if (!host) return 1;
   const total = drawn || BOARD_CATS.length;
-  const head = isDesktop ? PANE_CAT_HEAD : LIST_CAT_ROW;
-  const pager = isDesktop ? PANE_PAGER_H : LIST_CAT_ROW;
+  const head = viewState.isDesktop ? PANE_CAT_HEAD : LIST_CAT_ROW;
+  const pager = viewState.isDesktop ? PANE_PAGER_H : LIST_CAT_ROW;
   const n = Math.max(1, Math.min(total, filled | 0));
   // The content box, not clientHeight: the list's own bottom padding sits
   // inside clientHeight and outside the flex line, and at B68's row heights
@@ -3975,9 +3985,9 @@ function catPageCap(filled, drawn) {
   // their product, so the pager still counts cards and B42's law is untouched.
   // The mobile list card is taller than the rail's (B82: two title lines + the
   // Last Updated line), so each surface budgets against its own row height.
-  const rowH = isDesktop ? PANE_ROW_H : LIST_CARD_H;
+  const rowH = viewState.isDesktop ? PANE_ROW_H : LIST_CARD_H;
   const rows = Math.max(1, Math.floor((avail / n - head - pager) / (rowH + PANE_ROW_GAP)));
-  return rows * (isDesktop ? 1 : LIST_CARD_COLS);
+  return rows * (viewState.isDesktop ? 1 : LIST_CARD_COLS);
 }
 
 /* One section, both surfaces: head, add, cards, pager — the same four children
@@ -4109,7 +4119,7 @@ async function dropBoardCard(b, cat) {
     const rec = await idbGet(b.id);
     if (rec) { rec.category = cat; rec.catStamp = Date.now(); await idbPut(rec); }
   }
-  if (isWide) renderPane(); else renderListSurface();
+  if (viewState.isWide) renderPane(); else renderListSurface();
 }
 
 /* Since issue #112 / B74 the All-Boards menu is a category PICKER, and the
@@ -4185,7 +4195,7 @@ function makeListRow(b) {
   // reaches the same Export/Delete menu by right-click, exactly as the rail card
   // does (makePaneRow), so a board can be exported or deleted from the drill.
   card.addEventListener('contextmenu', (ev) => {
-    if (!isDesktop) return;              // mobile keeps its native context menu; the hold is the path
+    if (!viewState.isDesktop) return;              // mobile keeps its native context menu; the hold is the path
     ev.preventDefault();
     let x = ev.clientX, y = ev.clientY;
     if (!x && !y) {                      // Shift+F10 fires contextmenu at 0,0
@@ -4243,7 +4253,7 @@ function attachBoardCardGestures(card, row, b, opts) {
     card.setPointerCapture(e.pointerId);
     // Mobile summons the board menu by hold; desktop reaches the same menu by
     // right-click, on the card's own contextmenu listener (B24).
-    if (!isDesktop) t = setTimeout(() => {
+    if (!viewState.isDesktop) t = setTimeout(() => {
       longed = true;
       if (navigator.vibrate) navigator.vibrate(10);
       openBoardRowMenu(row, b, sx, sy);
@@ -4260,7 +4270,7 @@ function attachBoardCardGestures(card, row, b, opts) {
       dragCancel = () => { down = false; dragging = false; clearDrag(); };
       row.classList.add('card-dragging');
       // The same "the gesture just changed mode" signal the hold gives.
-      if (!isDesktop && navigator.vibrate) navigator.vibrate(10);
+      if (!viewState.isDesktop && navigator.vibrate) navigator.vibrate(10);
       ghost = card.cloneNode(true);
       ghost.classList.add('card-drag-ghost');
       // The ghost is fixed to the viewport off document.body, which takes it
@@ -4323,7 +4333,7 @@ async function deleteBoard(id, row) {
   // return, so heal it now, or the next interaction dereferences current.notes
   // (review finding 2). This holds whether the delete came from the rail or the
   // desktop drilled-category overlay.
-  if (isDesktop && wasCurrent) await ensureCurrentValid();
+  if (viewState.isDesktop && wasCurrent) await ensureCurrentValid();
   if (listOpen) {
     // Re-paginate the visible list overlay (the drill, either platform, or the
     // desktop picker). The row's own leave() plays first, so a delete on a full
@@ -4331,7 +4341,7 @@ async function deleteBoard(id, row) {
     // rail behind a desktop drill is hidden — rendering it here would leave the
     // visible drill with the hole (issue #112 review).
     setTimeout(renderListSurface, LEAVE_MS);
-  } else if (isWide) {
+  } else if (viewState.isWide) {
     renderPane();
   }
   showUndo(async () => {
@@ -4340,7 +4350,7 @@ async function deleteBoard(id, row) {
     // either platform), else the desktop rail — reopening the board there if it
     // was the one showing (issue #112 review).
     if (listOpen) { renderListSurface(); return; }
-    if (isWide) { if (wasCurrent) swapBoard(snapshot.id); else renderPane(); }
+    if (viewState.isWide) { if (wasCurrent) swapBoard(snapshot.id); else renderPane(); }
   }, 'board');
 }
 
@@ -4440,7 +4450,7 @@ async function swapBoard(id) {
    same drag, same head/add/cards/pager grid as the mobile list (B63) — the
    rail's skin only tightens the row heights and the control's label. */
 async function renderPane() {
-  if (!isWide || !el.paneCards) return;   // wide: the rail exists on tablet too (B96)
+  if (!viewState.isWide || !el.paneCards) return;   // wide: the rail exists on tablet too (B96)
   // A re-render tears the captured card out from under a live drag — pointerup
   // would never arrive, stranding the fixed ghost on screen. Cancel it first.
   if (dragCancel) dragCancel();
@@ -4610,7 +4620,7 @@ async function ensureCurrentValid() {
    there is no panel to fall, and its own tests expect an instant hide. */
 function hideListView() {
   el.listView.classList.remove('show');
-  if (isWide) { el.listView.hidden = true; return; }
+  if (viewState.isWide) { el.listView.hidden = true; return; }
   setTimeout(() => {
     if (!el.listView.classList.contains('show')) el.listView.hidden = true;
   }, LEAVE_MS);
@@ -4622,7 +4632,7 @@ async function showBoardFromList() {
   hideListView();                      // slide the drilled panel down, then hide (B82)
   if (!current) { await ensureCurrentValid(); }
   else { renderBoard(); }
-  if (isWide) renderPane();         // a board opened from the #list-view drill lights its rail card
+  if (viewState.isWide) renderPane();         // a board opened from the #list-view drill lights its rail card
 }
 
 /* --- 11.6 The rolling temporal calendar (issue #145) ----------------------
@@ -4652,7 +4662,7 @@ function goCalBack() {
    arrow) returns the rail. The rail commits nothing (B81: navigation runs
    raw); no history is pushed on wide, the rail is never "off". */
 function renderCalRail() {
-  if (!isWide) return;
+  if (!viewState.isWide) return;
   el.calView.hidden = false;          // the rail is standing furniture: never hidden on wide
   const today = new Date();
   const p = (n) => String(n).padStart(2, '0');
@@ -4703,7 +4713,7 @@ function collapseCalRail() {
 function showCal() {
   // Wide enters through the standing rail (B99); mobile keeps the pushed
   // full-screen view (B95's mobile path, unchanged).
-  if (isWide) { showCalRail(); return; }
+  if (viewState.isWide) { showCalRail(); return; }
   calOpen = true;
   closeLotMenu();
   hideListView();
@@ -4711,8 +4721,8 @@ function showCal() {
   syncBoardActions();
   // The squeeze is the desktop/tablet arrangement (R3/R6): the panel takes
   // real width beside the board; on mobile the calendar is the full screen.
-  el.calView.classList.toggle('panel', isWide);
-  setCalSqueeze(isWide);
+  el.calView.classList.toggle('panel', viewState.isWide);
+  setCalSqueeze(viewState.isWide);
   renderCal();
 }
 
@@ -4722,13 +4732,13 @@ function hideCal() {
   if (!calOpen && !calExpanded) return;
   calOpen = false;
   calExpanded = false;
-  el.calView.hidden = !isWide;       // wide: the rail face remains (furniture, B99)
+  el.calView.hidden = !viewState.isWide;       // wide: the rail face remains (furniture, B99)
   el.calView.classList.remove('panel');   // the expanded face lifts
-  el.calView.classList.toggle('rail-open', isWide);
-  el.calRail.hidden = !isWide;
+  el.calView.classList.toggle('rail-open', viewState.isWide);
+  el.calRail.hidden = !viewState.isWide;
   setCalSqueeze(false);              // the squeeze lifts; the frame returns (R6)
   syncBoardActions();
-  if (!isWide) renderBoard();
+  if (!viewState.isWide) renderBoard();
   else renderCalRail();
 }
 
@@ -4909,16 +4919,16 @@ el.calBack.addEventListener('click', () => {
   // On wide, Back IS the collapse arrow (B99): the panel returns to the rail,
   // the squeeze lifts — no history to pop (the rail pushed none). On mobile,
   // Back pops the pushed {v:'cal'} state (B9's route, visible — R1).
-  if (isWide && calExpanded) { collapseCalRail(); return; }
+  if (viewState.isWide && calExpanded) { collapseCalRail(); return; }
   goCalBack();
 });
 el.calRail.addEventListener('click', () => {
   // Furniture's one act: expand (B99). Pure navigation, no commit (B81).
-  if (!isWide || calExpanded) return;
+  if (!viewState.isWide || calExpanded) return;
   expandCalRail();
 });
 el.calBoards.addEventListener('click', (e) => {
-  if (isDesktop) return;               // B100: no All-Boards on desktop — the rail is the all-boards surface
+  if (viewState.isDesktop) return;               // B100: no All-Boards on desktop — the rail is the all-boards surface
   const r = e.currentTarget.getBoundingClientRect();
   history.pushState({ v: 'list' }, '');
   listOpen = true;
@@ -4954,11 +4964,11 @@ window.addEventListener('popstate', () => {
   if (s && s.v === 'cal') { showCal(); }
   else if (calOpen || calExpanded) { hideCal(); }     // landing anywhere else closes the calendar first
   else if (s && s.v === 'cat') {
-    if (isDesktop) { showBoardFromList(); }   // B100: desktop has no drill either — a stray landing (old-build history) heals to the board
+    if (viewState.isDesktop) { showBoardFromList(); }   // B100: desktop has no drill either — a stray landing (old-build history) heals to the board
     else { showCat(s.cat); }
   }
   else if (s && s.v === 'list') {
-    if (isDesktop) { showBoardFromList(); }   // B100: desktop pushes no {v:'list'} — a stray landing (old-build history) heals to the board
+    if (viewState.isDesktop) { showBoardFromList(); }   // B100: desktop pushes no {v:'list'} — a stray landing (old-build history) heals to the board
     else { catView = null; hideListView(); showList(); }  // the drill's panel slides down as the grid returns (B82)
   }
   else { showBoardFromList(); }
@@ -4992,12 +5002,12 @@ async function boot() {
                                                     // open or debounced yet
   const board = await pickLaunchBoard(all);
   openBoardObj(board);
-  if (isWide) renderPane();
+  if (viewState.isWide) renderPane();
   // The standing calendar rail (issue #158, B99): furniture renders at boot on
   // wide, no press required. The has-cal-rail class gates its CSS (the
   // section must not render as a 40px sliver where the feature isn't armed).
   // Mobile never sees it (its calendar stays the tab-driven full-screen view).
-  if (isWide) {
+  if (viewState.isWide) {
     document.documentElement.classList.add('has-cal-rail');
     showCalRail();
   }

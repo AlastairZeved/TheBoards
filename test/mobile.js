@@ -688,7 +688,7 @@ async function openCat(page, cat) {
     const cal = await page.evaluate(() => ({
       panel: document.getElementById('cal-view').classList.contains('panel'),
       w: document.getElementById('cal-view').getBoundingClientRect().width,
-      squeeze: typeof calSqueeze !== 'undefined' && calSqueeze,
+      squeeze: viewState.calSqueeze,
     }));
     ok('the rail expands into the docked panel (B99 + the issue #155 arrangement)',
       cal.panel && cal.w === 320 && cal.squeeze, JSON.stringify(cal));
@@ -697,7 +697,7 @@ async function openCat(page, cat) {
     const back = await page.evaluate(() => ({
       railOpen: document.getElementById('cal-view').classList.contains('rail-open'),
       w: document.getElementById('cal-view').getBoundingClientRect().width,
-      squeeze: typeof calSqueeze !== 'undefined' && calSqueeze,
+      squeeze: viewState.calSqueeze,
     }));
     ok('Back collapses to the standing rail, squeeze lifted (B99)',
       back.railOpen && back.w === 40 && !back.squeeze, JSON.stringify(back));
@@ -2120,8 +2120,8 @@ async function openCat(page, cat) {
     const { ctx, page, errors } = await newMobilePage(browser);
     await page.evaluate(() => {
       current.notes.length = 0; if (current.links) current.links.length = 0;
-      current.notes.push({ id:'la', text:'Alpha', x:80,  y:250, rw:LOGICAL_W, rh:LOGICAL_H, scale:1, state:'active' });
-      current.notes.push({ id:'lb', text:'Bravo', x:190, y:600, rw:LOGICAL_W, rh:LOGICAL_H, scale:1, state:'active' });
+      current.notes.push({ id:'la', text:'Alpha', x:80,  y:250, rw:viewState.LOGICAL_W, rh:viewState.LOGICAL_H, scale:1, state:'active' });
+      current.notes.push({ id:'lb', text:'Bravo', x:190, y:600, rw:viewState.LOGICAL_W, rh:viewState.LOGICAL_H, scale:1, state:'active' });
       renderBoard();
     });
     await page.waitForTimeout(120);

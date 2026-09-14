@@ -1638,8 +1638,8 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     const { ctx, page, errors } = await newDesktopPage(browser);
     await page.evaluate(() => {
       current.notes.length = 0; if (current.links) current.links.length = 0;
-      current.notes.push({ id:'la', text:'Alpha', x:90,  y:250, rw:LOGICAL_W, rh:LOGICAL_H, scale:1, state:'active' });
-      current.notes.push({ id:'lb', text:'Bravo', x:200, y:640, rw:LOGICAL_W, rh:LOGICAL_H, scale:1, state:'active' });
+      current.notes.push({ id:'la', text:'Alpha', x:90,  y:250, rw:viewState.LOGICAL_W, rh:viewState.LOGICAL_H, scale:1, state:'active' });
+      current.notes.push({ id:'lb', text:'Bravo', x:200, y:640, rw:viewState.LOGICAL_W, rh:viewState.LOGICAL_H, scale:1, state:'active' });
       renderBoard();
     });
     await page.waitForTimeout(150);
@@ -1744,7 +1744,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
         const a = recs.find((r) => r.title === 'Migrate alpha');
         const b = recs.find((r) => r.title === 'Migrate beta');
         return {
-          W: LOGICAL_W, H: LOGICAL_H,
+          W: viewState.LOGICAL_W, H: viewState.LOGICAL_H,
           a: a.notes.find((n) => n.id === 'legacy-a'),
           b: b.notes.find((n) => n.id === 'legacy-b'),
           modern: a.notes.find((n) => n.id === 'modern-a'),
