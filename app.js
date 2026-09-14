@@ -610,11 +610,17 @@ function newBoardRecord() {
 }
 
 // Single-flight persist with exponential backoff; capture is never blocked.
-let saveTimer = null, persisting = false, dirtyAgain = false, retryDelay = 1000;
-let dirty = false;                   // `current` holds an edit the debounce hasn't written
-function scheduleSave() { dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, SAVE_DEBOUNCE); }
+/* The debounced save queue's guard set — one state object (issue #176). */
+const persistenceState = {
+  saveTimer: null,
+  persisting: false,
+  dirtyAgain: false,
+  retryDelay: 1000,
+  dirty: false,                      // `boardData.current` holds an edit the debounce hasn't written
+};
+function scheduleSave() { persistenceState.dirty = true; clearTimeout(persistenceState.saveTimer); persistenceState.saveTimer = setTimeout(saveNow, SAVE_DEBOUNCE); }
 function saveNow() {
-  clearTimeout(saveTimer);
+  clearTimeout(persistenceState.saveTimer);
   if (!boardData.current) return;
   stampUpdated();
   persist();
@@ -627,9 +633,9 @@ function saveNow() {
    one law, two skins, disagreeing. It would also outrank a board created in
    that same moment, undoing B63's "the new card lands first". */
 function flushSave() {
-  clearTimeout(saveTimer);
+  clearTimeout(persistenceState.saveTimer);
   if (!boardData.current) return;
-  if (dirty) stampUpdated();
+  if (persistenceState.dirty) stampUpdated();
   persist();
 }
 /* The stamp is the whole of B69's order key. It deliberately does NOT turn the
@@ -639,20 +645,20 @@ function flushSave() {
    away already could — until they turn to page 1 and find it at the front. */
 function stampUpdated() {
   boardData.current.updatedAt = Date.now();
-  dirty = false;
+  persistenceState.dirty = false;
 }
 function persist() {
   if (!boardData.current) return;
-  if (persisting) { dirtyAgain = true; return; }
-  persisting = true;
+  if (persistenceState.persisting) { persistenceState.dirtyAgain = true; return; }
+  persistenceState.persisting = true;
   const snapshot = boardData.current;
   idbPut(snapshot).then(() => {
-    persisting = false; retryDelay = 1000; hideSaveError();
-    if (dirtyAgain) { dirtyAgain = false; persist(); }
+    persistenceState.persisting = false; persistenceState.retryDelay = 1000; hideSaveError();
+    if (persistenceState.dirtyAgain) { persistenceState.dirtyAgain = false; persist(); }
   }).catch(() => {
-    persisting = false; showSaveError();
-    setTimeout(persist, retryDelay);
-    retryDelay = Math.min(retryDelay * 2, 16000);
+    persistenceState.persisting = false; showSaveError();
+    setTimeout(persist, persistenceState.retryDelay);
+    persistenceState.retryDelay = Math.min(persistenceState.retryDelay * 2, 16000);
   });
 }
 
@@ -3867,7 +3873,7 @@ async function importBoardsJson(file) {
     }
   }
   if (overwrittenCurrent) {
-    dirty = false;                      // current was replaced wholesale, exactly ensureCurrentValid's reading
+    persistenceState.dirty = false;                      // current was replaced wholesale, exactly ensureCurrentValid's reading
     renderBoard();
   }
   if (menuUiState.listOpen) await renderListSurface();
@@ -4622,7 +4628,7 @@ async function ensureCurrentValid() {
   // with it, or the timer would fire against its successor and stamp a board
   // nobody edited — which under B69 would move that card (§3's `dirty` rides
   // whatever `current` is, so it is cleared wherever `current` is replaced).
-  clearTimeout(saveTimer); dirty = false;
+  clearTimeout(persistenceState.saveTimer); persistenceState.dirty = false;
   const all = await idbGetAll();
   boardData.current = all.length ? all.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)) : newBoardRecord();
   if (!all.length) await idbPut(boardData.current);
