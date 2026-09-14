@@ -4977,6 +4977,11 @@ if (window.visualViewport) window.visualViewport.addEventListener('resize', onVi
    re-measure when the faces land; a browser without the API keeps boot's. */
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(applyLayout);
 
+async function pickLaunchBoard(all) {
+  if (!all.length) { const board = newBoardRecord(); await idbPut(board); return board; }
+  return all.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a));   // launch → most recent
+}
+
 async function boot() {
   applyLayout();                 // establishes LEGACY_H before the migration reads it —
                                  // the first applyLayout otherwise fires inside openBoardObj,
@@ -4985,9 +4990,7 @@ async function boot() {
   const adopted = await migrateLegacyBoards(all);   // B93: legacy notes onto the single path,
                                                     // written straight to IDB — nothing is
                                                     // open or debounced yet
-  let board;
-  if (!all.length) { board = newBoardRecord(); await idbPut(board); }
-  else { board = all.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)); }  // launch → most recent
+  const board = await pickLaunchBoard(all);
   openBoardObj(board);
   if (isWide) renderPane();
   // The standing calendar rail (issue #158, B99): furniture renders at boot on
