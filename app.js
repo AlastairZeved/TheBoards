@@ -4863,6 +4863,10 @@ function renderCal() {
   // inherits the right one. Half-pixel headroom, per the board row's note.
   el.calTop.style.setProperty('--hit', (hitInset(el.calTop, 1) + 0.5) + 'px');
   const days = calWindow();
+  renderCalDays(days);
+}
+
+function renderCalDays(days) {
   flushSave();
   idbGetAll().then((all) => {
     const events = eventsOf(all);      // event records ride the boards store (§1.7)
