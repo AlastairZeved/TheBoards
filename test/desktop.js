@@ -1125,7 +1125,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.keyboard.press('Escape');
     await page.waitForTimeout(120);
     ok('Escape dismisses the Link menu, selection kept', await page.evaluate(() =>
-      document.querySelector('#menu').hidden !== false && linkSource === null &&
+      document.querySelector('#menu').hidden !== false && interactionState.linkSource === null &&
       document.querySelectorAll('.note.selected, .note.multi-selected').length === 2));
 
     // The primary's toolbar buttons; each acts on the whole selection.
@@ -1404,7 +1404,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.keyboard.press('Escape');
     await page.waitForTimeout(150);
     ok('Escape dismisses the Link menu', await page.evaluate(() =>
-       document.querySelector('#menu').hidden !== false && linkSource === null));
+       document.querySelector('#menu').hidden !== false && interactionState.linkSource === null));
     // The anchor route is gone (B92): a right-click on the title anchor must
     // NOT open the app menu — the browser's own menu shows instead. (The rail's
     // board-card menu, B24, is a different element and stays.)
@@ -1427,7 +1427,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.waitForTimeout(200);
     await page.mouse.click(905, 605);              // select it
     await page.waitForTimeout(150);
-    ok('a note is selected for the guard case', await page.evaluate(() => !!selected));
+    ok('a note is selected for the guard case', await page.evaluate(() => !!interactionState.selected));
     const noteBefore = await noteCount(page);
     // B100: the All tab is retired on desktop; the Export tab is the row's
     // live focusable — the guard's target, not the hidden one.
@@ -1659,15 +1659,15 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.evaluate(() => document.querySelector('#menu button').click());
     await page.waitForTimeout(80);
     ok('Link arms the mode with a "Click…" hint', await page.evaluate(() =>
-      linkSource !== null && /Click/i.test((document.querySelector('#toast .msg') || {}).textContent || '')));
+      interactionState.linkSource !== null && /Click/i.test((document.querySelector('#toast .msg') || {}).textContent || '')));
 
     // Click Bravo → one link, one line; Bravo is NOT selected by the click.
     await page.mouse.click(c.lb.x, c.lb.y);
     await page.waitForTimeout(120);
     ok('clicking the second note creates one link', (await links()) === 1, 'links=' + await links());
     ok('and draws one line', (await lines()) === 1, 'lines=' + await lines());
-    ok('the completing click did not select the target', await page.evaluate(() => selected === null));
-    ok('link mode cleared', await page.evaluate(() => linkSource === null));
+    ok('the completing click did not select the target', await page.evaluate(() => interactionState.selected === null));
+    ok('link mode cleared', await page.evaluate(() => interactionState.linkSource === null));
 
     // The line is below notes (z-order) and pointer-events:none.
     ok('link layer z(1) is below notes z(2), pointer-events:none', await page.evaluate(() => {

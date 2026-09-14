@@ -273,7 +273,7 @@ function applyMode() {
   // Teardown: nothing half-finished survives the flip.
   clearSelection();
   closeMenu();
-  if (g) { clearTimeout(g.longPressTimer); g = null; }
+  if (interactionState.g) { clearTimeout(interactionState.g.longPressTimer); interactionState.g = null; }
   pointers.clear();
   if (viewState.isWide && listOpen) returnToBoard();  // pop the whole list nav → board (B9 intact;
                                                // a drill is two levels deep, B74)
@@ -721,7 +721,7 @@ function repositionNotes() {
       setHitInset(node, note);
     }
   });
-  if (selected) updateSelectionUI();
+  if (interactionState.selected) updateSelectionUI();
   updateLinks();                     // links ride the notes' new geometry (B91)
 }
 
@@ -1234,7 +1234,7 @@ function runNoteToolbarAction(btn) {
   const editingHere = () =>
     isEditing(document.activeElement) && noteNode.contains(document.activeElement);
   commitAction(() => {
-    const inMulti = selected && selected.kind === 'note' &&
+    const inMulti = interactionState.selected && interactionState.selected.kind === 'note' &&
                     multiSel.size > 1 && multiSel.has(note.id);
     const ids = inMulti ? selectedNoteIds() : [note.id];
     if (btn.classList.contains('note-tb-copy')) {
@@ -1324,7 +1324,22 @@ function applyCompleteA11y(node, complete) {
 // The source note while a link is being armed (its id, or null). Modeled on the
 // mobile `engaged` idiom (B90): a single-id transient mode, cleared on resolve,
 // cancel, a drag, Escape, and any selection change / board swap (clearSelection).
-let linkSource = null;
+/* The live interaction plane — gesture context, selection, link arming, and
+   the async re-entrancy guards — grouped as one state object (issue #176). */
+const interactionState = {
+  linkSource: null,
+  linkLayer: null,
+  g: null,                           // active gesture context
+  swallowTap: false,                 // the pointerdown that dismissed a menu is inert (B30)
+  pendingAction: null,
+  selected: null,                    // { kind: 'note'|'lot', id }
+  lastTap: { key: null, t: 0 },      // double-click pairing across taps
+  selEl: null,                       // the resize-frame overlay (ring + edges + handles); actions live on the note's toolbar (B84)
+  engaged: null,                     // id of the mobile-engaged note, or null
+  dragCancel: null,                  // the live card-drag's teardown, if one is mid-flight
+  popping: false,
+  swapping: false,                   // async re-entrancy guard beyond the commit drop-guard
+};
 
 const boardLinks = () => (current && current.links) || [];   // B21 read-default for legacy boards
 const findLink = (a, b) =>
@@ -1374,12 +1389,12 @@ function pruneLinks(board) {
    duplicate (B81) — so it runs raw (and, from a menu item, is already inside
    commitAction). A persistent hint states the act; clearLink retracts it. */
 function beginLink(id) {
-  linkSource = id;
+  interactionState.linkSource = id;
   showNotice(viewState.isDesktop ? COPY.linkHintClick : COPY.linkHintTap, 'link');
 }
 function clearLink() {
-  if (linkSource === null) return;
-  linkSource = null;
+  if (interactionState.linkSource === null) return;
+  interactionState.linkSource = null;
   if (el.toast.dataset.mode === 'link') hideToast();
 }
 
@@ -1390,14 +1405,13 @@ function clearLink() {
    — appended after the static furniture — above the z:1 furniture, the valid-
    integer realization of the issue's "z-index: 1.5" (B91). */
 const SVGNS = 'http://www.w3.org/2000/svg';
-let linkLayer = null;
 const linkLineEls = new Map();       // link.id -> <line>
 function ensureLinkLayer() {
-  if (linkLayer) return;
-  linkLayer = document.createElementNS(SVGNS, 'svg');
-  linkLayer.id = 'link-layer';
-  linkLayer.setAttribute('aria-hidden', 'true');
-  el.board.appendChild(linkLayer);
+  if (interactionState.linkLayer) return;
+  interactionState.linkLayer = document.createElementNS(SVGNS, 'svg');
+  interactionState.linkLayer.id = 'link-layer';
+  interactionState.linkLayer.setAttribute('aria-hidden', 'true');
+  el.board.appendChild(interactionState.linkLayer);
 }
 // A note's centre in current board-logical px — the same math updateSelectionUI
 // uses (renderX + offsetWidth·effScale/2), read from the live DOM node.
@@ -1411,7 +1425,7 @@ function noteCenter(note, node) {
    until sanitizeBoard prunes it. Cheap no-op on a board that has never linked. */
 function updateLinks() {
   const links = boardLinks();
-  if (!links.length && !linkLayer) return;
+  if (!links.length && !interactionState.linkLayer) return;
   ensureLinkLayer();
   const live = new Set();
   for (const link of links) {
@@ -1424,7 +1438,7 @@ function updateLinks() {
     if (!line) {
       line = document.createElementNS(SVGNS, 'line');
       linkLineEls.set(link.id, line);
-      linkLayer.appendChild(line);
+      interactionState.linkLayer.appendChild(line);
     }
     line.setAttribute('x1', ca.x); line.setAttribute('y1', ca.y);
     line.setAttribute('x2', cb.x); line.setAttribute('y2', cb.y);
@@ -1438,8 +1452,6 @@ function updateLinks() {
 /* --- 7. Gesture recognizer ----------------------------------------------- */
 // One recognizer over the board. Targets: note | anchor | lot-item | lot | canvas.
 const pointers = new Map();          // pointerId -> {x,y,startX,startY}
-let g = null;                        // active gesture context
-let swallowTap = false;              // the pointerdown that dismissed a menu is inert (B30)
 
 /* The anchors and, since B91, notes carry a long-press menu (mobile) — the
    anchor's is the board's own menu (All boards · Export, B84/B75); the note's is
@@ -1460,7 +1472,7 @@ function classifyTarget(target) {
   // then the resize frame — both must win over the elements beneath them.
   const selBtn = target.closest('.sel-btn');
   if (selBtn) return { type: 'sel-btn', node: selBtn };
-  if (target.closest('#selection')) return { type: 'sel-frame', node: selEl };
+  if (target.closest('#selection')) return { type: 'sel-frame', node: interactionState.selEl };
   // The board-action row (B83) needs no branch here: its tabs are native
   // buttons and onPointerDown returns before classify runs for anything inside
   // #board-actions (the #lot-menu passthrough's precedent), so the recognizer
@@ -1483,7 +1495,7 @@ function classifyTarget(target) {
 el.board.addEventListener('pointerdown', onPointerDown);
 
 function onPointerDown(e) {
-  if (swallowTap) { swallowTap = false; return; }  // this press only dismissed a menu (B30)
+  if (interactionState.swallowTap) { interactionState.swallowTap = false; return; }  // this press only dismissed a menu (B30)
   // The All-Boards grid (issue #112 / B74) is drawn inside #lot, so its presses
   // bubble here — but it is a menu, not the board: let its buttons receive their
   // own native clicks rather than the recognizer swallowing them as lot capture.
@@ -1517,14 +1529,14 @@ function onPointerDown(e) {
   // (issue #55): scaling is single-selection only, and startPinch knows one
   // note. The extra pointer is simply ignored and the group drag continues
   // under the first (a touchscreen laptop can be desktop-mode, B19).
-  if (pointers.size === 2 && g && g.target.type === 'note' && !g.group) {
+  if (pointers.size === 2 && interactionState.g && interactionState.g.target.type === 'note' && !interactionState.g.group) {
     startPinch();
     return;
   }
   if (pointers.size > 1) return;                   // ignore extra pointers otherwise
 
   const target = classifyTarget(e.target);
-  g = {
+  interactionState.g = {
     target, pointerId: e.pointerId,
     startX: e.clientX, startY: e.clientY,
     shift: e.shiftKey,                             // multi-select modifier (issue #55)
@@ -1534,18 +1546,18 @@ function onPointerDown(e) {
   // Resize is single-selection only, by design (issue #55): with two or more
   // selected the CSS hides the grip, and this guard keeps the gesture honest
   // even if a stray hit reaches the frame.
-  if (viewState.isDesktop && target.type === 'sel-frame' && selected && selected.kind === 'note' &&
+  if (viewState.isDesktop && target.type === 'sel-frame' && interactionState.selected && interactionState.selected.kind === 'note' &&
       multiSel.size <= 1) {
     startResize(e);
   }
   try { el.board.setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone */ }
 
   if (!viewState.isDesktop && HAS_MENU.has(target.type)) {   // desktop removes click-and-hold entirely (issue #4)
-    g.longPressTimer = setTimeout(() => {
-      if (!g || g.mode !== 'pending' || g.moved) return;
-      g.longPressed = true;
+    interactionState.g.longPressTimer = setTimeout(() => {
+      if (!interactionState.g || interactionState.g.mode !== 'pending' || interactionState.g.moved) return;
+      interactionState.g.longPressed = true;
       if (navigator.vibrate) navigator.vibrate(10);
-      openMenuFor(target, g.startX, g.startY);
+      openMenuFor(target, interactionState.g.startX, interactionState.g.startY);
     }, LONGPRESS_MS);
   }
 }
@@ -1556,37 +1568,37 @@ function onPointerMove(e) {
   if (!p) return;
   p.x = e.clientX; p.y = e.clientY;
 
-  if (g && g.mode === 'pinch') { updatePinch(); return; }
-  if (g && g.mode === 'resize') { if (g.pointerId === e.pointerId) updateResize(e); return; }
-  if (!g || g.pointerId !== e.pointerId) return;
+  if (interactionState.g && interactionState.g.mode === 'pinch') { updatePinch(); return; }
+  if (interactionState.g && interactionState.g.mode === 'resize') { if (interactionState.g.pointerId === e.pointerId) updateResize(e); return; }
+  if (!interactionState.g || interactionState.g.pointerId !== e.pointerId) return;
 
-  const dx = e.clientX - g.startX, dy = e.clientY - g.startY;
-  if (!g.moved && Math.hypot(dx, dy) >= MOVE_THRESHOLD) {
-    g.moved = true;
-    clearTimeout(g.longPressTimer);
-    if (g.target.type === 'note' && !g.longPressed) startDrag();
-    else g.mode = 'cancelled';                      // canvas/anchor/lot don't drag; board never pans
+  const dx = e.clientX - interactionState.g.startX, dy = e.clientY - interactionState.g.startY;
+  if (!interactionState.g.moved && Math.hypot(dx, dy) >= MOVE_THRESHOLD) {
+    interactionState.g.moved = true;
+    clearTimeout(interactionState.g.longPressTimer);
+    if (interactionState.g.target.type === 'note' && !interactionState.g.longPressed) startDrag();
+    else interactionState.g.mode = 'cancelled';                      // canvas/anchor/lot don't drag; board never pans
   }
-  if (g.mode === 'drag') updateDrag(e);
+  if (interactionState.g.mode === 'drag') updateDrag(e);
 }
 
 el.board.addEventListener('pointerup', onPointerUp);
 el.board.addEventListener('pointercancel', onPointerUp);
 function onPointerUp(e) {
   pointers.delete(e.pointerId);
-  if (!g) return;
+  if (!interactionState.g) return;
 
-  if (g.mode === 'pinch') {
+  if (interactionState.g.mode === 'pinch') {
     if (pointers.size < 2) endPinch();
     return;
   }
-  if (g.pointerId !== e.pointerId) return;
-  clearTimeout(g.longPressTimer);
+  if (interactionState.g.pointerId !== e.pointerId) return;
+  clearTimeout(interactionState.g.longPressTimer);
 
-  if (g.mode === 'drag') { endDrag(); }
-  else if (g.mode === 'resize') { endResize(); }
-  else if (g.mode === 'pending' && !g.longPressed && !g.moved) { handleTap(g.target, e.clientX, e.clientY, g.shift); }
-  g = null;
+  if (interactionState.g.mode === 'drag') { endDrag(); }
+  else if (interactionState.g.mode === 'resize') { endResize(); }
+  else if (interactionState.g.mode === 'pending' && !interactionState.g.longPressed && !interactionState.g.moved) { handleTap(interactionState.g.target, e.clientX, e.clientY, interactionState.g.shift); }
+  interactionState.g = null;
 }
 
 /* --- 8. Editing, drag, pinch, z-order ------------------------------------ */
@@ -1622,12 +1634,11 @@ function commitOpenEditor(node) {
    so B18a/b's `.tapped` beat and B18c's ghost are retired. Navigation (menu
    open, swap, edit-entry) and capture self-heal, so they take no guard at all —
    they call their work directly. */
-let pendingAction = null;
 
 function commitAction(fn) {
-  if (pendingAction) return;
+  if (interactionState.pendingAction) return;
   fn();
-  pendingAction = setTimeout(() => { pendingAction = null; }, ACTION_DELAY);
+  interactionState.pendingAction = setTimeout(() => { interactionState.pendingAction = null; }, ACTION_DELAY);
 }
 
 /* No blanket pendingAction guard here (issue #13): commitAction carries its own
@@ -1658,8 +1669,8 @@ function handleTap(target, x, y, shift) {
    write is a consequence, so it and its mode-exit run together inside
    commitAction's drop-guard (B81); the cancel commits nothing, so it runs raw. */
 function resolvePendingLink(target) {
-  if (linkSource === null) return false;
-  const src = linkSource;
+  if (interactionState.linkSource === null) return false;
+  const src = interactionState.linkSource;
   if (target.type === 'note' && target.node.dataset.id !== src) {
     const dst = target.node.dataset.id;
     commitAction(() => { toggleLink(src, dst); clearLink(); });
@@ -1707,16 +1718,16 @@ function tapCanvas(x, y) {
   // Creation surfaces deselect first (issue #12 desktop / #41 mobile):
   // with a selection active a tap only dismisses; capture is only primary
   // when nothing is selected or being edited.
-  if (viewState.isDesktop && selected) { clearSelection(); return; }
-  if (!viewState.isDesktop && engaged) { clearEngaged(); return; }   // mobile: tap-away deselects; a further tap creates (issue #136, B90)
+  if (viewState.isDesktop && interactionState.selected) { clearSelection(); return; }
+  if (!viewState.isDesktop && interactionState.engaged) { clearEngaged(); return; }   // mobile: tap-away deselects; a further tap creates (issue #136, B90)
   createNote(x, y);                // capture is instant on both (B27, B81)
 }
 
 /* Creation surface, same #54 law as tapCanvas (see above). */
 function tapLot(x, y) {
   if (isEditing(document.activeElement)) { document.activeElement.blur(); return; }
-  if (viewState.isDesktop && selected) { clearSelection(); return; }   // creation surface too
-  if (!viewState.isDesktop && engaged) { clearEngaged(); return; }   // mobile: tap-away deselects (issue #136, B90)
+  if (viewState.isDesktop && interactionState.selected) { clearSelection(); return; }   // creation surface too
+  if (!viewState.isDesktop && interactionState.engaged) { clearEngaged(); return; }   // mobile: tap-away deselects (issue #136, B90)
   createLotItem();                 // capture is instant on both (B27, B81)
 }
 
@@ -1739,16 +1750,16 @@ function tapNote(target, x, y, shift) {
     // never pairs into the double-click window.
     if (shift) {
       toggleInSelection(note.id);
-      lastTap = { key: null, t: 0 };
+      interactionState.lastTap = { key: null, t: 0 };
       return;
     }
     // Click selects (instant, inert); a second click within the pairing
     // window edits with the caret at the end (issue #4). Completed notes
     // never edit — same guard as the mobile tap path.
     const key = 'note:' + note.id, now = Date.now();
-    if (selected && selected.kind === 'note' && selected.id === note.id &&
-        lastTap.key === key && now - lastTap.t < DBLCLICK_MS) {
-      lastTap = { key: null, t: 0 };
+    if (interactionState.selected && interactionState.selected.kind === 'note' && interactionState.selected.id === note.id &&
+        interactionState.lastTap.key === key && now - interactionState.lastTap.t < DBLCLICK_MS) {
+      interactionState.lastTap = { key: null, t: 0 };
       if (note.state === 'active') {
         clearSelection();
         surfaceNote(node);
@@ -1756,7 +1767,7 @@ function tapNote(target, x, y, shift) {
       }
     } else {
       selectNote(note.id);
-      lastTap = { key, t: now };
+      interactionState.lastTap = { key, t: now };
     }
     return;
   }
@@ -1768,7 +1779,7 @@ function tapNote(target, x, y, shift) {
   // B14 on mobile; the desktop precedent is B26). A completed note never edits
   // (§4.3), so it only ever engages.
   if (isEditing(document.activeElement)) document.activeElement.blur();
-  if (note.state === 'active' && engaged === note.id) {
+  if (note.state === 'active' && interactionState.engaged === note.id) {
     clearEngaged();
     surfaceNote(node);                                      // editing raises it (B27)
     editText(node.querySelector('.note-text'));             // no coords → caret at end
@@ -1786,16 +1797,16 @@ function tapLotItem(target, x, y) {
   if (viewState.isDesktop) {
     if (commitOpenEditor(node)) return;
     const key = 'lot:' + item.id, now = Date.now();
-    if (selected && selected.kind === 'lot' && selected.id === item.id &&
-        lastTap.key === key && now - lastTap.t < DBLCLICK_MS) {
-      lastTap = { key: null, t: 0 };
+    if (interactionState.selected && interactionState.selected.kind === 'lot' && interactionState.selected.id === item.id &&
+        interactionState.lastTap.key === key && now - interactionState.lastTap.t < DBLCLICK_MS) {
+      interactionState.lastTap = { key: null, t: 0 };
       if (item.state === 'active') {
         clearSelection();
         editText(node.querySelector('.lot-text'));    // no coords → caret at end
       }
     } else {
       selectLot(item.id);
-      lastTap = { key, t: now };
+      interactionState.lastTap = { key, t: now };
     }
     return;
   }
@@ -1910,22 +1921,22 @@ function onDesktopKeydown(e) {
   if (!viewState.isDesktop || menuOpen) return;
   // While a link is armed, Escape cancels it and every other key is inert (B91) —
   // no selection exists to Delete/Enter into, and this must win over the grammar.
-  if (linkSource !== null) { if (e.key === 'Escape') clearLink(); return; }
+  if (interactionState.linkSource !== null) { if (e.key === 'Escape') clearLink(); return; }
   const editing = isEditing(document.activeElement);
   if (e.key === 'Escape') {
     if (editing) { document.activeElement.blur(); }    // commit-on-blur path runs
-    else if (selected) clearSelection();
-  } else if ((e.key === 'Delete' || e.key === 'Backspace') && selected && !editing) {
+    else if (interactionState.selected) clearSelection();
+  } else if ((e.key === 'Delete' || e.key === 'Backspace') && interactionState.selected && !editing) {
     e.preventDefault();
     // A multi-selection deletes as one batch with one Undo (issue #55).
-    if (selected.kind === 'note' && multiSel.size > 1) { deleteNotes(selectedNoteIds()); return; }
-    const s = selected;
+    if (interactionState.selected.kind === 'note' && multiSel.size > 1) { deleteNotes(selectedNoteIds()); return; }
+    const s = interactionState.selected;
     clearSelection();
     if (s.kind === 'note') { const n = noteEls.get(s.id); if (n) deleteNote(n); }
     else { const n = lotEls.get(s.id); if (n) deleteLot(n); }
-  } else if (e.key === 'Enter' && selected && !editing) {
+  } else if (e.key === 'Enter' && interactionState.selected && !editing) {
     e.preventDefault();
-    const s = selected;
+    const s = interactionState.selected;
     if (s.kind === 'note') {
       const rec = current.notes.find(n => n.id === s.id);
       const n = noteEls.get(s.id);
@@ -1977,7 +1988,7 @@ function commitNote(node) {
   saveNow();
 }
 function removeNoteSilently(note, node) {
-  if (selected && selected.kind === 'note' && selected.id === note.id) clearSelection();
+  if (interactionState.selected && interactionState.selected.kind === 'note' && interactionState.selected.id === note.id) clearSelection();
   else dropFromSelection(note.id);     // set hygiene for a non-primary member (issue #55)
   const i = current.notes.indexOf(note);
   if (i >= 0) current.notes.splice(i, 1);
@@ -1995,7 +2006,7 @@ function commitLot(node) {
   saveNow();
 }
 function removeLotSilently(item, node) {
-  if (selected && selected.kind === 'lot' && selected.id === item.id) clearSelection();
+  if (interactionState.selected && interactionState.selected.kind === 'lot' && interactionState.selected.id === item.id) clearSelection();
   const i = current.parkingLot.indexOf(item);
   if (i >= 0) current.parkingLot.splice(i, 1);
   node.remove(); lotEls.delete(item.id);
@@ -2012,19 +2023,19 @@ function commitAnchor(node) {
 
 /* Drag (PRD §6.3): free overlap, no snap, clamp to page bounds only. */
 function startDrag() {
-  if (linkSource !== null) clearLink();   // dragging a note exits link mode (issue #142, B91)
-  g.mode = 'drag';
-  g.target.node.classList.add('pressed');
-  surfaceNote(g.target.node);
-  const note = g.note;
-  const startLogical = toLogical(g.startX, g.startY);
+  if (interactionState.linkSource !== null) clearLink();   // dragging a note exits link mode (issue #142, B91)
+  interactionState.g.mode = 'drag';
+  interactionState.g.target.node.classList.add('pressed');
+  surfaceNote(interactionState.g.target.node);
+  const note = interactionState.g.note;
+  const startLogical = toLogical(interactionState.g.startX, interactionState.g.startY);
   // Group drag (issue #55): grabbing a MEMBER of a multi-selection moves every
   // member by the same delta. Only the grabbed note surfaces (above) — the
   // others keep their z-order; every member wears .pressed. Grabbing a
   // non-member falls through to the single path, which collapses the set
   // (selectNote below) — today's behavior.
   if (viewState.isDesktop && multiSel.size > 1 && multiSel.has(note.id)) {
-    g.group = [];
+    interactionState.g.group = [];
     for (const id of selectedNoteIds()) {
       const n = current.notes.find(m => m.id === id);
       const memberNode = noteEls.get(id);
@@ -2033,7 +2044,7 @@ function startDrag() {
       // with B40 also folds each member's scale multiplier; visually silent.
       rebaseNote(n);
       const fw = memberNode.offsetWidth * n.scale, fh = memberNode.offsetHeight * n.scale;
-      g.group.push({
+      interactionState.g.group.push({
         note: n, node: memberNode, x0: n.x, y0: n.y,
         // Per-member bounds, widened to admit the grab position exactly as
         // the single path below (B40). Members hitting different clamps can
@@ -2044,14 +2055,14 @@ function startDrag() {
       });
       memberNode.classList.add('pressed');
     }
-    g.groupX0 = startLogical.x; g.groupY0 = startLogical.y;
+    interactionState.g.groupX0 = startLogical.x; interactionState.g.groupY0 = startLogical.y;
     setSelectionHidden(true);
     return;
   }
   rebaseNote(note);                  // grab math runs in current-frame units (issue #15)
   if (viewState.isDesktop) { selectNote(note.id); setSelectionHidden(true); }
-  g.grabDX = startLogical.x - note.x;
-  g.grabDY = startLogical.y - note.y;
+  interactionState.g.grabDX = startLogical.x - note.x;
+  interactionState.g.grabDY = startLogical.y - note.y;
   // Outer x range, fixed once and widened to include the grab position (B40):
   // a cross-frame note can arrive bigger than the sheet or past its edge, and
   // a plain [0, max(0, sheet − foot)] range would teleport it on the first
@@ -2062,21 +2073,21 @@ function startDrag() {
   // footprint if that is already narrower — and y takes no fixed upper bound
   // at all: settleDragFoot derives it per move from the measured height, less
   // dragOverY, the bottom overhang the grab itself admitted.
-  const node = g.target.node;
+  const node = interactionState.g.target.node;
   const footW = node.offsetWidth * note.scale, footH = node.offsetHeight * note.scale;
-  g.dragMinX = Math.min(0, note.x);
-  g.dragMaxX = Math.max(note.x,
+  interactionState.g.dragMinX = Math.min(0, note.x);
+  interactionState.g.dragMaxX = Math.max(note.x,
     Math.max(0, viewState.LOGICAL_W - Math.min(footW, NOTE_MIN_W * note.scale)));
-  g.dragMinY = Math.min(0, note.y);
-  g.dragOverY = Math.max(0, note.y + footH - viewState.LOGICAL_H);
+  interactionState.g.dragMinY = Math.min(0, note.y);
+  interactionState.g.dragOverY = Math.max(0, note.y + footH - viewState.LOGICAL_H);
   // Reflow-guard caches (issue #53): the cap the node is wearing right now
   // (the grab rebase re-asserted it — under B64's min-k the rebase can widen
   // the cap, so rebaseNote writes the var before anything here measures) and
   // the size measured under it. settleDragFoot skips the layout-forcing
   // write+read while these prove the cap cannot bind.
-  g.dragCap = noteMaxW(note);
-  g.dragW = node.offsetWidth;
-  g.dragH = node.offsetHeight;
+  interactionState.g.dragCap = noteMaxW(note);
+  interactionState.g.dragW = node.offsetWidth;
+  interactionState.g.dragH = node.offsetHeight;
 }
 
 /* Shared tail of every drag move and the drop (issue #53): cap at the current
@@ -2097,15 +2108,15 @@ function startDrag() {
    note must wear the exact cap, never the guard's stale one. */
 function settleDragFoot(note, node, force) {
   const cap = noteMaxW(note);
-  if (force || g.dragW > g.dragCap - 1 || cap < g.dragW) {
+  if (force || interactionState.g.dragW > interactionState.g.dragCap - 1 || cap < interactionState.g.dragW) {
     applyNoteWidth(node, note);
-    g.dragCap = cap;
-    g.dragW = node.offsetWidth;
-    g.dragH = node.offsetHeight;
+    interactionState.g.dragCap = cap;
+    interactionState.g.dragW = node.offsetWidth;
+    interactionState.g.dragH = node.offsetHeight;
   }
-  const footW = g.dragW * note.scale, footH = g.dragH * note.scale;
-  if (note.x + footW > viewState.LOGICAL_W) note.x = Math.max(g.dragMinX, viewState.LOGICAL_W - footW);
-  note.y = Math.min(note.y, Math.max(g.dragMinY, viewState.LOGICAL_H - footH + g.dragOverY));
+  const footW = interactionState.g.dragW * note.scale, footH = interactionState.g.dragH * note.scale;
+  if (note.x + footW > viewState.LOGICAL_W) note.x = Math.max(interactionState.g.dragMinX, viewState.LOGICAL_W - footW);
+  note.y = Math.min(note.y, Math.max(interactionState.g.dragMinY, viewState.LOGICAL_H - footH + interactionState.g.dragOverY));
   node.style.left = note.x + 'px';
   node.style.top = note.y + 'px';
   updateLinks();                     // a dragged note's links follow it live (B91)
@@ -2113,10 +2124,10 @@ function settleDragFoot(note, node, force) {
 
 function updateDrag(e) {
   const pt = toLogical(e.clientX, e.clientY);
-  if (g.group) {
+  if (interactionState.g.group) {
     // One delta for the whole group, clamped per member (issue #55).
-    const dx = pt.x - g.groupX0, dy = pt.y - g.groupY0;
-    for (const m of g.group) {
+    const dx = pt.x - interactionState.g.groupX0, dy = pt.y - interactionState.g.groupY0;
+    for (const m of interactionState.g.group) {
       m.note.x = clamp(m.x0 + dx, m.minX, m.maxX);
       m.note.y = clamp(m.y0 + dy, m.minY, m.maxY);
       m.node.style.left = m.note.x + 'px';
@@ -2125,29 +2136,29 @@ function updateDrag(e) {
     updateLinks();                   // group members' links follow too (B91)
     return;
   }
-  const note = g.note, node = g.target.node;
-  note.x = clamp(pt.x - g.grabDX, g.dragMinX, g.dragMaxX);
-  note.y = Math.max(g.dragMinY, pt.y - g.grabDY);   // upper bound lives in the settle
+  const note = interactionState.g.note, node = interactionState.g.target.node;
+  note.x = clamp(pt.x - interactionState.g.grabDX, interactionState.g.dragMinX, interactionState.g.dragMaxX);
+  note.y = Math.max(interactionState.g.dragMinY, pt.y - interactionState.g.grabDY);   // upper bound lives in the settle
   settleDragFoot(note, node, false);
 }
 function endDrag() {
-  if (g.group) {
+  if (interactionState.g.group) {
     // One write for the whole group (issue #55). The drag held grab-time
     // bounds, so no member overhangs; at the drop each settles onto the exact
     // cap for its resting x (issue #53) — never tighter than what the clamp
     // admitted, so nothing jumps, and a leftward member may re-widen.
-    for (const m of g.group) {
+    for (const m of interactionState.g.group) {
       applyNoteWidth(m.node, m.note);
       setHitInset(m.node, m.note);
       m.node.classList.remove('pressed');
     }
-    g.target.node.classList.remove('pressed');
+    interactionState.g.target.node.classList.remove('pressed');
     saveNow();
     updateLinks();                   // final settle: links land on the dropped notes (B91)
     if (viewState.isDesktop) updateSelectionUI();
     return;
   }
-  const note = g.note, node = g.target.node;
+  const note = interactionState.g.note, node = interactionState.g.target.node;
   // One final, forced settle at the resting x before the write. Legal under
   // B17: the re-clamp runs inside the gesture, which owns its writes — B17
   // forbids viewport re-clamps of committed positions only.
@@ -2164,14 +2175,14 @@ function endDrag() {
    so stored x,y stays truthful and the note doesn't drift; re-clamp position
    if the grown footprint exits the page. */
 function startPinch() {
-  clearTimeout(g.longPressTimer);
-  if (g.mode === 'drag') g.target.node.classList.remove('pressed');
+  clearTimeout(interactionState.g.longPressTimer);
+  if (interactionState.g.mode === 'drag') interactionState.g.target.node.classList.remove('pressed');
   const pts = [...pointers.values()];
-  g.mode = 'pinch';
-  rebaseNote(g.note);                // grab math runs in current-frame units (issue #15)
-  g.startDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
-  g.startScale = g.note.scale;
-  g.target.node.classList.add('pressed');
+  interactionState.g.mode = 'pinch';
+  rebaseNote(interactionState.g.note);                // grab math runs in current-frame units (issue #15)
+  interactionState.g.startDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+  interactionState.g.startScale = interactionState.g.note.scale;
+  interactionState.g.target.node.classList.add('pressed');
 }
 /* Shared tail of pinch and the desktop frame-drag resize: apply the clamped
    scale, re-clamp the footprint into the page, refresh the hit area. The note
@@ -2208,11 +2219,11 @@ function updatePinch() {
   const pts = [...pointers.values()];
   if (pts.length < 2) return;
   const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-  applyNoteScale(g.note, g.target.node, gestureScale(g.startScale, dist / g.startDist));
+  applyNoteScale(interactionState.g.note, interactionState.g.target.node, gestureScale(interactionState.g.startScale, dist / interactionState.g.startDist));
 }
 function endPinch() {
-  if (g) { g.target.node.classList.remove('pressed'); saveNow(); }
-  g = null;
+  if (interactionState.g) { interactionState.g.target.node.classList.remove('pressed'); saveNow(); }
+  interactionState.g = null;
 }
 
 /* Z-order: last-touched note to the top (end of array + end of DOM). */
@@ -2241,25 +2252,21 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
    by this same select state; its buttons are routed through the recognizer —
    setPointerCapture retargets click, so native listeners inside #board are
    unreliable by construction. */
-let selected = null;                 // { kind: 'note'|'lot', id }
-let lastTap = { key: null, t: 0 };   // double-click pairing across taps
-let selEl = null;                     // the resize-frame overlay (ring + edges + handles); actions live on the note's toolbar (B84)
 // Mobile-only "engaged" note (issue #136, B90): the note whose toolbar is shown
 // after a first tap — WITHOUT a keyboard. It is the select step desktop already
 // has via `selected`, which mobile lacked (there, engaging a note WAS editing it).
 // A second tap on the engaged active note edits it. No focus and no write (B22):
 // the toolbar is revealed by a `.engaged` class, not by :focus-within.
-let engaged = null;                   // id of the mobile-engaged note, or null
 function setEngaged(node) {
   const prev = el.board && el.board.querySelector('.note.engaged');
   if (prev) prev.classList.remove('engaged');
-  engaged = node.dataset.id;
+  interactionState.engaged = node.dataset.id;
   node.classList.add('engaged');
 }
 function clearEngaged() {
   const prev = el.board && el.board.querySelector('.note.engaged');
   if (prev) prev.classList.remove('engaged');
-  engaged = null;
+  interactionState.engaged = null;
 }
 
 /* Multi-selection (issue #55, B41): desktop NOTES only — lot rows stay
@@ -2275,9 +2282,9 @@ const multiSel = new Set();
 
 // The selection as an id array, primary first — the order bulk actions run in.
 function selectedNoteIds() {
-  if (!selected || selected.kind !== 'note') return [];
-  const ids = [selected.id];
-  for (const id of multiSel) if (id !== selected.id) ids.push(id);
+  if (!interactionState.selected || interactionState.selected.kind !== 'note') return [];
+  const ids = [interactionState.selected.id];
+  for (const id of multiSel) if (id !== interactionState.selected.id) ids.push(id);
   return ids;
 }
 
@@ -2287,13 +2294,13 @@ function selectedNoteIds() {
    back to a plain single selection, keeping the invariant. */
 function toggleInSelection(id) {
   if (!noteEls.get(id)) return;
-  if (!selected || selected.kind !== 'note') { selectNote(id); return; }
-  const members = new Set(multiSel.size ? multiSel : [selected.id]);
+  if (!interactionState.selected || interactionState.selected.kind !== 'note') { selectNote(id); return; }
+  const members = new Set(multiSel.size ? multiSel : [interactionState.selected.id]);
   let primary;
   if (members.has(id)) {
     members.delete(id);
     if (!members.size) { clearSelection(); return; }
-    primary = selected.id === id ? members.values().next().value : selected.id;
+    primary = interactionState.selected.id === id ? members.values().next().value : interactionState.selected.id;
   } else {
     members.add(id);
     primary = id;                      // the note just added leads
@@ -2320,29 +2327,29 @@ function dropFromSelection(id) {
   const node = noteEls.get(id);
   if (node) node.classList.remove('multi-selected');
   if (multiSel.size === 1) multiSel.clear();
-  if (selEl) selEl.classList.toggle('multi', multiSel.size > 1);
+  if (interactionState.selEl) interactionState.selEl.classList.toggle('multi', multiSel.size > 1);
 }
 
 function ensureSelectionEl() {
-  if (selEl) return;
-  selEl = document.createElement('div');
-  selEl.id = 'selection';
+  if (interactionState.selEl) return;
+  interactionState.selEl = document.createElement('div');
+  interactionState.selEl.id = 'selection';
   // The outline is visual only; hit-testing lives in four edge bands + the
   // corner handles, so the note's interior stays clickable for the second
   // click of a double-click (a parent's hit area can't be carved out).
   const ring = document.createElement('div');
   ring.className = 'sel-ring';
-  selEl.appendChild(ring);
+  interactionState.selEl.appendChild(ring);
   for (const side of ['n', 's', 'w', 'e']) {
     const b = document.createElement('div');
     b.className = 'sel-edge ' + side;
-    selEl.appendChild(b);
+    interactionState.selEl.appendChild(b);
   }
   for (const corner of ['tl', 'tr', 'bl', 'br']) {
     const h = document.createElement('div');
     h.className = 'sel-handle ' + corner;
     h.setAttribute('aria-hidden', 'true');
-    selEl.appendChild(h);
+    interactionState.selEl.appendChild(h);
   }
   // The overlay is the resize frame only now (B84): the ring, four edge bands
   // and four corner handles. A selected note's actions moved onto its own
@@ -2353,25 +2360,25 @@ function ensureSelectionEl() {
 function selectNote(id) {
   // Re-selecting the primary is a no-op only while the selection is single: a
   // plain click on the primary of a multi-selection collapses it (issue #55).
-  if (selected && selected.kind === 'note' && selected.id === id && multiSel.size === 0) {
+  if (interactionState.selected && interactionState.selected.kind === 'note' && interactionState.selected.id === id && multiSel.size === 0) {
     updateSelectionUI(); return;
   }
   clearSelection();
   const node = noteEls.get(id);
   if (!node) return;
-  selected = { kind: 'note', id };
+  interactionState.selected = { kind: 'note', id };
   node.classList.add('selected');
   ensureSelectionEl();
-  el.board.appendChild(selEl);
+  el.board.appendChild(interactionState.selEl);
   updateSelectionUI();
 }
 
 function selectLot(id) {
-  if (selected && selected.kind === 'lot' && selected.id === id) return;
+  if (interactionState.selected && interactionState.selected.kind === 'lot' && interactionState.selected.id === id) return;
   clearSelection();
   const node = lotEls.get(id);
   if (!node) return;
-  selected = { kind: 'lot', id };
+  interactionState.selected = { kind: 'lot', id };
   node.classList.add('selected');
   // Lot rows keep their buttons inline at the right edge (#lot-items clips
   // below-the-row placement on the last visible row) — issue #11.
@@ -2391,7 +2398,7 @@ function selectLot(id) {
 }
 
 function clearSelection() {
-  if (linkSource !== null) clearLink();   // a board swap / new selection ends link mode (B91)
+  if (interactionState.linkSource !== null) clearLink();   // a board swap / new selection ends link mode (B91)
   // Rings first: the whole set goes when the selection goes (issue #55) —
   // applyMode's teardown and renderBoard's rebuild both land here.
   if (multiSel.size) {
@@ -2401,38 +2408,38 @@ function clearSelection() {
     }
     multiSel.clear();
   }
-  if (!selected) return;
-  if (selected.kind === 'note') {
-    const node = noteEls.get(selected.id);
+  if (!interactionState.selected) return;
+  if (interactionState.selected.kind === 'note') {
+    const node = noteEls.get(interactionState.selected.id);
     if (node) node.classList.remove('selected');
-    if (selEl) selEl.remove();
+    if (interactionState.selEl) interactionState.selEl.remove();
   } else {
-    const node = lotEls.get(selected.id);
+    const node = lotEls.get(interactionState.selected.id);
     if (node) {
       node.classList.remove('selected');
       const act = node.querySelector('.lot-actions');
       if (act) act.remove();
     }
   }
-  selected = null;
+  interactionState.selected = null;
 }
 
 function setSelectionHidden(hidden) {  // drag/resize in flight: chrome steps aside
-  if (selEl) selEl.classList.toggle('hidden', hidden);
+  if (interactionState.selEl) interactionState.selEl.classList.toggle('hidden', hidden);
 }
 
 function updateSelectionUI() {
-  if (!selected || !current) return;
-  if (selected.kind === 'note') {
-    const note = current.notes.find(n => n.id === selected.id);
-    const node = noteEls.get(selected.id);
-    if (!note || !node || !selEl) return;
+  if (!interactionState.selected || !current) return;
+  if (interactionState.selected.kind === 'note') {
+    const note = current.notes.find(n => n.id === interactionState.selected.id);
+    const node = noteEls.get(interactionState.selected.id);
+    if (!note || !node || !interactionState.selEl) return;
     const w = node.offsetWidth * effScale(note), h = node.offsetHeight * effScale(note);
-    selEl.style.left = renderX(note) + 'px';
+    interactionState.selEl.style.left = renderX(note) + 'px';
     const top = renderY(note);
-    selEl.style.top = top + 'px';
-    selEl.style.width = w + 'px';
-    selEl.style.height = h + 'px';
+    interactionState.selEl.style.top = top + 'px';
+    interactionState.selEl.style.width = w + 'px';
+    interactionState.selEl.style.height = h + 'px';
     // The note's own toolbar carries the labels now (B84): re-derive its
     // Complete/Highlight marks and its above/below flip for the current geometry
     // (a drag or resize can have moved the note toward the sheet top).
@@ -2440,11 +2447,11 @@ function updateSelectionUI() {
     reflectToolbarFlip(node, note);
     // Two or more selected: the overlay drops its resize grip (edges +
     // handles, hidden in CSS) — resize is single-selection only (issue #55).
-    selEl.classList.toggle('multi', multiSel.size > 1);
+    interactionState.selEl.classList.toggle('multi', multiSel.size > 1);
     setSelectionHidden(false);
   } else {
-    const node = lotEls.get(selected.id);
-    const item = current.parkingLot.find(i => i.id === selected.id);
+    const node = lotEls.get(interactionState.selected.id);
+    const item = current.parkingLot.find(i => i.id === interactionState.selected.id);
     if (!node || !item) return;
     const p = node.querySelector('.sel-complete');
     if (p) p.textContent = item.state === 'complete' ? COPY.restore : COPY.complete;
@@ -2454,27 +2461,27 @@ function updateSelectionUI() {
 /* Frame-drag resize (issue #4): scale from the pointer's distance to the
    note's fixed top-left origin — same clamp, re-clamp, and hit math as pinch. */
 function startResize(e) {
-  const note = current.notes.find(n => n.id === selected.id);
-  const node = noteEls.get(selected.id);
-  if (!note || !node) { g.mode = 'cancelled'; return; }
+  const note = current.notes.find(n => n.id === interactionState.selected.id);
+  const node = noteEls.get(interactionState.selected.id);
+  if (!note || !node) { interactionState.g.mode = 'cancelled'; return; }
   rebaseNote(note);                  // grab math runs in current-frame units (issue #15)
-  g.mode = 'resize';
-  g.note = note;
-  g.target = { type: 'note', node };
-  g.originX = note.x; g.originY = note.y;
+  interactionState.g.mode = 'resize';
+  interactionState.g.note = note;
+  interactionState.g.target = { type: 'note', node };
+  interactionState.g.originX = note.x; interactionState.g.originY = note.y;
   const pt = toLogical(e.clientX, e.clientY);
-  g.grabDist = Math.hypot(pt.x - g.originX, pt.y - g.originY) || 1;
-  g.startScale = note.scale;
+  interactionState.g.grabDist = Math.hypot(pt.x - interactionState.g.originX, pt.y - interactionState.g.originY) || 1;
+  interactionState.g.startScale = note.scale;
   node.classList.add('pressed');
   setSelectionHidden(true);
 }
 function updateResize(e) {
   const pt = toLogical(e.clientX, e.clientY);
-  const dist = Math.hypot(pt.x - g.originX, pt.y - g.originY);
-  applyNoteScale(g.note, g.target.node, gestureScale(g.startScale, dist / g.grabDist));
+  const dist = Math.hypot(pt.x - interactionState.g.originX, pt.y - interactionState.g.originY);
+  applyNoteScale(interactionState.g.note, interactionState.g.target.node, gestureScale(interactionState.g.startScale, dist / interactionState.g.grabDist));
 }
 function endResize() {
-  g.target.node.classList.remove('pressed');
+  interactionState.g.target.node.classList.remove('pressed');
   saveNow();
   updateSelectionUI();               // reposition + unhide at the new footprint
 }
@@ -2522,7 +2529,7 @@ function restoreLot(node) {
 // index-restoring Undo — one implementation to keep honest.
 function deleteNote(node) { deleteNotes([node.dataset.id]); }
 function deleteLot(node) {
-  if (selected && selected.kind === 'lot' && selected.id === node.dataset.id) clearSelection();
+  if (interactionState.selected && interactionState.selected.kind === 'lot' && interactionState.selected.id === node.dataset.id) clearSelection();
   const item = current.parkingLot.find(i => i.id === node.dataset.id);
   const index = current.parkingLot.indexOf(item);
   const snapshot = JSON.parse(JSON.stringify(item));
@@ -2557,7 +2564,7 @@ function deleteNotes(ids) {
   const removedLinks = boardLinks().filter(l => wanted.has(l.a) || wanted.has(l.b));
   if (removedLinks.length) current.links = current.links.filter(l => !wanted.has(l.a) && !wanted.has(l.b));
   clearSelection();
-  if (engaged && wanted.has(engaged)) clearEngaged();   // the engaged note is leaving (issue #136, B90)
+  if (interactionState.engaged && wanted.has(interactionState.engaged)) clearEngaged();   // the engaged note is leaving (issue #136, B90)
   for (let i = snap.length - 1; i >= 0; i--) {       // descending: indices stay valid
     const s = snap[i];
     current.notes.splice(s.index, 1);
@@ -2850,7 +2857,7 @@ el.boardActions.addEventListener('keydown', (e) => {
    contextmenu listener (its delete menu, B24) is a different element, untouched. */
 el.board.addEventListener('contextmenu', (ev) => {
   if (!viewState.isDesktop) return;                           // mobile arms Link by long-press
-  if (linkSource) { ev.preventDefault(); return; }  // already arming: left-click a note to finish
+  if (interactionState.linkSource) { ev.preventDefault(); return; }  // already arming: left-click a note to finish
   const noteNode = ev.target.closest('.note');
   if (!noteNode || isEditing(ev.target)) return;    // non-note / text edit keeps the native menu
   ev.preventDefault();
@@ -2942,8 +2949,8 @@ function attachMenuOutsideDismiss() {
   menuOutsideHandler = (ev) => {
     if (el.menu.contains(ev.target)) return;
     if (el.board.contains(ev.target)) {
-      swallowTap = true;
-      setTimeout(() => { swallowTap = false; }, 0);   // never outlives this press
+      interactionState.swallowTap = true;
+      setTimeout(() => { interactionState.swallowTap = false; }, 0);   // never outlives this press
     }
     closeMenu();
   };
@@ -3952,7 +3959,6 @@ const catOrder = (a, b) => (touchedAt(b) - touchedAt(a)) || boardOrder(a, b);
 let catPage = { todo: 0, idea: 0, unsorted: 0, learning: 0 };
 let catCap = 0;                        // 0 = never rendered; the capacity check waits
 let catFilled = 0;                     // populated sections the last render measured
-let dragCancel = null;                 // the live card-drag's teardown, if one is mid-flight
 
 /* The per-page card budget, measured — never a constant (B42, restated B68).
    `filled` is how many of the drawn sections hold at least one board: an empty
@@ -4242,7 +4248,7 @@ function attachBoardCardGestures(card, row, b, opts) {
     if (ghost) { ghost.remove(); ghost = null; }
     row.classList.remove('card-dragging');
     if (over) { over.classList.remove('drop-target'); over = null; }
-    dragCancel = null;
+    interactionState.dragCancel = null;
   };
   card.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;        // right-click stays the contextmenu path
@@ -4267,7 +4273,7 @@ function attachBoardCardGestures(card, row, b, opts) {
       clearTimeout(t);                 // movement cancels the long-press (B29)
       // Register the teardown: a re-render mid-drag destroys this card and its
       // capture, so the render must be able to cancel the gesture.
-      dragCancel = () => { down = false; dragging = false; clearDrag(); };
+      interactionState.dragCancel = () => { down = false; dragging = false; clearDrag(); };
       row.classList.add('card-dragging');
       // The same "the gesture just changed mode" signal the hold gives.
       if (!viewState.isDesktop && navigator.vibrate) navigator.vibrate(10);
@@ -4378,10 +4384,9 @@ async function openBoardById(id) {
    makes the "This board" toggle (mobile, where the tab is not blurred) safe
    against a fast double-tap (B83). Cleared on the next popstate, when the nav
    this began has landed. */
-let popping = false;
 function returnToBoard() {
-  if (popping) return;
-  popping = true;
+  if (interactionState.popping) return;
+  interactionState.popping = true;
   const depth = (history.state && history.state.v === 'cat') ? 2 : 1;
   history.go(-depth);
 }
@@ -4418,7 +4423,6 @@ async function newBoardIn(cat) {
 }
 
 /* --- 11.5 Desktop board pane (issues #9 / #10 / #14) ---------------------- */
-let swapping = false;                // async re-entrancy guard beyond the commit drop-guard
 
 /* A pending note/lot Undo splices into whatever board is `current` at undo
    time — switching boards would resurrect it onto the wrong board. Board
@@ -4429,20 +4433,20 @@ function finalizeItemUndo() {
 }
 
 async function swapBoard(id) {
-  if (swapping) return;
+  if (interactionState.swapping) return;
   if (current && current.id === id) return;
   finalizeItemUndo();
-  swapping = true;
+  interactionState.swapping = true;
   flushSave();                        // persist() snapshots `current` synchronously — safe
   const rec = await idbGet(id);
-  if (!rec) { swapping = false; renderPane(); return; }
+  if (!rec) { interactionState.swapping = false; renderPane(); return; }
   el.board.classList.add('swapping');
   setTimeout(() => {                  // setTimeout, not transitionend: the reduced-motion
     current = rec;                    // kill-switch zeroes transitions (§8)
     renderBoard();
     renderPane();
     el.board.classList.remove('swapping');
-    swapping = false;
+    interactionState.swapping = false;
   }, SWAP_MS);
 }
 
@@ -4453,7 +4457,7 @@ async function renderPane() {
   if (!viewState.isWide || !el.paneCards) return;   // wide: the rail exists on tablet too (B96)
   // A re-render tears the captured card out from under a live drag — pointerup
   // would never arrive, stranding the fixed ghost on screen. Cancel it first.
-  if (dragCancel) dragCancel();
+  if (interactionState.dragCancel) interactionState.dragCancel();
   const all = await idbGetAll();
   const buckets = { todo: [], idea: [], unsorted: [], learning: [] };
   // The open board buckets from memory, not the snapshot: `current` is
@@ -4954,7 +4958,7 @@ el.calExport.addEventListener('click', (e) => {
    drill to the picker re-opens it on the surface the mode uses — the mobile
    grid or the desktop screen. */
 window.addEventListener('popstate', () => {
-  popping = false;                     // the nav returnToBoard began has landed (B83)
+  interactionState.popping = false;                     // the nav returnToBoard began has landed (B83)
   closeMenu();
   const s = history.state;
   // B99: on wide the calendar is furniture — the rail never enters this

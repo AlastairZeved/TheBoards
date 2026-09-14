@@ -2145,7 +2145,7 @@ async function openCat(page, cat) {
     await chooseLink();
     await page.waitForTimeout(80);
     ok('Link arms the mode and shows a hint toast', await page.evaluate(() =>
-      linkSource !== null && document.querySelector('#toast').dataset.mode === 'link'));
+      interactionState.linkSource !== null && document.querySelector('#toast').dataset.mode === 'link'));
     await tap(page, c.lb.x, c.lb.y);
     await page.waitForTimeout(120);
     ok('tapping the second note creates one link', (await links()) === 1, 'links=' + await links());
@@ -2153,7 +2153,7 @@ async function openCat(page, cat) {
     ok('the link records both note ids', await page.evaluate(() => {
       const l = current.links[0]; return (l.a === 'la' && l.b === 'lb') || (l.a === 'lb' && l.b === 'la');
     }));
-    ok('link mode cleared after completing', await page.evaluate(() => linkSource === null));
+    ok('link mode cleared after completing', await page.evaluate(() => interactionState.linkSource === null));
 
     // The line sits BELOW notes, is --frame, non-scaling, and click-through.
     ok('the line is a non-scaling --frame stroke below notes, pointer-events:none',
@@ -2187,10 +2187,10 @@ async function openCat(page, cat) {
     await page.waitForTimeout(100);
     await chooseLink();
     await page.waitForTimeout(80);
-    ok('armed again', await page.evaluate(() => linkSource !== null));
+    ok('armed again', await page.evaluate(() => interactionState.linkSource !== null));
     await tap(page, 40, 460);                              // empty paper between the notes
     await page.waitForTimeout(100);
-    ok('an empty-paper tap cancels link mode', await page.evaluate(() => linkSource === null));
+    ok('an empty-paper tap cancels link mode', await page.evaluate(() => interactionState.linkSource === null));
     ok('and creates no link', (await links()) === 0, 'links=' + await links());
     ok('and no stray note', (await noteCount(page)) === 2, 'count=' + await noteCount(page));
 
