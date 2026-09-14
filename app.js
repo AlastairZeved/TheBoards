@@ -1584,150 +1584,176 @@ function commitAction(fn) {
    drop-guard, so B18(d) holds exactly where a consequence fires — while inert
    taps (select, deselect) and navigation stay live regardless. */
 function handleTap(target, x, y, shift) {
-  // Pending link (issue #142, B91): while a source note is armed, the next tap
-  // resolves it — a DIFFERENT note is linked, or unlinked if the pair is already
-  // linked (toggle). Anything else — empty canvas, the lot, an anchor, the source
-  // note itself — cancels. Either way the tap is CONSUMED (return), so no note is
-  // created, selected or edited underneath. The write is a consequence, so it and
-  // its mode-exit run together inside commitAction's drop-guard (B81); the cancel
-  // commits nothing, so it runs raw.
-  if (linkSource !== null) {
-    const src = linkSource;
-    if (target.type === 'note' && target.node.dataset.id !== src) {
-      const dst = target.node.dataset.id;
-      commitAction(() => { toggleLink(src, dst); clearLink(); });
+  // Pending link (issue #142, B91) consumes any tap while a source is armed —
+  // see resolvePendingLink below. The tap must not select, edit or create
+  // underneath it.
+  if (resolvePendingLink(target)) return;
+  switch (target.type) {
+    case 'sel-btn': tapLotButton(target); break;
+    case 'note-tb-btn': tapNoteToolbar(target); break;   // B84 (keyboard path too, below)
+    case 'sel-frame': break;           // a motionless click on the ring does nothing
+    case 'canvas': tapCanvas(x, y); break;
+    case 'lot': tapLot(x, y); break;
+    case 'note': tapNote(target, x, y, shift); break;
+    case 'lot-item': tapLotItem(target, x, y); break;
+    case 'anchor': tapAnchor(target, x, y); break;       // edit-entry is instant on both (B27, B81)
+  }
+}
+
+/* B91 pending-link pre-check (issue #142): while a source note is armed, the
+   next tap resolves it — a DIFFERENT note is linked, or unlinked if the pair
+   is already linked (toggle). Anything else — empty canvas, the lot, an
+   anchor, the source note itself — cancels. Either way the tap is CONSUMED
+   (returns true), so no note is created, selected or edited underneath. The
+   write is a consequence, so it and its mode-exit run together inside
+   commitAction's drop-guard (B81); the cancel commits nothing, so it runs raw. */
+function resolvePendingLink(target) {
+  if (linkSource === null) return false;
+  const src = linkSource;
+  if (target.type === 'note' && target.node.dataset.id !== src) {
+    const dst = target.node.dataset.id;
+    commitAction(() => { toggleLink(src, dst); clearLink(); });
+  } else {
+    clearLink();
+  }
+  return true;
+}
+
+/* Lot rows only now (B84): notes act through their own top-edge toolbar
+   (tapNoteToolbar). Every button commits on release through the B81
+   drop-guard; Copy of a completed row is allowed — the record still holds
+   the text (issue #59). */
+function tapLotButton(target) {
+  const lotRow = target.node.closest('.lot-item');
+  if (!lotRow) return;
+  const isDel = target.node.classList.contains('sel-delete');
+  const isCopy = target.node.classList.contains('sel-copy');
+  commitAction(() => {
+    const item = current.parkingLot.find(i => i.id === lotRow.dataset.id);
+    if (!item) return;
+    if (isCopy) copyText(item.text);
+    else if (isDel) { clearSelection(); deleteLot(lotRow); }
+    else {
+      if (item.state === 'complete') restoreLot(lotRow); else completeLot(lotRow);
+      updateSelectionUI();
+    }
+  });
+}
+
+function tapNoteToolbar(target) {
+  runNoteToolbarAction(target.node);
+}
+
+/* Creation surface (issues #12/#41/#54). Guard order is load-bearing:
+   click-away-while-editing FIRST, then the selected check (#54). */
+function tapCanvas(x, y) {
+  // Click-away while editing commits and only dismisses (issue #54). This
+  // guard is mode-independent and must come BEFORE the selected check:
+  // while editing nothing is selected (edit paths clear selection first),
+  // and the recognizer suppressed the native blur (B27), so without it a
+  // desktop click fell through and created a note on top of the dismissal.
+  // The NEXT click creates.
+  if (isEditing(document.activeElement)) { document.activeElement.blur(); return; }
+  // Creation surfaces deselect first (issue #12 desktop / #41 mobile):
+  // with a selection active a tap only dismisses; capture is only primary
+  // when nothing is selected or being edited.
+  if (isDesktop && selected) { clearSelection(); return; }
+  if (!isDesktop && engaged) { clearEngaged(); return; }   // mobile: tap-away deselects; a further tap creates (issue #136, B90)
+  createNote(x, y);                // capture is instant on both (B27, B81)
+}
+
+/* Creation surface, same #54 law as tapCanvas (see above). */
+function tapLot(x, y) {
+  if (isEditing(document.activeElement)) { document.activeElement.blur(); return; }
+  if (isDesktop && selected) { clearSelection(); return; }   // creation surface too
+  if (!isDesktop && engaged) { clearEngaged(); return; }   // mobile: tap-away deselects (issue #136, B90)
+  createLotItem();                 // capture is instant on both (B27, B81)
+}
+
+/* Desktop: click selects (inert, instant); a second click within the pairing
+   window edits with the caret at the end (issue #4); shift-click toggles
+   multi-selection (issue #55). Mobile: two-tap grammar (issue #136, B90) —
+   a first tap ENGAGES (toolbar shows, no keyboard, no write, B22); a second
+   tap on the already-engaged active note EDITS, synchronously inside
+   pointerup so the keyboard rises (B27a), caret at the END. A completed
+   note never edits (§4.3), so it only ever engages. */
+function tapNote(target, x, y, shift) {
+  const node = target.node;
+  const note = current.notes.find(n => n.id === node.dataset.id);
+  if (!note) return;
+  if (isDesktop) {
+    // An open editor commits before the click acts (issue #54); on the
+    // edited note's own collar the click only dismisses.
+    if (commitOpenEditor(node)) return;
+    // Shift-click toggles multi-selection membership (issue #55) and
+    // never pairs into the double-click window.
+    if (shift) {
+      toggleInSelection(note.id);
+      lastTap = { key: null, t: 0 };
+      return;
+    }
+    // Click selects (instant, inert); a second click within the pairing
+    // window edits with the caret at the end (issue #4). Completed notes
+    // never edit — same guard as the mobile tap path.
+    const key = 'note:' + note.id, now = Date.now();
+    if (selected && selected.kind === 'note' && selected.id === note.id &&
+        lastTap.key === key && now - lastTap.t < DBLCLICK_MS) {
+      lastTap = { key: null, t: 0 };
+      if (note.state === 'active') {
+        clearSelection();
+        surfaceNote(node);
+        editText(node.querySelector('.note-text'));   // no coords → caret at end
+      }
     } else {
-      clearLink();
+      selectNote(note.id);
+      lastTap = { key, t: now };
     }
     return;
   }
-  switch (target.type) {
-    case 'sel-btn': {
-      // Lot rows only now (B84): notes act through their own top-edge toolbar
-      // (case 'note-tb-btn'). Every button commits on release through the B81
-      // drop-guard; Copy of a completed row is allowed — the record still holds
-      // the text (issue #59).
-      const lotRow = target.node.closest('.lot-item');
-      if (!lotRow) break;
-      const isDel = target.node.classList.contains('sel-delete');
-      const isCopy = target.node.classList.contains('sel-copy');
-      commitAction(() => {
-        const item = current.parkingLot.find(i => i.id === lotRow.dataset.id);
-        if (!item) return;
-        if (isCopy) copyText(item.text);
-        else if (isDel) { clearSelection(); deleteLot(lotRow); }
-        else {
-          if (item.state === 'complete') restoreLot(lotRow); else completeLot(lotRow);
-          updateSelectionUI();
-        }
-      });
-      break;
-    }
-    case 'note-tb-btn': runNoteToolbarAction(target.node); break;   // B84 (keyboard path too, below)
-    case 'sel-frame': break;           // a motionless click on the ring does nothing
-    case 'canvas': {
-      // Click-away while editing commits and only dismisses (issue #54). This
-      // guard is mode-independent and must come BEFORE the selected check:
-      // while editing nothing is selected (edit paths clear selection first),
-      // and the recognizer suppressed the native blur (B27), so without it a
-      // desktop click fell through and created a note on top of the dismissal.
-      // The NEXT click creates.
-      if (isEditing(document.activeElement)) { document.activeElement.blur(); break; }
-      // Creation surfaces deselect first (issue #12 desktop / #41 mobile):
-      // with a selection active a tap only dismisses; capture is only primary
-      // when nothing is selected or being edited.
-      if (isDesktop && selected) { clearSelection(); break; }
-      if (!isDesktop && engaged) { clearEngaged(); break; }   // mobile: tap-away deselects; a further tap creates (issue #136, B90)
-      createNote(x, y);                // capture is instant on both (B27, B81)
-      break;
-    }
-    case 'lot': {
-      // Same #54 law as canvas: an open editor commits and the tap is spent.
-      if (isEditing(document.activeElement)) { document.activeElement.blur(); break; }
-      if (isDesktop && selected) { clearSelection(); break; }   // creation surface too
-      if (!isDesktop && engaged) { clearEngaged(); break; }   // mobile: tap-away deselects (issue #136, B90)
-      createLotItem();                 // capture is instant on both (B27, B81)
-      break;
-    }
-    case 'note': {
-      const node = target.node;
-      const note = current.notes.find(n => n.id === node.dataset.id);
-      if (!note) break;
-      if (isDesktop) {
-        // An open editor commits before the click acts (issue #54); on the
-        // edited note's own collar the click only dismisses.
-        if (commitOpenEditor(node)) break;
-        // Shift-click toggles multi-selection membership (issue #55) and
-        // never pairs into the double-click window.
-        if (shift) {
-          toggleInSelection(note.id);
-          lastTap = { key: null, t: 0 };
-          break;
-        }
-        // Click selects (instant, inert); a second click within the pairing
-        // window edits with the caret at the end (issue #4). Completed notes
-        // never edit — same guard as the mobile tap path.
-        const key = 'note:' + note.id, now = Date.now();
-        if (selected && selected.kind === 'note' && selected.id === note.id &&
-            lastTap.key === key && now - lastTap.t < DBLCLICK_MS) {
-          lastTap = { key: null, t: 0 };
-          if (note.state === 'active') {
-            clearSelection();
-            surfaceNote(node);
-            editText(node.querySelector('.note-text'));   // no coords → caret at end
-          }
-        } else {
-          selectNote(note.id);
-          lastTap = { key, t: now };
-        }
-        break;
-      }
-      // Mobile two-tap grammar (issue #136, B90): a first tap ENGAGES the note —
-      // its toolbar shows (via the `.engaged` class), with no focus, no keyboard,
-      // and no write (B22, so no surfaceNote on this tap). A second tap on the
-      // already-engaged active note EDITS it, synchronously inside pointerup so the
-      // keyboard rises (B27a), caret at the END (no coords → caretToEnd, overriding
-      // B14 on mobile; the desktop precedent is B26). A completed note never edits
-      // (§4.3), so it only ever engages.
-      if (isEditing(document.activeElement)) document.activeElement.blur();
-      if (note.state === 'active' && engaged === note.id) {
-        clearEngaged();
-        surfaceNote(node);                                      // editing raises it (B27)
-        editText(node.querySelector('.note-text'));             // no coords → caret at end
-      } else {
-        setEngaged(node);
-      }
-      break;
-    }
-    case 'lot-item': {
-      const node = target.node;
-      const item = current.parkingLot.find(i => i.id === node.dataset.id);
-      if (!item) break;
-      if (isDesktop) {
-        // Same #54 commit-first guard as the note branch. Lot rows stay
-        // single-select (issue #55) — no shift path here, by design.
-        if (commitOpenEditor(node)) break;
-        const key = 'lot:' + item.id, now = Date.now();
-        if (selected && selected.kind === 'lot' && selected.id === item.id &&
-            lastTap.key === key && now - lastTap.t < DBLCLICK_MS) {
-          lastTap = { key: null, t: 0 };
-          if (item.state === 'active') {
-            clearSelection();
-            editText(node.querySelector('.lot-text'));    // no coords → caret at end
-          }
-        } else {
-          selectLot(item.id);
-          lastTap = { key, t: now };
-        }
-        break;
-      }
-      if (item.state === 'active') editText(node.querySelector('.lot-text'), x, y);  // B27
-      break;
-    }
-    case 'anchor':
-      editText(target.node, x, y);      // edit-entry is instant on both (B27, B81)
-      break;
+  // Mobile two-tap grammar (issue #136, B90): a first tap ENGAGES the note —
+  // its toolbar shows (via the `.engaged` class), with no focus, no keyboard,
+  // and no write (B22, so no surfaceNote on this tap). A second tap on the
+  // already-engaged active note EDITS it, synchronously inside pointerup so the
+  // keyboard rises (B27a), caret at the END (no coords → caretToEnd, overriding
+  // B14 on mobile; the desktop precedent is B26). A completed note never edits
+  // (§4.3), so it only ever engages.
+  if (isEditing(document.activeElement)) document.activeElement.blur();
+  if (note.state === 'active' && engaged === note.id) {
+    clearEngaged();
+    surfaceNote(node);                                      // editing raises it (B27)
+    editText(node.querySelector('.note-text'));             // no coords → caret at end
+  } else {
+    setEngaged(node);
   }
+}
+
+/* Same #54 commit-first guard as the note branch. Lot rows stay
+   single-select (issue #55) — no shift path here, by design. */
+function tapLotItem(target, x, y) {
+  const node = target.node;
+  const item = current.parkingLot.find(i => i.id === node.dataset.id);
+  if (!item) return;
+  if (isDesktop) {
+    if (commitOpenEditor(node)) return;
+    const key = 'lot:' + item.id, now = Date.now();
+    if (selected && selected.kind === 'lot' && selected.id === item.id &&
+        lastTap.key === key && now - lastTap.t < DBLCLICK_MS) {
+      lastTap = { key: null, t: 0 };
+      if (item.state === 'active') {
+        clearSelection();
+        editText(node.querySelector('.lot-text'));    // no coords → caret at end
+      }
+    } else {
+      selectLot(item.id);
+      lastTap = { key, t: now };
+    }
+    return;
+  }
+  if (item.state === 'active') editText(node.querySelector('.lot-text'), x, y);  // B27
+}
+
+function tapAnchor(target, x, y) {
+  editText(target.node, x, y);      // edit-entry is instant on both (B27, B81)
 }
 
 /* Enter inline edit on any editable text node. */
@@ -4964,7 +4990,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v48';
+const OWN_BUILD = 'v49';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {
