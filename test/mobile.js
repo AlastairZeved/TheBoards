@@ -76,7 +76,7 @@ const activeIsNoteText = page => page.evaluate(() =>
 // way a tap through the picker would — goToList raises the picker, drillCat
 // pushes the category. The two-level history means the board is two pops away.
 async function openCat(page, cat) {
-  await page.evaluate((c) => { if (!listOpen) goToList(); drillCat(c); }, cat);
+  await page.evaluate((c) => { if (!menuUiState.listOpen) goToList(); drillCat(c); }, cat);
   await page.waitForTimeout(300);
 }
 
@@ -1546,7 +1546,7 @@ async function openCat(page, cat) {
     await page.waitForTimeout(250);
     ok('back again returns from the picker to the board', await page.evaluate(() =>
       document.querySelector('#lot-menu').hidden === true &&
-      document.querySelector('#list-view').hidden === true && !listOpen));
+      document.querySelector('#list-view').hidden === true && !menuUiState.listOpen));
     ok('and the board\'s real Parking Lot is back', await page.evaluate(() =>
       !document.querySelector('#lot').classList.contains('menu-open')));
 
@@ -1688,7 +1688,7 @@ async function openCat(page, cat) {
     await page.waitForTimeout(600);                     // past ACTION_DELAY; two pops → board
     ok('the second card opened its board', await page.evaluate(() => current.id) === target);
     ok('and the nav returned all the way to the board', await page.evaluate(() =>
-      !listOpen && document.querySelector('#list-view').hidden === true &&
+      !menuUiState.listOpen && document.querySelector('#list-view').hidden === true &&
       document.querySelector('#lot-menu').hidden === true));
     // A genuine edit: capture a note and commit it — the commit's saveNow() stamps updatedAt.
     await tap(page, 200, 500);
@@ -1810,7 +1810,7 @@ async function openCat(page, cat) {
        await page.evaluate(() => !document.querySelector('.cat-add.tapped')));
     await page.waitForTimeout(600);
     ok('it opened onto the new board', await page.evaluate(() =>
-      document.querySelector('#list-view').hidden !== false && !listOpen));
+      document.querySelector('#list-view').hidden !== false && !menuUiState.listOpen));
     const rec = await page.evaluate(async () => {
       const all = await idbGetAll();
       const newest = all.reduce((a, b) => (b.createdAt > a.createdAt ? b : a));
@@ -1878,7 +1878,7 @@ async function openCat(page, cat) {
     await page.waitForTimeout(200);
     const opened = await page.evaluate(() => ({
       grid: document.querySelector('#lot-menu').hidden === false,
-      lotMenuOpen, listOpen,
+      lotMenuOpen: menuUiState.lotMenuOpen, listOpen: menuUiState.listOpen,
       label: document.querySelector('#action-boards .label').textContent,
     }));
     ok('All boards raised the lot-grid — no note on the canvas beneath the collar',
@@ -1895,7 +1895,7 @@ async function openCat(page, cat) {
     await page.waitForTimeout(300);
     ok('This board returns to the board — grid gone, label back to All (R7.2\'s short form)',
        await page.evaluate(() => document.querySelector('#lot-menu').hidden === true &&
-         !lotMenuOpen && !listOpen &&
+         !menuUiState.lotMenuOpen && !menuUiState.listOpen &&
          /^All$/.test(document.querySelector('#action-boards .label').textContent)));
 
     // history.go is async and not idempotent, so a re-entrant returnToBoard (a
@@ -1914,7 +1914,7 @@ async function openCat(page, cat) {
     await page.waitForTimeout(300);
     ok('a re-entrant returnToBoard pops once, never past the board (B83)', pops === 1, String(pops));
     ok('and it landed back on the board', await page.evaluate(() =>
-      !!document.querySelector('#board') && !listOpen && !lotMenuOpen));
+      !!document.querySelector('#board') && !menuUiState.listOpen && !menuUiState.lotMenuOpen));
 
     // Export is now a CHOICE (B92): the tab opens the PDF · JSON menu at the
     // tab, and the PDF leaf commits (a file leaves the device).

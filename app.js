@@ -275,7 +275,7 @@ function applyMode() {
   closeMenu();
   if (interactionState.g) { clearTimeout(interactionState.g.longPressTimer); interactionState.g = null; }
   pointers.clear();
-  if (viewState.isWide && listOpen) returnToBoard();  // pop the whole list nav → board (B9 intact;
+  if (viewState.isWide && menuUiState.listOpen) returnToBoard();  // pop the whole list nav → board (B9 intact;
                                                // a drill is two levels deep, B74)
   // The calendar across the flip (issue #145): the panel arrangement belongs
   // to the wide grammar, so a flip while it is open closes it and pops its
@@ -285,9 +285,9 @@ function applyMode() {
   // every flip; only the mobile screen state and the wide EXPANDED panel
   // tear down (the expanded panel's squeeze must lift so the frame re-reads
   // the rail's 40px). Mobile, closed, hides the view outright as before.
-  if (calOpen || calExpanded) {
-    calOpen = false;
-    calExpanded = false;
+  if (menuUiState.calOpen || menuUiState.calExpanded) {
+    menuUiState.calOpen = false;
+    menuUiState.calExpanded = false;
     el.calView.hidden = true;
     el.calView.classList.remove('rail-open', 'panel');
     el.calRail.hidden = true;
@@ -703,10 +703,10 @@ function applyMobileLayout(vw, vh) {
 }
 
 function checkListCapacity() {
-  if (catCap && catPageCap(catFilled, catView ? 1 : undefined) !== catCap) {
+  if (menuUiState.catCap && catPageCap(menuUiState.catFilled, menuUiState.catView ? 1 : undefined) !== menuUiState.catCap) {
     // Re-paginate the surface that is showing: the open list overlay (drill or
     // desktop picker) first, else the desktop rail behind it (issue #112 review).
-    if (listOpen) renderListSurface();
+    if (menuUiState.listOpen) renderListSurface();
     else if (viewState.isWide && el.paneCards) renderPane();
   }
 }
@@ -1901,7 +1901,7 @@ function onEditFocusIn(e) {
       // member, and that hand-back must not collapse the multi-selection the
       // menu just acted on. A real Tab onto a member still selects it, so
       // keyboard focus and selection never diverge outside that one call.
-      if (!(menuReturnFocus && multiSel.size > 1 && multiSel.has(note.id))) selectNote(note.id);
+      if (!(menuUiState.menuReturnFocus && multiSel.size > 1 && multiSel.has(note.id))) selectNote(note.id);
       return;
     }
     if (note.state === 'active') editText(t.querySelector('.note-text'));
@@ -1918,7 +1918,7 @@ document.addEventListener('focusin', onEditFocusIn);
    menuKeyHandler owns Escape/Tab/arrows there, and Delete must not destroy the
    selection underneath an open menu (issue #10). */
 function onDesktopKeydown(e) {
-  if (!viewState.isDesktop || menuOpen) return;
+  if (!viewState.isDesktop || menuUiState.menuOpen) return;
   // While a link is armed, Escape cancels it and every other key is inert (B91) —
   // no selection exists to Delete/Enter into, and this must win over the grammar.
   if (interactionState.linkSource !== null) { if (e.key === 'Escape') clearLink(); return; }
@@ -2627,9 +2627,28 @@ function leave(node, done) {
 }
 
 /* Undo toast (UIUX §9): 5s, restores exact state; a new delete finalizes prior. */
-let undoTimer = null;
+/* Menu, list, category, calendar, and toast UI flags — one state object
+   (issue #176). Members keep their original declaration comments. */
+const menuUiState = {
+  undoTimer: null,
+  noticeSeq: 0,
+  menuOpen: false,
+  menuKeyHandler: null,
+  menuOutsideHandler: null,
+  menuInvoker: null,                 // desktop contextmenu: focus returns here on close
+  menuReturnFocus: false,            // true only inside closeMenu's synchronous focus return
+  pdfLossy: false,
+  listOpen: false,
+  catView: null,
+  lotMenuOpen: false,
+  catPage: { todo: 0, idea: 0, unsorted: 0, learning: 0 },
+  catCap: 0,                         // 0 = never rendered; the capacity check waits
+  catFilled: 0,                      // populated sections the last render measured
+  calOpen: false,                    // the MOBILE full-screen calendar (B95's third screen)
+  calExpanded: false,                // wide's expanded panel (B99) — rail-up is not "open"
+};
 function showUndo(undoFn, scope, label) {
-  clearTimeout(undoTimer);
+  clearTimeout(menuUiState.undoTimer);
   el.toast.dataset.mode = 'undo';                      // capture priority over save-error
   el.toast.dataset.scope = scope || 'item';            // 'item' undo is current-bound (finding 1)
   el.toast.textContent = '';
@@ -2639,13 +2658,13 @@ function showUndo(undoFn, scope, label) {
   // Clear the finalize timer on the click itself, not at the end of the action
   // window, so a late Undo (≈4.6s+) can't be finalized out from under it.
   btn.addEventListener('click', () => {
-    clearTimeout(undoTimer);
+    clearTimeout(menuUiState.undoTimer);
     commitAction(() => { hideToast(); undoFn(); });
   });
   el.toast.appendChild(msg); el.toast.appendChild(btn);
   el.toast.hidden = false;
   requestAnimationFrame(() => el.toast.classList.add('show'));
-  undoTimer = setTimeout(hideToast, UNDO_MS);          // timeout finalizes the delete
+  menuUiState.undoTimer = setTimeout(hideToast, UNDO_MS);          // timeout finalizes the delete
 }
 function hideToast() {
   delete el.toast.dataset.mode;
@@ -2657,13 +2676,12 @@ function hideToast() {
 /* A message with no action. `save` is persistent (hideSaveError clears it when
    the write lands); `export` and `copy` carry a ttl, because nothing later will
    come along to retract them. */
-let noticeSeq = 0;
 function showNotice(text, mode, ttl) {
   if (el.toast.dataset.mode === 'undo') return;        // never clobber a pending undo
   // Each notice stamps the toast; the ttl timer only hides its own stamp. A
   // mode check alone let a stale timer hide a newer same-mode notice early —
   // copying two items inside 1.5s (issue #59) is how that became observable.
-  const seq = String(++noticeSeq);
+  const seq = String(++menuUiState.noticeSeq);
   el.toast.dataset.mode = mode;
   el.toast.dataset.seq = seq;
   el.toast.textContent = '';
@@ -2716,9 +2734,6 @@ function copyText(text) {
 }
 
 /* --- 10. Long-press menu ------------------------------------------------- */
-let menuOpen = false, menuKeyHandler = null, menuOutsideHandler = null;
-let menuInvoker = null;              // desktop contextmenu: focus returns here on close
-let menuReturnFocus = false;         // true only inside closeMenu's synchronous focus return
 
 /* One menu opens here now (B91): a note's single Link item. The anchor's own
    menu (All boards · Export) is gone (issue #140, B92) — both of its actions
@@ -2773,7 +2788,7 @@ fillBoardAction(el.calExport, GLYPH.export, COPY.calExport);
    (the four-tab row's fit); the toggle's other face keeps the full "This
    board" — the one word that states the return, unchanged from B83. */
 function syncBoardActions() {
-  const away = listOpen || lotMenuOpen;
+  const away = menuUiState.listOpen || menuUiState.lotMenuOpen;
   const l = el.actionBoards.querySelector('.label');
   if (l) l.textContent = away ? COPY.thisBoard : COPY.calBoardTab;
 }
@@ -2782,7 +2797,7 @@ function syncBoardActions() {
    duplicate, so it runs raw, no commitAction (B81). goToList opens the list /
    lot-grid; returnToBoard pops back however deep. */
 el.actionBoards.addEventListener('click', () => {
-  if (listOpen || lotMenuOpen) returnToBoard();
+  if (menuUiState.listOpen || menuUiState.lotMenuOpen) returnToBoard();
   else goToList();
 });
 /* Export is now a CHOICE (issue #140, B92): the tab opens the app's one menu
@@ -2824,7 +2839,7 @@ el.importFile.addEventListener('change', () => {
    state { v: 'cal' }: the OS back gesture returns from it (B9, unshadowed),
    and its OWN Back button is the always-visible route (R1). */
 el.actionCalendar.addEventListener('click', () => {
-  if (calOpen) return;
+  if (menuUiState.calOpen) return;
   // The rail is wide's entry (B99); the tab is mobile's and pushes its own
   // history state { v: 'cal' }: the OS back gesture returns from it (B9,
   // unshadowed), and its OWN Back button is the always-visible route (R1).
@@ -2914,7 +2929,7 @@ function buildMenu(items, clientX, clientY) {
   el.menu.style.left = x + 'px';
   el.menu.style.top = y + 'px';
   requestAnimationFrame(() => el.menu.classList.add('show'));
-  menuOpen = true;
+  menuUiState.menuOpen = true;
   if (buttons[0]) buttons[0].focus();
 
   attachMenuKeyNav(buttons);
@@ -2922,7 +2937,7 @@ function buildMenu(items, clientX, clientY) {
 }
 
 function attachMenuKeyNav(buttons) {
-  menuKeyHandler = (ev) => {
+  menuUiState.menuKeyHandler = (ev) => {
     // Escape pops the menu ONLY (B91): stopPropagation keeps it from reaching the
     // desktop keydown grammar underneath, which — now that a note's Link menu can
     // open over a live selection — would otherwise also clear that selection.
@@ -2939,14 +2954,14 @@ function attachMenuKeyNav(buttons) {
       buttons[next].focus();
     }
   };
-  document.addEventListener('keydown', menuKeyHandler, true);
+  document.addEventListener('keydown', menuUiState.menuKeyHandler, true);
 }
 
 /* Dismissal is inert (B30): this handler runs in the capture phase, so the
    very press that closes the menu would otherwise go on to reach the
    recognizer and capture a note on the paper the menu was covering. */
 function attachMenuOutsideDismiss() {
-  menuOutsideHandler = (ev) => {
+  menuUiState.menuOutsideHandler = (ev) => {
     if (el.menu.contains(ev.target)) return;
     if (el.board.contains(ev.target)) {
       interactionState.swallowTap = true;
@@ -2954,26 +2969,26 @@ function attachMenuOutsideDismiss() {
     }
     closeMenu();
   };
-  setTimeout(() => document.addEventListener('pointerdown', menuOutsideHandler, true), 0);
+  setTimeout(() => document.addEventListener('pointerdown', menuUiState.menuOutsideHandler, true), 0);
 }
 
 function closeMenu() {
-  if (!menuOpen && el.menu.hidden) return;
+  if (!menuUiState.menuOpen && el.menu.hidden) return;
   el.menu.classList.remove('show');
   el.menu.hidden = true;
-  menuOpen = false;
-  if (menuKeyHandler) document.removeEventListener('keydown', menuKeyHandler, true);
-  if (menuOutsideHandler) document.removeEventListener('pointerdown', menuOutsideHandler, true);
-  menuKeyHandler = menuOutsideHandler = null;
+  menuUiState.menuOpen = false;
+  if (menuUiState.menuKeyHandler) document.removeEventListener('keydown', menuUiState.menuKeyHandler, true);
+  if (menuUiState.menuOutsideHandler) document.removeEventListener('pointerdown', menuUiState.menuOutsideHandler, true);
+  menuUiState.menuKeyHandler = menuUiState.menuOutsideHandler = null;
   returnMenuFocus();
 }
 
 function returnMenuFocus() {
-  if (menuInvoker) {
-    const m = menuInvoker; menuInvoker = null;
+  if (menuUiState.menuInvoker) {
+    const m = menuUiState.menuInvoker; menuUiState.menuInvoker = null;
     // focus() dispatches focusin synchronously; the flag scopes the multi-
     // selection exemption to exactly this call (issue #55).
-    menuReturnFocus = true; m.focus(); menuReturnFocus = false;
+    menuUiState.menuReturnFocus = true; m.focus(); menuUiState.menuReturnFocus = false;
   }
 }
 
@@ -3051,14 +3066,13 @@ const PDF_CP1252 = {
    exists to avoid. Those characters export as '?', and the substitution is
    reported rather than swallowed: §10's law is that truncation is always
    indicated, and a silently mangled line is truncation. See DECISIONS B34. */
-let pdfLossy = false;
 function pdfCode(ch) {
   const u = ch.codePointAt(0);
   if (u === 9) return 32;                              // tab -> space
   if ((u >= 32 && u <= 126) || (u >= 160 && u <= 255)) return u;
   const m = PDF_CP1252[u];
   if (m !== undefined) return m;
-  pdfLossy = true;
+  menuUiState.pdfLossy = true;
   return 63;
 }
 function pdfAdv(code, bold) {
@@ -3703,10 +3717,10 @@ async function exportBoardPdf(board) {
       notes: (src.notes || []).filter(keep),
       parkingLot: (src.parkingLot || []).filter(keep),
     };
-    pdfLossy = false;
+    menuUiState.pdfLossy = false;
     const bytes = buildBoardPdf(rec);
     downloadBlob(new Blob([bytes], { type: 'application/pdf' }), pdfFilename(rec));
-    if (pdfLossy) showNotice(COPY.exportLossy, 'export', UNDO_MS);
+    if (menuUiState.pdfLossy) showNotice(COPY.exportLossy, 'export', UNDO_MS);
   } catch (e) {
     showNotice(COPY.exportError, 'export', UNDO_MS);
   }
@@ -3852,7 +3866,7 @@ async function importBoardsJson(file) {
     dirty = false;                      // current was replaced wholesale, exactly ensureCurrentValid's reading
     renderBoard();
   }
-  if (listOpen) await renderListSurface();
+  if (menuUiState.listOpen) await renderListSurface();
   else if (viewState.isWide) renderPane();     // the rail re-reads; the sheet is already right
   showNotice(COPY.imported, 'import', UNDO_MS);
 }
@@ -3864,9 +3878,6 @@ async function importBoardsJson(file) {
    picker is the Parking Lot turned into the grid rather than a screen of its
    own. History carries {v:'list'} for the picker and {v:'cat',cat} for a drill,
    so the OS back gesture returns drill -> picker -> board (B9, never shadowed). */
-let listOpen = false;
-let catView = null;
-let lotMenuOpen = false;
 
 // Creation order, newest first, with an id tiebreak so equal-millisecond
 // creates can't reorder between renders (issue #14). Since issue #97 this is
@@ -3956,9 +3967,6 @@ const catOrder = (a, b) => (touchedAt(b) - touchedAt(a)) || boardOrder(a, b);
    clamps every render, so a differing capacity heals itself. catCap is the
    budget the last render used, and catFilled the fill state it measured
    against — applyLayout compares both. */
-let catPage = { todo: 0, idea: 0, unsorted: 0, learning: 0 };
-let catCap = 0;                        // 0 = never rendered; the capacity check waits
-let catFilled = 0;                     // populated sections the last render measured
 
 /* The per-page card budget, measured — never a constant (B42, restated B68).
    `filled` is how many of the drawn sections hold at least one board: an empty
@@ -4001,8 +4009,8 @@ function catPageCap(filled, drawn) {
    shape. `makeCard` is what differs (a rail card or a list row). */
 function makeCatSection(cat, boards, cap, makeCard) {
   const pages = Math.max(1, Math.ceil(boards.length / cap));
-  catPage[cat] = Math.max(0, Math.min(catPage[cat], pages - 1));
-  const page = catPage[cat];
+  menuUiState.catPage[cat] = Math.max(0, Math.min(menuUiState.catPage[cat], pages - 1));
+  const page = menuUiState.catPage[cat];
 
   const sec = document.createElement('div');
   sec.className = 'board-cat'; sec.dataset.cat = cat;
@@ -4068,13 +4076,13 @@ function makeCatSection(cat, boards, cap, makeCard) {
    replaces the clicked button, so focus is put back on its successor (or the
    nearest enabled sibling) — a keyboard reader pages without re-tabbing. */
 async function goCatPage(cat, p, key) {
-  catPage[cat] = p;
+  menuUiState.catPage[cat] = p;
   // Page the surface that is actually showing this category: the drilled screen
   // (#list-rows, either platform) when the list overlay is open, else the
   // desktop rail (#pane-cards). Paging the hidden rail behind an open drill
   // would move focus onto an occluded button (issue #112 review).
-  if (listOpen) await renderCat(cat); else await renderPane();
-  const host = listOpen ? el.listRows : el.paneCards;
+  if (menuUiState.listOpen) await renderCat(cat); else await renderPane();
+  const host = menuUiState.listOpen ? el.listRows : el.paneCards;
   const sec = host && host.querySelector('.board-cat[data-cat="' + cat + '"]');
   if (!sec) return;
   let b = sec.querySelector('.pager-btn[aria-label="' + COPY[key] + '"]');
@@ -4115,7 +4123,7 @@ function refocusCatAdd(host, cat) {
    debounced persist can't clobber a record it never holds, and a fresh get
    can't resurrect a board deleted mid-drag. */
 async function dropBoardCard(b, cat) {
-  catPage[cat] = 0;                    // the dropped card lands first — show it
+  menuUiState.catPage[cat] = 0;                    // the dropped card lands first — show it
   if (current && current.id === b.id) {
     current.category = cat;
     current.catStamp = Date.now();
@@ -4139,8 +4147,8 @@ async function dropBoardCard(b, cat) {
    furniture with no board data to rebuild, so renderListSurface has nothing
    to do there. */
 async function renderListSurface() {
-  if (!listOpen) return;
-  if (catView) { await renderCat(catView); return; }
+  if (!menuUiState.listOpen) return;
+  if (menuUiState.catView) { await renderCat(menuUiState.catView); return; }
   // Level 1 is the lot-grid (B100): static furniture with no board data to
   // rebuild, so renderListSurface has nothing to do there — on any surface.
 }
@@ -4155,14 +4163,14 @@ async function renderCat(cat) {
   const boards = all
     .map(b => (current && b.id === current.id) ? current : b)
     .filter(b => catOf(b) === cat);
-  catFilled = 1;
-  catCap = catPageCap(1, 1);                  // one section drawn: it takes the whole surface
+  menuUiState.catFilled = 1;
+  menuUiState.catCap = catPageCap(1, 1);                  // one section drawn: it takes the whole surface
   const focusCat = focusedCatAdd();
   el.listView.classList.remove('picker');
   el.listRows.setAttribute('role', 'list');   // a list of board rows (restored from the picker's menu)
   el.listRows.textContent = '';
   el.listRows.appendChild(
-    makeCatSection(cat, boards.sort(catOrder), catCap, makeListRow));
+    makeCatSection(cat, boards.sort(catOrder), menuUiState.catCap, makeListRow));
   refocusCatAdd(el.listRows, focusCat);
 }
 
@@ -4208,7 +4216,7 @@ function makeListRow(b) {
       const r = card.getBoundingClientRect();
       x = r.left + r.width / 2; y = r.top + r.height / 2;
     }
-    menuInvoker = card;                  // focus returns to the card on close
+    menuUiState.menuInvoker = card;                  // focus returns to the card on close
     openBoardRowMenu(row, b, x, y);
   });
   return row;
@@ -4340,7 +4348,7 @@ async function deleteBoard(id, row) {
   // (review finding 2). This holds whether the delete came from the rail or the
   // desktop drilled-category overlay.
   if (viewState.isDesktop && wasCurrent) await ensureCurrentValid();
-  if (listOpen) {
+  if (menuUiState.listOpen) {
     // Re-paginate the visible list overlay (the drill, either platform, or the
     // desktop picker). The row's own leave() plays first, so a delete on a full
     // page pulls the next board up instead of leaving a hole (issue #74). The
@@ -4355,7 +4363,7 @@ async function deleteBoard(id, row) {
     // Restore into the visible surface: the open list overlay (drill/picker,
     // either platform), else the desktop rail — reopening the board there if it
     // was the one showing (issue #112 review).
-    if (listOpen) { renderListSurface(); return; }
+    if (menuUiState.listOpen) { renderListSurface(); return; }
     if (viewState.isWide) { if (wasCurrent) swapBoard(snapshot.id); else renderPane(); }
   }, 'board');
 }
@@ -4411,13 +4419,13 @@ async function newBoardIn(cat) {
   board.category = cat;
   board.catStamp = Date.now();                          // lands first by catOrder, like a drop
   await idbPut(board);
-  catPage[cat] = 0;                                     // the new card's page — show it
+  menuUiState.catPage[cat] = 0;                                     // the new card's page — show it
   // The branch is the routing invariant, not the mode: history.back() is only
   // lawful while the list's pushed state is still on the stack. An OS back
   // gesture or a mode flip clears listOpen before this fires — then the swap
   // opens the board without popping an entry the
   // list no longer owns (B9 untouched; the swap's renderPane no-ops off-desktop).
-  if (!listOpen) { swapBoard(board.id); return; }
+  if (!menuUiState.listOpen) { swapBoard(board.id); return; }
   current = board;
   returnToBoard();                                      // page-turn back to the board (B9)
 }
@@ -4429,7 +4437,7 @@ async function newBoardIn(cat) {
    swaps finalize it (the delete is already persisted). Board-scoped Undo is
    cross-board-safe and survives. (Review finding 1.) */
 function finalizeItemUndo() {
-  if (el.toast.dataset.scope === 'item') { clearTimeout(undoTimer); hideToast(); }
+  if (el.toast.dataset.scope === 'item') { clearTimeout(menuUiState.undoTimer); hideToast(); }
 }
 
 async function swapBoard(id) {
@@ -4467,13 +4475,13 @@ async function renderPane() {
     const rec = (current && b.id === current.id) ? current : b;
     buckets[catOf(rec)].push(rec);
   }
-  catFilled = BOARD_CATS.filter(c => buckets[c].length).length;
-  catCap = catPageCap(catFilled);
+  menuUiState.catFilled = BOARD_CATS.filter(c => buckets[c].length).length;
+  menuUiState.catCap = catPageCap(menuUiState.catFilled);
   const focusCat = focusedCatAdd();
   el.paneCards.textContent = '';
   for (const cat of BOARD_CATS)
     el.paneCards.appendChild(
-      makeCatSection(cat, buckets[cat].sort(catOrder), catCap, makePaneRow));
+      makeCatSection(cat, buckets[cat].sort(catOrder), menuUiState.catCap, makePaneRow));
   refocusCatAdd(el.paneCards, focusCat);
 }
 
@@ -4519,7 +4527,7 @@ function makePaneRow(b) {
       const r = card.getBoundingClientRect();
       x = r.left + r.width / 2; y = r.top + r.height / 2;
     }
-    menuInvoker = card;               // focus returns to the card on close
+    menuUiState.menuInvoker = card;               // focus returns to the card on close
     openBoardRowMenu(row, b, x, y);
   });
   return row;
@@ -4538,7 +4546,7 @@ function updateActiveCardTitle() {
 }
 
 function goToList() {
-  if (listOpen) return;
+  if (menuUiState.listOpen) return;
   // B100 (issue #157): the picker is the lot-grid on every surface that has
   // the tab (mobile and tablet — desktop's tab is retired, the rail is its
   // all-boards surface). The grid opens over the lot without occluding the
@@ -4553,8 +4561,8 @@ function goToList() {
    at level 1: its All-boards tab is retired (B100) — the left rail (B24)
    already lists every category with every board. */
 function showList() {
-  listOpen = true;
-  catView = null;
+  menuUiState.listOpen = true;
+  menuUiState.catView = null;
   syncViewTitle();                    // the picker names itself (issue #148 item 2)
   syncBoardActions();                 // the tab stays visible above the grid — flip it to "This board" (B83)
   openLotMenu();
@@ -4568,8 +4576,8 @@ function drillCat(cat) {
   showCat(cat);
 }
 async function showCat(cat) {
-  listOpen = true;
-  catView = cat;
+  menuUiState.listOpen = true;
+  menuUiState.catView = cat;
   syncViewTitle();                    // the drill names itself (issue #148 item 2)
   closeLotMenu();                     // B100: the drill is a screen; the grid steps aside, on every surface
   el.listView.classList.remove('show'); // mobile: start below the fold; inert on desktop
@@ -4582,7 +4590,7 @@ async function showCat(cat) {
   // there and the full-screen overlay is already shown. The guard skips a rise
   // whose navigation was superseded before the frame arrived.
   requestAnimationFrame(() => {
-    if (listOpen && catView === cat) el.listView.classList.add('show');
+    if (menuUiState.listOpen && menuUiState.catView === cat) el.listView.classList.add('show');
   });
 }
 /* Mobile only: the Parking Lot becomes the All-Boards menu (issue #112 / B74).
@@ -4591,15 +4599,15 @@ async function showCat(cat) {
    touches current.parkingLot: the board's own lot data is only hidden, and it
    returns intact the moment the picker is dismissed. */
 function openLotMenu() {
-  lotMenuOpen = true;
+  menuUiState.lotMenuOpen = true;
   el.lotMenu.textContent = '';
   buildCatButtons(el.lotMenu);
   el.lotMenu.hidden = false;
   el.lot.classList.add('menu-open');   // hides the lot's own rule/header/items
 }
 function closeLotMenu() {
-  if (!lotMenuOpen) return;
-  lotMenuOpen = false;
+  if (!menuUiState.lotMenuOpen) return;
+  menuUiState.lotMenuOpen = false;
   el.lotMenu.hidden = true;
   el.lotMenu.textContent = '';
   el.lot.classList.remove('menu-open');
@@ -4630,8 +4638,8 @@ function hideListView() {
   }, LEAVE_MS);
 }
 async function showBoardFromList() {
-  listOpen = false;
-  catView = null;
+  menuUiState.listOpen = false;
+  menuUiState.catView = null;
   closeLotMenu();                      // mobile: the grid steps aside, the real lot returns
   hideListView();                      // slide the drilled panel down, then hide (B82)
   if (!current) { await ensureCurrentValid(); }
@@ -4647,8 +4655,6 @@ async function showBoardFromList() {
    All Boards (the picker, calendar shrinking to fit — R1), Export (B92's
    choice, PDF leaf = the 7-day reference sheet). The stack never scrolls —
    it is a bounded page like every other surface. */
-let calOpen = false;                 // the MOBILE full-screen calendar (B95's third screen)
-let calExpanded = false;             // wide's expanded panel (B99) — rail-up is not "open":
                                      // the rail is furniture, so it must never enter the
                                      // screen-grammar branches (popstate's calOpen swallow,
                                      // applyMode's close, hideCal) that a pushed screen owns.
@@ -4683,7 +4689,7 @@ function renderCalRail() {
 function showCalRail() {
   closeLotMenu();
   hideListView();
-  listOpen = false; catView = null;
+  menuUiState.listOpen = false; menuUiState.catView = null;
   syncBoardActions();
   el.calView.hidden = false;
   el.calView.classList.add('rail-open');
@@ -4699,7 +4705,7 @@ function expandCalRail() {
   el.calView.classList.add('panel');
   el.calRail.hidden = true;
   el.calRail.setAttribute('aria-expanded', 'true');
-  calExpanded = true;                 // the screen-grammar state rides the PANEL, not the rail
+  menuUiState.calExpanded = true;                 // the screen-grammar state rides the PANEL, not the rail
   setCalSqueeze(true);                // the board reflows beside the panel (R6)
   renderCal();                        // the expanded face: the 7-day stack
 }
@@ -4709,7 +4715,7 @@ function collapseCalRail() {
   el.calView.classList.remove('panel');
   el.calRail.hidden = false;
   el.calRail.setAttribute('aria-expanded', 'false');
-  calExpanded = false;
+  menuUiState.calExpanded = false;
   setCalSqueeze(false);               // the squeeze lifts; the board returns (R6)
   renderCalRail();
 }
@@ -4718,10 +4724,10 @@ function showCal() {
   // Wide enters through the standing rail (B99); mobile keeps the pushed
   // full-screen view (B95's mobile path, unchanged).
   if (viewState.isWide) { showCalRail(); return; }
-  calOpen = true;
+  menuUiState.calOpen = true;
   closeLotMenu();
   hideListView();
-  listOpen = false; catView = null;
+  menuUiState.listOpen = false; menuUiState.catView = null;
   syncBoardActions();
   // The squeeze is the desktop/tablet arrangement (R3/R6): the panel takes
   // real width beside the board; on mobile the calendar is the full screen.
@@ -4733,9 +4739,9 @@ function showCal() {
 /* The popstate branch: {v:'cal'} re-shows the calendar (an OS-forward onto
    it); leaving it lands on the board and restores the action row. */
 function hideCal() {
-  if (!calOpen && !calExpanded) return;
-  calOpen = false;
-  calExpanded = false;
+  if (!menuUiState.calOpen && !menuUiState.calExpanded) return;
+  menuUiState.calOpen = false;
+  menuUiState.calExpanded = false;
   el.calView.hidden = !viewState.isWide;       // wide: the rail face remains (furniture, B99)
   el.calView.classList.remove('panel');   // the expanded face lifts
   el.calView.classList.toggle('rail-open', viewState.isWide);
@@ -4923,19 +4929,19 @@ el.calBack.addEventListener('click', () => {
   // On wide, Back IS the collapse arrow (B99): the panel returns to the rail,
   // the squeeze lifts — no history to pop (the rail pushed none). On mobile,
   // Back pops the pushed {v:'cal'} state (B9's route, visible — R1).
-  if (viewState.isWide && calExpanded) { collapseCalRail(); return; }
+  if (viewState.isWide && menuUiState.calExpanded) { collapseCalRail(); return; }
   goCalBack();
 });
 el.calRail.addEventListener('click', () => {
   // Furniture's one act: expand (B99). Pure navigation, no commit (B81).
-  if (!viewState.isWide || calExpanded) return;
+  if (!viewState.isWide || menuUiState.calExpanded) return;
   expandCalRail();
 });
 el.calBoards.addEventListener('click', (e) => {
   if (viewState.isDesktop) return;               // B100: no All-Boards on desktop — the rail is the all-boards surface
   const r = e.currentTarget.getBoundingClientRect();
   history.pushState({ v: 'list' }, '');
-  listOpen = true;
+  menuUiState.listOpen = true;
   showList();
 });
 el.calExport.addEventListener('click', (e) => {
@@ -4966,14 +4972,14 @@ window.addEventListener('popstate', () => {
   // wide collapses the panel (the mobile-era entry has no wide meaning);
   // mobile keeps its full-screen view.
   if (s && s.v === 'cal') { showCal(); }
-  else if (calOpen || calExpanded) { hideCal(); }     // landing anywhere else closes the calendar first
+  else if (menuUiState.calOpen || menuUiState.calExpanded) { hideCal(); }     // landing anywhere else closes the calendar first
   else if (s && s.v === 'cat') {
     if (viewState.isDesktop) { showBoardFromList(); }   // B100: desktop has no drill either — a stray landing (old-build history) heals to the board
     else { showCat(s.cat); }
   }
   else if (s && s.v === 'list') {
     if (viewState.isDesktop) { showBoardFromList(); }   // B100: desktop pushes no {v:'list'} — a stray landing (old-build history) heals to the board
-    else { catView = null; hideListView(); showList(); }  // the drill's panel slides down as the grid returns (B82)
+    else { menuUiState.catView = null; hideListView(); showList(); }  // the drill's panel slides down as the grid returns (B82)
   }
   else { showBoardFromList(); }
 });

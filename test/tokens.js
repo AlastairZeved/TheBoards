@@ -646,8 +646,8 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /el\.calRail\.addEventListener\('click'[\s\S]*?expandCalRail\(\);/.test(app) &&
     !/calRail[\s\S]{0,200}pushState/.test(app));
   ok('rail-up is not "open": the screen grammar rides calExpanded, not the furniture',
-    /let calExpanded = false;/.test(app) &&
-    /if \(viewState\.isWide && calExpanded\) \{ collapseCalRail\(\); return; \}/.test(app));
+    /calExpanded: false,/.test(app) &&
+    /if \(viewState\.isWide && menuUiState\.calExpanded\) \{ collapseCalRail\(\); return; \}/.test(app));
   // --- Issue #156 / B98: the R1 top row is filled and meets the touch floor ---
   ok('the R1 row is filled at boot: each button gets its glyph + label (issue #156, B98)',
     /fillBoardAction\(el\.calBack, GLYPH\.calBack, COPY\.calBack\)/.test(app) &&

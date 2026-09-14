@@ -1624,7 +1624,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
          document.getElementById('list-view').hidden &&
          getComputedStyle(document.getElementById('list-view')).display === 'none' &&
          document.getElementById('lot-menu').hidden &&
-         !listOpen && catView === null));
+         !menuUiState.listOpen && menuUiState.catView === null));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
