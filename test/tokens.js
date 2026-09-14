@@ -201,7 +201,7 @@ console.log('\n[1b] The ladder rotates with the board type — three bindings, o
     /\.board-cat\[data-cat="idea"\]/.test(css) && /\.board-cat\[data-cat="unsorted"\]/.test(css) &&
     /\.board-cat\[data-cat="learning"\]/.test(css));
   ok('app.js sets the scope from the record and carries no colour of its own (B67)',
-    /el\.board\.dataset\.cat = catOf\(current\)/.test(app));
+    /el\.board\.dataset\.cat = catOf\(boardData.current\)/.test(app));
   // The drag ghost is fixed off document.body, outside its section's scope, so
   // it has to carry the attribute itself or a green card turns blue in the air.
   ok('the card drag ghost carries its own scope (B67)',
@@ -605,7 +605,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /actionExport\.addEventListener\('click'[\s\S]*?buildMenu\(/.test(app) &&
     /COPY\.exportPdf/.test(app) && /COPY\.exportJson/.test(app));
   ok('each export leaf commits; the choice itself runs raw (B81)',
-    /action: \(\) => commitAction\(\(\) => exportBoardPdf\(current\)\)/.test(app) &&
+    /action: \(\) => commitAction\(\(\) => exportBoardPdf\(boardData.current\)\)/.test(app) &&
     /action: \(\) => commitAction\(exportAllJson\)/.test(app));
   ok('exportAllJson flushes the debounce and backs up every board under the app tag',
     /async function exportAllJson/.test(app) && /flushSave\(\);\s*\n\s*const boards = await idbGetAll\(\)/.test(app) &&

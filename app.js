@@ -377,7 +377,7 @@ function newCalEvent(dateKey, text) {
    itself (renderPane's stance). */
 function calBoardOf(all, dateKey) {
   for (const b of all) {
-    const rec = (current && b.id === current.id) ? current : b;
+    const rec = (boardData.current && b.id === boardData.current.id) ? boardData.current : b;
     if (rec.cal === dateKey) return rec;
   }
   return null;
@@ -554,7 +554,11 @@ async function idbGet(id) {
 }
 
 /* --- 3. State + save queue ----------------------------------------------- */
-let current = null;                  // the open board record (in memory)
+/* The open board record (in memory) — the one piece of true data state
+   (issue #176). */
+const boardData = {
+  current: null,                     // the open board record (in memory)
+};
 
 const noteEls = new Map();           // note.id -> element
 const lotEls = new Map();            // lotItem.id -> element
@@ -611,7 +615,7 @@ let dirty = false;                   // `current` holds an edit the debounce has
 function scheduleSave() { dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, SAVE_DEBOUNCE); }
 function saveNow() {
   clearTimeout(saveTimer);
-  if (!current) return;
+  if (!boardData.current) return;
   stampUpdated();
   persist();
 }
@@ -624,7 +628,7 @@ function saveNow() {
    that same moment, undoing B63's "the new card lands first". */
 function flushSave() {
   clearTimeout(saveTimer);
-  if (!current) return;
+  if (!boardData.current) return;
   if (dirty) stampUpdated();
   persist();
 }
@@ -634,14 +638,14 @@ function flushSave() {
    the open board's card on a page the reader is not looking at — as paging
    away already could — until they turn to page 1 and find it at the front. */
 function stampUpdated() {
-  current.updatedAt = Date.now();
+  boardData.current.updatedAt = Date.now();
   dirty = false;
 }
 function persist() {
-  if (!current) return;
+  if (!boardData.current) return;
   if (persisting) { dirtyAgain = true; return; }
   persisting = true;
-  const snapshot = current;
+  const snapshot = boardData.current;
   idbPut(snapshot).then(() => {
     persisting = false; retryDelay = 1000; hideSaveError();
     if (dirtyAgain) { dirtyAgain = false; persist(); }
@@ -713,7 +717,7 @@ function checkListCapacity() {
 
 function repositionNotes() {
   noteEls.forEach((node, id) => {
-    const note = current && current.notes.find(n => n.id === id);
+    const note = boardData.current && boardData.current.notes.find(n => n.id === id);
     if (note) {
       node.style.left = renderX(note) + 'px';
       node.style.top = renderY(note) + 'px';
@@ -840,7 +844,7 @@ const CAL_PANEL_W = 320;             // unscaled CSS px the panel takes (mockup 
 function setCalSqueeze(on) {
   if (viewState.calSqueeze === on) return;
   viewState.calSqueeze = on;
-  if (current) applyLayout();
+  if (boardData.current) applyLayout();
 }
 
 /* The similarity transform (issues #65/#75, B64; supersedes B40's anisotropic
@@ -1096,7 +1100,7 @@ function sanitizeBoard(board) {
    bucket the list files it in, which is the agreement the card preview
    depends on. Both call sites have already established `current`. */
 function applyBoardCat() {
-  el.board.dataset.cat = catOf(current);
+  el.board.dataset.cat = catOf(boardData.current);
 }
 
 /* The tab/OS-window title follows the view (issue #148 item 2). Chrome only —
@@ -1109,28 +1113,28 @@ function syncViewTitle() {
   if (s && s.v === 'cat') document.title = `${COPY['cat' + s.cat[0].toUpperCase() + s.cat.slice(1)] || s.cat} · To-Do Boards`;
   else if (s && s.v === 'list') document.title = `All boards · To-Do Boards`;
   else {
-    const titled = current && !!(current.title && current.title.trim().length);
-    document.title = titled ? `${current.title} · To-Do Boards` : 'To-Do Boards';
+    const titled = boardData.current && !!(boardData.current.title && boardData.current.title.trim().length);
+    document.title = titled ? `${boardData.current.title} · To-Do Boards` : 'To-Do Boards';
   }
 }
 
 function renderBoard() {
   clearSelection();                  // note DOM is about to be rebuilt
   applyBoardCat();
-  if (sanitizeBoard(current)) scheduleSave();
+  if (sanitizeBoard(boardData.current)) scheduleSave();
   syncViewTitle();
   // Anchors.
   for (const key of ['title', 'components', 'requirements']) {
     const node = anchorEls[key];
-    node.textContent = current[key] || '';
-    node.classList.toggle('filled', !!(current[key] && current[key].length));
+    node.textContent = boardData.current[key] || '';
+    node.classList.toggle('filled', !!(boardData.current[key] && boardData.current[key].length));
   }
   // Notes (array order = z-order; DOM order mirrors it).
   noteEls.forEach(n => n.remove()); noteEls.clear();
-  for (const note of current.notes) el.board.appendChild(makeNoteEl(note));
+  for (const note of boardData.current.notes) el.board.appendChild(makeNoteEl(note));
   // Parking Lot.
   el.lotItems.textContent = ''; lotEls.clear();
-  for (const item of current.parkingLot) el.lotItems.appendChild(makeLotEl(item));
+  for (const item of boardData.current.parkingLot) el.lotItems.appendChild(makeLotEl(item));
   syncBoardActions();                // the toggle reads All boards on a drawn board (B83)
   applyLayout();
 }
@@ -1229,7 +1233,7 @@ function reflectToolbarFlip(node, note) {
 function runNoteToolbarAction(btn) {
   const noteNode = btn.closest('.note');
   if (!noteNode) return;
-  const note = current.notes.find(n => n.id === noteNode.dataset.id);
+  const note = boardData.current.notes.find(n => n.id === noteNode.dataset.id);
   if (!note) return;
   const editingHere = () =>
     isEditing(document.activeElement) && noteNode.contains(document.activeElement);
@@ -1241,7 +1245,7 @@ function runNoteToolbarAction(btn) {
       // note.text is live off every keystroke (the input handler), so Copy needs
       // no blur — it copies the current text and leaves the note engaged.
       copyText(ids.map(id => {
-        const n = current.notes.find(m => m.id === id);
+        const n = boardData.current.notes.find(m => m.id === id);
         return n ? n.text : '';
       }).join('\n'));
     } else if (btn.classList.contains('note-tb-delete')) {
@@ -1341,7 +1345,7 @@ const interactionState = {
   swapping: false,                   // async re-entrancy guard beyond the commit drop-guard
 };
 
-const boardLinks = () => (current && current.links) || [];   // B21 read-default for legacy boards
+const boardLinks = () => (boardData.current && boardData.current.links) || [];   // B21 read-default for legacy boards
 const findLink = (a, b) =>
   boardLinks().find(l => (l.a === a && l.b === b) || (l.a === b && l.b === a));
 
@@ -1351,27 +1355,27 @@ const findLink = (a, b) =>
    app's one reversal idiom (UIUX §9). The Undo closures read current.links
    directly, exactly as deleteNotes reads current.notes (same board-binding). */
 function toggleLink(a, b) {
-  if (!current || a === b) return;
-  if (!current.links) current.links = [];
+  if (!boardData.current || a === b) return;
+  if (!boardData.current.links) boardData.current.links = [];
   const existing = findLink(a, b);
   if (existing) {
-    current.links = current.links.filter(l => l !== existing);
+    boardData.current.links = boardData.current.links.filter(l => l !== existing);
     saveNow(); updateLinks();
-    showUndo(() => { current.links.push(existing); saveNow(); updateLinks(); }, 'item', COPY.unlinked);
+    showUndo(() => { boardData.current.links.push(existing); saveNow(); updateLinks(); }, 'item', COPY.unlinked);
   } else {
     const link = { id: uuid(), a, b };
-    current.links.push(link);
+    boardData.current.links.push(link);
     saveNow(); updateLinks();
-    showUndo(() => { current.links = boardLinks().filter(l => l.id !== link.id); saveNow(); updateLinks(); }, 'item', COPY.linked);
+    showUndo(() => { boardData.current.links = boardLinks().filter(l => l.id !== link.id); saveNow(); updateLinks(); }, 'item', COPY.linked);
   }
 }
 
 // Drop links referencing an id (a deleted note); returns the removed links so a
 // caller's Undo can restore them (exact prior state, UIUX §9).
 function removeLinksForNote(id) {
-  if (!current || !current.links || !current.links.length) return [];
-  const removed = current.links.filter(l => l.a === id || l.b === id);
-  if (removed.length) current.links = current.links.filter(l => l.a !== id && l.b !== id);
+  if (!boardData.current || !boardData.current.links || !boardData.current.links.length) return [];
+  const removed = boardData.current.links.filter(l => l.a === id || l.b === id);
+  if (removed.length) boardData.current.links = boardData.current.links.filter(l => l.a !== id && l.b !== id);
   return removed;
 }
 
@@ -1429,8 +1433,8 @@ function updateLinks() {
   ensureLinkLayer();
   const live = new Set();
   for (const link of links) {
-    const na = current.notes.find(n => n.id === link.a);
-    const nb = current.notes.find(n => n.id === link.b);
+    const na = boardData.current.notes.find(n => n.id === link.a);
+    const nb = boardData.current.notes.find(n => n.id === link.b);
     const ea = noteEls.get(link.a), eb = noteEls.get(link.b);
     if (!na || !nb || !ea || !eb) continue;
     const ca = noteCenter(na, ea), cb = noteCenter(nb, eb);
@@ -1541,7 +1545,7 @@ function onPointerDown(e) {
     startX: e.clientX, startY: e.clientY,
     shift: e.shiftKey,                             // multi-select modifier (issue #55)
     mode: 'pending', longPressed: false, moved: false,
-    note: target.type === 'note' ? current.notes.find(n => n.id === target.node.dataset.id) : null,
+    note: target.type === 'note' ? boardData.current.notes.find(n => n.id === target.node.dataset.id) : null,
   };
   // Resize is single-selection only, by design (issue #55): with two or more
   // selected the CSS hides the grip, and this guard keeps the gesture honest
@@ -1690,7 +1694,7 @@ function tapLotButton(target) {
   const isDel = target.node.classList.contains('sel-delete');
   const isCopy = target.node.classList.contains('sel-copy');
   commitAction(() => {
-    const item = current.parkingLot.find(i => i.id === lotRow.dataset.id);
+    const item = boardData.current.parkingLot.find(i => i.id === lotRow.dataset.id);
     if (!item) return;
     if (isCopy) copyText(item.text);
     else if (isDel) { clearSelection(); deleteLot(lotRow); }
@@ -1740,7 +1744,7 @@ function tapLot(x, y) {
    note never edits (§4.3), so it only ever engages. */
 function tapNote(target, x, y, shift) {
   const node = target.node;
-  const note = current.notes.find(n => n.id === node.dataset.id);
+  const note = boardData.current.notes.find(n => n.id === node.dataset.id);
   if (!note) return;
   if (viewState.isDesktop) {
     // An open editor commits before the click acts (issue #54); on the
@@ -1792,7 +1796,7 @@ function tapNote(target, x, y, shift) {
    single-select (issue #55) — no shift path here, by design. */
 function tapLotItem(target, x, y) {
   const node = target.node;
-  const item = current.parkingLot.find(i => i.id === node.dataset.id);
+  const item = boardData.current.parkingLot.find(i => i.id === node.dataset.id);
   if (!item) return;
   if (viewState.isDesktop) {
     if (commitOpenEditor(node)) return;
@@ -1848,7 +1852,7 @@ function createNote(clientX, clientY) {
   const note = { id: uuid(), text: '', x: clamp(pt.x, 0, Math.max(0, viewState.LOGICAL_W - NOTE_MIN_W)),
                  y: clamp(pt.y, 0, viewState.LOGICAL_H - 4), rw: viewState.LOGICAL_W, rh: viewState.LOGICAL_H,
                  scale: 1.0, state: 'active' };
-  current.notes.push(note);                          // top of z-order
+  boardData.current.notes.push(note);                          // top of z-order
   const node = makeNoteEl(note);
   el.board.appendChild(node);
   const text = node.querySelector('.note-text');
@@ -1858,7 +1862,7 @@ function createNote(clientX, clientY) {
 
 function createLotItem() {
   const item = { id: uuid(), text: '', state: 'active' };
-  current.parkingLot.push(item);
+  boardData.current.parkingLot.push(item);
   const node = makeLotEl(item);
   el.lotItems.appendChild(node);
   updateBoardGeometry();               // the shelf follows its rows (UIUX §3.2)
@@ -1893,7 +1897,7 @@ function onEditFocusIn(e) {
   if (t.classList.contains('anchor') && !t.hasAttribute('contenteditable')) {
     enableEditing(t);
   } else if (t.classList.contains('note')) {
-    const note = current && current.notes.find(n => n.id === t.dataset.id);
+    const note = boardData.current && boardData.current.notes.find(n => n.id === t.dataset.id);
     if (!note) return;
     if (viewState.isDesktop) {
       // Tab selects; Enter edits (issue #13) — EXCEPT the menu's own focus
@@ -1906,7 +1910,7 @@ function onEditFocusIn(e) {
     }
     if (note.state === 'active') editText(t.querySelector('.note-text'));
   } else if (t.classList.contains('lot-item')) {
-    const item = current && current.parkingLot.find(i => i.id === t.dataset.id);
+    const item = boardData.current && boardData.current.parkingLot.find(i => i.id === t.dataset.id);
     if (!item) return;
     if (viewState.isDesktop) { selectLot(item.id); return; }
     if (item.state === 'active') editText(t.querySelector('.lot-text'));
@@ -1938,13 +1942,13 @@ function onDesktopKeydown(e) {
     e.preventDefault();
     const s = interactionState.selected;
     if (s.kind === 'note') {
-      const rec = current.notes.find(n => n.id === s.id);
+      const rec = boardData.current.notes.find(n => n.id === s.id);
       const n = noteEls.get(s.id);
       if (rec && n && rec.state === 'active') {
         clearSelection(); surfaceNote(n); editText(n.querySelector('.note-text'));
       }
     } else {
-      const rec = current.parkingLot.find(i => i.id === s.id);
+      const rec = boardData.current.parkingLot.find(i => i.id === s.id);
       const n = lotEls.get(s.id);
       if (rec && n && rec.state === 'active') {
         clearSelection(); editText(n.querySelector('.lot-text'));
@@ -1958,15 +1962,15 @@ document.addEventListener('keydown', onDesktopKeydown);
 function onLiveEditInput(e) {
   const t = e.target;
   if (t.classList.contains('note-text')) {
-    const note = current.notes.find(n => n.id === t.closest('.note').dataset.id);
+    const note = boardData.current.notes.find(n => n.id === t.closest('.note').dataset.id);
     if (note) { note.text = t.textContent; setHitInset(t.closest('.note'), note); scheduleSave(); }
   } else if (t.classList.contains('lot-text')) {
-    const item = current.parkingLot.find(i => i.id === t.closest('.lot-item').dataset.id);
+    const item = boardData.current.parkingLot.find(i => i.id === t.closest('.lot-item').dataset.id);
     // The lot sizes to its rendered rows, live (issue #106, B73) — the same
     // capture feedback the band's anchor branch below already gives.
     if (item) { item.text = t.textContent; updateBoardGeometry(); scheduleSave(); }
   } else if (t.classList.contains('anchor')) {
-    current[t.dataset.anchor] = t.textContent;
+    boardData.current[t.dataset.anchor] = t.textContent;
     t.classList.toggle('filled', !!t.textContent.length);
     if (t.dataset.anchor === 'title' && viewState.isDesktop) updateActiveCardTitle();
     if (t.dataset.anchor === 'title') syncViewTitle();   // the tab carries the board's name, live (issue #148 item 2)
@@ -1981,7 +1985,7 @@ function onLiveEditInput(e) {
 el.board.addEventListener('input', onLiveEditInput);
 
 function commitNote(node) {
-  const note = current.notes.find(n => n.id === node.dataset.id);
+  const note = boardData.current.notes.find(n => n.id === node.dataset.id);
   if (!note) return;
   note.text = node.querySelector('.note-text').textContent;
   if (note.text.trim().length === 0) { removeNoteSilently(note, node); return; }  // no empty frames ever
@@ -1990,8 +1994,8 @@ function commitNote(node) {
 function removeNoteSilently(note, node) {
   if (interactionState.selected && interactionState.selected.kind === 'note' && interactionState.selected.id === note.id) clearSelection();
   else dropFromSelection(note.id);     // set hygiene for a non-primary member (issue #55)
-  const i = current.notes.indexOf(note);
-  if (i >= 0) current.notes.splice(i, 1);
+  const i = boardData.current.notes.indexOf(note);
+  if (i >= 0) boardData.current.notes.splice(i, 1);
   node.remove(); noteEls.delete(note.id);
   // A husk discard takes its links with it — emptying a note deletes it (B8), and
   // deleting a note deletes its links (issue #142, B91). Silent, so no Undo.
@@ -1999,7 +2003,7 @@ function removeNoteSilently(note, node) {
   saveNow();
 }
 function commitLot(node) {
-  const item = current.parkingLot.find(i => i.id === node.dataset.id);
+  const item = boardData.current.parkingLot.find(i => i.id === node.dataset.id);
   if (!item) return;
   item.text = node.querySelector('.lot-text').textContent;
   if (item.text.trim().length === 0) { removeLotSilently(item, node); return; }
@@ -2007,14 +2011,14 @@ function commitLot(node) {
 }
 function removeLotSilently(item, node) {
   if (interactionState.selected && interactionState.selected.kind === 'lot' && interactionState.selected.id === item.id) clearSelection();
-  const i = current.parkingLot.indexOf(item);
-  if (i >= 0) current.parkingLot.splice(i, 1);
+  const i = boardData.current.parkingLot.indexOf(item);
+  if (i >= 0) boardData.current.parkingLot.splice(i, 1);
   node.remove(); lotEls.delete(item.id);
   updateBoardGeometry();               // the shelf follows its rows (UIUX §3.2)
   saveNow();
 }
 function commitAnchor(node) {
-  current[node.dataset.anchor] = node.textContent;
+  boardData.current[node.dataset.anchor] = node.textContent;
   node.classList.toggle('filled', !!node.textContent.length);
   if (viewState.isDesktop && node.dataset.anchor === 'title') renderPane(); // reconcile the date line
   updateBoardGeometry();      // the band follows its zones (B47), the handle its card (B65)
@@ -2037,7 +2041,7 @@ function startDrag() {
   if (viewState.isDesktop && multiSel.size > 1 && multiSel.has(note.id)) {
     interactionState.g.group = [];
     for (const id of selectedNoteIds()) {
-      const n = current.notes.find(m => m.id === id);
+      const n = boardData.current.notes.find(m => m.id === id);
       const memberNode = noteEls.get(id);
       if (!n || !memberNode) continue;
       // Per-member rebase — the one licensed grab-time write (B21), which
@@ -2229,11 +2233,11 @@ function endPinch() {
 /* Z-order: last-touched note to the top (end of array + end of DOM). */
 function surfaceNote(node) {
   const id = node.dataset.id;
-  const note = current.notes.find(n => n.id === id);
+  const note = boardData.current.notes.find(n => n.id === id);
   if (!note) return;
-  const i = current.notes.indexOf(note);
-  if (i === current.notes.length - 1) { return; }    // already on top
-  current.notes.splice(i, 1); current.notes.push(note);
+  const i = boardData.current.notes.indexOf(note);
+  if (i === boardData.current.notes.length - 1) { return; }    // already on top
+  boardData.current.notes.splice(i, 1); boardData.current.notes.push(note);
   el.board.appendChild(node);                         // move to top of DOM among notes
   saveNow();
 }
@@ -2429,9 +2433,9 @@ function setSelectionHidden(hidden) {  // drag/resize in flight: chrome steps as
 }
 
 function updateSelectionUI() {
-  if (!interactionState.selected || !current) return;
+  if (!interactionState.selected || !boardData.current) return;
   if (interactionState.selected.kind === 'note') {
-    const note = current.notes.find(n => n.id === interactionState.selected.id);
+    const note = boardData.current.notes.find(n => n.id === interactionState.selected.id);
     const node = noteEls.get(interactionState.selected.id);
     if (!note || !node || !interactionState.selEl) return;
     const w = node.offsetWidth * effScale(note), h = node.offsetHeight * effScale(note);
@@ -2451,7 +2455,7 @@ function updateSelectionUI() {
     setSelectionHidden(false);
   } else {
     const node = lotEls.get(interactionState.selected.id);
-    const item = current.parkingLot.find(i => i.id === interactionState.selected.id);
+    const item = boardData.current.parkingLot.find(i => i.id === interactionState.selected.id);
     if (!node || !item) return;
     const p = node.querySelector('.sel-complete');
     if (p) p.textContent = item.state === 'complete' ? COPY.restore : COPY.complete;
@@ -2461,7 +2465,7 @@ function updateSelectionUI() {
 /* Frame-drag resize (issue #4): scale from the pointer's distance to the
    note's fixed top-left origin — same clamp, re-clamp, and hit math as pinch. */
 function startResize(e) {
-  const note = current.notes.find(n => n.id === interactionState.selected.id);
+  const note = boardData.current.notes.find(n => n.id === interactionState.selected.id);
   const node = noteEls.get(interactionState.selected.id);
   if (!note || !node) { interactionState.g.mode = 'cancelled'; return; }
   rebaseNote(note);                  // grab math runs in current-frame units (issue #15)
@@ -2490,7 +2494,7 @@ function endResize() {
 // State + presentation together, no write: the single-note wrappers below add
 // their own saveNow, the bulk path (issue #55) saves once for the whole set.
 function setNoteState(node, complete) {
-  const note = current.notes.find(n => n.id === node.dataset.id);
+  const note = boardData.current.notes.find(n => n.id === node.dataset.id);
   if (!note) return;                   // a blank note the pre-act blur just discarded (B84/B8)
   note.state = complete ? 'complete' : 'active';
   node.classList.toggle('complete', complete);
@@ -2503,24 +2507,24 @@ function restoreNote(node) { setNoteState(node, false); saveNow(); }
 // applyCompleteA11y here; the amber wash is decorative and reads truthily off
 // note.highlighted (legacy notes lack the field, which is falsy — B21's idiom).
 function setNoteHighlight(node, on) {
-  const note = current.notes.find(n => n.id === node.dataset.id);
+  const note = boardData.current.notes.find(n => n.id === node.dataset.id);
   if (!note) return;                   // discarded blank note (B84/B8) — nothing to wash
   note.highlighted = on;
   node.classList.toggle('highlight', on);
   updateNoteToolbar(node, note);       // Highlight ⇄ Remove highlight label (B84)
 }
 function toggleHighlight(node) {
-  const note = current.notes.find(n => n.id === node.dataset.id);
+  const note = boardData.current.notes.find(n => n.id === node.dataset.id);
   if (!note) return;
   setNoteHighlight(node, !note.highlighted); saveNow();
 }
 function completeLot(node) {
-  const item = current.parkingLot.find(i => i.id === node.dataset.id);
+  const item = boardData.current.parkingLot.find(i => i.id === node.dataset.id);
   item.state = 'complete'; node.classList.add('complete');
   applyCompleteA11y(node, true); saveNow();
 }
 function restoreLot(node) {
-  const item = current.parkingLot.find(i => i.id === node.dataset.id);
+  const item = boardData.current.parkingLot.find(i => i.id === node.dataset.id);
   item.state = 'active'; node.classList.remove('complete');
   applyCompleteA11y(node, false); saveNow();
 }
@@ -2530,14 +2534,14 @@ function restoreLot(node) {
 function deleteNote(node) { deleteNotes([node.dataset.id]); }
 function deleteLot(node) {
   if (interactionState.selected && interactionState.selected.kind === 'lot' && interactionState.selected.id === node.dataset.id) clearSelection();
-  const item = current.parkingLot.find(i => i.id === node.dataset.id);
-  const index = current.parkingLot.indexOf(item);
+  const item = boardData.current.parkingLot.find(i => i.id === node.dataset.id);
+  const index = boardData.current.parkingLot.indexOf(item);
   const snapshot = JSON.parse(JSON.stringify(item));
-  current.parkingLot.splice(index, 1);
+  boardData.current.parkingLot.splice(index, 1);
   leave(node, () => { node.remove(); lotEls.delete(item.id); updateBoardGeometry(); });
   saveNow();
   showUndo(() => {
-    current.parkingLot.splice(index, 0, snapshot);
+    boardData.current.parkingLot.splice(index, 0, snapshot);
     const newNode = makeLotEl(snapshot);
     const ref = el.lotItems.children[index] || null;
     el.lotItems.insertBefore(newNode, ref);
@@ -2554,7 +2558,7 @@ function deleteLot(node) {
 function deleteNotes(ids) {
   const wanted = new Set(ids);
   const snap = [];
-  current.notes.forEach((n, i) => {
+  boardData.current.notes.forEach((n, i) => {
     if (wanted.has(n.id)) snap.push({ note: JSON.parse(JSON.stringify(n)), index: i });
   });
   if (!snap.length) return;
@@ -2562,12 +2566,12 @@ function deleteNotes(ids) {
   // FIRST so the one Undo restores exact prior state — the notes AND their
   // relationships (UIUX §9) — then drop them from the live board.
   const removedLinks = boardLinks().filter(l => wanted.has(l.a) || wanted.has(l.b));
-  if (removedLinks.length) current.links = current.links.filter(l => !wanted.has(l.a) && !wanted.has(l.b));
+  if (removedLinks.length) boardData.current.links = boardData.current.links.filter(l => !wanted.has(l.a) && !wanted.has(l.b));
   clearSelection();
   if (interactionState.engaged && wanted.has(interactionState.engaged)) clearEngaged();   // the engaged note is leaving (issue #136, B90)
   for (let i = snap.length - 1; i >= 0; i--) {       // descending: indices stay valid
     const s = snap[i];
-    current.notes.splice(s.index, 1);
+    boardData.current.notes.splice(s.index, 1);
     const node = noteEls.get(s.note.id);
     if (node) leave(node, () => { node.remove(); noteEls.delete(s.note.id); });
   }
@@ -2575,13 +2579,13 @@ function deleteNotes(ids) {
   saveNow();
   showUndo(() => {
     for (const s of snap) {                          // ascending: exact z-order back
-      current.notes.splice(s.index, 0, s.note);
+      boardData.current.notes.splice(s.index, 0, s.note);
       el.board.appendChild(makeNoteEl(s.note));
     }
     reorderNotesDOM();
     if (removedLinks.length) {                       // relationships come back with the notes
-      if (!current.links) current.links = [];
-      for (const l of removedLinks) current.links.push(l);
+      if (!boardData.current.links) boardData.current.links = [];
+      for (const l of removedLinks) boardData.current.links.push(l);
       updateLinks();
     }
     saveNow();
@@ -2616,7 +2620,7 @@ function setSelectedNotesHighlight(on) {
 
 // Rebuild note DOM order to match array order (used after undo-insert).
 function reorderNotesDOM() {
-  for (const note of current.notes) {
+  for (const note of boardData.current.notes) {
     const node = noteEls.get(note.id);
     if (node) el.board.appendChild(node);
   }
@@ -2812,7 +2816,7 @@ el.actionBoards.addEventListener('click', () => {
 el.actionExport.addEventListener('click', (e) => {
   const r = e.currentTarget.getBoundingClientRect();
   buildMenu([
-    { label: COPY.exportPdf, glyph: GLYPH.export, action: () => commitAction(() => exportBoardPdf(current)) },
+    { label: COPY.exportPdf, glyph: GLYPH.export, action: () => commitAction(() => exportBoardPdf(boardData.current)) },
     { label: COPY.exportJson, glyph: GLYPH.boards, action: () => commitAction(exportAllJson) },
   ], r.left, r.bottom);
 });
@@ -3703,8 +3707,8 @@ function downloadBlob(blob, name) {
    from IndexedDB in case its snapshot has aged. */
 async function exportBoardPdf(board) {
   try {
-    const src = (current && current.id === board.id)
-      ? current : ((await idbGet(board.id)) || board);
+    const src = (boardData.current && boardData.current.id === board.id)
+      ? boardData.current : ((await idbGet(board.id)) || board);
     // B8/B31's sweep on a COPY. Records reach the menu straight from
     // idbGetAll(), so they have never been through renderBoard's sanitize, and
     // a whitespace husk would export as an empty framed box. Copying rather
@@ -3857,8 +3861,8 @@ async function importBoardsJson(file) {
   let overwrittenCurrent = false;
   for (const rec of incoming) {
     await idbPut(rec);
-    if (current && rec.id === current.id) {
-      current = rec;                    // the open board's new self is the file's copy
+    if (boardData.current && rec.id === boardData.current.id) {
+      boardData.current = rec;                    // the open board's new self is the file's copy
       overwrittenCurrent = true;
     }
   }
@@ -4124,9 +4128,9 @@ function refocusCatAdd(host, cat) {
    can't resurrect a board deleted mid-drag. */
 async function dropBoardCard(b, cat) {
   menuUiState.catPage[cat] = 0;                    // the dropped card lands first — show it
-  if (current && current.id === b.id) {
-    current.category = cat;
-    current.catStamp = Date.now();
+  if (boardData.current && boardData.current.id === b.id) {
+    boardData.current.category = cat;
+    boardData.current.catStamp = Date.now();
     applyBoardCat();                   // the open board's ladder rotates with it (B67)
     saveNow();
   } else {
@@ -4161,7 +4165,7 @@ async function renderListSurface() {
 async function renderCat(cat) {
   const all = await idbGetAll();
   const boards = all
-    .map(b => (current && b.id === current.id) ? current : b)
+    .map(b => (boardData.current && b.id === boardData.current.id) ? boardData.current : b)
     .filter(b => catOf(b) === cat);
   menuUiState.catFilled = 1;
   menuUiState.catCap = catPageCap(1, 1);                  // one section drawn: it takes the whole surface
@@ -4341,8 +4345,8 @@ async function deleteBoard(id, row) {
   const snapshot = await idbGet(id);
   await idbDelete(id);
   if (row) leave(row, () => row.remove());
-  const wasCurrent = current && current.id === id;
-  if (wasCurrent) current = null;                      // guard invalid current on return
+  const wasCurrent = boardData.current && boardData.current.id === id;
+  if (wasCurrent) boardData.current = null;                      // guard invalid current on return
   // On desktop the board view has no list screen to heal a dead `current` on
   // return, so heal it now, or the next interaction dereferences current.notes
   // (review finding 2). This holds whether the delete came from the rail or the
@@ -4374,7 +4378,7 @@ async function openBoardById(id) {
                                                         // flush: one law, two skins (B69)
   const rec = await idbGet(id);
   if (!rec) return;
-  current = rec;
+  boardData.current = rec;
   returnToBoard();                                      // pop the nav stack → board (B9)
 }
 
@@ -4400,7 +4404,7 @@ function returnToBoard() {
 }
 
 function openBoardObj(board) {
-  current = board;
+  boardData.current = board;
   renderBoard();
 }
 
@@ -4426,7 +4430,7 @@ async function newBoardIn(cat) {
   // opens the board without popping an entry the
   // list no longer owns (B9 untouched; the swap's renderPane no-ops off-desktop).
   if (!menuUiState.listOpen) { swapBoard(board.id); return; }
-  current = board;
+  boardData.current = board;
   returnToBoard();                                      // page-turn back to the board (B9)
 }
 
@@ -4442,7 +4446,7 @@ function finalizeItemUndo() {
 
 async function swapBoard(id) {
   if (interactionState.swapping) return;
-  if (current && current.id === id) return;
+  if (boardData.current && boardData.current.id === id) return;
   finalizeItemUndo();
   interactionState.swapping = true;
   flushSave();                        // persist() snapshots `current` synchronously — safe
@@ -4450,7 +4454,7 @@ async function swapBoard(id) {
   if (!rec) { interactionState.swapping = false; renderPane(); return; }
   el.board.classList.add('swapping');
   setTimeout(() => {                  // setTimeout, not transitionend: the reduced-motion
-    current = rec;                    // kill-switch zeroes transitions (§8)
+    boardData.current = rec;                    // kill-switch zeroes transitions (§8)
     renderBoard();
     renderPane();
     el.board.classList.remove('swapping');
@@ -4472,7 +4476,7 @@ async function renderPane() {
   // authoritative for it (the export takes the same stance), and a drop's
   // write can still be behind the debounced persist when this getAll runs.
   for (const b of all) {
-    const rec = (current && b.id === current.id) ? current : b;
+    const rec = (boardData.current && b.id === boardData.current.id) ? boardData.current : b;
     buckets[catOf(rec)].push(rec);
   }
   menuUiState.catFilled = BOARD_CATS.filter(c => buckets[c].length).length;
@@ -4492,7 +4496,7 @@ function makePaneRow(b) {
   card.type = 'button'; card.className = 'pane-card'; card.dataset.id = b.id;
   fillRowContent(card, b);
   row.appendChild(card);
-  const isActive = current && b.id === current.id;
+  const isActive = boardData.current && b.id === boardData.current.id;
   if (isActive) {
     card.classList.add('active');
     // Deletion path (a), issue #10: a permanent control on the open board's
@@ -4537,11 +4541,11 @@ function makePaneRow(b) {
    full renderPane on commit reconciles the untitled date line. */
 function updateActiveCardTitle() {
   const card = el.paneCards && el.paneCards.querySelector('.pane-card.active');
-  if (!card || !current) return;
+  if (!card || !boardData.current) return;
   const titleEl = card.querySelector('.row-title');
   if (!titleEl) return;
-  const titled = !!(current.title && current.title.trim().length);
-  titleEl.textContent = titled ? current.title : COPY.untitled;
+  const titled = !!(boardData.current.title && boardData.current.title.trim().length);
+  titleEl.textContent = titled ? boardData.current.title : COPY.untitled;
   titleEl.classList.toggle('untitled', !titled);
 }
 
@@ -4613,15 +4617,15 @@ function closeLotMenu() {
   el.lot.classList.remove('menu-open');
 }
 async function ensureCurrentValid() {
-  if (current) { const still = await idbGet(current.id); if (still) return; }
+  if (boardData.current) { const still = await idbGet(boardData.current.id); if (still) return; }
   // The board being replaced is gone from storage; drop its pending debounce
   // with it, or the timer would fire against its successor and stamp a board
   // nobody edited — which under B69 would move that card (§3's `dirty` rides
   // whatever `current` is, so it is cleared wherever `current` is replaced).
   clearTimeout(saveTimer); dirty = false;
   const all = await idbGetAll();
-  current = all.length ? all.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)) : newBoardRecord();
-  if (!all.length) await idbPut(current);
+  boardData.current = all.length ? all.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)) : newBoardRecord();
+  if (!all.length) await idbPut(boardData.current);
   renderBoard();
 }
 /* Put the #list-view away (B82, issue #125). Mobile slides the drilled panel
@@ -4642,7 +4646,7 @@ async function showBoardFromList() {
   menuUiState.catView = null;
   closeLotMenu();                      // mobile: the grid steps aside, the real lot returns
   hideListView();                      // slide the drilled panel down, then hide (B82)
-  if (!current) { await ensureCurrentValid(); }
+  if (!boardData.current) { await ensureCurrentValid(); }
   else { renderBoard(); }
   if (viewState.isWide) renderPane();         // a board opened from the #list-view drill lights its rail card
 }
