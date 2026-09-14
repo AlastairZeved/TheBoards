@@ -2834,9 +2834,7 @@ el.board.addEventListener('contextmenu', (ev) => {
   openMenuFor({ type: 'note', node: noteNode }, x, y);
 });
 
-function buildMenu(items, clientX, clientY) {
-  closeMenu();
-  el.menu.textContent = '';
+function buildMenuButtons(items) {
   const buttons = [];
   for (const it of items) {
     if (it.sep) { const s = document.createElement('div'); s.className = 'sep'; el.menu.appendChild(s); continue; }
@@ -2859,6 +2857,13 @@ function buildMenu(items, clientX, clientY) {
     });
     el.menu.appendChild(b); buttons.push(b);
   }
+  return buttons;
+}
+
+function buildMenu(items, clientX, clientY) {
+  closeMenu();
+  el.menu.textContent = '';
+  const buttons = buildMenuButtons(items);
   el.menu.hidden = false;
   // Position adjacent to the press point, flipped to stay on-viewport.
   const mw = el.menu.offsetWidth, mh = el.menu.offsetHeight;
@@ -2874,6 +2879,11 @@ function buildMenu(items, clientX, clientY) {
   menuOpen = true;
   if (buttons[0]) buttons[0].focus();
 
+  attachMenuKeyNav(buttons);
+  attachMenuOutsideDismiss();
+}
+
+function attachMenuKeyNav(buttons) {
   menuKeyHandler = (ev) => {
     // Escape pops the menu ONLY (B91): stopPropagation keeps it from reaching the
     // desktop keydown grammar underneath, which — now that a note's Link menu can
@@ -2892,9 +2902,12 @@ function buildMenu(items, clientX, clientY) {
     }
   };
   document.addEventListener('keydown', menuKeyHandler, true);
-  // Dismissal is inert (B30): this handler runs in the capture phase, so the
-  // very press that closes the menu would otherwise go on to reach the
-  // recognizer and capture a note on the paper the menu was covering.
+}
+
+/* Dismissal is inert (B30): this handler runs in the capture phase, so the
+   very press that closes the menu would otherwise go on to reach the
+   recognizer and capture a note on the paper the menu was covering. */
+function attachMenuOutsideDismiss() {
   menuOutsideHandler = (ev) => {
     if (el.menu.contains(ev.target)) return;
     if (el.board.contains(ev.target)) {
