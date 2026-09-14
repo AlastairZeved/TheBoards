@@ -4932,17 +4932,27 @@ if (window.visualViewport) window.visualViewport.addEventListener('resize', onVi
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(applyLayout);
 
 async function boot() {
+  // Boot-order characterization guard (issue #182): one marker per step, emitted
+  // SYNCHRONOUSLY immediately before the step it names — before any await, so the
+  // observable order cannot race the awaited work. These are permanent: they are
+  // the guard that makes the phase-2 module split verifiable (import hoisting must
+  // never reorder boot), not scaffolding to strip. test/boot-order.js pins them.
+  console.debug('boot:layout');
   applyLayout();                 // establishes LEGACY_H before the migration reads it —
                                  // the first applyLayout otherwise fires inside openBoardObj,
                                  // after storage is already being rendered (B93)
+  console.debug('boot:idb');
   const all = await idbGetAll();
+  console.debug('boot:migrate');
   const adopted = await migrateLegacyBoards(all);   // B93: legacy notes onto the single path,
                                                     // written straight to IDB — nothing is
                                                     // open or debounced yet
   let board;
   if (!all.length) { board = newBoardRecord(); await idbPut(board); }
   else { board = all.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)); }  // launch → most recent
+  console.debug('boot:open');
   openBoardObj(board);
+  console.debug('boot:pane-rail');
   if (isWide) renderPane();
   // The standing calendar rail (issue #158, B99): furniture renders at boot on
   // wide, no press required. The has-cal-rail class gates its CSS (the
@@ -5015,7 +5025,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v49';
+const OWN_BUILD = 'v50';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {
