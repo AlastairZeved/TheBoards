@@ -8,7 +8,7 @@ import { registerInteractions, selected } from './interactions.js';
 import { closeMenu, fillBoardAction, registerMenus } from './menus.js';
 import { EXPORT_GEO, EXPORT_W, buildBoardPdf, exportBoardPdf, exportCalPdf, exportNoteBox, exportX, pdfTextW } from './export.js';
 import { BOARD_CATS, GRID_ORDER, catOf, catOrder, catPageCap, catView, drillCat, goToList, listOpen, lotMenuOpen } from './boards.js';
-import { makeCalDay, newBoardIn, openBoardObj, popping, registerBoards, renderCal, renderPane, returnToBoard, showCalRail, startCalLineEdit } from './boards.js';
+import { checkDayRoll, makeCalDay, newBoardIn, openBoardObj, popping, registerBoards, renderCal, renderPane, returnToBoard, showCalRail, startCalLineEdit } from './boards.js';
 import { swapBoard, swapping, syncDateMirror } from './boards.js';
 
 // Test-observability bridge (issue #182): the black-box suites drive the page
@@ -128,6 +128,9 @@ async function boot() {
     document.documentElement.classList.add('has-cal-rail');
     showCalRail();
   }
+  // The day-roll launch (issue #153, B105): if today carries events, the app
+  // opens the day's linked To-Do board instead of the last-touched one.
+  checkDayRoll();
 }
 boot();
 
@@ -199,7 +202,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v51';
+const OWN_BUILD = 'v52';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

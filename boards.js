@@ -1044,7 +1044,44 @@ export function eventsOf(all) {
   return all.filter(r => typeof r.date === 'string' && typeof r.text === 'string' && r.title === undefined);
 }
 
+/* --- The day-roll launch (issue #153, B105) --------------------------------
+   When the app opens, or the day rolls under an open app, and TODAY's date
+   carries at least one calendar event, the app lands on that date's linked
+   To-Do board — the B95 species R5 already keeps filled with the day's
+   events. The check runs ONCE PER DAY KEY: at boot, and at renderCal only
+   when the today key changed since the last check (the open-past-midnight
+   case) — never per render, so it cannot steal focus mid-interaction. With
+   no events, nothing is created and nothing navigates. */
+let rollDay = null;                     // the day key the roll check last ran for
+
+export function checkDayRoll() {
+  const today = calKey(new Date());
+  if (rollDay === today) return;
+  rollDay = today;
+  launchTodayBoard(today);
+}
+
+async function launchTodayBoard(today) {
+  commitAction(async () => {            // creating the board is a consequence
+                                        // (ensureLinkedBoard's contract, B81) —
+                                        // same wrap as addCalEvent's R5 chain
+    flushSave();
+    const all = await idbGetAll();
+    if (!calEventsOf(eventsOf(all), today).length) return;
+    const boards = all.filter(b => b.title !== undefined);
+    const { board, created } = ensureLinkedBoard(boards, today);
+    if (created) await idbPut(board);
+    await syncDateMirror(today);
+    // Step off the calendar first — mobile pops the pushed {v:'cal'} (B9),
+    // wide collapses the expanded panel to its rail — then the plain swap.
+    if (state.calOpen) goCalBack();
+    else if (state.calExpanded) collapseCalRail();
+    swapBoard(board.id);
+  });
+}
+
 export function renderCal() {
+  checkDayRoll();                // the day-roll launch (B105): once per day key
   el.calView.hidden = false;
   el.calStack.textContent = '';
   // §6/B7's collar on the R1 top row (issue #156, B98): the row's tabs draw
