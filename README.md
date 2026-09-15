@@ -38,9 +38,7 @@ behavior.
 - [Design Philosophy](#design-philosophy)
 - [Project Structure](#project-structure)
 - [The Governing Records](#the-governing-records)
-- [Testing](#testing)
 - [Maintainers](#maintainers)
-- [Thanks](#thanks)
 - [Contributing](#contributing)
 - [License](#license)
 
