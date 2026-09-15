@@ -772,8 +772,12 @@ async function ensureCurrentValid() {
   // whatever `current` is, so it is cleared wherever `current` is replaced).
   clearTimeout(saveTimer); state.dirty = false;
   const all = await idbGetAll();
-  state.current = all.length ? all.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)) : newBoardRecord();
-  if (!all.length) await idbPut(state.current);
+  // Events ride the boards store (B105) with no `updatedAt` — same reduce
+  // hazard as boot's most-recent pick: an event-first store would open an
+  // event as the board. Current is a BOARD.
+  const boards = all.filter(r => r.title !== undefined);
+  state.current = boards.length ? boards.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)) : newBoardRecord();
+  if (!boards.length) await idbPut(state.current);
   renderBoard();
 }
 /* Put the #list-view away (B82, issue #125). Mobile slides the drilled panel

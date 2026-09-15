@@ -114,8 +114,14 @@ async function boot() {
                                                     // written straight to IDB — nothing is
                                                     // open or debounced yet
   let board;
-  if (!all.length) { board = newBoardRecord(); await idbPut(board); }
-  else { board = all.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)); }  // launch → most recent
+  // Events ride the boards store (B105) with no `updatedAt` — `undefined >
+  // anything` is false, so an unfiltered reduce over the raw store returns
+  // its first record verbatim; a store whose lowest uuid is an event then
+  // boots an event as the board (renderBoard's crash, seen in CI). Boot
+  // opens a BOARD: the most-recent record that has a title.
+  const boards = all.filter(r => r.title !== undefined);
+  if (!boards.length) { board = newBoardRecord(); await idbPut(board); }
+  else { board = boards.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)); }  // launch → most recent
   console.debug('boot:open');
   openBoardObj(board);
   console.debug('boot:pane-rail');
@@ -202,7 +208,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v56';
+const OWN_BUILD = 'v57';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {
