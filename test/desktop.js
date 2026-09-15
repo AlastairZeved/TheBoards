@@ -1904,19 +1904,36 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
     // Seed the linked pair, then reboot onto it — an empty boot made its own
-    // board, so the house seed→reload pattern applies.
+    // board, so the house seed→reload pattern applies. The first boot also
+    // auto-creates today's linked To Do (B107/B108); seeding a SECOND board
+    // linked to the same day made calBoardOf's pick depend on IDB key order
+    // (uuid ids), so the morning lifecycle could land on the wrong board and
+    // its syncMirror could rebuild the span in random event order. Start from
+    // a clean store: exactly one linked pair, events ordered by createdAt.
     await page.evaluate(async () => {
+      for (const r of await idbGetAll()) await idbDelete(r.id);
       const key = calKey(new Date());
       const b = newBoardRecord();
       b.title = '09/02/26 To Do'; b.cal = key; b.calReq = 2;
       b.requirements = 'mirror one\nmirror two\nhand line';
-      const ev1 = newCalEvent(key, 'mirror one');
-      const ev2 = newCalEvent(key, 'mirror two');
+      const now = Date.now();
+      const ev1 = newCalEvent(key, 'mirror one'); ev1.createdAt = now - 1000;
+      const ev2 = newCalEvent(key, 'mirror two'); ev2.createdAt = now;
       await idbPut(b); await idbPut(ev1); await idbPut(ev2);
     });
     // Reboot onto the seeded store — an empty boot made its own board.
     await page.reload();
-    await page.waitForTimeout(600);
+    // B108's morning lifecycle runs after boot's own render, and with the
+    // board already open its swapBoard early-returns — nothing re-renders
+    // after it. Wait for the landed state instead of a fixed 600ms, so the
+    // race fails loud (timeout) instead of editing mid-lifecycle.
+    await page.waitForFunction(() =>
+      state.current && state.current.title === '09/02/26 To Do' &&
+      state.current.cal && state.current.requirements ===
+        'mirror one\nmirror two\nhand line' &&
+      document.getElementById('anchor-requirements').textContent ===
+        state.current.requirements,
+      null, { timeout: 10000 });
 
     // 1. Edit the FIRST span line on the board, commit on blur.
     await page.evaluate(() => document.getElementById('anchor-requirements').focus());
