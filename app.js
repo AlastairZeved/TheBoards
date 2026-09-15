@@ -429,6 +429,41 @@ function mirrorEventsOf(board, events) {
 }
 
 /* --- 2. IndexedDB persistence -------------------------------------------- */
+// DOM plumbing (entry-owned, issue #182): every surface the app draws into.
+// Declared here at the module boundary so the persistence region that follows
+// stays pure; used by every region via the shared binding.
+const el = {
+  board: document.getElementById('board'),
+  boardView: document.getElementById('board-view'),
+  lotItems: document.getElementById('lot-items'),
+  lot: document.getElementById('lot'),
+  lotMenu: document.getElementById('lot-menu'),       // mobile All-Boards grid (B74)
+  listView: document.getElementById('list-view'),
+  listRows: document.getElementById('list-rows'),
+  menu: document.getElementById('menu'),
+  toast: document.getElementById('toast'),
+  pane: document.getElementById('pane'),
+  paneCards: document.getElementById('pane-cards'),
+  boardActions: document.getElementById('board-actions'),   // the board-action row (B83)
+  actionBoards: document.getElementById('action-boards'),   // All Boards ⇄ This board toggle
+  actionExport: document.getElementById('action-export'),   // Export this board (PDF · JSON, B92)
+  actionImport: document.getElementById('action-import'),   // Import a JSON backup (issue #140, B92)
+  importFile: document.getElementById('import-file'),       // the import tab's file dialog
+  calView: document.getElementById('cal-view'),             // calendar screen (issue #145)
+  calRail: document.getElementById('cal-rail'),             // the standing rail face (issue #158, B99)
+  calStack: document.getElementById('cal-stack'),
+  calTop: document.getElementById('cal-top'),
+  calBack: document.getElementById('cal-back'),
+  calBoards: document.getElementById('cal-boards'),
+  calExport: document.getElementById('cal-export'),
+  actionCalendar: document.getElementById('action-calendar'), // 4th board-action tab (R7.2)
+};
+const anchorEls = {
+  title: document.getElementById('anchor-title'),
+  components: document.getElementById('anchor-components'),
+  requirements: document.getElementById('anchor-requirements'),
+};
+
 const DB_NAME = 'boards-db', STORE = 'boards';
 
 function openDB() {
@@ -551,38 +586,6 @@ const state = {
 };
 const noteEls = new Map();           // note.id -> element
 const lotEls = new Map();            // lotItem.id -> element
-
-const el = {
-  board: document.getElementById('board'),
-  boardView: document.getElementById('board-view'),
-  lotItems: document.getElementById('lot-items'),
-  lot: document.getElementById('lot'),
-  lotMenu: document.getElementById('lot-menu'),       // mobile All-Boards grid (B74)
-  listView: document.getElementById('list-view'),
-  listRows: document.getElementById('list-rows'),
-  menu: document.getElementById('menu'),
-  toast: document.getElementById('toast'),
-  pane: document.getElementById('pane'),
-  paneCards: document.getElementById('pane-cards'),
-  boardActions: document.getElementById('board-actions'),   // the board-action row (B83)
-  actionBoards: document.getElementById('action-boards'),   // All Boards ⇄ This board toggle
-  actionExport: document.getElementById('action-export'),   // Export this board (PDF · JSON, B92)
-  actionImport: document.getElementById('action-import'),   // Import a JSON backup (issue #140, B92)
-  importFile: document.getElementById('import-file'),       // the import tab's file dialog
-  calView: document.getElementById('cal-view'),             // calendar screen (issue #145)
-  calRail: document.getElementById('cal-rail'),             // the standing rail face (issue #158, B99)
-  calStack: document.getElementById('cal-stack'),
-  calTop: document.getElementById('cal-top'),
-  calBack: document.getElementById('cal-back'),
-  calBoards: document.getElementById('cal-boards'),
-  calExport: document.getElementById('cal-export'),
-  actionCalendar: document.getElementById('action-calendar'), // 4th board-action tab (R7.2)
-};
-const anchorEls = {
-  title: document.getElementById('anchor-title'),
-  components: document.getElementById('anchor-components'),
-  requirements: document.getElementById('anchor-requirements'),
-};
 
 /* The category is written, not defaulted (B67, extending B63's rule to the one
    creation path that predates it): since the ladder rotates with the type, an
