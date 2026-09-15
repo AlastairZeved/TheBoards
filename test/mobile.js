@@ -839,7 +839,8 @@ async function openCat(page, cat) {
                labelFontSize: getComputedStyle(
                  document.querySelector('#zone-components .band-label')).fontSize };
     });
-    const src = fs.readFileSync(__dirname + '/../app.js', 'utf8');
+    // issue #182: EXPORT_GEO now lives in export.js — read the module, not the entry.
+    const src = fs.readFileSync(__dirname + '/../export.js', 'utf8');
     const num = k => Number((src.match(new RegExp(k + ':\\s*(\\d+(?:\\.\\d+)?)')) || [])[1]);
     const [bandTop, bandGap, cardTop, cardOverhang, headLH, labelSize, labelLH, radius] =
       ['bandTop', 'bandGap', 'cardTop', 'cardOverhang',
@@ -2275,22 +2276,17 @@ async function openCat(page, cat) {
 
     // Flow 2: the re-arm guard. startCalLineEdit arms the blur commit, so a
     // second editor on the same line would DOUBLE-COMMIT the same event.
-    // The guard must prevent that. Instrumented: count editors armed across
-    // a second tap on the line WHILE it is editing.
-    await page.evaluate(() => {
-      window._armed = 0;
-      const orig = startCalLineEdit;
-      window.startCalLineEdit = function (line, ev) {
-        window._armed++;
-        return orig(line, ev);
-      };
-    });
+    // The guard must prevent that. Observable black-box: exactly one line
+    // carries contenteditable across the second tap (issue #182 — module
+    // scope no longer lets a test wrap the function itself).
     await tapLine('existing event line!');       // opens the editor (arm 1)
     await page.waitForTimeout(80);
-    const armed1 = await page.evaluate(() => window._armed);
+    const armed1 = await page.evaluate(() =>
+      document.querySelectorAll('.cal-line[contenteditable]').length);
     await tapLine('existing event line!');       // the second tap while editing
     await page.waitForTimeout(120);
-    const armed2 = await page.evaluate(() => window._armed);
+    const armed2 = await page.evaluate(() =>
+      document.querySelectorAll('.cal-line[contenteditable]').length);
     ok('a second tap while editing does not re-arm the editor (exactly one editor open)',
       armed1 === 1 && armed2 === 1, 'armed=' + armed1 + '->' + armed2);
     await calBlur();                             // close flow 2's editor
