@@ -350,8 +350,9 @@ export function ensureLinkedBoard(all, dateKey) {
    wrote, so a deletion shrinks the events but not the span — an old mirror
    line can never be demoted to a "hand" line by an event's removal. The
    span's lines are rewritten wholesale in event order; everything after
-   them is the reader's own and is carried through untouched. Editing either
-   side lands here — one writer, so the two surfaces can never disagree.
+   them is the reader's own and is carried through untouched. Each surface
+   writes its own edits and lands here to converge (B106) — the span decides
+   what a write owns, so the two surfaces can never disagree.
 
    Requirements is one plain string (PRD §4.1): lines are \n-separated. */
 export function syncMirror(board, events) {
@@ -374,7 +375,7 @@ export function syncMirror(board, events) {
 /* Read the mirror back: the events a board's Requirements implies, by
    position (the first lines are the mirror's). Used when the READER edits a
    line — the edit writes through to the event record it mirrors. */
-function mirrorEventsOf(board, events) {
+export function mirrorEventsOf(board, events) {
   const lines = (board.requirements || '').length
     ? board.requirements.split('\n') : [];
   if (!board.cal) return [];

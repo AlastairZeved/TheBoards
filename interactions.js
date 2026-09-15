@@ -8,7 +8,7 @@ import { rebaseNote, renderX, renderY, setHitInset, toLogical, updateBoardGeomet
 import { applyCompleteA11y, boardLinks, clearLink, linkSource, lotEls, makeLotEl, makeNoteEl, noteEls } from './render.js';
 import { reflectToolbarFlip, removeLinksForNote, runNoteToolbarAction, syncViewTitle, toggleLink, updateLinks, updateNoteToolbar } from './render.js';
 import { menuOpen, menuReturnFocus, openMenuFor } from './menus.js';
-import { renderPane, updateActiveCardTitle } from './boards.js';
+import { renderPane, updateActiveCardTitle, writeThroughRequirements } from './boards.js';
 
 // One recognizer over the board. Targets: note | anchor | lot-item | lot | canvas.
 export const pointers = new Map();          // pointerId -> {x,y,startX,startY}
@@ -393,8 +393,18 @@ function tapAnchor(target, x, y) {
   editText(target.node, x, y);      // edit-entry is instant on both (B27, B81)
 }
 
-/* Enter inline edit on any editable text node. */
+/* Enter inline edit on any editable text node. The Requirements anchor's
+   pre-edit text is snapshotted here — the single funnel every edit entry
+   (tap and focusin alike) passes through — because the live onInput path
+   overwrites state.current on every keystroke and the write-through commit
+   (B106) needs the text the reader started from to tell a deleted span line
+   from an edited one. */
+let reqBefore = null;
 function enableEditing(textNode) {
+  if (textNode.classList && textNode.classList.contains('anchor') &&
+      textNode.dataset.anchor === 'requirements') {
+    reqBefore = state.current.requirements || '';
+  }
   textNode.setAttribute('contenteditable', CE);
 }
 function disableEditing(textNode) {
@@ -492,6 +502,12 @@ function commitAnchor(node) {
   state.current[node.dataset.anchor] = node.textContent;
   node.classList.toggle('filled', !!node.textContent.length);
   if (state.isDesktop && node.dataset.anchor === 'title') renderPane(); // reconcile the date line
+  if (node.dataset.anchor === 'requirements' && state.current.cal) {
+    // The mirror's reverse direction (issue #154, B106): this commit IS the
+    // write-through — not a timeout beside it (B81's commit-on-release).
+    writeThroughRequirements(state.current, reqBefore);
+    reqBefore = null;
+  }
   updateBoardGeometry();      // the band follows its zones (B47), the handle its card (B65)
   saveNow();
 }

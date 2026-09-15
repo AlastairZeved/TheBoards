@@ -3,7 +3,7 @@
 import { CAT_SEC_GAP, CE, COPY, GLYPH, LEAVE_MS, LIST_CARD_COLS, LIST_CARD_H, LIST_CAT_ROW } from './state.js';
 import { LONGPRESS_MS, MOVE_THRESHOLD, PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP, PANE_ROW_H, SWAP_MS, calBoardOf } from './state.js';
 import { calEventsOf, calKey, calWindow, el, ensureLinkedBoard, newBoardRecord, newCalEvent, state } from './state.js';
-import { syncMirror } from './state.js';
+import { syncMirror, mirrorEventsOf } from './state.js';
 import { flushSave, idbDelete, idbGet, idbGetAll, idbPut, saveNow, saveTimer, scheduleSave } from './persistence.js';
 import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze } from './geometry.js';
 import { applyBoardCat, renderBoard, syncViewTitle } from './render.js';
@@ -1036,6 +1036,62 @@ export async function syncDateMirror(dateKey) {
   const board = calBoardOf(boards, dateKey);
   if (!board) return;
   if (syncMirror(board, calEventsOf(eventsOf(all), dateKey))) await idbPut(board);
+}
+
+/* The REVERSE direction of startCalLineEdit (issue #154, B106): a board-side
+   Requirements commit writes through to the event records the mirror's span
+   mirrors, then resyncs. Within the span the BOARD is the word now — each
+   span line rewrites its positional event (mirrorEventsOf's law, span line
+   i ↔ event i), a deleted span line deletes its event (event-deletion
+   semantics, never demotion), and lines after the span are hand lines this
+   path never touches. Board-side additions land after the span as hand lines
+   (insertion inside the span is ambiguous, B106). The resync runs syncMirror
+   on the LIVE board object, not a fresh store read — the commit's own
+   saveNow is racing the same record, and one object cannot disagree with
+   itself. Fire-and-forget async, like every consequence in this file.
+
+   `before` is the pre-edit text (snapshotted at edit entry, interactions.js):
+   a plain-text anchor cannot say WHICH line was deleted, but a prefix/suffix
+   diff can — a pure deletion (the middle collapsed to nothing) removes the
+   deleted lines' events and never lets a hand line slide up into the span.
+   Any mixed edit/delete falls to the positional law, which converges: the
+   board's span text is the word, position by position. */
+export async function writeThroughRequirements(board, before) {
+  if (!board || !board.cal) return;
+  const all = await idbGetAll();
+  const mine = calEventsOf(eventsOf(all), board.cal);
+  const lines = (board.requirements || '').length
+    ? board.requirements.split('\n') : [];
+  const span = typeof board.calReq === 'number'
+    ? board.calReq
+    : Math.min(lines.length, mine.length);   // first sync on a legacy pair
+  const o = (before || '').length ? before.split('\n') : [];
+  let p = 0;   // common prefix — the lines both texts agree on, from the top
+  while (p < o.length && p < lines.length && o[p] === lines[p]) p++;
+  let s = 0;   // common suffix — from the bottom, never overlapping the prefix
+  while (s < o.length - p && s < lines.length - p &&
+         o[o.length - 1 - s] === lines[lines.length - 1 - s]) s++;
+  if (o.length > lines.length && lines.length === p + s) {
+    // Pure deletion: old lines [p, o.length - s) are gone.
+    const lo = Math.min(p, span), hi = Math.min(o.length - s, span);
+    for (let i = lo; i < hi && i < mine.length; i++) await idbDelete(mine[i].id);
+    const kept = mine.filter((_, i) => i < p || i >= o.length - s);
+    board.calReq = span - (hi - lo);         // the span follows its deletions
+    syncMirror(board, kept);
+    await idbPut(board);                     // always: saveNow raced the span move
+    return;
+  }
+  const keep = Math.min(span, lines.length);
+  // Span-line edits: line i writes through to event i.
+  for (const { event, text } of mirrorEventsOf(board, all)) {
+    if (event.text !== text) { event.text = text; await idbPut(event); }
+  }
+  // A shrunken span deletes its surplus events.
+  for (let i = keep; i < span && i < mine.length; i++) await idbDelete(mine[i].id);
+  if (keep !== span) board.calReq = keep;    // the span follows the board's deletion
+  if (syncMirror(board, mine.slice(0, keep)) || keep !== span) {
+    await idbPut(board);                     // saveNow raced the span move
+  }
 }
 
 /* Event records ride the boards store (one store, no schema bump); they are

@@ -230,7 +230,12 @@ date key it serves as that day's To-Do board) and `calReq` (the count of
 Requirements lines the calendar mirror last wrote — the span that
 distinguishes the mirror's lines from the reader's own). Both are added at
 the read site, defaulted when absent (B21's idiom — no migration, no DB
-version move). Calendar events are records in the same store shaped
+version move). Since B106 (issue #154) the span is the arbiter of a two-way
+mirror: a board-side edit of a span line writes through to the event record
+it mirrors (span line i ↔ event i), a board-side deletion of span lines
+deletes the mirrored events, and hand lines after the span are never
+touched by either direction. Calendar events are records in the same store
+shaped
 `{ id, date, text, state, createdAt }`, identified by carrying `date` and
 no `title`; the 7-day window is computed from today's date at render, so no
 rolling array is stored and midnight writes nothing.
