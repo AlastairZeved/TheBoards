@@ -104,6 +104,11 @@ If v2 ships with any of these it has failed, regardless of technical correctness
   attention.
 - **What this does not license:** decoration. Peace comes from restraint, depth
   and consistency.
+- **The one exception, bounded (B104):** reminders are a tap, not a nag. A
+  clock icon toggles on a note card; the active clock glows and the card
+  surfaces to that morning's To-Do board. No time picker, no pop-up, no
+  due-time stored anywhere, nothing pushes — the board still asks nothing; it
+  only remembers where the person put the clock.
 
 ### §1.5 Taste decisions
 
@@ -145,7 +150,7 @@ completion as a visible scratch-out; multiple boards; and a PDF export.
 | Tags, folders, search, filters, auto-grouping | §1.2. Every one of these infers a relationship the person did not assert. |
 | Rich text, images, attachments, drawing | The data model is plain strings (§4.1). B3 enforces this at the paste boundary. |
 | Snapping, alignment guides, auto-layout | §1.3 and §1.2. Notes overlap freely; the person places them. |
-| Reminders, due dates, notifications, streaks | §1.4. The board makes no demands. |
+| Due dates with time logic, push notifications, in-app notification banners, email, streaks | §1.4. The board makes no demands. Clock-toggle reminders and the day's To-Do surface are the bounded exception, ruled **B104** (issue #169) — a tap, a glow, and a card that shows up where the person already looks; no times are stored and nothing pushes |
 | Infinite canvas, pan, zoom | §5.1. Boundedness is the feature — a page you can see all of. |
 | A framework, bundler, package manager, dependency | §3.3. |
 | Settings, preferences, a theme switch | §1.4. §9 is one identity, not a choice to make. |
