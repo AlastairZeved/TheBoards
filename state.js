@@ -108,6 +108,11 @@ export const COPY = {
   // board, or spawn a board around it. The issue's own wording, verbatim.
   addToBoard: 'Add to existing board',
   newBoardWith: 'Create new board with this as first card',
+  // The clock toggle's two faces (issue #169, B109), the Highlight grammar
+  // (B43/B71): the label states the act it will perform.
+  remind: 'Remind me', unremind: 'Remove reminder',
+  // Surfaced cards' menu (issue #169, B109): the issue's own wording, verbatim.
+  gotoBoard: 'Go to Board',
   linkHintTap: 'Tap another note to link',
   linkHintClick: 'Click another note to link',
   linked: 'Linked', unlinked: 'Unlinked',
@@ -201,6 +206,11 @@ export const GLYPH = {
   // hanging rail — drawn in the app's hand. Back reads as the mirrored page
   // pair (a page turn back), the same "page" semantics as the pager's marks.
   calendar:  MARK(16, '<rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5.5 1.5V4M10.5 1.5V4"/>'),
+  // The reminder clock (issue #169, B104/B109): a dial and its hands, drawn in
+  // the app's own hand like every mark — one tap sets or clears (B104), no
+  // time concept anywhere in it: the hands read ten past ten because a clock
+  // glyph must, not because anything is scheduled.
+  clock:     MARK(16, '<circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/>'),
   calBack:   MARK(16, '<path d="M9.5 3.5L5 8l4.5 4.5"/><path d="M5 8h6.5"/>'),
 };
 

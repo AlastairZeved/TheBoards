@@ -1,7 +1,7 @@
 /* --- 6. Rendering -------------------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { COPY, GLYPH, anchorEls, el, state, uuid } from './state.js';
-import { saveNow, scheduleSave } from './persistence.js';
+import { COPY, GLYPH, anchorEls, calKey, el, state, uuid } from './state.js';
+import { idbGet, idbGetAll, idbPut, saveNow, scheduleSave } from './persistence.js';
 import { applyLayout, applyNoteWidth, effScale, renderX, renderY, setHitInset } from './geometry.js';
 import { clearSelection, commitAction, completeNote, copyText, deleteNotes, hideToast, isEditing, multiSel } from './interactions.js';
 import { restoreNote, selected, selectedNoteIds, setSelectedNotesHighlight, setSelectedNotesState, showNotice, showUndo, toggleHighlight } from './interactions.js';
@@ -86,6 +86,7 @@ export function renderBoard() {
   // Notes (array order = z-order; DOM order mirrors it).
   noteEls.forEach(n => n.remove()); noteEls.clear();
   for (const note of state.current.notes) el.board.appendChild(makeNoteEl(note));
+  hydrateSurfaced();                  // reminder echoes on today's To Do (B109)
   // Parking Lot.
   el.lotItems.textContent = ''; lotEls.clear();
   for (const item of state.current.parkingLot) el.lotItems.appendChild(makeLotEl(item));
@@ -117,12 +118,153 @@ export function makeNoteEl(note) {
   scratch.setAttribute('aria-hidden', 'true');
 
   node.appendChild(text); node.appendChild(scratch);
+  node.appendChild(makeClockBtn(note));                      // the reminder toggle (B109)
+  setReminderUi(node, note);                                 // class + aria follow the record
   node.appendChild(makeNoteToolbar(note));                   // the on-select action row (B84)
   applyCompleteA11y(node, note.state === 'complete');
   reflectToolbarFlip(node, note);                            // above the note, or below near the sheet top
   noteEls.set(note.id, node);
   requestAnimationFrame(() => setHitInset(node, note));
   return node;
+}
+
+/* --- 6.4 The reminder clock (issue #169, B104/B109) ----------------------- */
+
+/* The clock toggle, bottom-right of every note card: one tap sets or clears
+   the reminder (B104) — no picker, no dialog, no time. Off the record stays
+   lean: clearing DELETES the key (B21's absence-is-off idiom), so a legacy
+   note and a cleared one are the same shape. */
+function makeClockBtn(note) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'note-clock';
+  b.innerHTML = GLYPH.clock;                 // SVG is already aria-hidden
+  return b;
+}
+
+/* The clock's look follows the record (aria carries the state too — never
+   colour alone, UIUX §1). Called from the render paths and the toggle. */
+export function setReminderUi(node, note) {
+  node.classList.toggle('reminder', !!note.reminder);
+  const b = node.querySelector('.note-clock');
+  if (b) {
+    b.setAttribute('aria-label', note.reminder ? COPY.unremind : COPY.remind);
+    b.setAttribute('aria-pressed', String(!!note.reminder));
+  }
+}
+
+/* One clock activation, from a pointer tap or the keyboard: commit on release
+   through the B81 drop-guard, exactly like the toolbar's tabs. On this board's
+   own note the record is `state.current`'s; on a surfaced echo it lives on the
+   source board, and the toggle writes there and recomputes the surfacing. */
+export function runClockAction(btn) {
+  const node = btn.closest('.note');
+  if (!node) return;
+  if (isEditing(document.activeElement)) { document.activeElement.blur(); return; }
+  const id = node.dataset.id;
+  const local = state.current.notes.find(n => n.id === id);
+  commitAction(() => {
+    if (local) {
+      if (local.reminder) delete local.reminder; else local.reminder = true;
+      setReminderUi(node, local);
+      saveNow();
+    } else {
+      toggleSurfacedReminder(id);
+    }
+  });
+}
+
+/* --- 6.5 Surfaced reminder cards (issue #169, B109) -----------------------
+   A note with `reminder` set on ANY board other than today's linked To-Do
+   renders an ECHO of itself there — one source of truth (the record never
+   leaves its board; nothing is copied, so nothing can diverge), computed at
+   render time like sanitizeBoard's sweep. The echo wears the source board's
+   note hue (data-src-cat rebinds --note, the ladder's own discipline). The
+   surfacing set is ACTIVE reminder notes: completing one anywhere unsurfaces
+   it, and the same is true of clearing its clock. */
+
+export const surfacedMap = new Map();      // note.id -> { boardId } — the echoes on screen
+let surfacedToken = 0;                     // stale-async guard across re-renders
+
+export function clearSurfaced() {
+  surfacedMap.clear();
+  for (const n of [...el.board.querySelectorAll('.note.surfaced')]) n.remove();
+}
+
+function makeSurfacedEl(note, srcBoard) {
+  const node = document.createElement('div');
+  // .surfaced: the echo — inert to tap/drag/edit (interactions.js finds no
+  // record here), reachable by long-press/right-click for its two menu acts.
+  node.className = 'note on-light surfaced reminder';
+  node.dataset.id = note.id;
+  node.dataset.srcBoard = srcBoard.id;
+  node.dataset.srcCat = catOf(srcBoard);
+  node.setAttribute('tabindex', '0');
+  applyNoteWidth(node, note);
+  node.style.left = renderX(note) + 'px';
+  node.style.top = renderY(note) + 'px';
+  node.style.transform = 'scale(' + effScale(note) + ')';
+
+  const text = document.createElement('div');
+  text.className = 'note-text';
+  text.textContent = note.text;
+
+  const scratch = document.createElement('div');
+  scratch.className = 'note-scratch';
+  scratch.setAttribute('aria-hidden', 'true');
+
+  node.appendChild(text); node.appendChild(scratch);
+  const clock = makeClockBtn(note);
+  clock.setAttribute('aria-label', COPY.unremind);
+  clock.setAttribute('aria-pressed', 'true');
+  node.appendChild(clock);
+  return node;
+}
+
+function hydrateSurfaced() {
+  const token = ++surfacedToken;
+  const board = state.current;
+  if (!board || !board.cal || board.cal !== calKey(new Date())) { clearSurfaced(); return; }
+  idbGetAll().then((all) => {
+    if (token !== surfacedToken || state.current !== board) return;
+    clearSurfaced();
+    for (const b of all) {
+      if (typeof b.title !== 'string') continue;           // event records ride the store
+      if (b.id === board.id || b.cal === board.cal) continue;
+      for (const n of (b.notes || [])) {
+        if (!n.reminder || n.state === 'complete') continue;
+        surfacedMap.set(n.id, { boardId: b.id });
+        el.board.appendChild(makeSurfacedEl(n, b));
+      }
+    }
+  });
+}
+
+/* The two acts a surfaced card's menu carries (B109). Both write the SOURCE
+   record through idbGet — the echo holds no state of its own — then re-render
+   today's board, which recomputes the surfacing set. Completing clears a
+   carriedOn marker under the same law as setNoteState (B108). */
+export async function completeSurfaced(id) {
+  const surf = surfacedMap.get(id);
+  if (!surf) return;
+  const rec = await idbGet(surf.boardId);
+  const n = rec && (rec.notes || []).find(m => m.id === id);
+  if (!n || n.state === 'complete') return;
+  n.state = 'complete';
+  if (n.carriedOn) delete n.carriedOn;
+  await idbPut(rec);
+  renderBoard();
+}
+
+async function toggleSurfacedReminder(id) {
+  const surf = surfacedMap.get(id);
+  if (!surf) return;
+  const rec = await idbGet(surf.boardId);
+  const n = rec && (rec.notes || []).find(m => m.id === id);
+  if (!n) return;
+  if (n.reminder) delete n.reminder; else n.reminder = true;
+  await idbPut(rec);
+  renderBoard();                        // clock-off unsurfaces; nothing to re-add
 }
 
 /* The note's action toolbar (B84, issue #126, UIUX §4.5/§14): four flat tabs on
@@ -390,9 +532,16 @@ export function updateLinks() {
    call from boot() — no module does load-time work. */
 export function registerRender() {
   el.board.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    const clock = e.target.closest && e.target.closest('.note-clock');
+    if (clock) {                    // the clock's keyboard route, beside the tabs' (B109)
+      e.preventDefault();
+      e.stopPropagation();
+      runClockAction(clock);
+      return;
+    }
     const btn = e.target.closest && e.target.closest('.note-tb-btn');
     if (!btn) return;
-    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
     e.preventDefault();
     e.stopPropagation();
     runNoteToolbarAction(btn);

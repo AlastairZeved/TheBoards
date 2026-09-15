@@ -553,6 +553,25 @@ note toolbar (§4.5), alongside a fixed blue sibling `--accent-copy` `#698ebf` f
 Copy tab — both fixed like this wash, and both chrome that names *which action*, never
 the note's state.
 
+### §2.6.2 The reminder glow (B109)
+
+| Token | Value | Role | text on it (`--ink-dark`) | vs. the note families (hue) |
+|---|---|---|---|---|
+| `--reminder` | `#52c4e2` | a note the user has toggled a reminder on (the clock's active fill + bloom, §4.7) | 9.48:1 | water's own hue, lifted bright, vs. cool blue/green/violet |
+
+A reminder is **not an accent** — it belongs to the same class as the highlight
+wash (§2.6.1): a per-note appearance state the *user* asserts, sitting on the
+board at the user's command, so the accent placement rule does not reach it.
+It is **cool** by law (§2.6 keeps `--danger` the only warm hue; B107 retired
+the red past-due state and B104's yellow carried state is the carried
+indicator's, not this one) — the water's own hue (~197°) lifted bright, a
+saturation the note families' pastels never reach, so the separation is hue and
+chroma where the highlight's was hue and warmth. Like `--highlight` it does
+**not** rotate with board type: a reminder means the same thing on every board.
+Luminance 0.4676, above the ink crossover, so the clock's dark glyph is correct
+on it. The glow is the bloom: a `box-shadow` of the token around the filled
+clock — never a second colour.
+
 ### §2.7 Focus
 
 **The ring is two-tone**, and that is structural rather than stylistic:
@@ -1079,6 +1098,36 @@ because the export palette stays off `:root` (§15).
 
 **Copy.** `Link` (menu item); `Tap another note to link` / `Click another note to
 link` (the armed hint, mobile / desktop); `Linked` / `Unlinked` (the undo captions).
+
+### §4.7 The reminder clock and the surfaced echo (B109)
+
+*New in v2 (issue #169, B104/B109).* The clock is the reminder's whole
+interface: a drawn dial mark (§13.3's discipline, in `GLYPH`) sitting
+bottom-right of **every** note card, resting in the note's own ink. One tap
+sets the reminder, one tap clears it — **no time picker, no dialog, no due
+time stored anywhere in the record** (B104). Active, it takes the `--reminder`
+fill (§2.6.2) with a bloom of the same token — the glow B104 rules — and its
+`aria-label` states the act the tap will perform (`Remind me` ⇄ `Remove
+reminder`), so the state never rides colour alone. An empty note keeps no
+frame (§6.2) and shows no clock.
+
+**The surfacing.** A note whose reminder is set renders an **echo** of itself
+on today's linked To-Do board (B95's species, `board.cal` = the today key) —
+at render time, computed, never stored: the record never leaves its board, so
+there is one source of truth and nothing to diverge. The echo is the note
+card's own anatomy minus the toolbar: same text, same scratch-out geometry,
+same clock (tapping it there writes the *source* record and unsurfaces), and
+it wears the **source board's note hue** — a `data-src-cat` attribute rebinds
+`--note` for the echo alone, the ladder's own §2.2.2 discipline. A reminder
+note on today's board itself simply glows; it does not surface to itself.
+The surfacing set is **active** reminder notes: completing the note anywhere
+(completing an echo completes the source, B109) unsurfaces it, as does
+clearing its clock. The echo's long-press/right-click menu carries **Complete**
+and **Go to Board** (the source board, the plain swap route, B9) — Link is
+absent there, because it arms against records this board does not hold.
+Completing a reminder note just completes it: nothing recreates anything
+(recurring reminders stay open, B104/B107). Echoes are render-time references
+and do not travel into the PDF export (which draws board records, not echoes).
 
 ---
 

@@ -1,11 +1,11 @@
 /* --- 10. Long-press menu ------------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { COPY, GLYPH, el, newBoardRecord, state } from './state.js';
-import { beginLink, linkSource, renderBoard } from './render.js';
+import { beginLink, completeSurfaced, linkSource, renderBoard, surfacedMap } from './render.js';
 import { idbGetAll, idbPut, saveNow } from './persistence.js';
 import { commitAction, g, isEditing } from './interactions.js';
 import { exportAllJson, exportBoardPdf, importBoardsJson } from './export.js';
-import { goToList, listOpen, lotMenuOpen, returnToBoard, showCal } from './boards.js';
+import { goToList, listOpen, lotMenuOpen, returnToBoard, showCal, swapBoard } from './boards.js';
 
 export let menuOpen = false, menuKeyHandler = null, menuOutsideHandler = null;
 export let menuReturnFocus = false;         // true only inside closeMenu's synchronous focus return
@@ -17,10 +17,10 @@ export let menuReturnFocus = false;         // true only inside closeMenu's sync
    tab one gesture away is chrome without a job. The lot still has none. All
    items are non-destructive, so no separator — same rule as everywhere else.
 
-   Today's To Do cards (issue #169, B108): a MANUALLY ADDED card on a linked
-   To-Do board (board.cal set, no carriedOn — carried notes came from another
-   board and are not this board's own; surfaced cards, link 4's, don't exist
-   yet) gains the two re-homing options in the issue's order. Both MOVE the
+   To-Do cards (issue #169, B108): a MANUALLY ADDED card on a linked To-Do
+   board (board.cal set, no carriedOn — carried notes came from another
+   board and are not this board's own) gains the two re-homing options on
+   its menu, in the issue's order. Both MOVE the
    note — a manual add is not tied to any other board, so re-homing is the
    note's whole life: "Add to existing board" lists the boards (the one menu
    species, buildMenu, nested a step deeper; ponytail: a flat list, fine at
@@ -28,12 +28,25 @@ export let menuReturnFocus = false;         // true only inside closeMenu's sync
    it. Both commit (records change) under buildMenu's own drop-guard. */
 export function openMenuFor(target, clientX, clientY) {
   if (target.type !== 'note') return;   // anchors lost their menu (B92); lot / canvas have none
+  const id = target.node.dataset.id;
+  const note = state.current && state.current.notes.find(n => n.id === id);
+  // A surfaced echo (issue #169, B109): its record lives on the source board,
+  // so its menu is its two acts — Complete here completes THERE (and the echo
+  // unsurfaces), Go to Board takes the plain swapBoard route (B9). Link arms
+  // against state.current's notes and would strand on a record that isn't
+  // there, so the echo's menu carries no Link.
+  const surf = !note && surfacedMap.get(id);
+  const items = [];
+  if (surf) {
+    items.push({ label: COPY.complete, glyph: GLYPH.complete, action: () => completeSurfaced(id) });
+    items.push({ label: COPY.gotoBoard, glyph: GLYPH.boards, action: () => swapBoard(surf.boardId) });
+    buildMenu(items, clientX, clientY);
+    return;
+  }
+  if (!note) return;                    // a stale id (the record was discarded mid-press)
   // A note's one relational action (issue #142, B91): Link arms link mode, then
   // the next note tapped is connected (handleTap's linkSource branch). beginLink
   // runs inside buildMenu's commitAction wrapper — arming is idempotent, fine.
-  const id = target.node.dataset.id;
-  const note = state.current && state.current.notes.find(n => n.id === id);
-  const items = [];
   if (note && state.current.cal && !note.carriedOn) {
     items.push(
       { label: COPY.addToBoard, glyph: GLYPH.boards, action: () => chooseBoardFor(id, clientX, clientY) },
