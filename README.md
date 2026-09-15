@@ -115,12 +115,6 @@ runtime dependencies. Fonts (Montserrat Alternates) are self-hosted in
 `fonts/`, and the PDF exporter is hand-rolled in `export.js` rather than pulled
 from a library.
 
-The regression suite (dev-only, never shipped) needs Node and Playwright:
-
-```sh
-npm install playwright   # somewhere on NODE_PATH; not committed, no package.json
-```
-
 ## Usage
 
 Everything happens on the one canvas; there is nothing behind it. Nothing
