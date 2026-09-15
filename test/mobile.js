@@ -7,6 +7,22 @@ const launchOpts = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHR
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
+// B108's morning landing owns boot: every load lands on today's linked board.
+// reopen() puts the board under test back on the sheet after a reload — by id
+// (a board that was already open) or by title (a seeded fixture, which boot's
+// old most-recent rule used to open on its own).
+async function reopen(page, idOrTitle) {
+  await page.reload();
+  await page.waitForTimeout(600);
+  await page.evaluate(async (k) => {
+    if (state.current && (state.current.id === k || state.current.title === k)) return;
+    const b = (await idbGetAll()).find(r => r.title !== undefined && (r.id === k || r.title === k));
+    if (b) swapBoard(b.id);
+  }, idOrTitle);
+  await page.waitForTimeout(700);          // SWAP_MS + render
+}
+
+
 async function newMobilePage(browser, viewport = { width: 384, height: 846 }) {
   const ctx = await browser.newContext({
     viewport, isMobile: true, hasTouch: true, deviceScaleFactor: 3,
@@ -106,8 +122,8 @@ async function openCat(page, cat) {
     await page.keyboard.type('hello board');
     await tap(page, 200, 250);               // blur onto other paper
     await page.waitForTimeout(300);
-    await page.reload();
-    await page.waitForTimeout(600);
+    const cur = await page.evaluate(() => state.current.id);
+    await reopen(page, cur);
     const txt = await page.evaluate(() => [...document.querySelectorAll('.note-text')].map(n => n.textContent));
     ok('text persisted across reload', txt.includes('hello board'), JSON.stringify(txt));
     await ctx.close();
@@ -169,7 +185,10 @@ async function openCat(page, cat) {
         const store = db.transaction('boards', 'readwrite').objectStore('boards');
         const all = store.getAll();
         all.onsuccess = () => {
-          const b = all.result[0];
+          // B108's day board shares the store now; the husk belongs to the
+          // plain board the pre-B108 boot opened (getAll is key-ordered, so
+          // result[0] is ambiguous across the two).
+          const b = all.result.find(r => !r.cal) || all.result[0];
           b.notes.push({ id: 'husk-1', text: '   ', x: 300, y: 500, rw: 900, rh: 1000, scale: 1, state: 'active' });
           const put = store.put(b);
           put.onsuccess = () => res(b.id);
@@ -179,8 +198,11 @@ async function openCat(page, cat) {
       };
       rq.onerror = () => rej(rq.error);
     }));
-    await page.reload();
-    await page.waitForTimeout(700);
+    // B8/B31's sweep heals a husk when its board is DRAWN — pre-B108 boot drew
+    // it, B108's landing draws the day board, so reopen draws the plain board.
+    await reopen(page, await page.evaluate(async () =>
+      (await idbGetAll()).find(r => r.title !== undefined && !r.cal).id));
+    await page.waitForTimeout(500);        // the sweep's debounced save
     const inDom = await page.evaluate(() => !!document.querySelector('[data-id="husk-1"]'));
     ok('husk absent from DOM after boot', inDom === false);
     const inData = await page.evaluate(() => new Promise(res => {
@@ -334,6 +356,13 @@ async function openCat(page, cat) {
   console.log('\n[9] Anchor and Parking Lot capture');
   {
     const { ctx, page, errors } = await newMobilePage(browser);
+    // B108 lands boot on today's linked board; this block renames whatever is
+    // open, so it runs on a plain board (a linked board's title is the species).
+    await page.evaluate(async () => {
+      const b = (await idbGetAll()).find(r => r.title !== undefined && !r.cal);
+      if (b && b.id !== state.current.id) swapBoard(b.id);
+    });
+    await page.waitForTimeout(500);
     const t = await page.evaluate(() => {
       const r = document.querySelector('#anchor-title').getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
@@ -356,8 +385,8 @@ async function openCat(page, cat) {
     await page.keyboard.type('a lot line');
     await page.evaluate(() => document.activeElement.blur());
     await page.waitForTimeout(300);
-    await page.reload();
-    await page.waitForTimeout(600);
+    const cur = await page.evaluate(() => state.current.id);
+    await reopen(page, cur);
     const state = await page.evaluate(() => ({
       title: document.querySelector('#anchor-title').textContent,
       lot: [...document.querySelectorAll('.lot-text')].map(n => n.textContent),
@@ -887,8 +916,7 @@ async function openCat(page, cat) {
       ];
       await idbPut(rec);
     });
-    await page.reload();
-    await page.waitForTimeout(600);
+    await reopen(page, 'Lot ceiling fixture');
     const g = await page.evaluate(() => {
       const b = document.querySelector('#board').getBoundingClientRect();
       const lot = document.querySelector('#lot').getBoundingClientRect();
@@ -926,8 +954,7 @@ async function openCat(page, cat) {
       ];
       await idbPut(rec);
     });
-    await page.reload();
-    await page.waitForTimeout(600);
+    await reopen(page, 'Lot growth fixture');
     const g = await page.evaluate(() => {
       const b = document.querySelector('#board').getBoundingClientRect();
       const lot = document.querySelector('#lot').getBoundingClientRect();
@@ -957,8 +984,7 @@ async function openCat(page, cat) {
       }));
       await idbPut(rec);
     });
-    await page.reload();
-    await page.waitForTimeout(600);
+    await reopen(page, 'Lot ceiling fixture');
     const g = await page.evaluate(() => {
       const b = document.querySelector('#board').getBoundingClientRect();
       const lot = document.querySelector('#lot').getBoundingClientRect();
@@ -1063,8 +1089,7 @@ async function openCat(page, cat) {
       ];
       await idbPut(rec);
     });
-    await page.reload();
-    await page.waitForTimeout(600);
+    await reopen(page, 'Similarity fixture');
     const measure = () => page.evaluate(() => {
       const b = document.querySelector('#board').getBoundingClientRect();
       const out = { board: { left: b.left, top: b.top, right: b.right, bottom: b.bottom } };
@@ -1141,7 +1166,7 @@ async function openCat(page, cat) {
         const store = rq.result.transaction('boards', 'readwrite').objectStore('boards');
         const all = store.getAll();
         all.onsuccess = () => {
-          const b = all.result[0];
+          const b = all.result.find(r => !r.cal) || all.result[0];
           // Written on the old ~1983-unit mobile sheet: off the bottom of a 846 page.
           b.notes.push({ id: 'legacy-1', text: 'old', x: 300, y: 1500, rw: 900, scale: 1, state: 'active' });
           const put = store.put(b);
@@ -1150,8 +1175,10 @@ async function openCat(page, cat) {
       };
       rq.onerror = () => rej(rq.error);
     }));
-    await page.reload();
-    await page.waitForTimeout(700);
+    // The legacy note rides the first-run (plain) board, which is what the
+    // pre-B108 boot opened — the day board owns boot's landing now (B108).
+    await reopen(page, await page.evaluate(async () =>
+      (await idbGetAll()).find(r => r.title !== undefined && !r.cal).id));
     // B93 adopts the note at boot: it writes the position the legacy branch
     // rendered — x on the width ratio (384/900), y through LEGACY_H
     // (900·846/384 = 1982.8125) with the clamp — and stamps rw/rh, the same
@@ -1216,8 +1243,7 @@ async function openCat(page, cat) {
       ];
       await idbPut(rec);
     });
-    await page.reload();
-    await page.waitForTimeout(400);
+    await reopen(page, 'Pocket board');
     // newBoardRecord() seeds 'todo' (B67), so the Pocket board is a To-Do board;
     // its row lives on the drilled To-Do screen (issue #112 / B74).
     await openCat(page, 'todo');
@@ -1267,6 +1293,13 @@ async function openCat(page, cat) {
   console.log('\n[16] Long-press an anchor opens no menu (issue #140, B92)');
   {
     const { ctx, page, errors } = await newMobilePage(browser);
+    // B108 lands boot on today's linked board; this block renames whatever is
+    // open, so it runs on a plain board (a linked board's title is the species).
+    await page.evaluate(async () => {
+      const b = (await idbGetAll()).find(r => r.title !== undefined && !r.cal);
+      if (b && b.id !== state.current.id) swapBoard(b.id);
+    });
+    await page.waitForTimeout(500);
     const t = await page.evaluate(() => {
       const r = document.querySelector('#anchor-title').getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
@@ -1463,8 +1496,7 @@ async function openCat(page, cat) {
       await mk('Legacy one', 50000);
       await mk('Legacy two', 60000);
     });
-    await page.reload();
-    await page.waitForTimeout(500);
+    await reopen(page, 'Legacy one');
 
     // -- the picker is the lot-grid: four category tiles, clockwise -----------
     await page.evaluate(() => goToList());
@@ -1553,8 +1585,12 @@ async function openCat(page, cat) {
 
     // -- the seeded board is in To-Do; the legacy two were never written (B21) --
     await openCat(page, 'todo');
-    ok('the seeded first-run board sits in To-Do', await page.evaluate(() =>
-      document.querySelectorAll('.board-cat[data-cat="todo"] .board-row').length === 1));
+    ok('the seeded first-run board sits in To-Do', await page.evaluate(() => {
+      // B108's day board is a legitimate second To-Do row now; what this
+      // asserts is that the boot-created first-run board is among them.
+      const rows = [...document.querySelectorAll('.board-cat[data-cat="todo"] .board-row')];
+      return rows.length >= 1 && rows.some(r => !/\/\d\d\/\d\d To Do$/.test(r.textContent));
+    }));
     ok('nothing was written to file the legacy records (B21)', await page.evaluate(async () =>
       (await idbGetAll()).filter(b => b.category === undefined && b.catStamp === undefined).length === 2));
 
@@ -2119,6 +2155,14 @@ async function openCat(page, cat) {
   console.log('\n[24] Note linking: long-press → Link → tap target (issue #142, B91)');
   {
     const { ctx, page, errors } = await newMobilePage(browser);
+    // B108 lands boot on today's linked board; the Link-only menu grammar
+    // (B91) is a plain-board contract — manual adds on a linked board carry
+    // the two re-homing options (B108). Run on a plain board.
+    await page.evaluate(async () => {
+      const b = (await idbGetAll()).find(r => r.title !== undefined && !r.cal);
+      if (b && b.id !== state.current.id) swapBoard(b.id);
+    });
+    await page.waitForTimeout(500);
     await page.evaluate(() => {
       state.current.notes.length = 0; if (state.current.links) state.current.links.length = 0;
       state.current.notes.push({ id:'la', text:'Alpha', x:80,  y:250, rw:LOGICAL_W, rh:LOGICAL_H, scale:1, state:'active' });

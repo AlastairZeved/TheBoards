@@ -9,6 +9,22 @@ const launchOpts = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHR
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
+// B108's morning landing owns boot: every load lands on today's linked board.
+// reopen() puts the board under test back on the sheet after a reload — by id
+// (a board that was already open) or by title (a seeded fixture, which boot's
+// old most-recent rule used to open on its own).
+async function reopen(page, idOrTitle) {
+  await page.reload();
+  await page.waitForTimeout(600);
+  await page.evaluate(async (k) => {
+    if (state.current && (state.current.id === k || state.current.title === k)) return;
+    const b = (await idbGetAll()).find(r => r.title !== undefined && (r.id === k || r.title === k));
+    if (b) swapBoard(b.id);
+  }, idOrTitle);
+  await page.waitForTimeout(700);          // SWAP_MS + render
+}
+
+
 async function newDesktopPage(browser) {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 },
                                          acceptDownloads: true });
@@ -299,8 +315,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
                         { id: 'l2', text: 'LOTSECRET', state: 'complete' }];
       await idbPut(rec);
     });
-    await page.reload();
-    await page.waitForTimeout(600);
+    await reopen(page, 'Export fixture');
 
     const openExportMenu = () => page.evaluate(() => {
       const c = [...document.querySelectorAll('#pane-cards .pane-card')]
@@ -375,8 +390,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       a.notes = [{ id: 'a1', text: 'ALPHAMARKER', x: 80, y: 300, rw: 900, rh: 1000, scale: 1, state: 'active' }];
       await idbPut(a);
     });
-    await page.reload();
-    await page.waitForTimeout(600);
+    await reopen(page, 'Board Alpha');
     // A second board becomes `current`, so Alpha's card is now inactive.
     await page.click('.board-cat[data-cat="unsorted"] .cat-add');
     await page.waitForTimeout(700);
@@ -504,8 +518,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       ];
       await idbPut(rec);
     });
-    await page.reload();
-    await page.waitForTimeout(600);
+    await reopen(page, 'Homothetic fixture');
     const m = await page.evaluate(() => {
       const n1 = document.querySelector('[data-id="h1"]');
       const n2 = document.querySelector('[data-id="h2"]');
@@ -536,8 +549,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
                      scale: 1, state: 'active' }];
       await idbPut(rec);
     });
-    await page.reload();
-    await page.waitForTimeout(600);
+    await reopen(page, 'Grab fixture');
     const before = await page.evaluate(() => {
       const r = document.querySelector('[data-id="g1"]').getBoundingClientRect();
       return { w: r.width, x: r.x + r.width / 2, y: r.y + r.height / 2 };
@@ -587,8 +599,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
                      scale: 3, state: 'active' }];
       await idbPut(rec);
     });
-    await page.reload();
-    await page.waitForTimeout(600);
+    await reopen(page, 'Fold fixture');
     const c = await page.evaluate(() => {
       const r = document.querySelector('[data-id="f1"]').getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: r.width };
@@ -628,15 +639,16 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
        JSON.stringify(heads));
 
     // B67 seeds the first-run board 'todo', so an empty database opens blue on
-    // the app's own kind of board instead of defaulting into Notes. This
-    // is the whole of To-Do at this point in the scenario.
+    // the app's own kind of board instead of defaulting into Notes. B108 adds
+    // the morning day board to the store — a second To-Do record, legitimately.
     ok('the first-run board is seeded To-Do and wears the blue ladder (B67)',
       await page.evaluate(async () => {
         const all = await idbGetAll();
-        return all.length === 1 && all[0].category === 'todo' &&
+        const first = all.find(r => !r.cal);
+        return all.length === 2 && first && first.category === 'todo' &&
           document.getElementById('board').dataset.cat === 'todo' &&
           getComputedStyle(document.getElementById('board')).backgroundColor === 'rgb(2, 8, 18)' &&
-          document.querySelectorAll('.board-cat[data-cat="todo"] .pane-card').length === 1;
+          document.querySelectorAll('.board-cat[data-cat="todo"] .pane-card').length === 2;
       }));
 
     // A board created from a section's own control lands in that section, and
@@ -650,7 +662,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.waitForTimeout(700);
     ok('new boards appear in Notes', await page.evaluate(() =>
       document.querySelectorAll('.board-cat[data-cat="unsorted"] .pane-card').length === 2 &&
-      document.querySelectorAll('.board-cat[data-cat="todo"] .pane-card').length === 1 &&
+      document.querySelectorAll('.board-cat[data-cat="todo"] .pane-card').length === 2 &&   // first-run + B108's day board
       !document.querySelector('.board-cat[data-cat="idea"] .pane-card')));
     ok('the created record carries category:"unsorted" + catStamp', await page.evaluate(async () => {
       const all = await idbGetAll();
@@ -763,8 +775,8 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
         await idbPut(r);
       }
     });
-    await page.reload();
-    await page.waitForTimeout(600);
+    const cur = await page.evaluate(() => state.current.id);
+    await reopen(page, cur);
     ok('categorization survives the reload', await page.evaluate((id) => {
       const first = document.querySelector('.board-cat[data-cat="todo"] .pane-card');
       return !!first && first.dataset.id === id;
@@ -934,8 +946,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       ];
       await idbPut(rec);
     });
-    await page.reload();
-    await page.waitForTimeout(600);
+    await reopen(page, 'Edge fixture');
     // The invariant B39 asserts: screen wrap width ≡ export wrap width, both
     // (rw − x)/scale in authored units. e1 is cap-bound, so min(natural, cap)
     // is the cap itself on both sides and the two must agree exactly.
@@ -993,8 +1004,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       ];
       await idbPut(rec);
     });
-    await page.reload();
-    await page.waitForTimeout(600);
+    await reopen(page, 'Centre fixture');
     ok('.note-text computes text-align: center', await page.evaluate(() =>
       getComputedStyle(document.querySelector('[data-id="c1"] .note-text')).textAlign === 'center'));
     // Where the stream must put the short line: left content edge + half the
@@ -1229,8 +1239,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       await put('idea', 2, 'Idea');
       await put(null, 8, 'Fill');            // no category written: Unsorted by default
     });
-    await page.reload();
-    await page.waitForTimeout(600);
+    await reopen(page, 'To-do 0');
 
     ok('the global New board buttons are gone', await page.evaluate(() =>
       !document.querySelector('#new-board') && !document.querySelector('#pane-new')));
@@ -1390,6 +1399,14 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // Right-click on a note opens its Link menu (B91) — the ONLY menu a
     // right-click can still open on the board (B92): an anchor, the canvas, or
     // the lot keeps the browser's own menu / opens nothing.
+    // B108 lands boot on the day board; this grammar (Link alone, B91) is a
+    // plain-board contract — a manual add on a linked board carries the two
+    // re-homing options (B108). Swap to a plain board first.
+    await page.evaluate(async () => {
+      const b = (await idbGetAll()).find(r => r.title !== undefined && !r.cal);
+      if (b && b.id !== state.current.id) swapBoard(b.id);
+    });
+    await page.waitForTimeout(500);
     await page.mouse.click(900, 600);
     await page.waitForTimeout(500);
     await page.keyboard.type('RIGHTCLICKPATH');
@@ -1636,6 +1653,13 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
   console.log('\n[D-link] Note linking: right-click → Link → click target (issue #142, B91)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
+    // B108 lands boot on the day board; the Link-only right-click grammar
+    // (B91) is a plain-board contract. Swap to a plain board first.
+    await page.evaluate(async () => {
+      const b = (await idbGetAll()).find(r => r.title !== undefined && !r.cal);
+      if (b && b.id !== state.current.id) swapBoard(b.id);
+    });
+    await page.waitForTimeout(500);
     await page.evaluate(() => {
       state.current.notes.length = 0; if (state.current.links) state.current.links.length = 0;
       state.current.notes.push({ id:'la', text:'Alpha', x:90,  y:250, rw:LOGICAL_W, rh:LOGICAL_H, scale:1, state:'active' });
@@ -1678,9 +1702,8 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
 
     // Persist + reload: the link survives and redraws.
     await page.waitForTimeout(400);
-    await page.reload();
-    await page.waitForFunction(() => !!document.querySelector('#board'));
-    await page.waitForTimeout(500);
+    const cur = await page.evaluate(() => state.current.id);
+    await reopen(page, cur);
     ok('the link persists across reload', (await links()) === 1, 'links=' + await links());
     ok('and its line redraws', (await lines()) === 1, 'lines=' + await lines());
 
@@ -1733,8 +1756,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       b.notes = [{ id: 'legacy-b', text: 'LEGACYB', x: 60, y: 200, scale: 1.5, state: 'active' }];
       return Promise.all([idbPut(a), idbPut(b)]);
     });
-    await page.reload();
-    await page.waitForTimeout(600);
+    await reopen(page, 'Migrate alpha');
 
     // The adoption is render-silent by construction: expected stored values are
     // exactly what the legacy branch rendered — x on the width ratio, y through

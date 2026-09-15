@@ -103,6 +103,11 @@ export const COPY = {
   // note tapped. The hint states the act while the mode is armed; linked/unlinked
   // caption the 5s undo toast (re-linking an already-linked pair removes it).
   link: 'Link',
+  // Today's To Do manual adds (issue #169, B108): the two re-homing options a
+  // hand-added card on a linked To-Do board carries — re-home it onto another
+  // board, or spawn a board around it. The issue's own wording, verbatim.
+  addToBoard: 'Add to existing board',
+  newBoardWith: 'Create new board with this as first card',
   linkHintTap: 'Tap another note to link',
   linkHintClick: 'Click another note to link',
   linked: 'Linked', unlinked: 'Unlinked',
@@ -183,6 +188,10 @@ export const GLYPH = {
   // Two nodes joined by a line (issue #142, B91): the mark IS the thing it makes —
   // a connection between two notes, no arrowhead, in the board's own hand.
   link:     MARK(16, '<circle cx="4" cy="12" r="1.6"/><circle cx="12" cy="4" r="1.6"/><path d="M5.3 10.7l5.4-5.4"/>'),
+  // A fresh sheet with a plus (issue #169, B108): the mark IS the act — a new
+  // board framed where the note will land, the boards mark's frame minus its
+  // grid, the capture control's plus inside it.
+  newBoard: MARK(16, '<rect x="1.5" y="1.5" width="13" height="13" rx="2"/><path d="M8 5.5v5M5.5 8h5"/>'),
   delete:   MARK(16, '<path d="M2 4.5h12M5.5 4.5V3a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 10.5 3v1.5M3.8 4.5l.6 8.6a1.5 1.5 0 0 0 1.5 1.4h4.2a1.5 1.5 0 0 0 1.5-1.4l.6-8.6"/>'),
   pageFirst: MARK(14, '<path d="M12.5 2.5L7 8l5.5 5.5"/><path d="M8 2.5L2.5 8 8 13.5"/>'),
   pagePrev:  MARK(14, '<path d="M10 2.5L4.5 8 10 13.5"/>'),

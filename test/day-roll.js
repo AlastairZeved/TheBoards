@@ -54,7 +54,7 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++
     await ctx.close();
   }
 
-  console.log('\n[R2] Fresh open, today has 0 events: boot lands as always — nothing created');
+  console.log('\n[R2] Fresh open, today has 0 events: the morning auto-create lands on the day board (B107/B108 — supersedes B105\'s nothing-created, deliberately rewritten)');
   {
     const ctx = await browser.newContext({ serviceWorkers: 'block' });
     const page = await ctx.newPage();
@@ -66,11 +66,12 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++
     const got = await page.evaluate(async () => {
       const key = calKey(new Date());
       const all = await idbGetAll();
+      const board = all.find(r => r.cal === key);
       return { curCal: state.current && state.current.cal,
-               linked: all.some(r => r.cal === key) };
+               title: board && board.title };
     });
-    ok('no linked board was created', !got.linked);
-    ok('current is a plain board, not a linked one', !got.cal || got.cal !== today);
+    ok('today\'s linked board was created with 0 events', !!got.title, JSON.stringify(got));
+    ok('boot is CURRENT on it', got.curCal === today, JSON.stringify(got.curCal) + " want " + today);
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }

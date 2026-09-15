@@ -998,6 +998,7 @@ function setNoteState(node, complete) {
   const note = state.current.notes.find(n => n.id === node.dataset.id);
   if (!note) return;                   // a blank note the pre-act blur just discarded (B84/B8)
   note.state = complete ? 'complete' : 'active';
+  if (complete && note.carriedOn) delete note.carriedOn;   // carried status ends at completion (B108)
   node.classList.toggle('complete', complete);
   applyCompleteA11y(node, complete);
   updateNoteToolbar(node, note);       // Complete ⇄ Restore mark/label (B84)

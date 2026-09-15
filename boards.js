@@ -4,7 +4,7 @@ import { CAT_SEC_GAP, CE, COPY, GLYPH, LEAVE_MS, LIST_CARD_COLS, LIST_CARD_H, LI
 import { LONGPRESS_MS, MOVE_THRESHOLD, PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP, PANE_ROW_H, SWAP_MS, calBoardOf } from './state.js';
 import { calEventsOf, calKey, calWindow, el, ensureLinkedBoard, newBoardRecord, newCalEvent, state } from './state.js';
 import { syncMirror, mirrorEventsOf } from './state.js';
-import { flushSave, idbDelete, idbGet, idbGetAll, idbPut, saveNow, saveTimer, scheduleSave } from './persistence.js';
+import { flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, saveTimer, scheduleSave } from './persistence.js';
 import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze } from './geometry.js';
 import { applyBoardCat, renderBoard, syncViewTitle } from './render.js';
 import { commitAction, g, hideToast, leave, showUndo, undoTimer } from './interactions.js';
@@ -1100,33 +1100,39 @@ export function eventsOf(all) {
   return all.filter(r => typeof r.date === 'string' && typeof r.text === 'string' && r.title === undefined);
 }
 
-/* --- The day-roll launch (issue #153, B105) --------------------------------
-   When the app opens, or the day rolls under an open app, and TODAY's date
-   carries at least one calendar event, the app lands on that date's linked
-   To-Do board — the B95 species R5 already keeps filled with the day's
-   events. The check runs ONCE PER DAY KEY: at boot, and at renderCal only
-   when the today key changed since the last check (the open-past-midnight
-   case) — never per render, so it cannot steal focus mid-interaction. With
-   no events, nothing is created and nothing navigates. */
+/* --- The day-roll launch (issue #153, B105) + the morning lifecycle (B108) -
+   Each morning's first load, TODAY's linked To-Do board exists — created by
+   `ensureLinkedBoard` even with zero events (B107's unconditional landing,
+   superseding B105's events-exist-only morning condition) — and boot lands
+   on it, carrying forward yesterday's incomplete notes (below). The check
+   still runs ONCE PER DAY KEY: at boot, and at renderCal only when the
+   today key changed since the last check (the open-past-midnight case) —
+   never per render, so it cannot steal focus mid-interaction. The
+   MID-SESSION roll keeps B105 exactly as shipped: it navigates only when
+   the day carries events and carries nothing forward; the morning work is
+   boot's alone, keyed by the same once-per-day guard. */
 let rollDay = null;                     // the day key the roll check last ran for
 
 export function checkDayRoll() {
   const today = calKey(new Date());
   if (rollDay === today) return;
+  const morning = rollDay === null;     // first check of a page load = boot's
   rollDay = today;
-  launchTodayBoard(today);
+  launchTodayBoard(today, morning);
 }
 
-async function launchTodayBoard(today) {
+async function launchTodayBoard(today, morning) {
   commitAction(async () => {            // creating the board is a consequence
                                         // (ensureLinkedBoard's contract, B81) —
                                         // same wrap as addCalEvent's R5 chain
     flushSave();
     const all = await idbGetAll();
-    if (!calEventsOf(eventsOf(all), today).length) return;
+    if (!morning && !calEventsOf(eventsOf(all), today).length) return;
     const boards = all.filter(b => b.title !== undefined);
-    const { board, created } = ensureLinkedBoard(boards, today);
-    if (created) await idbPut(board);
+    const { board } = ensureLinkedBoard(boards, today);
+    if (morning) await carryForward(boards, board, today);
+    if (state.current && state.current.id === board.id) persist();
+    else await idbPut(board);
     await syncDateMirror(today);
     // Step off the calendar first — mobile pops the pushed {v:'cal'} (B9),
     // wide collapses the expanded panel to its rail — then the plain swap.
@@ -1134,6 +1140,29 @@ async function launchTodayBoard(today) {
     else if (state.calExpanded) collapseCalRail();
     swapBoard(board.id);
   });
+}
+
+/* Carry-forward (issue #169, B108): yesterday's linked board's INCOMPLETE
+   notes MOVE onto today's board at their same logical x/y — MOVE, not copy
+   (History is retrospective reference; the carried notes' absence from
+   yesterday's board is the owner's accepted ruling). Each carried note
+   wears `carriedOn` = today's date key: the daily marker the carried
+   indicator reads (self-clearing by date comparison — no cleanup pass; the
+   flag is set again, to the new today, by each later carry). Completing a
+   note clears it (interactions.js setNoteState). Idempotent: a same-day
+   reload finds yesterday's board already empty of incomplete notes. */
+async function carryForward(boards, todayBoard, today) {
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  const yb = calBoardOf(boards, calKey(y));
+  if (!yb || yb.id === todayBoard.id) return;
+  const moving = (yb.notes || []).filter(n => n.state !== 'complete');
+  if (!moving.length) return;
+  for (const n of moving) { n.carriedOn = today; todayBoard.notes.push(n); }
+  yb.notes = yb.notes.filter(n => n.state === 'complete');
+  // yb may BE state.current (boot landed on it last session): mutate it
+  // live and let swapBoard's flushSave persist it; otherwise write it now.
+  if (state.current && yb.id === state.current.id) persist();
+  else await idbPut(yb);
 }
 
 export function renderCal() {
