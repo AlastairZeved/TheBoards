@@ -163,7 +163,11 @@ function pdfBaseline(top, lh, size) {
 
 /* ---- Content-stream builder --------------------------------------------
    Board coordinates in, operators out. Every method returns `p` so the
-   drawing code below reads as a sequence rather than a pile of pushes. */
+   drawing code below reads as a sequence rather than a pile of pushes.
+   The larger furniture (rounded paths, frames, text, the scratch-out)
+   lives in the free `draw*`/`rrectPath` functions below — each takes `p`
+   and holds the verbatim body — so this builder stays a table of
+   one-line delegates rather than 100 lines of nesting. */
 function pdfCanvas() {
   const ops = [];
   const p = {
@@ -184,91 +188,107 @@ function pdfCanvas() {
     line(x1, y1, x2, y2) {
       return p.raw(pdfNum(x1) + ' ' + pdfNum(y1) + ' m ' + pdfNum(x2) + ' ' + pdfNum(y2) + ' l');
     },
-    // Rounded rect as a path; radius 2 everywhere, as everywhere in the CSS.
-    rrect(x, y, w, h, r) {
-      r = Math.max(0, Math.min(r, w / 2, h / 2));
-      if (!r) return p.rect(x, y, w, h);
-      const k = r * 0.5523, X = x + w, Y = y + h;
-      const c = (x1, y1, x2, y2, x3, y3) =>
-        p.raw([x1, y1, x2, y2, x3, y3].map(pdfNum).join(' ') + ' c');
-      p.raw(pdfNum(x + r) + ' ' + pdfNum(y) + ' m');
-      p.raw(pdfNum(X - r) + ' ' + pdfNum(y) + ' l');
-      c(X - r + k, y, X, y + r - k, X, y + r);
-      p.raw(pdfNum(X) + ' ' + pdfNum(Y - r) + ' l');
-      c(X, Y - r + k, X - r + k, Y, X - r, Y);
-      p.raw(pdfNum(x + r) + ' ' + pdfNum(Y) + ' l');
-      c(x + r - k, Y, x, Y - r + k, x, Y - r);
-      p.raw(pdfNum(x) + ' ' + pdfNum(y + r) + ' l');
-      c(x, y + r - k, x + r - k, y, x + r, y);
-      return p.raw('h');
-    },
+    rrect(x, y, w, h, r) { return rrectPath(p, x, y, w, h, r); },
     clip() { return p.raw('W n'); },
-    // A CSS border is drawn inside the box; a PDF stroke straddles the path.
-    // Inset by half the width so a 2px frame lands where the browser puts it.
-    frame(x, y, w, h, r, bw, bg) {
-      if (bg) { p.fill(bg); p.rrect(x, y, w, h, r); p.raw('f'); }
-      p.strokeColor(PDF_INK).lineWidth(bw);
-      p.rrect(x + bw / 2, y + bw / 2, w - bw, h - bw, Math.max(0, r - bw / 2));
-      return p.raw('S');
-    },
-    // The title compartment (B38, issue #52): the sheet's own top edge is its
-    // fourth side, so only three are drawn — down the left, across the bottom,
-    // back up the right, one path, inset by half the border width same as
-    // `frame`. No radius: at the export's 0.581 A4 scale the 2px CSS corner is
-    // ~1pt, and a three-segment path is honest about which sides exist.
-    frameOpenTop(x, y, w, h, bw, bg) {
-      if (bg) { p.fill(bg); p.rect(x, y, w, h); p.raw('f'); }
-      p.strokeColor(PDF_INK).lineWidth(bw);
-      const lx = x + bw / 2, rx = x + w - bw / 2, by = y + h - bw / 2;
-      p.raw(pdfNum(lx) + ' ' + pdfNum(y) + ' m');
-      p.raw(pdfNum(lx) + ' ' + pdfNum(by) + ' l');
-      p.raw(pdfNum(rx) + ' ' + pdfNum(by) + ' l');
-      p.raw(pdfNum(rx) + ' ' + pdfNum(y) + ' l');
-      return p.raw('S');
-    },
-    /* One line of text on a baseline. The text matrix cancels the page flip;
-       without it every glyph would render upside down. */
+    frame(x, y, w, h, r, bw, bg) { return drawFrame(p, x, y, w, h, r, bw, bg); },
+    frameOpenTop(x, y, w, h, bw, bg) { return drawFrameOpenTop(p, x, y, w, h, bw, bg); },
     text(str, x, baseline, size, bold, color) {
-      if (!String(str).length) return p;
-      p.fill(color || PDF_INK);
-      p.raw('BT');
-      p.raw('/' + (bold ? 'F2' : 'F1') + ' ' + pdfNum(size) + ' Tf');
-      p.raw('1 0 0 -1 ' + pdfNum(x) + ' ' + pdfNum(baseline) + ' Tm');
-      p.raw(pdfStr(str) + ' Tj');
-      return p.raw('ET');
+      return drawText(p, str, x, baseline, size, bold, color);
     },
-    // align: 'left' | 'center' | 'right', measured in the box's own width.
     lines(arr, x, w, top, size, lh, bold, align, color) {
-      for (let i = 0; i < arr.length; i++) {
-        const s = arr[i];
-        if (!s.length) continue;
-        let tx = x;
-        // Centring measures the line sans trailing spaces: pre-wrap hangs
-        // them on screen, so counting them would shift the export (B62).
-        if (align === 'center') tx = x + (w - pdfTextW(s.replace(/ +$/, ''), bold, size)) / 2;
-        else if (align === 'right') tx = x + w - pdfTextW(s, bold, size);
-        p.text(s, tx, pdfBaseline(top + i * lh, lh, size), size, bold, color);
-      }
-      return p;
+      return drawLines(p, arr, x, w, top, size, lh, bold, align, color);
     },
-    /* The scratch-out: the three repeating-linear-gradients of styles.css §4.3
-       as three families of ruled lines. Clip first — this fills whatever the
-       current clip allows. Angles are CSS's, and in a y-down space a positive
-       angle rotates clockwise on screen, same as CSS reads them. */
-    scratch(w, h) {
-      const bands = [[8, 5, 8], [-14, 4, 7], [79, 3, 5]];
-      const R = Math.hypot(w, h) / 2 + 4;
-      p.strokeColor(PDF_SCRATCH);
-      for (const [deg, thick, period] of bands) {
-        const a = deg * Math.PI / 180, cos = Math.cos(a), sin = Math.sin(a);
-        p.q().cm(cos, sin, -sin, cos, w / 2, h / 2).lineWidth(thick);
-        for (let y = -R; y <= R; y += period) p.line(-R, y + thick / 2, R, y + thick / 2);
-        p.raw('S').Q();
-      }
-      return p;
-    },
+    scratch(w, h) { return drawScratch(p, w, h); },
     stream() { return ops.join('\n'); },
   };
+  return p;
+}
+
+// Rounded rect as a path; radius 2 everywhere, as everywhere in the CSS.
+function rrectPath(p, x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
+  if (!r) return p.rect(x, y, w, h);
+  const k = r * 0.5523, X = x + w, Y = y + h;
+  const c = (x1, y1, x2, y2, x3, y3) =>
+    p.raw([x1, y1, x2, y2, x3, y3].map(pdfNum).join(' ') + ' c');
+  p.raw(pdfNum(x + r) + ' ' + pdfNum(y) + ' m');
+  p.raw(pdfNum(X - r) + ' ' + pdfNum(y) + ' l');
+  c(X - r + k, y, X, y + r - k, X, y + r);
+  p.raw(pdfNum(X) + ' ' + pdfNum(Y - r) + ' l');
+  c(X, Y - r + k, X - r + k, Y, X - r, Y);
+  p.raw(pdfNum(x + r) + ' ' + pdfNum(Y) + ' l');
+  c(x + r - k, Y, x, Y - r + k, x, Y - r);
+  p.raw(pdfNum(x) + ' ' + pdfNum(y + r) + ' l');
+  c(x, y + r - k, x + r - k, y, x + r, y);
+  return p.raw('h');
+}
+
+// A CSS border is drawn inside the box; a PDF stroke straddles the path.
+// Inset by half the width so a 2px frame lands where the browser puts it.
+function drawFrame(p, x, y, w, h, r, bw, bg) {
+  if (bg) { p.fill(bg); p.rrect(x, y, w, h, r); p.raw('f'); }
+  p.strokeColor(PDF_INK).lineWidth(bw);
+  p.rrect(x + bw / 2, y + bw / 2, w - bw, h - bw, Math.max(0, r - bw / 2));
+  return p.raw('S');
+}
+
+// The title compartment (B38, issue #52): the sheet's own top edge is its
+// fourth side, so only three are drawn — down the left, across the bottom,
+// back up the right, one path, inset by half the border width same as
+// `frame`. No radius: at the export's 0.581 A4 scale the 2px CSS corner is
+// ~1pt, and a three-segment path is honest about which sides exist.
+function drawFrameOpenTop(p, x, y, w, h, bw, bg) {
+  if (bg) { p.fill(bg); p.rect(x, y, w, h); p.raw('f'); }
+  p.strokeColor(PDF_INK).lineWidth(bw);
+  const lx = x + bw / 2, rx = x + w - bw / 2, by = y + h - bw / 2;
+  p.raw(pdfNum(lx) + ' ' + pdfNum(y) + ' m');
+  p.raw(pdfNum(lx) + ' ' + pdfNum(by) + ' l');
+  p.raw(pdfNum(rx) + ' ' + pdfNum(by) + ' l');
+  p.raw(pdfNum(rx) + ' ' + pdfNum(y) + ' l');
+  return p.raw('S');
+}
+
+/* One line of text on a baseline. The text matrix cancels the page flip;
+   without it every glyph would render upside down. */
+function drawText(p, str, x, baseline, size, bold, color) {
+  if (!String(str).length) return p;
+  p.fill(color || PDF_INK);
+  p.raw('BT');
+  p.raw('/' + (bold ? 'F2' : 'F1') + ' ' + pdfNum(size) + ' Tf');
+  p.raw('1 0 0 -1 ' + pdfNum(x) + ' ' + pdfNum(baseline) + ' Tm');
+  p.raw(pdfStr(str) + ' Tj');
+  return p.raw('ET');
+}
+
+// align: 'left' | 'center' | 'right', measured in the box's own width.
+function drawLines(p, arr, x, w, top, size, lh, bold, align, color) {
+  for (let i = 0; i < arr.length; i++) {
+    const s = arr[i];
+    if (!s.length) continue;
+    let tx = x;
+    // Centring measures the line sans trailing spaces: pre-wrap hangs
+    // them on screen, so counting them would shift the export (B62).
+    if (align === 'center') tx = x + (w - pdfTextW(s.replace(/ +$/, ''), bold, size)) / 2;
+    else if (align === 'right') tx = x + w - pdfTextW(s, bold, size);
+    p.text(s, tx, pdfBaseline(top + i * lh, lh, size), size, bold, color);
+  }
+  return p;
+}
+
+/* The scratch-out: the three repeating-linear-gradients of styles.css §4.3
+   as three families of ruled lines. Clip first — this fills whatever the
+   current clip allows. Angles are CSS's, and in a y-down space a positive
+   angle rotates clockwise on screen, same as CSS reads them. */
+function drawScratch(p, w, h) {
+  const bands = [[8, 5, 8], [-14, 4, 7], [79, 3, 5]];
+  const R = Math.hypot(w, h) / 2 + 4;
+  p.strokeColor(PDF_SCRATCH);
+  for (const [deg, thick, period] of bands) {
+    const a = deg * Math.PI / 180, cos = Math.cos(a), sin = Math.sin(a);
+    p.q().cm(cos, sin, -sin, cos, w / 2, h / 2).lineWidth(thick);
+    for (let y = -R; y <= R; y += period) p.line(-R, y + thick / 2, R, y + thick / 2);
+    p.raw('S').Q();
+  }
   return p;
 }
 
@@ -422,7 +442,6 @@ export function exportNoteBox(note) {
 }
 
 function exportBoardPage(rec) {
-  const g = EXPORT_GEO;
   const scale = Math.min((A4_W - 2 * PDF_MARGIN) / EXPORT_W, (A4_H - 2 * PDF_MARGIN) / EXPORT_H);
   const mx = (A4_W - EXPORT_W * scale) / 2;
   const my = (A4_H - EXPORT_H * scale) / 2;   // centred: the sheet is squarer than A4
@@ -435,10 +454,19 @@ function exportBoardPage(rec) {
   p.fill(PDF_PAPER).rect(0, 0, A4_W, A4_H).raw('f');
   p.cm(scale, 0, 0, scale, mx, my);
   p.fill(PDF_PAPER).rect(0, 0, EXPORT_W, EXPORT_H).raw('f');   // the sheet itself
+  const ruleY = exportBand(p, rec);
+  exportCard(p, rec, ruleY);
+  exportLot(p, rec);
+  exportLinks(p, rec);
+  exportNotes(p, rec);
+  return p.Q().stream();
+}
 
-  // The band reads content, then the rule as the band's bottom edge — full
-  // width (B47) — with each header hanging just below the rule as a tab in the
-  // rule's own ink (B76). The card draws last, on top of the rule.
+// The band reads content, then the rule as the band's bottom edge — full
+// width (B47) — with each header hanging just below the rule as a tab in the
+// rule's own ink (B76). Returns the rule's y so the card can overhang it.
+function exportBand(p, rec) {
+  const g = EXPORT_GEO;
   const ruleY = exportRuleY(rec);
   const zones = [
     { text: rec.components, label: 'Components', l: g.compL, r: g.compR },
@@ -464,12 +492,17 @@ function exportBoardPage(rec) {
             g.labelSize, g.labelLH, true, 'center', PDF_PAPER);
   }
   p.fill(PDF_INK).rect(0, ruleY, EXPORT_W, 1).raw('f');
+  return ruleY;
+}
 
+// The title compartment. ruleY comes from exportBand — the compartment's
+// border-top is no longer drawn (B38, issue #52), and it overhangs the band's
+// rule by 22, occluding it (B47).
+function exportCard(p, rec, ruleY) {
+  const g = EXPORT_GEO;
   const title = rec.title || '';
   const cardContentW = g.cardW - 2 * g.cardPad - 2 * g.border;
   const titleLines = title ? pdfWrap(title, true, g.headSize, cardContentW) : [];
-  // One border now, not two — the compartment's border-top is no longer drawn
-  // (B38, issue #52). It overhangs the band's rule by 22 and occludes it (B47).
   const cardH = Math.max(ruleY + g.cardOverhang,
                          titleLines.length * g.headLH + g.cardPadTop + g.cardPad + g.border);
   p.frameOpenTop(g.cardL, g.cardTop, g.cardW, cardH, g.border, PDF_PAPER);
@@ -482,11 +515,14 @@ function exportBoardPage(rec) {
     p.lines(titleLines, g.cardL + g.border + g.cardPad, cardContentW, top,
             g.headSize, g.headLH, true, 'center');
   }
+}
 
-  // Parking Lot: full-bleed to the sheet's bottom with its content on the
-  // gutter (UIUX §3.2), sized by its rows from the two-row floor. #lot-items
-  // is overflow:hidden, so the export clips too — otherwise a long lot walks
-  // off the bottom of the page.
+// Parking Lot: full-bleed to the sheet's bottom with its content on the
+// gutter (UIUX §3.2), sized by its rows from the two-row floor. #lot-items
+// is overflow:hidden, so the export clips too — otherwise a long lot walks
+// off the bottom of the page.
+function exportLot(p, rec) {
+  const g = EXPORT_GEO;
   const lotH = exportLotH(rec);
   const lotTop = EXPORT_H - lotH;
   const lotW = EXPORT_W - 2 * g.gutter;
@@ -513,12 +549,15 @@ function exportBoardPage(rec) {
     ly += rowH;
   }
   p.Q();
+}
 
-  // Links UNDER the notes (issue #142, B91): a thin line between two note centres,
-  // drawn in sheet space (not the per-note transform), so it sits below the cards
-  // it joins — the same z-order as the screen (the link layer is below notes). A
-  // neutral hairline suits the export's paper/ink/shade palette better than a
-  // board-hue line; a dangling link (endpoint gone) is skipped, as on screen.
+// Links UNDER the notes (issue #142, B91): a thin line between two note centres,
+// drawn in sheet space (not the per-note transform), so it sits below the cards
+// it joins — the same z-order as the screen (the link layer is below notes). A
+// neutral hairline suits the export's paper/ink/shade palette better than a
+// board-hue line; a dangling link (endpoint gone) is skipped, as on screen.
+function exportLinks(p, rec) {
+  const g = EXPORT_GEO;
   const noteCentre = (n) => {
     const box = exportNoteBox(n), s = (n.scale || 1) * exportK(n);
     return { x: exportX(n) + box.w * s / 2, y: exportY(n) + box.h * s / 2 };
@@ -530,8 +569,11 @@ function exportBoardPage(rec) {
     const a = noteCentre(na), b = noteCentre(nb);
     p.q().strokeColor(PDF_SHADE).lineWidth(g.linkWidth).line(a.x, a.y, b.x, b.y).raw('S').Q();
   }
+}
 
-  // Notes last: array order is z-order, and DOM order mirrors it.
+// Notes last: array order is z-order, and DOM order mirrors it.
+function exportNotes(p, rec) {
+  const g = EXPORT_GEO;
   for (const note of rec.notes || []) {
     const box = exportNoteBox(note);
     const s = (note.scale || 1) * exportK(note);      // the similarity (B64)
@@ -549,15 +591,17 @@ function exportBoardPage(rec) {
     }
     p.Q();
   }
-
-  return p.Q().stream();
 }
 
 /* ---- Page 2+: the text ---------------------------------------------------
    The board again, as prose — so the file is searchable and readable at a
    glance. Completed items keep their place in the order but not their words. */
-function exportTextPages(rec) {
-  const L = PDF_MARGIN, R = A4_W - PDF_MARGIN, W = R - L;
+/* The page machinery exportTextPages runs on, extracted verbatim: opens and
+   closes A4 text pages and lays paragraphs under a running baseline. The
+   old closures become the returned object's members (`cur` is the live
+   canvas, `y` reads and writes the baseline). */
+function textPager() {
+  const L = PDF_MARGIN, W = A4_W - 2 * PDF_MARGIN;
   const BOTTOM = A4_H - PDF_MARGIN;
   const streams = [];
   let p = null, y = 0;
@@ -588,36 +632,44 @@ function exportTextPages(rec) {
     y += 6;
   };
 
-  openPage();
-  para(rec.title || COPY.untitled, 18, 24, true, PDF_INK);
-  para(formatDate(rec.createdAt), 9, 13, false, PDF_SHADE);
+  return { streams, L, W, openPage, closePage, room, para, heading,
+           get cur() { return p; }, get y() { return y; }, set y(v) { y = v; } };
+}
 
-  if (rec.components) { heading('COMPONENTS'); para(rec.components, 10, 14, false, PDF_INK); }
-  if (rec.requirements) { heading('REQUIREMENTS'); para(rec.requirements, 10, 14, false, PDF_INK); }
+function exportTextPages(rec) {
+  const t = textPager();
 
   const bullets = (label, items) => {
     if (!items.length) return;
-    heading(label);
+    t.heading(label);
     for (const it of items) {
       // A completed item keeps its place in the order but not its words —
       // the same promise the scratch-out makes on page 1.
       const done = it.state === 'complete';
       const color = done ? PDF_SHADE : PDF_INK;
-      const lines = pdfWrap(done ? '— completed —' : it.text, false, 10, W - 14);
-      room(14);                                  // keep the bullet with its first line
-      p.text('•', L, pdfBaseline(y, 14, 10), 10, false, color);
+      const lines = pdfWrap(done ? '— completed —' : it.text, false, 10, t.W - 14);
+      t.room(14);                                  // keep the bullet with its first line
+      t.cur.text('•', t.L, pdfBaseline(t.y, 14, 10), 10, false, color);
       for (const line of lines) {
-        room(14);
-        if (line.length) p.text(line, L + 14, pdfBaseline(y, 14, 10), 10, false, color);
-        y += 14;
+        t.room(14);
+        if (line.length) t.cur.text(line, t.L + 14, pdfBaseline(t.y, 14, 10), 10, false, color);
+        t.y += 14;
       }
     }
   };
+
+  t.openPage();
+  t.para(rec.title || COPY.untitled, 18, 24, true, PDF_INK);
+  t.para(formatDate(rec.createdAt), 9, 13, false, PDF_SHADE);
+
+  if (rec.components) { t.heading('COMPONENTS'); t.para(rec.components, 10, 14, false, PDF_INK); }
+  if (rec.requirements) { t.heading('REQUIREMENTS'); t.para(rec.requirements, 10, 14, false, PDF_INK); }
+
   bullets('NOTES', rec.notes || []);
   bullets('PARKING LOT', rec.parkingLot || []);
 
-  closePage();
-  return streams;
+  t.closePage();
+  return t.streams;
 }
 
 export function buildBoardPdf(rec) {
