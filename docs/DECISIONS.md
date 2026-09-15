@@ -3941,3 +3941,38 @@ cover-portrait still mobile); [11b]'s short-window scenario moves below the
 floor (720×540, 600×450 — the mobile sheet's law under test is unchanged,
 its free-canvas floors re-measured at 60%/50% for the squat shapes).
 `UIUX §3.4`/§10 tier notes move with it.
+
+### B104. Reminders arrive as a CLOCK TOGGLE, not a clock — one tap per note card sets or clears a reminder with no time picker, no pop-up and no due-time stored anywhere in the record; an active clock glows and surfaces its card to that morning's To-Do board, which is the EXISTING B95 per-date linked board (`ensureLinkedBoard`, title "MM/DD/YY To Do") and not a new board species; status is BORDER + GLOW — red past due, yellow carried over — a separate semantic layer that never borrows the highlight layer (issue #169, the owner's v3 Reminders design of 2026-09-02; narrows PRD §2.3's out-of-scope row and amends PRD §1.4; keeps §1.4's no-demands law — the board still asks nothing, the person taps the clock, nothing pings or pushes; keeps B95's To-Do species and B21's defaulted-at-read-site idiom for any future record field; waives nothing, but two triggers are explicitly unresolved — see below)
+
+**The rulings.** The reminder is a toggle: tap the clock on any note card and
+it glows; the card then surfaces to the day's To-Do board; tap again and both
+the glow and the surface go away. There is no "due by" field anywhere — that
+overhead is what the feature exists to avoid. Today's To Do is the landing
+page and holds manually-added notes, cards surfaced from any board by an
+active clock, and the day's calendar events; surfaced cards keep their source
+board's background colour, and "Go to Board" lives in their long-tap menu.
+Carry-forward is spatial, not temporal: a fresh board each morning on first
+load, carried items in the same positions, the calendar owns time and the
+board owns none. Notifications are decided: an SMS end-of-day summary in a
+conversational, self-compassionate tone plus a passive 2x2 home screen widget
+carrying the same border + glow; push, in-app banners and email are hard-nos.
+
+**The record.** PRD §2.3's row is narrowed, not deleted — due dates with time
+logic, push notifications, in-app banners, email and streaks stay out;
+clock-toggle reminders and the day's To-Do surface are the bounded exception
+citing this ruling. PRD §1.4 gains the one bounded exception. §4.1 is
+untouched: no record field is ruled here, and any reminder field follows
+B21's defaulted-at-read-site idiom when its implementation card exists. This
+fan-out's in-scope slices are #153 (launch behavior) and #154 (two-way
+mirror); the clock toggle, carry-forward, status indicators, widget, SMS and
+history rail are future cards.
+
+**Unresolved, recorded as unresolved.** (1) The PAST DUE indicator is
+specified as a red border + red glow but its trigger is undefined until a
+later ruling — the clock toggle deliberately carries no time concept, so
+nothing in the record can say "late"; the yellow carried-over state is
+well-defined, the red one is a placeholder pending that ruling. (2) The SMS
+summary is ruled adopted, but its delivery mechanism touches §3.2's no-
+backend law and needs a separate owner ruling before any implementation card
+exists. (3) Open questions stay open: recurring reminders, the month view,
+the summary's exact text format, and the week-absent first-load edge case.
