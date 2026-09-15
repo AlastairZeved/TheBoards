@@ -1,7 +1,8 @@
 /* --- 10. Long-press menu ------------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { COPY, GLYPH, el, state } from './state.js';
-import { beginLink, linkSource } from './render.js';
+import { COPY, GLYPH, el, newBoardRecord, state } from './state.js';
+import { beginLink, linkSource, renderBoard } from './render.js';
+import { idbGetAll, idbPut, saveNow } from './persistence.js';
 import { commitAction, g, isEditing } from './interactions.js';
 import { exportAllJson, exportBoardPdf, importBoardsJson } from './export.js';
 import { goToList, listOpen, lotMenuOpen, returnToBoard, showCal } from './boards.js';
@@ -14,14 +15,59 @@ export let menuReturnFocus = false;         // true only inside closeMenu's sync
    had long since been declared on the board-action row (B83), and the row is
    now the only route to them: a hidden menu whose every item sits on a visible
    tab one gesture away is chrome without a job. The lot still has none. All
-   items are non-destructive, so no separator — same rule as everywhere else. */
+   items are non-destructive, so no separator — same rule as everywhere else.
+
+   Today's To Do cards (issue #169, B108): a MANUALLY ADDED card on a linked
+   To-Do board (board.cal set, no carriedOn — carried notes came from another
+   board and are not this board's own; surfaced cards, link 4's, don't exist
+   yet) gains the two re-homing options in the issue's order. Both MOVE the
+   note — a manual add is not tied to any other board, so re-homing is the
+   note's whole life: "Add to existing board" lists the boards (the one menu
+   species, buildMenu, nested a step deeper; ponytail: a flat list, fine at
+   realistic board counts) and "Create new board..." spawns a board around
+   it. Both commit (records change) under buildMenu's own drop-guard. */
 export function openMenuFor(target, clientX, clientY) {
   if (target.type !== 'note') return;   // anchors lost their menu (B92); lot / canvas have none
   // A note's one relational action (issue #142, B91): Link arms link mode, then
   // the next note tapped is connected (handleTap's linkSource branch). beginLink
   // runs inside buildMenu's commitAction wrapper — arming is idempotent, fine.
   const id = target.node.dataset.id;
-  buildMenu([{ label: COPY.link, glyph: GLYPH.link, action: () => beginLink(id), raw: true }], clientX, clientY);
+  const note = state.current && state.current.notes.find(n => n.id === id);
+  const items = [];
+  if (note && state.current.cal && !note.carriedOn) {
+    items.push(
+      { label: COPY.addToBoard, glyph: GLYPH.boards, action: () => chooseBoardFor(id, clientX, clientY) },
+      { label: COPY.newBoardWith, glyph: GLYPH.newBoard, action: () => newBoardWithNote(id) },
+    );
+  }
+  items.push({ label: COPY.link, glyph: GLYPH.link, action: () => beginLink(id), raw: true });
+  buildMenu(items, clientX, clientY);
+}
+
+/* The re-homing pair (issue #169, B108). Both splice the note off the
+   current (linked) board and land it top-of-z-order on its destination, at
+   the same logical x/y; the source is `current`, so its own saveNow
+   persists it, and the destination gets its own write. renderBoard redraws
+   the thinned source. */
+function moveNoteTo(id, dest) {
+  const note = state.current.notes.find(n => n.id === id);
+  if (!note || !dest || dest.id === state.current.id) return;
+  state.current.notes.splice(state.current.notes.indexOf(note), 1);
+  dest.notes.push(note);              // top of z-order, like every arrival
+  idbPut(dest);
+  renderBoard();                      // the source thins; the destination renders on arrival
+  saveNow();
+}
+async function chooseBoardFor(id, clientX, clientY) {
+const all = await idbGetAll();
+const boards = all.filter(b => b.title !== undefined && b.id !== state.current.id);
+buildMenu(boards.map(b => ({ label: b.title || 'Untitled', glyph: GLYPH.boards, action: () => moveNoteTo(id, b) })),
+  clientX, clientY);
+}
+async function newBoardWithNote(id) {
+const board = newBoardRecord();     // category 'todo' — the B63 default
+moveNoteTo(id, board);              // the note is its first card
+await idbPut(board);
 }
 
 /* The board-action row (issue #126, B83; three tabs since issue #140, B92): the
