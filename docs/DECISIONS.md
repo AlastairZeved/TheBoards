@@ -3978,3 +3978,28 @@ exists. (3) Open questions stay open: recurring reminders, the month view,
 the summary's exact text format, and the week-absent first-load edge case.
 
 ### B105. The day-roll launch: when the app boots, or the day rolls under an open app, and TODAY's date carries at least one calendar event, the app lands on that date's linked To-Do board — the B95 species R5 already fills with the day's events — via swapBoard's existing route, the Requirements mirror's creation-order lines already in place; with no events nothing is created and boot lands where it always has (issue #153's premise "check if today's date has any events. If it does, launch"; the check is keyed ONCE PER DAY: it runs at boot() and at renderCal() only when the today key changed since the last check — the open-app-past-midnight case — so it can never steal focus mid-interaction; the board's creation is a consequence and runs under commitAction's guard (B81) exactly as addCalEvent's R5 chain does, but the landing itself is the plain swapBoard route, raw navigation (B81's live navigation); keeps B95's board species and R5's creation-on-first-event, B9's History-API-only routes, B21's read-site defaulting; the empty-morning auto-create stays #169 carry-forward territory, not built here; waives nothing)
+
+### B106. The mirror writes through both ways: a board-side edit of a Requirements line inside the mirror's span writes through to the event record it mirrors — mirrorEventsOf's positional law, span line i ↔ event i — and a board-side deletion of span lines deletes the mirrored events (event-deletion semantics, never demotion), the span shrinking to follow; lines after the span are hand lines this path never touches, and a board-side ADDITION lands after the span as a hand line, because insertion inside the span is positionally ambiguous and is not a supported gesture (issue #154; supersedes B95's one-writer law — each surface is now the writer for its own edits, converging through syncMirror/syncDateMirror with the self-recorded span (calReq) as arbiter; the write-through is part of the anchor's own commitAnchor commit under B81's commit-on-release, not a timeout beside it; no new storage, no schema change — events still ride the boards store; keeps B97's calendar-side in-place editing untouched, B8, B21's read-site defaulting, B81 — and waives nothing)
+
+**The two directions of one law.** B95 ruled the mirror one-writer: the
+calendar wrote, the board read. B97 made an event editable in place. #154
+asks the reverse, and the answer is not a second writer but the same writer
+wearing the other surface: whichever surface a person edits, that surface's
+commit is the write, and the span bookkeeping (`calReq`) decides what the
+write owns. Inside the span the edited surface is the word — the events or
+lines re-derive from it — outside it nothing moves. A shrunken span is a
+deletion (the events go with their lines, so a calendar event can never
+survive as a ghost under a line the reader erased); a grown span is hand
+lines, the reader's own, exactly as B95's span already treats them. The
+positional mapping is the cost of the span being a count, not a join table —
+an edit in the middle of the span re-writes every line after it from the
+board's text, which is correct, because the board's text IS what the span
+now says.
+
+**Where the commit lives.** The board's Requirements anchor already commits
+on blur through `commitAnchor` (B81's commit-on-release, issue #182's
+regions); the write-through runs inside that commit, fire-and-forget like
+every async consequence, and the resync runs `syncMirror` on the live board
+record — the same record `saveNow` persists, so the two writes cannot
+disagree. No timeout, no second commit path. The calendar-side direction
+(B97's `startCalLineEdit` → `syncDateMirror`) is untouched.

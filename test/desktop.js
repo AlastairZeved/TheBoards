@@ -1874,6 +1874,107 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await ctx.close();
   }
 
+  // ---- D25. the mirror writes through both ways (issue #154, B106) ---------
+  // Board-side: editing a span line updates the event record AND the calendar
+  // line; deleting a span line deletes the event and resyncs; hand lines
+  // below the span are never touched; board additions stay hand lines.
+  console.log('\n[D25] Mirror: board-side Requirements edits write through (issue #154, B106)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    // Seed the linked pair, then reboot onto it — an empty boot made its own
+    // board, so the house seed→reload pattern applies.
+    await page.evaluate(async () => {
+      const key = calKey(new Date());
+      const b = newBoardRecord();
+      b.title = '09/02/26 To Do'; b.cal = key; b.calReq = 2;
+      b.requirements = 'mirror one\nmirror two\nhand line';
+      const ev1 = newCalEvent(key, 'mirror one');
+      const ev2 = newCalEvent(key, 'mirror two');
+      await idbPut(b); await idbPut(ev1); await idbPut(ev2);
+    });
+    // Reboot onto the seeded store — an empty boot made its own board.
+    await page.reload();
+    await page.waitForTimeout(600);
+
+    // 1. Edit the FIRST span line on the board, commit on blur.
+    await page.evaluate(() => document.getElementById('anchor-requirements').focus());
+    await page.evaluate(() => {
+      document.getElementById('anchor-requirements').textContent =
+        'mirror one EDITED\nmirror two\nhand line';
+    });
+    await page.evaluate(() => document.getElementById('anchor-requirements').blur());
+    await page.waitForTimeout(500);
+    const afterEdit = await page.evaluate(async () => {
+      const key = calKey(new Date());
+      const all = await idbGetAll();
+      const board = all.find(r => r.cal === key);
+      const evs = all.filter(r => r.date === key).map(r => r.text).sort();
+      return { evs, req: board.requirements, calReq: board.calReq };
+    });
+    ok('board-side span edit writes through to the event record',
+       JSON.stringify(afterEdit.evs) ===
+       JSON.stringify(['mirror one EDITED', 'mirror two']),
+       JSON.stringify(afterEdit));
+    ok('hand line below the span survives the write-through',
+       afterEdit.req === 'mirror one EDITED\nmirror two\nhand line' &&
+       afterEdit.calReq === 2, JSON.stringify(afterEdit));
+
+    // The calendar renders the new text.
+    await page.evaluate(() => { document.getElementById('cal-rail').click(); });
+    await page.waitForTimeout(400);
+    ok('the calendar line renders the board-side edit',
+       await page.evaluate(() =>
+         [...document.querySelectorAll('.cal-line')].some(l => l.textContent === 'mirror one EDITED')));
+
+    // 2. Back on the board, delete the SECOND span line.
+    await page.evaluate(() => { document.getElementById('cal-back').click(); });
+    await page.waitForTimeout(400);
+    await page.evaluate(() => document.getElementById('anchor-requirements').focus());
+    await page.evaluate(() => {
+      document.getElementById('anchor-requirements').textContent =
+        'mirror one EDITED\nhand line';
+    });
+    await page.evaluate(() => document.getElementById('anchor-requirements').blur());
+    await page.waitForTimeout(500);
+    const afterDel = await page.evaluate(async () => {
+      const key = calKey(new Date());
+      const all = await idbGetAll();
+      const board = all.find(r => r.cal === key);
+      const evs = all.filter(r => r.date === key).map(r => r.text).sort();
+      return { evs, req: board.requirements, calReq: board.calReq };
+    });
+    ok('board-side span deletion deletes the mirrored event and resyncs',
+       JSON.stringify(afterDel.evs) === JSON.stringify(['mirror one EDITED']),
+       JSON.stringify(afterDel));
+    ok('the span shrinks with the deletion; the hand line never moves',
+       afterDel.req === 'mirror one EDITED\nhand line' && afterDel.calReq === 1,
+       JSON.stringify(afterDel));
+
+    // 3. A board-side ADDITION lands after the span as a hand line (B106):
+    // no event is created, the span does not grow.
+    await page.evaluate(() => document.getElementById('anchor-requirements').focus());
+    await page.evaluate(() => {
+      document.getElementById('anchor-requirements').textContent =
+        'mirror one EDITED\nhand line\nnew hand line';
+    });
+    await page.evaluate(() => document.getElementById('anchor-requirements').blur());
+    await page.waitForTimeout(500);
+    const afterAdd = await page.evaluate(async () => {
+      const key = calKey(new Date());
+      const all = await idbGetAll();
+      const board = all.find(r => r.cal === key);
+      return { evCount: all.filter(r => r.date === key).length,
+               calReq: board.calReq, req: board.requirements };
+    });
+    ok('a board-side addition is a hand line — no event, span unchanged',
+       afterAdd.evCount === 1 && afterAdd.calReq === 1 &&
+       afterAdd.req === 'mirror one EDITED\nhand line\nnew hand line',
+       JSON.stringify(afterAdd));
+
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   await browser.close();
   console.log('\n=== desktop: ' + pass + ' passed, ' + fail + ' failed ===');
   process.exit(fail ? 1 : 0);
