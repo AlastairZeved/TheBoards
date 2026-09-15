@@ -4196,3 +4196,15 @@ app. B107's two pending clauses are superseded by this entry by number, not
 edited in place. Docs-only: no code, no `sw.js` CACHE bump, no redeploy
 (`**/*.md` is already paths-ignored in the deploy workflow). **Open,
 unchanged:** recurring reminders, the month view.
+
+### B112. Boot opens a BOARD: the most-recent pick — at launch in `app.js` and in `boards.js`' `ensureCurrentValid` — filters `title !== undefined` before the reduce, because events ride the boards store (B105) with no `updatedAt`, `undefined > anything` is false, and an unfiltered reduce over the raw store returns its first record verbatim: a store whose lowest uuid is an event record booted that event as the board and crashed `renderBoard`'s `sanitizeBoard` before the rail, the checkDayRoll, or anything else — found as a CI desktop-suite flake (D25, runs 35031082327 / 35019985397) that reproduced 4-of-4 deterministically once seeded event-first, the app-crash root cause the test's timing narrative had been covering; the pick is now the most-recent record that HAS a title, in both sites, the same guard twice because they are the same reduce (issue: the D25 CI-flake investigation; keeps B108's bootstrap intent — launch lands the board the user last touched, the pick's purpose is untouched and an events-first store simply has no candidate, so the empty-store branch creates a fresh board as it already did; keeps B21's read-site defaulting — the rule is computed at the read, no stored flag, and an old event record renders correctly as an event wherever it is actually opened; keeps B105's event records verbatim — nothing gains a title, nothing gains an `updatedAt`, the guard is the read-site's, not the record's; waives nothing)
+
+**The record.** No schema change, no lifecycle change: the filter is two
+lines at the shared reduce in each caller, and the empty-filtered branch
+falls through to the same `newBoardRecord()` path the empty store always
+took. `sw.js` CACHE bump v56→v57 and `app.js` OWN_BUILD v57 ship it;
+test/tokens.js re-pins both in the same PR (deliberate rewrite of the pin
+strings, same assertions). test/desktop.js's D25 — the test that caught it —
+seeds a single clean linked pair with createdAt-ordered events and waits on
+the landed state, so an event-first regression fails loud instead of
+racing. **Open, unchanged:** recurring reminders, the month view.
