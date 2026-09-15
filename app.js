@@ -270,9 +270,9 @@ function applyMode() {
   // every flip; only the mobile screen state and the wide EXPANDED panel
   // tear down (the expanded panel's squeeze must lift so the frame re-reads
   // the rail's 40px). Mobile, closed, hides the view outright as before.
-  if (calOpen || calExpanded) {
-    calOpen = false;
-    calExpanded = false;
+  if (state.calOpen || state.calExpanded) {
+    state.calOpen = false;
+    state.calExpanded = false;
     el.calView.hidden = true;
     el.calView.classList.remove('rail-open', 'panel');
     el.calRail.hidden = true;
@@ -362,7 +362,7 @@ function newCalEvent(dateKey, text) {
    itself (renderPane's stance). */
 function calBoardOf(all, dateKey) {
   for (const b of all) {
-    const rec = (current && b.id === current.id) ? current : b;
+    const rec = (state.current && b.id === state.current.id) ? state.current : b;
     if (rec.cal === dateKey) return rec;
   }
   return null;
@@ -539,7 +539,23 @@ async function idbGet(id) {
 }
 
 /* --- 3. State + save queue ----------------------------------------------- */
-let current = null;                  // the open board record (in memory)
+// Shared mutable state carrier (issue #182, B' ruling): only globals WRITTEN
+// from more than one future module live here, so a module split can safely
+// cross-module-write them (a bare imported `let` is read-only in ESM). The
+// container is never reassigned and never destructured into locals; live-binding
+// reads of state.<member> are legal from any module. Membership derived from a
+// writers-map grep of the unsplit file; all other module-scope lets stay loose
+// in their owning module.
+const state = {
+  current: null,          // the open board record (in memory)
+  dirty: false,           // `current` holds an edit the debounce hasn't written
+  editVVFloor: Infinity,  // smallest visual-viewport height seen this edit (keyboard fully up)
+  layoutDeferred: false,
+  menuInvoker: null,      // desktop contextmenu: focus returns here on close
+  swallowTap: false,      // the pointerdown that dismissed a menu is inert (B30)
+  calOpen: false,         // the MOBILE full-screen calendar (B95's third screen)
+  calExpanded: false,     // wide's expanded panel (B99) — rail-up is not "open"
+};
 let renderScale = 1, offX = 0, offY = 0;
 
 const noteEls = new Map();           // note.id -> element
@@ -593,11 +609,10 @@ function newBoardRecord() {
 
 // Single-flight persist with exponential backoff; capture is never blocked.
 let saveTimer = null, persisting = false, dirtyAgain = false, retryDelay = 1000;
-let dirty = false;                   // `current` holds an edit the debounce hasn't written
-function scheduleSave() { dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, SAVE_DEBOUNCE); }
+function scheduleSave() { state.dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, SAVE_DEBOUNCE); }
 function saveNow() {
   clearTimeout(saveTimer);
-  if (!current) return;
+  if (!state.current) return;
   stampUpdated();
   persist();
 }
@@ -610,8 +625,8 @@ function saveNow() {
    that same moment, undoing B63's "the new card lands first". */
 function flushSave() {
   clearTimeout(saveTimer);
-  if (!current) return;
-  if (dirty) stampUpdated();
+  if (!state.current) return;
+  if (state.dirty) stampUpdated();
   persist();
 }
 /* The stamp is the whole of B69's order key. It deliberately does NOT turn the
@@ -620,14 +635,14 @@ function flushSave() {
    the open board's card on a page the reader is not looking at — as paging
    away already could — until they turn to page 1 and find it at the front. */
 function stampUpdated() {
-  current.updatedAt = Date.now();
-  dirty = false;
+  state.current.updatedAt = Date.now();
+  state.dirty = false;
 }
 function persist() {
-  if (!current) return;
+  if (!state.current) return;
   if (persisting) { dirtyAgain = true; return; }
   persisting = true;
-  const snapshot = current;
+  const snapshot = state.current;
   idbPut(snapshot).then(() => {
     persisting = false; retryDelay = 1000; hideSaveError();
     if (dirtyAgain) { dirtyAgain = false; persist(); }
@@ -702,7 +717,7 @@ function applyLayout() {
   // at creation (makeNoteEl) and by the gestures that change its inputs
   // (rebaseNote, applyNoteScale, the drag).
   noteEls.forEach((node, id) => {
-    const note = current && current.notes.find(n => n.id === id);
+    const note = state.current && state.current.notes.find(n => n.id === id);
     if (note) {
       node.style.left = renderX(note) + 'px';
       node.style.top = renderY(note) + 'px';
@@ -747,8 +762,6 @@ function applyLayout() {
    too — the whole board would flinch at every keyboard. This deferral is the
    only thing standing between the soft keyboard and all of that. Do not
    weaken it. */
-let layoutDeferred = false;
-let editVVFloor = Infinity;          // smallest visual-viewport height seen this edit (keyboard fully up)
 
 function editingInBoard() {
   const a = document.activeElement;
@@ -767,9 +780,9 @@ function editingInBoard() {
 function onViewportResize() {
   const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   if (!isDesktop && editingInBoard()) {
-    if (h <= editVVFloor) { editVVFloor = h; layoutDeferred = true; return; }
-    if (h > editVVFloor + KB_HIDE_SLOP) { document.activeElement.blur(); return; }
-    layoutDeferred = true; return;   // sub-threshold jitter: keep holding
+    if (h <= state.editVVFloor) { state.editVVFloor = h; state.layoutDeferred = true; return; }
+    if (h > state.editVVFloor + KB_HIDE_SLOP) { document.activeElement.blur(); return; }
+    state.layoutDeferred = true; return;   // sub-threshold jitter: keep holding
   }
   applyLayout();
 }
@@ -809,7 +822,7 @@ const CAL_PANEL_W = 320;             // unscaled CSS px the panel takes (mockup 
 function setCalSqueeze(on) {
   if (calSqueeze === on) return;
   calSqueeze = on;
-  if (current) applyLayout();
+  if (state.current) applyLayout();
 }
 
 /* The similarity transform (issues #65/#75, B64; supersedes B40's anisotropic
@@ -1065,7 +1078,7 @@ function sanitizeBoard(board) {
    bucket the list files it in, which is the agreement the card preview
    depends on. Both call sites have already established `current`. */
 function applyBoardCat() {
-  el.board.dataset.cat = catOf(current);
+  el.board.dataset.cat = catOf(state.current);
 }
 
 /* The tab/OS-window title follows the view (issue #148 item 2). Chrome only —
@@ -1078,28 +1091,28 @@ function syncViewTitle() {
   if (s && s.v === 'cat') document.title = `${COPY['cat' + s.cat[0].toUpperCase() + s.cat.slice(1)] || s.cat} · To-Do Boards`;
   else if (s && s.v === 'list') document.title = `All boards · To-Do Boards`;
   else {
-    const titled = current && !!(current.title && current.title.trim().length);
-    document.title = titled ? `${current.title} · To-Do Boards` : 'To-Do Boards';
+    const titled = state.current && !!(state.current.title && state.current.title.trim().length);
+    document.title = titled ? `${state.current.title} · To-Do Boards` : 'To-Do Boards';
   }
 }
 
 function renderBoard() {
   clearSelection();                  // note DOM is about to be rebuilt
   applyBoardCat();
-  if (sanitizeBoard(current)) scheduleSave();
+  if (sanitizeBoard(state.current)) scheduleSave();
   syncViewTitle();
   // Anchors.
   for (const key of ['title', 'components', 'requirements']) {
     const node = anchorEls[key];
-    node.textContent = current[key] || '';
-    node.classList.toggle('filled', !!(current[key] && current[key].length));
+    node.textContent = state.current[key] || '';
+    node.classList.toggle('filled', !!(state.current[key] && state.current[key].length));
   }
   // Notes (array order = z-order; DOM order mirrors it).
   noteEls.forEach(n => n.remove()); noteEls.clear();
-  for (const note of current.notes) el.board.appendChild(makeNoteEl(note));
+  for (const note of state.current.notes) el.board.appendChild(makeNoteEl(note));
   // Parking Lot.
   el.lotItems.textContent = ''; lotEls.clear();
-  for (const item of current.parkingLot) el.lotItems.appendChild(makeLotEl(item));
+  for (const item of state.current.parkingLot) el.lotItems.appendChild(makeLotEl(item));
   syncBoardActions();                // the toggle reads All boards on a drawn board (B83)
   applyLayout();
 }
@@ -1198,7 +1211,7 @@ function reflectToolbarFlip(node, note) {
 function runNoteToolbarAction(btn) {
   const noteNode = btn.closest('.note');
   if (!noteNode) return;
-  const note = current.notes.find(n => n.id === noteNode.dataset.id);
+  const note = state.current.notes.find(n => n.id === noteNode.dataset.id);
   if (!note) return;
   const editingHere = () =>
     isEditing(document.activeElement) && noteNode.contains(document.activeElement);
@@ -1210,7 +1223,7 @@ function runNoteToolbarAction(btn) {
       // note.text is live off every keystroke (the input handler), so Copy needs
       // no blur — it copies the current text and leaves the note engaged.
       copyText(ids.map(id => {
-        const n = current.notes.find(m => m.id === id);
+        const n = state.current.notes.find(m => m.id === id);
         return n ? n.text : '';
       }).join('\n'));
     } else if (btn.classList.contains('note-tb-delete')) {
@@ -1295,7 +1308,7 @@ function applyCompleteA11y(node, complete) {
 // cancel, a drag, Escape, and any selection change / board swap (clearSelection).
 let linkSource = null;
 
-const boardLinks = () => (current && current.links) || [];   // B21 read-default for legacy boards
+const boardLinks = () => (state.current && state.current.links) || [];   // B21 read-default for legacy boards
 const findLink = (a, b) =>
   boardLinks().find(l => (l.a === a && l.b === b) || (l.a === b && l.b === a));
 
@@ -1305,27 +1318,27 @@ const findLink = (a, b) =>
    app's one reversal idiom (UIUX §9). The Undo closures read current.links
    directly, exactly as deleteNotes reads current.notes (same board-binding). */
 function toggleLink(a, b) {
-  if (!current || a === b) return;
-  if (!current.links) current.links = [];
+  if (!state.current || a === b) return;
+  if (!state.current.links) state.current.links = [];
   const existing = findLink(a, b);
   if (existing) {
-    current.links = current.links.filter(l => l !== existing);
+    state.current.links = state.current.links.filter(l => l !== existing);
     saveNow(); updateLinks();
-    showUndo(() => { current.links.push(existing); saveNow(); updateLinks(); }, 'item', COPY.unlinked);
+    showUndo(() => { state.current.links.push(existing); saveNow(); updateLinks(); }, 'item', COPY.unlinked);
   } else {
     const link = { id: uuid(), a, b };
-    current.links.push(link);
+    state.current.links.push(link);
     saveNow(); updateLinks();
-    showUndo(() => { current.links = boardLinks().filter(l => l.id !== link.id); saveNow(); updateLinks(); }, 'item', COPY.linked);
+    showUndo(() => { state.current.links = boardLinks().filter(l => l.id !== link.id); saveNow(); updateLinks(); }, 'item', COPY.linked);
   }
 }
 
 // Drop links referencing an id (a deleted note); returns the removed links so a
 // caller's Undo can restore them (exact prior state, UIUX §9).
 function removeLinksForNote(id) {
-  if (!current || !current.links || !current.links.length) return [];
-  const removed = current.links.filter(l => l.a === id || l.b === id);
-  if (removed.length) current.links = current.links.filter(l => l.a !== id && l.b !== id);
+  if (!state.current || !state.current.links || !state.current.links.length) return [];
+  const removed = state.current.links.filter(l => l.a === id || l.b === id);
+  if (removed.length) state.current.links = state.current.links.filter(l => l.a !== id && l.b !== id);
   return removed;
 }
 
@@ -1384,8 +1397,8 @@ function updateLinks() {
   ensureLinkLayer();
   const live = new Set();
   for (const link of links) {
-    const na = current.notes.find(n => n.id === link.a);
-    const nb = current.notes.find(n => n.id === link.b);
+    const na = state.current.notes.find(n => n.id === link.a);
+    const nb = state.current.notes.find(n => n.id === link.b);
     const ea = noteEls.get(link.a), eb = noteEls.get(link.b);
     if (!na || !nb || !ea || !eb) continue;
     const ca = noteCenter(na, ea), cb = noteCenter(nb, eb);
@@ -1408,7 +1421,6 @@ function updateLinks() {
 // One recognizer over the board. Targets: note | anchor | lot-item | lot | canvas.
 const pointers = new Map();          // pointerId -> {x,y,startX,startY}
 let g = null;                        // active gesture context
-let swallowTap = false;              // the pointerdown that dismissed a menu is inert (B30)
 
 /* The anchors and, since B91, notes carry a long-press menu (mobile) — the
    anchor's is the board's own menu (All boards · Export, B84/B75); the note's is
@@ -1452,7 +1464,7 @@ function classifyTarget(target) {
 el.board.addEventListener('pointerdown', onPointerDown);
 
 function onPointerDown(e) {
-  if (swallowTap) { swallowTap = false; return; }  // this press only dismissed a menu (B30)
+  if (state.swallowTap) { state.swallowTap = false; return; }  // this press only dismissed a menu (B30)
   // The All-Boards grid (issue #112 / B74) is drawn inside #lot, so its presses
   // bubble here — but it is a menu, not the board: let its buttons receive their
   // own native clicks rather than the recognizer swallowing them as lot capture.
@@ -1498,7 +1510,7 @@ function onPointerDown(e) {
     startX: e.clientX, startY: e.clientY,
     shift: e.shiftKey,                             // multi-select modifier (issue #55)
     mode: 'pending', longPressed: false, moved: false,
-    note: target.type === 'note' ? current.notes.find(n => n.id === target.node.dataset.id) : null,
+    note: target.type === 'note' ? state.current.notes.find(n => n.id === target.node.dataset.id) : null,
   };
   // Resize is single-selection only, by design (issue #55): with two or more
   // selected the CSS hides the grip, and this guard keeps the gesture honest
@@ -1648,7 +1660,7 @@ function tapLotButton(target) {
   const isDel = target.node.classList.contains('sel-delete');
   const isCopy = target.node.classList.contains('sel-copy');
   commitAction(() => {
-    const item = current.parkingLot.find(i => i.id === lotRow.dataset.id);
+    const item = state.current.parkingLot.find(i => i.id === lotRow.dataset.id);
     if (!item) return;
     if (isCopy) copyText(item.text);
     else if (isDel) { clearSelection(); deleteLot(lotRow); }
@@ -1698,7 +1710,7 @@ function tapLot(x, y) {
    note never edits (§4.3), so it only ever engages. */
 function tapNote(target, x, y, shift) {
   const node = target.node;
-  const note = current.notes.find(n => n.id === node.dataset.id);
+  const note = state.current.notes.find(n => n.id === node.dataset.id);
   if (!note) return;
   if (isDesktop) {
     // An open editor commits before the click acts (issue #54); on the
@@ -1750,7 +1762,7 @@ function tapNote(target, x, y, shift) {
    single-select (issue #55) — no shift path here, by design. */
 function tapLotItem(target, x, y) {
   const node = target.node;
-  const item = current.parkingLot.find(i => i.id === node.dataset.id);
+  const item = state.current.parkingLot.find(i => i.id === node.dataset.id);
   if (!item) return;
   if (isDesktop) {
     if (commitOpenEditor(node)) return;
@@ -1806,7 +1818,7 @@ function createNote(clientX, clientY) {
   const note = { id: uuid(), text: '', x: clamp(pt.x, 0, Math.max(0, LOGICAL_W - NOTE_MIN_W)),
                  y: clamp(pt.y, 0, LOGICAL_H - 4), rw: LOGICAL_W, rh: LOGICAL_H,
                  scale: 1.0, state: 'active' };
-  current.notes.push(note);                          // top of z-order
+  state.current.notes.push(note);                          // top of z-order
   const node = makeNoteEl(note);
   el.board.appendChild(node);
   const text = node.querySelector('.note-text');
@@ -1816,7 +1828,7 @@ function createNote(clientX, clientY) {
 
 function createLotItem() {
   const item = { id: uuid(), text: '', state: 'active' };
-  current.parkingLot.push(item);
+  state.current.parkingLot.push(item);
   const node = makeLotEl(item);
   el.lotItems.appendChild(node);
   updateBoardGeometry();               // the shelf follows its rows (UIUX §3.2)
@@ -1833,11 +1845,11 @@ document.addEventListener('focusout', (e) => {
   if (t.classList.contains('note-text')) commitNote(t.closest('.note'));
   else if (t.classList.contains('lot-text')) commitLot(t.closest('.lot-item'));
   else if (t.classList.contains('anchor')) commitAnchor(t);
-  editVVFloor = Infinity;   // next edit measures its own keyboard-up floor (B80)
+  state.editVVFloor = Infinity;   // next edit measures its own keyboard-up floor (B80)
   // A viewport change held back during the edit lands now that nothing is at
   // stake — the keyboard's own retraction resize would repeat it, but a
   // rotation or fold has no such second chance.
-  if (layoutDeferred) { layoutDeferred = false; requestAnimationFrame(applyLayout); }
+  if (state.layoutDeferred) { state.layoutDeferred = false; requestAnimationFrame(applyLayout); }
 });
 
 /* Keyboard/AT users focus a region → enter edit. The pointer path owns taps, so
@@ -1850,7 +1862,7 @@ document.addEventListener('focusin', (e) => {
   if (t.classList.contains('anchor') && !t.hasAttribute('contenteditable')) {
     enableEditing(t);
   } else if (t.classList.contains('note')) {
-    const note = current && current.notes.find(n => n.id === t.dataset.id);
+    const note = state.current && state.current.notes.find(n => n.id === t.dataset.id);
     if (!note) return;
     if (isDesktop) {
       // Tab selects; Enter edits (issue #13) — EXCEPT the menu's own focus
@@ -1863,7 +1875,7 @@ document.addEventListener('focusin', (e) => {
     }
     if (note.state === 'active') editText(t.querySelector('.note-text'));
   } else if (t.classList.contains('lot-item')) {
-    const item = current && current.parkingLot.find(i => i.id === t.dataset.id);
+    const item = state.current && state.current.parkingLot.find(i => i.id === t.dataset.id);
     if (!item) return;
     if (isDesktop) { selectLot(item.id); return; }
     if (item.state === 'active') editText(t.querySelector('.lot-text'));
@@ -1894,13 +1906,13 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     const s = selected;
     if (s.kind === 'note') {
-      const rec = current.notes.find(n => n.id === s.id);
+      const rec = state.current.notes.find(n => n.id === s.id);
       const n = noteEls.get(s.id);
       if (rec && n && rec.state === 'active') {
         clearSelection(); surfaceNote(n); editText(n.querySelector('.note-text'));
       }
     } else {
-      const rec = current.parkingLot.find(i => i.id === s.id);
+      const rec = state.current.parkingLot.find(i => i.id === s.id);
       const n = lotEls.get(s.id);
       if (rec && n && rec.state === 'active') {
         clearSelection(); editText(n.querySelector('.lot-text'));
@@ -1913,15 +1925,15 @@ document.addEventListener('keydown', (e) => {
 el.board.addEventListener('input', (e) => {
   const t = e.target;
   if (t.classList.contains('note-text')) {
-    const note = current.notes.find(n => n.id === t.closest('.note').dataset.id);
+    const note = state.current.notes.find(n => n.id === t.closest('.note').dataset.id);
     if (note) { note.text = t.textContent; setHitInset(t.closest('.note'), note); scheduleSave(); }
   } else if (t.classList.contains('lot-text')) {
-    const item = current.parkingLot.find(i => i.id === t.closest('.lot-item').dataset.id);
+    const item = state.current.parkingLot.find(i => i.id === t.closest('.lot-item').dataset.id);
     // The lot sizes to its rendered rows, live (issue #106, B73) — the same
     // capture feedback the band's anchor branch below already gives.
     if (item) { item.text = t.textContent; updateBoardGeometry(); scheduleSave(); }
   } else if (t.classList.contains('anchor')) {
-    current[t.dataset.anchor] = t.textContent;
+    state.current[t.dataset.anchor] = t.textContent;
     t.classList.toggle('filled', !!t.textContent.length);
     if (t.dataset.anchor === 'title' && isDesktop) updateActiveCardTitle();
     if (t.dataset.anchor === 'title') syncViewTitle();   // the tab carries the board's name, live (issue #148 item 2)
@@ -1935,7 +1947,7 @@ el.board.addEventListener('input', (e) => {
 });
 
 function commitNote(node) {
-  const note = current.notes.find(n => n.id === node.dataset.id);
+  const note = state.current.notes.find(n => n.id === node.dataset.id);
   if (!note) return;
   note.text = node.querySelector('.note-text').textContent;
   if (note.text.trim().length === 0) { removeNoteSilently(note, node); return; }  // no empty frames ever
@@ -1944,8 +1956,8 @@ function commitNote(node) {
 function removeNoteSilently(note, node) {
   if (selected && selected.kind === 'note' && selected.id === note.id) clearSelection();
   else dropFromSelection(note.id);     // set hygiene for a non-primary member (issue #55)
-  const i = current.notes.indexOf(note);
-  if (i >= 0) current.notes.splice(i, 1);
+  const i = state.current.notes.indexOf(note);
+  if (i >= 0) state.current.notes.splice(i, 1);
   node.remove(); noteEls.delete(note.id);
   // A husk discard takes its links with it — emptying a note deletes it (B8), and
   // deleting a note deletes its links (issue #142, B91). Silent, so no Undo.
@@ -1953,7 +1965,7 @@ function removeNoteSilently(note, node) {
   saveNow();
 }
 function commitLot(node) {
-  const item = current.parkingLot.find(i => i.id === node.dataset.id);
+  const item = state.current.parkingLot.find(i => i.id === node.dataset.id);
   if (!item) return;
   item.text = node.querySelector('.lot-text').textContent;
   if (item.text.trim().length === 0) { removeLotSilently(item, node); return; }
@@ -1961,14 +1973,14 @@ function commitLot(node) {
 }
 function removeLotSilently(item, node) {
   if (selected && selected.kind === 'lot' && selected.id === item.id) clearSelection();
-  const i = current.parkingLot.indexOf(item);
-  if (i >= 0) current.parkingLot.splice(i, 1);
+  const i = state.current.parkingLot.indexOf(item);
+  if (i >= 0) state.current.parkingLot.splice(i, 1);
   node.remove(); lotEls.delete(item.id);
   updateBoardGeometry();               // the shelf follows its rows (UIUX §3.2)
   saveNow();
 }
 function commitAnchor(node) {
-  current[node.dataset.anchor] = node.textContent;
+  state.current[node.dataset.anchor] = node.textContent;
   node.classList.toggle('filled', !!node.textContent.length);
   if (isDesktop && node.dataset.anchor === 'title') renderPane(); // reconcile the date line
   updateBoardGeometry();      // the band follows its zones (B47), the handle its card (B65)
@@ -1991,7 +2003,7 @@ function startDrag() {
   if (isDesktop && multiSel.size > 1 && multiSel.has(note.id)) {
     g.group = [];
     for (const id of selectedNoteIds()) {
-      const n = current.notes.find(m => m.id === id);
+      const n = state.current.notes.find(m => m.id === id);
       const memberNode = noteEls.get(id);
       if (!n || !memberNode) continue;
       // Per-member rebase — the one licensed grab-time write (B21), which
@@ -2183,11 +2195,11 @@ function endPinch() {
 /* Z-order: last-touched note to the top (end of array + end of DOM). */
 function surfaceNote(node) {
   const id = node.dataset.id;
-  const note = current.notes.find(n => n.id === id);
+  const note = state.current.notes.find(n => n.id === id);
   if (!note) return;
-  const i = current.notes.indexOf(note);
-  if (i === current.notes.length - 1) { return; }    // already on top
-  current.notes.splice(i, 1); current.notes.push(note);
+  const i = state.current.notes.indexOf(note);
+  if (i === state.current.notes.length - 1) { return; }    // already on top
+  state.current.notes.splice(i, 1); state.current.notes.push(note);
   el.board.appendChild(node);                         // move to top of DOM among notes
   saveNow();
 }
@@ -2387,9 +2399,9 @@ function setSelectionHidden(hidden) {  // drag/resize in flight: chrome steps as
 }
 
 function updateSelectionUI() {
-  if (!selected || !current) return;
+  if (!selected || !state.current) return;
   if (selected.kind === 'note') {
-    const note = current.notes.find(n => n.id === selected.id);
+    const note = state.current.notes.find(n => n.id === selected.id);
     const node = noteEls.get(selected.id);
     if (!note || !node || !selEl) return;
     const w = node.offsetWidth * effScale(note), h = node.offsetHeight * effScale(note);
@@ -2409,7 +2421,7 @@ function updateSelectionUI() {
     setSelectionHidden(false);
   } else {
     const node = lotEls.get(selected.id);
-    const item = current.parkingLot.find(i => i.id === selected.id);
+    const item = state.current.parkingLot.find(i => i.id === selected.id);
     if (!node || !item) return;
     const p = node.querySelector('.sel-complete');
     if (p) p.textContent = item.state === 'complete' ? COPY.restore : COPY.complete;
@@ -2419,7 +2431,7 @@ function updateSelectionUI() {
 /* Frame-drag resize (issue #4): scale from the pointer's distance to the
    note's fixed top-left origin — same clamp, re-clamp, and hit math as pinch. */
 function startResize(e) {
-  const note = current.notes.find(n => n.id === selected.id);
+  const note = state.current.notes.find(n => n.id === selected.id);
   const node = noteEls.get(selected.id);
   if (!note || !node) { g.mode = 'cancelled'; return; }
   rebaseNote(note);                  // grab math runs in current-frame units (issue #15)
@@ -2448,7 +2460,7 @@ function endResize() {
 // State + presentation together, no write: the single-note wrappers below add
 // their own saveNow, the bulk path (issue #55) saves once for the whole set.
 function setNoteState(node, complete) {
-  const note = current.notes.find(n => n.id === node.dataset.id);
+  const note = state.current.notes.find(n => n.id === node.dataset.id);
   if (!note) return;                   // a blank note the pre-act blur just discarded (B84/B8)
   note.state = complete ? 'complete' : 'active';
   node.classList.toggle('complete', complete);
@@ -2461,24 +2473,24 @@ function restoreNote(node) { setNoteState(node, false); saveNow(); }
 // applyCompleteA11y here; the amber wash is decorative and reads truthily off
 // note.highlighted (legacy notes lack the field, which is falsy — B21's idiom).
 function setNoteHighlight(node, on) {
-  const note = current.notes.find(n => n.id === node.dataset.id);
+  const note = state.current.notes.find(n => n.id === node.dataset.id);
   if (!note) return;                   // discarded blank note (B84/B8) — nothing to wash
   note.highlighted = on;
   node.classList.toggle('highlight', on);
   updateNoteToolbar(node, note);       // Highlight ⇄ Remove highlight label (B84)
 }
 function toggleHighlight(node) {
-  const note = current.notes.find(n => n.id === node.dataset.id);
+  const note = state.current.notes.find(n => n.id === node.dataset.id);
   if (!note) return;
   setNoteHighlight(node, !note.highlighted); saveNow();
 }
 function completeLot(node) {
-  const item = current.parkingLot.find(i => i.id === node.dataset.id);
+  const item = state.current.parkingLot.find(i => i.id === node.dataset.id);
   item.state = 'complete'; node.classList.add('complete');
   applyCompleteA11y(node, true); saveNow();
 }
 function restoreLot(node) {
-  const item = current.parkingLot.find(i => i.id === node.dataset.id);
+  const item = state.current.parkingLot.find(i => i.id === node.dataset.id);
   item.state = 'active'; node.classList.remove('complete');
   applyCompleteA11y(node, false); saveNow();
 }
@@ -2488,14 +2500,14 @@ function restoreLot(node) {
 function deleteNote(node) { deleteNotes([node.dataset.id]); }
 function deleteLot(node) {
   if (selected && selected.kind === 'lot' && selected.id === node.dataset.id) clearSelection();
-  const item = current.parkingLot.find(i => i.id === node.dataset.id);
-  const index = current.parkingLot.indexOf(item);
+  const item = state.current.parkingLot.find(i => i.id === node.dataset.id);
+  const index = state.current.parkingLot.indexOf(item);
   const snapshot = JSON.parse(JSON.stringify(item));
-  current.parkingLot.splice(index, 1);
+  state.current.parkingLot.splice(index, 1);
   leave(node, () => { node.remove(); lotEls.delete(item.id); updateBoardGeometry(); });
   saveNow();
   showUndo(() => {
-    current.parkingLot.splice(index, 0, snapshot);
+    state.current.parkingLot.splice(index, 0, snapshot);
     const newNode = makeLotEl(snapshot);
     const ref = el.lotItems.children[index] || null;
     el.lotItems.insertBefore(newNode, ref);
@@ -2512,7 +2524,7 @@ function deleteLot(node) {
 function deleteNotes(ids) {
   const wanted = new Set(ids);
   const snap = [];
-  current.notes.forEach((n, i) => {
+  state.current.notes.forEach((n, i) => {
     if (wanted.has(n.id)) snap.push({ note: JSON.parse(JSON.stringify(n)), index: i });
   });
   if (!snap.length) return;
@@ -2520,12 +2532,12 @@ function deleteNotes(ids) {
   // FIRST so the one Undo restores exact prior state — the notes AND their
   // relationships (UIUX §9) — then drop them from the live board.
   const removedLinks = boardLinks().filter(l => wanted.has(l.a) || wanted.has(l.b));
-  if (removedLinks.length) current.links = current.links.filter(l => !wanted.has(l.a) && !wanted.has(l.b));
+  if (removedLinks.length) state.current.links = state.current.links.filter(l => !wanted.has(l.a) && !wanted.has(l.b));
   clearSelection();
   if (engaged && wanted.has(engaged)) clearEngaged();   // the engaged note is leaving (issue #136, B90)
   for (let i = snap.length - 1; i >= 0; i--) {       // descending: indices stay valid
     const s = snap[i];
-    current.notes.splice(s.index, 1);
+    state.current.notes.splice(s.index, 1);
     const node = noteEls.get(s.note.id);
     if (node) leave(node, () => { node.remove(); noteEls.delete(s.note.id); });
   }
@@ -2533,13 +2545,13 @@ function deleteNotes(ids) {
   saveNow();
   showUndo(() => {
     for (const s of snap) {                          // ascending: exact z-order back
-      current.notes.splice(s.index, 0, s.note);
+      state.current.notes.splice(s.index, 0, s.note);
       el.board.appendChild(makeNoteEl(s.note));
     }
     reorderNotesDOM();
     if (removedLinks.length) {                       // relationships come back with the notes
-      if (!current.links) current.links = [];
-      for (const l of removedLinks) current.links.push(l);
+      if (!state.current.links) state.current.links = [];
+      for (const l of removedLinks) state.current.links.push(l);
       updateLinks();
     }
     saveNow();
@@ -2574,7 +2586,7 @@ function setSelectedNotesHighlight(on) {
 
 // Rebuild note DOM order to match array order (used after undo-insert).
 function reorderNotesDOM() {
-  for (const note of current.notes) {
+  for (const note of state.current.notes) {
     const node = noteEls.get(note.id);
     if (node) el.board.appendChild(node);
   }
@@ -2675,7 +2687,6 @@ function copyText(text) {
 
 /* --- 10. Long-press menu ------------------------------------------------- */
 let menuOpen = false, menuKeyHandler = null, menuOutsideHandler = null;
-let menuInvoker = null;              // desktop contextmenu: focus returns here on close
 let menuReturnFocus = false;         // true only inside closeMenu's synchronous focus return
 
 /* One menu opens here now (B91): a note's single Link item. The anchor's own
@@ -2755,7 +2766,7 @@ el.actionBoards.addEventListener('click', () => {
 el.actionExport.addEventListener('click', (e) => {
   const r = e.currentTarget.getBoundingClientRect();
   buildMenu([
-    { label: COPY.exportPdf, glyph: GLYPH.export, action: () => commitAction(() => exportBoardPdf(current)) },
+    { label: COPY.exportPdf, glyph: GLYPH.export, action: () => commitAction(() => exportBoardPdf(state.current)) },
     { label: COPY.exportJson, glyph: GLYPH.boards, action: () => commitAction(exportAllJson) },
   ], r.left, r.bottom);
 });
@@ -2782,7 +2793,7 @@ el.importFile.addEventListener('change', () => {
    state { v: 'cal' }: the OS back gesture returns from it (B9, unshadowed),
    and its OWN Back button is the always-visible route (R1). */
 el.actionCalendar.addEventListener('click', () => {
-  if (calOpen) return;
+  if (state.calOpen) return;
   // The rail is wide's entry (B99); the tab is mobile's and pushes its own
   // history state { v: 'cal' }: the OS back gesture returns from it (B9,
   // unshadowed), and its OWN Back button is the always-visible route (R1).
@@ -2894,8 +2905,8 @@ function buildMenu(items, clientX, clientY) {
   menuOutsideHandler = (ev) => {
     if (el.menu.contains(ev.target)) return;
     if (el.board.contains(ev.target)) {
-      swallowTap = true;
-      setTimeout(() => { swallowTap = false; }, 0);   // never outlives this press
+      state.swallowTap = true;
+      setTimeout(() => { state.swallowTap = false; }, 0);   // never outlives this press
     }
     closeMenu();
   };
@@ -2910,8 +2921,8 @@ function closeMenu() {
   if (menuKeyHandler) document.removeEventListener('keydown', menuKeyHandler, true);
   if (menuOutsideHandler) document.removeEventListener('pointerdown', menuOutsideHandler, true);
   menuKeyHandler = menuOutsideHandler = null;
-  if (menuInvoker) {
-    const m = menuInvoker; menuInvoker = null;
+  if (state.menuInvoker) {
+    const m = state.menuInvoker; state.menuInvoker = null;
     // focus() dispatches focusin synchronously; the flag scopes the multi-
     // selection exemption to exactly this call (issue #55).
     menuReturnFocus = true; m.focus(); menuReturnFocus = false;
@@ -3630,8 +3641,8 @@ function downloadBlob(blob, name) {
    from IndexedDB in case its snapshot has aged. */
 async function exportBoardPdf(board) {
   try {
-    const src = (current && current.id === board.id)
-      ? current : ((await idbGet(board.id)) || board);
+    const src = (state.current && state.current.id === board.id)
+      ? state.current : ((await idbGet(board.id)) || board);
     // B8/B31's sweep on a COPY. Records reach the menu straight from
     // idbGetAll(), so they have never been through renderBoard's sanitize, and
     // a whitespace husk would export as an empty framed box. Copying rather
@@ -3784,13 +3795,13 @@ async function importBoardsJson(file) {
   let overwrittenCurrent = false;
   for (const rec of incoming) {
     await idbPut(rec);
-    if (current && rec.id === current.id) {
-      current = rec;                    // the open board's new self is the file's copy
+    if (state.current && rec.id === state.current.id) {
+      state.current = rec;                    // the open board's new self is the file's copy
       overwrittenCurrent = true;
     }
   }
   if (overwrittenCurrent) {
-    dirty = false;                      // current was replaced wholesale, exactly ensureCurrentValid's reading
+    state.dirty = false;                      // current was replaced wholesale, exactly ensureCurrentValid's reading
     renderBoard();
   }
   if (listOpen) await renderListSurface();
@@ -4058,9 +4069,9 @@ function refocusCatAdd(host, cat) {
    can't resurrect a board deleted mid-drag. */
 async function dropBoardCard(b, cat) {
   catPage[cat] = 0;                    // the dropped card lands first — show it
-  if (current && current.id === b.id) {
-    current.category = cat;
-    current.catStamp = Date.now();
+  if (state.current && state.current.id === b.id) {
+    state.current.category = cat;
+    state.current.catStamp = Date.now();
     applyBoardCat();                   // the open board's ladder rotates with it (B67)
     saveNow();
   } else {
@@ -4095,7 +4106,7 @@ async function renderListSurface() {
 async function renderCat(cat) {
   const all = await idbGetAll();
   const boards = all
-    .map(b => (current && b.id === current.id) ? current : b)
+    .map(b => (state.current && b.id === state.current.id) ? state.current : b)
     .filter(b => catOf(b) === cat);
   catFilled = 1;
   catCap = catPageCap(1, 1);                  // one section drawn: it takes the whole surface
@@ -4150,7 +4161,7 @@ function makeListRow(b) {
       const r = card.getBoundingClientRect();
       x = r.left + r.width / 2; y = r.top + r.height / 2;
     }
-    menuInvoker = card;                  // focus returns to the card on close
+    state.menuInvoker = card;                  // focus returns to the card on close
     openBoardRowMenu(row, b, x, y);
   });
   return row;
@@ -4275,8 +4286,8 @@ async function deleteBoard(id, row) {
   const snapshot = await idbGet(id);
   await idbDelete(id);
   if (row) leave(row, () => row.remove());
-  const wasCurrent = current && current.id === id;
-  if (wasCurrent) current = null;                      // guard invalid current on return
+  const wasCurrent = state.current && state.current.id === id;
+  if (wasCurrent) state.current = null;                      // guard invalid current on return
   // On desktop the board view has no list screen to heal a dead `current` on
   // return, so heal it now, or the next interaction dereferences current.notes
   // (review finding 2). This holds whether the delete came from the rail or the
@@ -4308,7 +4319,7 @@ async function openBoardById(id) {
                                                         // flush: one law, two skins (B69)
   const rec = await idbGet(id);
   if (!rec) return;
-  current = rec;
+  state.current = rec;
   returnToBoard();                                      // pop the nav stack → board (B9)
 }
 
@@ -4335,7 +4346,7 @@ function returnToBoard() {
 }
 
 function openBoardObj(board) {
-  current = board;
+  state.current = board;
   renderBoard();
 }
 
@@ -4361,7 +4372,7 @@ async function newBoardIn(cat) {
   // opens the board without popping an entry the
   // list no longer owns (B9 untouched; the swap's renderPane no-ops off-desktop).
   if (!listOpen) { swapBoard(board.id); return; }
-  current = board;
+  state.current = board;
   returnToBoard();                                      // page-turn back to the board (B9)
 }
 
@@ -4378,7 +4389,7 @@ function finalizeItemUndo() {
 
 async function swapBoard(id) {
   if (swapping) return;
-  if (current && current.id === id) return;
+  if (state.current && state.current.id === id) return;
   finalizeItemUndo();
   swapping = true;
   flushSave();                        // persist() snapshots `current` synchronously — safe
@@ -4386,7 +4397,7 @@ async function swapBoard(id) {
   if (!rec) { swapping = false; renderPane(); return; }
   el.board.classList.add('swapping');
   setTimeout(() => {                  // setTimeout, not transitionend: the reduced-motion
-    current = rec;                    // kill-switch zeroes transitions (§8)
+    state.current = rec;                    // kill-switch zeroes transitions (§8)
     renderBoard();
     renderPane();
     el.board.classList.remove('swapping');
@@ -4408,7 +4419,7 @@ async function renderPane() {
   // authoritative for it (the export takes the same stance), and a drop's
   // write can still be behind the debounced persist when this getAll runs.
   for (const b of all) {
-    const rec = (current && b.id === current.id) ? current : b;
+    const rec = (state.current && b.id === state.current.id) ? state.current : b;
     buckets[catOf(rec)].push(rec);
   }
   catFilled = BOARD_CATS.filter(c => buckets[c].length).length;
@@ -4428,7 +4439,7 @@ function makePaneRow(b) {
   card.type = 'button'; card.className = 'pane-card'; card.dataset.id = b.id;
   fillRowContent(card, b);
   row.appendChild(card);
-  const isActive = current && b.id === current.id;
+  const isActive = state.current && b.id === state.current.id;
   if (isActive) {
     card.classList.add('active');
     // Deletion path (a), issue #10: a permanent control on the open board's
@@ -4463,7 +4474,7 @@ function makePaneRow(b) {
       const r = card.getBoundingClientRect();
       x = r.left + r.width / 2; y = r.top + r.height / 2;
     }
-    menuInvoker = card;               // focus returns to the card on close
+    state.menuInvoker = card;               // focus returns to the card on close
     openBoardRowMenu(row, b, x, y);
   });
   return row;
@@ -4473,11 +4484,11 @@ function makePaneRow(b) {
    full renderPane on commit reconciles the untitled date line. */
 function updateActiveCardTitle() {
   const card = el.paneCards && el.paneCards.querySelector('.pane-card.active');
-  if (!card || !current) return;
+  if (!card || !state.current) return;
   const titleEl = card.querySelector('.row-title');
   if (!titleEl) return;
-  const titled = !!(current.title && current.title.trim().length);
-  titleEl.textContent = titled ? current.title : COPY.untitled;
+  const titled = !!(state.current.title && state.current.title.trim().length);
+  titleEl.textContent = titled ? state.current.title : COPY.untitled;
   titleEl.classList.toggle('untitled', !titled);
 }
 
@@ -4549,15 +4560,15 @@ function closeLotMenu() {
   el.lot.classList.remove('menu-open');
 }
 async function ensureCurrentValid() {
-  if (current) { const still = await idbGet(current.id); if (still) return; }
+  if (state.current) { const still = await idbGet(state.current.id); if (still) return; }
   // The board being replaced is gone from storage; drop its pending debounce
   // with it, or the timer would fire against its successor and stamp a board
   // nobody edited — which under B69 would move that card (§3's `dirty` rides
   // whatever `current` is, so it is cleared wherever `current` is replaced).
-  clearTimeout(saveTimer); dirty = false;
+  clearTimeout(saveTimer); state.dirty = false;
   const all = await idbGetAll();
-  current = all.length ? all.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)) : newBoardRecord();
-  if (!all.length) await idbPut(current);
+  state.current = all.length ? all.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)) : newBoardRecord();
+  if (!all.length) await idbPut(state.current);
   renderBoard();
 }
 /* Put the #list-view away (B82, issue #125). Mobile slides the drilled panel
@@ -4578,7 +4589,7 @@ async function showBoardFromList() {
   catView = null;
   closeLotMenu();                      // mobile: the grid steps aside, the real lot returns
   hideListView();                      // slide the drilled panel down, then hide (B82)
-  if (!current) { await ensureCurrentValid(); }
+  if (!state.current) { await ensureCurrentValid(); }
   else { renderBoard(); }
   if (isWide) renderPane();         // a board opened from the #list-view drill lights its rail card
 }
@@ -4591,11 +4602,9 @@ async function showBoardFromList() {
    All Boards (the picker, calendar shrinking to fit — R1), Export (B92's
    choice, PDF leaf = the 7-day reference sheet). The stack never scrolls —
    it is a bounded page like every other surface. */
-let calOpen = false;                 // the MOBILE full-screen calendar (B95's third screen)
-let calExpanded = false;             // wide's expanded panel (B99) — rail-up is not "open":
-                                     // the rail is furniture, so it must never enter the
-                                     // screen-grammar branches (popstate's calOpen swallow,
-                                     // applyMode's close, hideCal) that a pushed screen owns.
+                                   // the rail is furniture, so it must never enter the
+                                   // screen-grammar branches (popstate's calOpen swallow,
+                                   // applyMode's close, hideCal) that a pushed screen owns.
 
 function goCalBack() {
   history.back();                      // pop {v:'cal'} → the board (B9's route, visible)
@@ -4643,7 +4652,7 @@ function expandCalRail() {
   el.calView.classList.add('panel');
   el.calRail.hidden = true;
   el.calRail.setAttribute('aria-expanded', 'true');
-  calExpanded = true;                 // the screen-grammar state rides the PANEL, not the rail
+  state.calExpanded = true;                 // the screen-grammar state rides the PANEL, not the rail
   setCalSqueeze(true);                // the board reflows beside the panel (R6)
   renderCal();                        // the expanded face: the 7-day stack
 }
@@ -4653,7 +4662,7 @@ function collapseCalRail() {
   el.calView.classList.remove('panel');
   el.calRail.hidden = false;
   el.calRail.setAttribute('aria-expanded', 'false');
-  calExpanded = false;
+  state.calExpanded = false;
   setCalSqueeze(false);               // the squeeze lifts; the board returns (R6)
   renderCalRail();
 }
@@ -4662,7 +4671,7 @@ function showCal() {
   // Wide enters through the standing rail (B99); mobile keeps the pushed
   // full-screen view (B95's mobile path, unchanged).
   if (isWide) { showCalRail(); return; }
-  calOpen = true;
+  state.calOpen = true;
   closeLotMenu();
   hideListView();
   listOpen = false; catView = null;
@@ -4677,9 +4686,9 @@ function showCal() {
 /* The popstate branch: {v:'cal'} re-shows the calendar (an OS-forward onto
    it); leaving it lands on the board and restores the action row. */
 function hideCal() {
-  if (!calOpen && !calExpanded) return;
-  calOpen = false;
-  calExpanded = false;
+  if (!state.calOpen && !state.calExpanded) return;
+  state.calOpen = false;
+  state.calExpanded = false;
   el.calView.hidden = !isWide;       // wide: the rail face remains (furniture, B99)
   el.calView.classList.remove('panel');   // the expanded face lifts
   el.calView.classList.toggle('rail-open', isWide);
@@ -4863,12 +4872,12 @@ el.calBack.addEventListener('click', () => {
   // On wide, Back IS the collapse arrow (B99): the panel returns to the rail,
   // the squeeze lifts — no history to pop (the rail pushed none). On mobile,
   // Back pops the pushed {v:'cal'} state (B9's route, visible — R1).
-  if (isWide && calExpanded) { collapseCalRail(); return; }
+  if (isWide && state.calExpanded) { collapseCalRail(); return; }
   goCalBack();
 });
 el.calRail.addEventListener('click', () => {
   // Furniture's one act: expand (B99). Pure navigation, no commit (B81).
-  if (!isWide || calExpanded) return;
+  if (!isWide || state.calExpanded) return;
   expandCalRail();
 });
 el.calBoards.addEventListener('click', (e) => {
@@ -4906,7 +4915,7 @@ window.addEventListener('popstate', () => {
   // wide collapses the panel (the mobile-era entry has no wide meaning);
   // mobile keeps its full-screen view.
   if (s && s.v === 'cal') { showCal(); }
-  else if (calOpen || calExpanded) { hideCal(); }     // landing anywhere else closes the calendar first
+  else if (state.calOpen || state.calExpanded) { hideCal(); }     // landing anywhere else closes the calendar first
   else if (s && s.v === 'cat') {
     if (isDesktop) { showBoardFromList(); }   // B100: desktop has no drill either — a stray landing (old-build history) heals to the board
     else { showCat(s.cat); }

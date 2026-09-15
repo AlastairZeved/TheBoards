@@ -1350,7 +1350,7 @@ async function openCat(page, cat) {
     });
     // A drawn-fresh note is not highlighted.
     ok('a new note is not highlighted', await page.evaluate(() =>
-      !document.querySelector('.note').classList.contains('highlight') && !current.notes[0].highlighted));
+      !document.querySelector('.note').classList.contains('highlight') && !state.current.notes[0].highlighted));
 
     // The Highlight tab keeps the note engaged (no blur), so it can be toggled
     // twice without re-tapping — spaced past the B81 re-fire guard.
@@ -1369,7 +1369,7 @@ async function openCat(page, cat) {
     await page.waitForTimeout(300);
     ok('the note gains the highlight class', await page.evaluate(() =>
       document.querySelector('.note').classList.contains('highlight')));
-    ok('and the record carries highlighted', await page.evaluate(() => current.notes[0].highlighted === true));
+    ok('and the record carries highlighted', await page.evaluate(() => state.current.notes[0].highlighted === true));
     ok('the tab label flips to Remove highlight', (await hlBtn()).label === 'Remove highlight',
        (await hlBtn()).label);
 
@@ -1379,7 +1379,7 @@ async function openCat(page, cat) {
     await tap(page, hb.x, hb.y);
     await page.waitForTimeout(300);
     ok('the wash toggles back off', await page.evaluate(() =>
-      !document.querySelector('.note').classList.contains('highlight') && current.notes[0].highlighted === false));
+      !document.querySelector('.note').classList.contains('highlight') && state.current.notes[0].highlighted === false));
     ok('highlighting deleted nothing', (await noteCount(page)) === 1);
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
@@ -1401,7 +1401,7 @@ async function openCat(page, cat) {
     await page.evaluate(() => document.activeElement.blur());
     await page.waitForTimeout(300);
     const m = await page.evaluate(() => {
-      const note = current.notes[current.notes.length - 1];
+      const note = state.current.notes[state.current.notes.length - 1];
       const node = document.querySelector('[data-id="' + note.id + '"]');
       const box = exportNoteBox(note);
       return { screenW: node.offsetWidth, exportW: box.w,
@@ -1670,7 +1670,7 @@ async function openCat(page, cat) {
 
     const unSorted = () => page.evaluate(async () => {
       const all = await idbGetAll();
-      return all.map(b => (current && b.id === current.id) ? current : b)
+      return all.map(b => (state.current && b.id === state.current.id) ? state.current : b)
                 .filter(b => catOf(b) === 'unsorted').sort(catOrder).map(b => b.id);
     });
     const unShown = () => page.evaluate(() =>
@@ -1686,7 +1686,7 @@ async function openCat(page, cat) {
     }, target);
     await tap(page, tbox.x, tbox.y);
     await page.waitForTimeout(600);                     // past ACTION_DELAY; two pops → board
-    ok('the second card opened its board', await page.evaluate(() => current.id) === target);
+    ok('the second card opened its board', await page.evaluate(() => state.current.id) === target);
     ok('and the nav returned all the way to the board', await page.evaluate(() =>
       !listOpen && document.querySelector('#list-view').hidden === true &&
       document.querySelector('#lot-menu').hidden === true));
@@ -1799,7 +1799,7 @@ async function openCat(page, cat) {
     await page.reload();
     await page.waitForTimeout(400);
     await openCat(page, 'todo');
-    const before = await page.evaluate(() => current.id);
+    const before = await page.evaluate(() => state.current.id);
     const btn = await page.evaluate(() => {
       const r = document.querySelector('.board-cat[data-cat="todo"] .cat-add').getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
@@ -1814,12 +1814,12 @@ async function openCat(page, cat) {
     const rec = await page.evaluate(async () => {
       const all = await idbGetAll();
       const newest = all.reduce((a, b) => (b.createdAt > a.createdAt ? b : a));
-      return { cat: newest.category, stamp: typeof newest.catStamp, opened: newest.id === current.id };
+      return { cat: newest.category, stamp: typeof newest.catStamp, opened: newest.id === state.current.id };
     });
     ok('the record is written into To-Do, stamped, and open',
        rec.cat === 'todo' && rec.stamp === 'number' && rec.opened, JSON.stringify(rec));
     ok('and it is a new board, not the one that was open',
-       await page.evaluate(() => current.id) !== before);
+       await page.evaluate(() => state.current.id) !== before);
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
@@ -2024,12 +2024,12 @@ async function openCat(page, cat) {
       ok('the panel itself does not scroll', s.listNoScroll);
       // The board behind the risen panel is context, not a capture surface (B82):
       // a tap on the exposed sheet above the panel must not drop a note on it.
-      const notesBefore = await page.evaluate(() => (current.notes || []).length);
+      const notesBefore = await page.evaluate(() => (state.current.notes || []).length);
       await tap(page, 190, 200);         // well above panelTop (~564): bare board
       await page.waitForTimeout(120);
       const inert = await page.evaluate(() => {
         const v = document.querySelector('#list-view');
-        return { notes: (current.notes || []).length, shown: v.hidden === false && v.classList.contains('show') };
+        return { notes: (state.current.notes || []).length, shown: v.hidden === false && v.classList.contains('show') };
       });
       ok('a tap on the board behind the panel captures nothing (B82)',
          inert.notes === notesBefore && inert.shown, JSON.stringify([inert.notes, notesBefore, inert.shown]));
@@ -2072,7 +2072,7 @@ async function openCat(page, cat) {
          await page.evaluate(async () => {
            const all = await idbGetAll();
            const newest = all.reduce((a, b) => (b.createdAt > a.createdAt ? b : a));
-           return newest.category === 'learning' && newest.id === current.id &&
+           return newest.category === 'learning' && newest.id === state.current.id &&
              document.getElementById('board').dataset.cat === 'learning';
          }));
       ok('no page errors', errors.length === 0, errors.join(' | '));
@@ -2119,16 +2119,16 @@ async function openCat(page, cat) {
   {
     const { ctx, page, errors } = await newMobilePage(browser);
     await page.evaluate(() => {
-      current.notes.length = 0; if (current.links) current.links.length = 0;
-      current.notes.push({ id:'la', text:'Alpha', x:80,  y:250, rw:LOGICAL_W, rh:LOGICAL_H, scale:1, state:'active' });
-      current.notes.push({ id:'lb', text:'Bravo', x:190, y:600, rw:LOGICAL_W, rh:LOGICAL_H, scale:1, state:'active' });
+      state.current.notes.length = 0; if (state.current.links) state.current.links.length = 0;
+      state.current.notes.push({ id:'la', text:'Alpha', x:80,  y:250, rw:LOGICAL_W, rh:LOGICAL_H, scale:1, state:'active' });
+      state.current.notes.push({ id:'lb', text:'Bravo', x:190, y:600, rw:LOGICAL_W, rh:LOGICAL_H, scale:1, state:'active' });
       renderBoard();
     });
     await page.waitForTimeout(120);
     const c = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.note')].map(n => {
       const r = n.getBoundingClientRect(); return [n.dataset.id, { x: r.x + r.width / 2, y: r.y + r.height / 2 }];
     })));
-    const links = () => page.evaluate(() => (current.links || []).length);
+    const links = () => page.evaluate(() => (state.current.links || []).length);
     const lines = () => page.evaluate(() => document.querySelectorAll('#link-layer line').length);
     const chooseLink = () => page.evaluate(() =>
       [...document.querySelectorAll('#menu button')].find(b => /Link/.test(b.textContent)).click());
@@ -2151,7 +2151,7 @@ async function openCat(page, cat) {
     ok('tapping the second note creates one link', (await links()) === 1, 'links=' + await links());
     ok('and draws one line', (await lines()) === 1, 'lines=' + await lines());
     ok('the link records both note ids', await page.evaluate(() => {
-      const l = current.links[0]; return (l.a === 'la' && l.b === 'lb') || (l.a === 'lb' && l.b === 'la');
+      const l = state.current.links[0]; return (l.a === 'la' && l.b === 'lb') || (l.a === 'lb' && l.b === 'la');
     }));
     ok('link mode cleared after completing', await page.evaluate(() => linkSource === null));
 
@@ -2195,7 +2195,7 @@ async function openCat(page, cat) {
     ok('and no stray note', (await noteCount(page)) === 2, 'count=' + await noteCount(page));
 
     // Deleting a linked note prunes its link (persist-level integrity, B91).
-    await page.evaluate(() => { current.links = [{ id:'lk', a:'la', b:'lb' }]; updateLinks(); });
+    await page.evaluate(() => { state.current.links = [{ id:'lk', a:'la', b:'lb' }]; updateLinks(); });
     ok('link re-seeded', (await links()) === 1);
     await page.evaluate(() => deleteNote(noteEls.get('la')));
     await page.waitForTimeout(150);
