@@ -150,7 +150,7 @@ completion as a visible scratch-out; multiple boards; and a PDF export.
 | Tags, folders, search, filters, auto-grouping | §1.2. Every one of these infers a relationship the person did not assert. |
 | Rich text, images, attachments, drawing | The data model is plain strings (§4.1). B3 enforces this at the paste boundary. |
 | Snapping, alignment guides, auto-layout | §1.3 and §1.2. Notes overlap freely; the person places them. |
-| Due dates with time logic, push notifications, in-app notification banners, email, streaks | §1.4. The board makes no demands. Clock-toggle reminders and the day's To-Do surface are the bounded exception, ruled **B104** (issue #169) — a tap, a glow, and a card that shows up where the person already looks; no times are stored and nothing pushes |
+| Due dates with time logic, push notifications, in-app notification banners, email, SMS, any outbound message system, streaks | §1.4 and §3.2. The board makes no demands and sends nothing — there is no backend to send from. Clock-toggle reminders and the day's To-Do surface are the bounded exception, ruled **B104** (issue #169) — a tap, a glow, and a card that shows up where the person already looks; no times are stored and nothing pushes. The end-of-day SMS summary is removed, ruled **B107**; notifications reduce to the 2x2 widget, itself pending a capability ruling |
 | Infinite canvas, pan, zoom | §5.1. Boundedness is the feature — a page you can see all of. |
 | A framework, bundler, package manager, dependency | §3.3. |
 | Settings, preferences, a theme switch | §1.4. §9 is one identity, not a choice to make. |
