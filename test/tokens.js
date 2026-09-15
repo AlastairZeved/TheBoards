@@ -629,7 +629,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('the calendar view carries the standing rail face (B99, mockup 6)',
     /id="cal-rail"/.test(html) && /calRail: document\.getElementById\('cal-rail'\)/.test(app));
   ok('the rail renders at boot on wide — furniture, no press (B99)',
-    /if \(isWide\) \{\s*\n\s*document\.documentElement\.classList\.add\('has-cal-rail'\);\s*\n\s*showCalRail\(\);/.test(app));
+    /if \(state\.isWide\) \{\s*\n\s*document\.documentElement\.classList\.add\('has-cal-rail'\);\s*\n\s*showCalRail\(\);/.test(app));
   ok('the rail is the mockup-6 species: vertical label, date, lit dot',
     /writing-mode: vertical-rl/.test(css) && /#cal-rail \.vlabel/.test(css) &&
     /#cal-rail \.cdot/.test(css) && /#cal-rail \.cdate/.test(css) &&
@@ -647,7 +647,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     !/calRail[\s\S]{0,200}pushState/.test(app));
   ok('rail-up is not "open": the screen grammar rides calExpanded, not the furniture',
     /calExpanded: false,/.test(app) &&
-    /if \(isWide && state\.calExpanded\) \{ collapseCalRail\(\); return; \}/.test(app));
+    /if \(state\.isWide && state\.calExpanded\) \{ collapseCalRail\(\); return; \}/.test(app));
   // --- Issue #156 / B98: the R1 top row is filled and meets the touch floor ---
   ok('the R1 row is filled at boot: each button gets its glyph + label (issue #156, B98)',
     /fillBoardAction\(el\.calBack, GLYPH\.calBack, COPY\.calBack\)/.test(app) &&
