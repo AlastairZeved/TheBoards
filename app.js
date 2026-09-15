@@ -251,7 +251,7 @@ function applyMode() {
   // Teardown: nothing half-finished survives the flip.
   clearSelection();
   closeMenu();
-  if (g) { clearTimeout(g.longPressTimer); g = null; }
+  cancelGesture();
   pointers.clear();
   if (isWide && listOpen) returnToBoard();  // pop the whole list nav → board (B9 intact;
                                                // a drill is two levels deep, B74)
@@ -1577,6 +1577,16 @@ function onPointerUp(e) {
   else if (g.mode === 'resize') { endResize(); }
   else if (g.mode === 'pending' && !g.longPressed && !g.moved) { handleTap(g.target, e.clientX, e.clientY, g.shift); }
   g = null;
+}
+
+/* Teardown for a mode flip (issue #182, B'): the entry's media-query listener
+   used to cancel an in-flight gesture inline by writing `g` directly. A module
+   split cannot write an imported bare `let` (imported bindings are read-only),
+   so the one cross-module write of `g` moves here, where `g` lives. The entry
+   calls cancelGesture() instead. Same behavior, same order: kill the long-press
+   timer, drop the gesture. */
+function cancelGesture() {
+  if (g) { clearTimeout(g.longPressTimer); g = null; }
 }
 
 /* --- 8. Editing, drag, pinch, z-order ------------------------------------ */
