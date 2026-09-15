@@ -584,8 +584,6 @@ const state = {
   calOpen: false,         // the MOBILE full-screen calendar (B95's third screen)
   calExpanded: false,     // wide's expanded panel (B99) — rail-up is not "open"
 };
-const noteEls = new Map();           // note.id -> element
-const lotEls = new Map();            // lotItem.id -> element
 
 /* The category is written, not defaulted (B67, extending B63's rule to the one
    creation path that predates it): since the ladder rotates with the type, an
@@ -1043,6 +1041,11 @@ function caretToEnd(node) {
 }
 
 /* --- 6. Rendering -------------------------------------------------------- */
+// Element caches (render-owned, issue #182): every note/lot element lookup in
+// the app routes through these Maps. Declared at the region header so the
+// render module owns them and every other region imports the binding.
+const noteEls = new Map();           // note.id -> element
+const lotEls = new Map();            // lotItem.id -> element
 
 /* B8 at rest, not only at blur: "no empty frames ever exist" (PRD §6.2). The
    blur discard covers a frame the user abandons; it cannot cover one whose
