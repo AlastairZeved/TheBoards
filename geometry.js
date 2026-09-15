@@ -37,7 +37,15 @@ export function onFrameReflow(fn) { frameUi.frameReflow = fn; }
    expands FROM the rail, it doesn't add to it. */
 const CAL_RAIL_W = 40;               // the collapsed rail (mockup 6: 40px, right edge)
 export function applyLayout() {
-  const vw = window.innerWidth, vh = window.innerHeight;
+  computeFrame(window.innerWidth, window.innerHeight);
+  applyFrame();
+}
+
+/* Split (issue #176): applyLayout's two natural halves — the scale-to-fit math
+   that chooses the frame, and the DOM application that publishes it — are now
+   helpers called in the original order. Extraction only: the bodies are
+   applyLayout's, verbatim. */
+function computeFrame(vw, vh) {
   if (state.isWide) {
     // Wide (B20): the rail takes PANE_W unscaled; the sheet fills the rest.
     // Desktop reached it via B19's MQ; tablet joins by width alone (B96, issue
@@ -73,6 +81,12 @@ export function applyLayout() {
     offY = 0;
     LEGACY_H = 900 * vh / vw;        // the height B17 would have produced here
   }
+}
+
+/* The application half (issue #176): publish the frame computeFrame chose —
+   the board's CSS vars, the sections' re-measure, each note's render
+   coordinates, the links, and the two registered hooks. */
+function applyFrame() {
   el.board.style.setProperty('--logical-w', LOGICAL_W + 'px');
   el.board.style.setProperty('--logical-h', LOGICAL_H + 'px');
   el.board.style.setProperty('--rs', renderScale);
