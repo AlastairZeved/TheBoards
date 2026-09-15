@@ -6,6 +6,7 @@ import { saveNow, scheduleSave } from './persistence.js';
 import { LOGICAL_H, LOGICAL_W, applyLayout, applyNoteWidth, caretToEnd, effScale, noteMaxW, placeCaretAtPoint } from './geometry.js';
 import { rebaseNote, renderX, renderY, setHitInset, toLogical, updateBoardGeometry } from './geometry.js';
 import { applyCompleteA11y, boardLinks, clearLink, linkSource, lotEls, makeLotEl, makeNoteEl, noteEls } from './render.js';
+import { runClockAction } from './render.js';
 import { reflectToolbarFlip, removeLinksForNote, runNoteToolbarAction, syncViewTitle, toggleLink, updateLinks, updateNoteToolbar } from './render.js';
 import { menuOpen, menuReturnFocus, openMenuFor } from './menus.js';
 import { renderPane, updateActiveCardTitle, writeThroughRequirements } from './boards.js';
@@ -43,6 +44,8 @@ function classifyTarget(target) {
   // buttons before the press falls through to the note beneath them.
   const tbBtn = target.closest('.note-tb-btn');
   if (tbBtn) return { type: 'note-tb-btn', node: tbBtn };
+  const clockBtn = target.closest('.note-clock');   // the reminder toggle (B109): wins over the note
+  if (clockBtn) return { type: 'note-clock', node: clockBtn };
   const note = target.closest('.note');
   if (note) return { type: 'note', node: note };
   const lotItem = target.closest('.lot-item');
@@ -228,6 +231,7 @@ function handleTap(target, x, y, shift) {
   switch (target.type) {
     case 'sel-btn': tapLotButton(target); break;
     case 'note-tb-btn': tapNoteToolbar(target); break;   // B84 (keyboard path too, below)
+    case 'note-clock': runClockAction(target.node); break;   // the reminder toggle (B109)
     case 'sel-frame': break;           // a motionless click on the ring does nothing
     case 'canvas': tapCanvas(x, y); break;
     case 'lot': tapLot(x, y); break;
@@ -545,6 +549,7 @@ function collectGroupMembers(note, startLogical) {
 }
 
 function startDrag() {
+  if (!g.note) { g.mode = 'cancelled'; return; }   // a surfaced echo is not draggable (B109)
   if (linkSource !== null) clearLink();   // dragging a note exits link mode (issue #142, B91)
   g.mode = 'drag';
   g.target.node.classList.add('pressed');
@@ -676,6 +681,7 @@ function endDrag() {
    so stored x,y stays truthful and the note doesn't drift; re-clamp position
    if the grown footprint exits the page. */
 function startPinch() {
+  if (!g.note) return;                 // a surfaced echo has no record to pinch (B109)
   clearTimeout(g.longPressTimer);
   if (g.mode === 'drag') g.target.node.classList.remove('pressed');
   const pts = [...pointers.values()];

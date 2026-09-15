@@ -64,6 +64,11 @@
      from the three cool note families (blue/green/violet), carrying --ink-dark
      text at >12:1 (UIUX §2.6.1). */
   --highlight:       #F2D64B;
+  /* The reminder glow (issue #169, B104/B109): a per-note appearance state the
+     USER asserts, like the highlight above — so it does NOT rotate with the
+     ladder either. Cool by law (--danger is the only warm hue, §2.6): the
+     water's own hue lifted bright, carrying --ink-dark at 9.48:1 (UIUX §2.6.2). */
+  --reminder:        #52c4e2;
   --accent-copy:     #698ebf;   /* the Copy tab's fixed identity fill — a fixed blue, never board-rotating (issue #131, B85) */
   --elevation:       0 2px 8px rgb(0 0 0 / 0.45);
   --elevation-inset: inset -3px 0 8px rgb(0 0 0 / 0.16), inset 0 2px 4px rgb(0 0 0 / 0.10);
@@ -769,6 +774,57 @@ html:not(.desktop) .note:focus-within:not(.pressed) .note-toolbar {
    (mobile surfaces the engaged note; desktop selection does not, B22). */
 html.desktop .note.selected { z-index: 3; }
 html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so its toolbar clears overlaps, without a write (issue #136, B90) */
+
+/* ---- §4.6 The reminder clock (issue #169, B104/B109) ---------------------
+   Bottom-right of every note card, always visible: one tap sets or clears the
+   reminder (B104) — no picker, no dialog, no time concept anywhere. Resting,
+   it is the note's own ink mark; active, it takes the --reminder fill and a
+   bloom of the same hue (the glow B104 rules), its aria-label stating the act
+   the tap will perform. A note with no frame shows no clock (§6.2's law). */
+.note-clock {
+  position: absolute;
+  right: 3px; bottom: 3px;
+  z-index: 3;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px;
+  border: 0; border-radius: 3px;
+  background: transparent;
+  color: var(--ink);                   /* --ink-dark, rebound by .on-light on the node */
+  cursor: pointer;
+}
+.note-clock svg { width: 16px; height: 16px; }
+/* Decoupled hit area (§6, the tabs' idiom): 24px mark, 44px tap target. The
+   collar grows UP-LEFT ONLY — into the card the clock lives on. Down or right
+   it would reach past the note's edge and swallow the canvas taps that capture
+   the next note (the tb-btn collar's upward-only rule, §4.5, for the same
+   reason). */
+.note-clock::before {
+  content: "";
+  position: absolute;
+  right: 0; bottom: 0;
+  width: 44px; height: 44px;
+}
+.note-clock:focus-visible {            /* the two-tone ring (§2.7), same as the tabs */
+  outline: 2px solid var(--ink-light);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--ink-dark);
+}
+.note.reminder .note-clock {
+  background: var(--reminder);         /* identity fill, like the tabs (§4.5) */
+  color: var(--ink-dark);
+  box-shadow: 0 0 6px 1px var(--reminder);   /* the glow (B104) */
+}
+.note-text:empty ~ .note-clock { display: none; }   /* no frame, no clock (§6.2) */
+
+/* The surfaced echo (B109): a reminder-active note's render-time reference on
+   today's To Do. It keeps its SOURCE board's note hue — data-src-cat rebinds
+   --note for the echo alone, the ladder's own discipline (§2.2.2); a source on
+   a To-Do board needs no rule (the default). Tap, drag, pinch and edit find no
+   record here and stay inert; the clock and the long-press/right-click menu
+   write the source record through. */
+.note.surfaced[data-src-cat="idea"]     { --note: #b9d2b2; }
+.note.surfaced[data-src-cat="unsorted"] { --note: #cec6ed; }
+.note.surfaced[data-src-cat="learning"] { --note: #e6c2c9; }
 
 /* Pressed (drag/pinch engaged): border thickens to 3px, padding compensates so
    nothing reflows — the "picked up" / "I have this" confirmation (§4.2). */

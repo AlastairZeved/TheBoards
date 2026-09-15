@@ -4083,3 +4083,53 @@ AGENTS.md rule) — R2 of test/day-roll.js asserted B105's morning, which
 B107 superseded; the new test/morning.js suite owns the B108 contract.
 **Open, unchanged:** recurring reminders, the month view, the reminder
 surfacing pass, the carried indicator's styling (it reads `carriedOn`).
+
+### B109. The reminder pass: every note card carries a CLOCK TOGGLE bottom-right — one tap sets or clears the reminder (no picker, no dialog, no time concept anywhere in the record — the key is simply `reminder: true` or absent, B21's absence-is-off idiom), the active clock takes the `--reminder` fill with a bloom of the same token, and a reminder-active note SURFACES to today's linked To-Do board as a render-time ECHO — one source of truth, no copy records (issue #169 §2, the reminder pass B104 promised; keeps B104's clock-toggle ruling verbatim, B107's retirement of the red past-due state and of SMS, B81's commit-on-release for the tap, B9's plain swap route for navigation, §2's token discipline for the new colour; waives nothing)
+
+**The rulings.** (1) The toggle: a drawn clock mark (`GLYPH.clock`, §13.3's
+hand-rolled discipline — no icon library, the no-dependencies law) sits
+bottom-right of every note card on every board, always visible; it is
+classified by the recognizer before the note beneath it and commits through
+`commitAction` exactly as the B84 toolbar tabs do, pointer and keyboard
+alike. Clearing DELETES the key rather than writing `false`, so a legacy note
+and a cleared one are the same shape and the record can never grow a time
+field by accident. Active, the clock wears `--reminder` `#52c4e2` (UIUX
+§2.6.2 — cool by law, the water's hue lifted bright, per-note like the
+highlight wash, never board-rotating) plus a bloom of the same token; the
+aria-label carries the toggle's face (`Remind me` ⇄ `Remove reminder`), never
+colour alone (UIUX §1). An empty note keeps no frame (§6.2) and shows no
+clock.
+
+(2) The surfacing: a note with `reminder` set whose board is NOT today's
+linked To-Do renders an echo of itself on today's board — computed at render
+time (`hydrateSurfaced`, after the sync note pass, gated by a stale-async
+token), never stored: no reference, no copy, no schema change. The echo is a
+`.note.surfaced` element with the note's own id, text, scratch-out and clock,
+wearing the SOURCE board's note hue via `data-src-cat` (the ladder's §2.2.2
+rebinding discipline — the source hue B104 ruled). Surfacing set = ACTIVE
+reminder notes on other boards: a reminder note on today's board itself just
+glows; completing a note anywhere unsurfaces it; clearing the clock
+unsurfaces it. The echo is inert to tap, drag, pinch and edit — the
+recognizer finds no record in `state.current.notes` and the drag/pinch paths
+guard on it — because an echo is a reference, not a second note. Its
+long-press (mobile) / right-click (desktop) menu carries exactly two items:
+**Complete** (writes the SOURCE record — `state` set, `carriedOn` cleared
+under B108's law — then re-renders, unsurfacing) and **Go to Board** (the
+plain `swapBoard` route, B9; the issue's own wording, verbatim). Link is not
+on the echo's menu: it arms against `state.current`'s notes and would strand
+on a record that is not there.
+
+(3) Interactions that do NOT change: completing a reminder note on its own
+board just completes it (nothing recreates it — recurring reminders stay
+open, B104/B107); manual adds to a linked To-Do keep B108's menu untouched —
+the clock works on them as on any note, and a manual add with a reminder set
+is already home, so it surfaces nowhere.
+
+**The record.** No schema change: `reminder` is written at the read-site
+toggle (B21's idiom), `carriedOn` untouched. `sw.js` CACHE bump v54→v55 and
+`app.js` OWN_BUILD v55 ship it; test/tokens.js re-pins both in the same PR
+and gains §2.6.2's token checks. New test/reminder.js owns the B109 contract
+(genuine CDP touch, B27b). Echoes are render-time references and do not
+travel into the PDF export, which draws board records. **Open, unchanged:**
+recurring reminders, the month view, the carried indicator's styling (link 5
+reads `carriedOn`).

@@ -99,6 +99,7 @@ const T = {
   inkLight: '#f4f5f1', inkDark: '#031019',
   accentRestore: '#b6dee2', accentPage: '#6d9cb0', danger: '#E2A08C',
   highlight: '#F2D64B',   // the per-note highlight wash (UIUX §2.6.1, B71)
+  reminder: '#52c4e2',    // the per-note reminder glow (UIUX §2.6.2, B109)
 };
 /* B67 (issue #96): the same ladder at two more hues, one per board type. Each
    rung reproduces the To-Do rung's WCAG relative luminance to the 4dp UIUX §2.2
@@ -137,6 +138,7 @@ console.log('\n[1] The surface ladder — tokens declared, luminances reproduce 
     '--note': T.note, '--water-top': T.waterTop, '--water-mid': T.waterMid,
     '--water-bot': T.waterBot, '--ink-light': T.inkLight, '--ink-dark': T.inkDark,
     '--accent-restore': T.accentRestore, '--accent-page': T.accentPage, '--danger': T.danger,
+    '--reminder': T.reminder,
   };
   for (const [name, hex] of Object.entries(need)) {
     ok(`${name} is ${hex}`, (declared[name] || '').toLowerCase() === hex.toLowerCase(),
@@ -240,7 +242,7 @@ console.log('\n[1b] The ladder rotates with the board type — three bindings, o
   // scene-level (the highlight means one thing on every board type — B71).
   for (const name of LADDER_NAMES.filter(n => n !== 'To-Do')) {
     const decl = propsIn(LADDER[name].sel);
-    for (const dead of ['--ink-light', '--ink-dark', '--accent-restore', '--accent-page', '--danger', '--highlight'])
+    for (const dead of ['--ink-light', '--ink-dark', '--accent-restore', '--accent-page', '--danger', '--highlight', '--reminder'])
       ok(`${name}: ${dead} is not rebound per board type`, !(dead in decl), decl[dead]);
   }
 }
@@ -413,6 +415,24 @@ console.log('\n[5b] The highlight wash — value, dark-ink contrast, note-surfac
   // ink is correct.
   ok('--highlight stays above the ink crossover (takes dark ink like the note)',
     lum(T.highlight) > 0.1788, String(r4(lum(T.highlight))));
+}
+
+console.log('\n[5c] The reminder glow — value, dark-ink contrast, clock placement (UIUX §2.6.2, B109)');
+{
+  ok(`--reminder is ${T.reminder}`, (declared['--reminder'] || '').toLowerCase() === T.reminder.toLowerCase(),
+    declared['--reminder']);
+  // It carries the note's dark ink at the published 9.48:1 (UIUX §2.6.2).
+  ok('--reminder with --ink-dark = 9.48', r2(contrast(T.reminder, T.inkDark)) === 9.48,
+    String(r2(contrast(T.reminder, T.inkDark))));
+  // A reminder is a NOTE component, not a chrome accent: it fills the active
+  // clock on the note (UIUX §2.6.2 — the accent placement rule does not reach it).
+  ok('--reminder fills the active clock (.note.reminder .note-clock)',
+    /\.note\.reminder \.note-clock\s*{[^}]*background:\s*var\(--reminder\)/s.test(css));
+  ok('--reminder is never an accent text colour', !/color:\s*var\(--reminder\)/.test(css));
+  // Cool by law (--danger is the only warm hue, §2.6) and above the crossover,
+  // so the dark glyph is correct on it.
+  ok('--reminder stays above the ink crossover (takes dark ink)',
+    lum(T.reminder) > 0.1788, String(r4(lum(T.reminder))));
 }
 
 console.log('\n[6] The two-tone focus ring clears 3:1 on every ground by construction (UIUX §2.7)');
@@ -593,10 +613,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is todo-boards-v54 — the bump that ships the morning lifecycle + carry-forward (#169)',
-    /const CACHE = 'todo-boards-v54';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v54, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v54';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is todo-boards-v55 — the bump that ships the clock-toggle reminders + surfacing (#169, B109)',
+    /const CACHE = 'todo-boards-v55';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v55, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v55';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('TABLET_MQ is the B103 one-leg width floor: min-width 744px, orientation-blind',
     /window\.matchMedia\('\(min-width: 744px\)'\)/.test(app),
