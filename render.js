@@ -120,6 +120,7 @@ export function makeNoteEl(note) {
   node.appendChild(text); node.appendChild(scratch);
   node.appendChild(makeClockBtn(note));                      // the reminder toggle (B109)
   setReminderUi(node, note);                                 // class + aria follow the record
+  setCarriedUi(node, note);                                  // the carried status shadow (B110)
   node.appendChild(makeNoteToolbar(note));                   // the on-select action row (B84)
   applyCompleteA11y(node, note.state === 'complete');
   reflectToolbarFlip(node, note);                            // above the note, or below near the sheet top
@@ -151,6 +152,17 @@ export function setReminderUi(node, note) {
     b.setAttribute('aria-label', note.reminder ? COPY.unremind : COPY.remind);
     b.setAttribute('aria-pressed', String(!!note.reminder));
   }
+}
+
+/* The carried indicator's look follows the record (B110): the class is B108's
+   `carriedOn` field's shadow — recomputed at render from the field against the
+   today key, never stored style state. Complete wins (B108's completion law
+   clears the field; a completed note never glows even if a legacy record kept
+   the field). Called from the render paths and from setNoteState, so
+   completion and restoration recompute it in place. */
+export function setCarriedUi(node, note) {
+  node.classList.toggle('carried',
+    note.state !== 'complete' && !!note.carriedOn && note.carriedOn === calKey(new Date()));
 }
 
 /* One clock activation, from a pointer tap or the keyboard: commit on release
