@@ -4168,3 +4168,31 @@ plain. The widget carrying the same mechanic is DROPPED (the owner's post-B107
 ruling — v3 notifications are none); no red status path anywhere in the diff —
 B107's retirement holds. **Open, unchanged:** recurring reminders, the month
 view.
+
+### B111. The "Today's To Do History" rail is KILLED — it existed to hold the end-of-day summary, the summary is gone (B107), and it gets no new job: Today's To Do is just the board, historical reference remains the past days' linked boards in the lists, and no rail and no new surface is built; and the 2x2 home screen widget is DROPPED — a PWA cannot render a home-screen widget on any platform, and the workarounds (an installed app, an APK) break the no-package and no-backend laws, so the at-a-glance surface is the app itself, via B107's unconditional morning landing, while the standing calendar rail (B99) remains what it already is — not a widget substitute, just itself; with both gone, v3 notifications are NONE — consistent with §1.4's no-demands law, nothing pushes and nothing sits outside the app, and the status-indicator glow (B110) lives only on the board (issue #169, the owner's follow-up ruling of 2026-09-15, the comment of record: https://github.com/AlastairZeved/TheBoards/issues/169#issuecomment-5686476517; supersedes B107's two pending clauses — the widget's ON-HOLD-pending-a-capability-ruling clause and the History rail's PENDING-a-separate-owner-ruling clause — by ruling both out outright, and B110's standing reference to the widget as dropped is confirmed rather than amended; keeps B107's SMS removal, red past-due retirement, carried-only status and unconditional morning landing, B110's border + glow grammar and every colour it pinned, B99's calendar rail untouched, B104's clock toggle, §1.4's no-demands law and §3.2's no-backend law; recurring reminders and the month view remain the only open questions; waives nothing)
+
+**The rulings.** The "Today's To Do History" rail is killed. B104 defined it
+as the summary's home on the board — a thin rail above the row of buttons —
+and B107 left it pending a separate owner ruling once the summary was
+removed. The owner's ruling removes it: no summary, no new job, no rail.
+Today's To Do is just the board. Historical reference is already served by
+the past days' linked boards sitting in the lists — no rail, no new surface,
+and B9's History routes stay the only way back to a day.
+
+**The widget.** The 2x2 home screen widget is dropped. A PWA cannot render a
+home-screen widget on any platform, and the workarounds — an installed app
+or an APK — collide with the no-package and no-backend laws (§2.3, §3.2).
+The at-a-glance surface is the app itself: boot lands on today's To-Do board
+every morning (B107's unconditional landing, shipped as B108). The standing
+calendar rail (B99) remains what it already is — not a widget substitute,
+just itself. The consequence is stated plainly: v3 notifications are NONE.
+Nothing pushes, nothing sits outside the app, and the status glow (B110)
+lives only on the board.
+
+**The record.** PRD §2.3's notifications row is amended: the widget clause
+("notifications reduce to the 2x2 widget, itself pending a capability
+ruling") is resolved to dropped — nothing pushes, nothing sits outside the
+app. B107's two pending clauses are superseded by this entry by number, not
+edited in place. Docs-only: no code, no `sw.js` CACHE bump, no redeploy
+(`**/*.md` is already paths-ignored in the deploy workflow). **Open,
+unchanged:** recurring reminders, the month view.
