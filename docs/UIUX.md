@@ -572,6 +572,23 @@ Luminance 0.4676, above the ink crossover, so the clock's dark glyph is correct
 on it. The glow is the bloom: a `box-shadow` of the token around the filled
 clock — never a second colour.
 
+### §2.6.3 The carried glow (B110)
+
+| Token | Value | Role | text on it (`--ink-dark`) | vs. the note families (hue) |
+|---|---|---|---|---|
+| `--carried` | `#E1BE26` | a note carried onto its board today (the card's border + soft bloom, §4.8) | 10.62:1 | the highlight's amber family, dropped a rung |
+
+The carried state is **not an accent** and **not the highlight** (§2.6.1): it is
+B104's status layer — border + soft glow, the one status state beyond
+normal/complete since B107 retired the red past-due. Like the highlight and the
+reminder it does **not** rotate with board type: a carry means the same thing
+on every board. It is the highlight's own hue (~49°) held while the luminance
+drops from 0.6748 to 0.5297 — a full rung below the wash, so attention (the
+user's fill) outranks status (the record's frame), the issue's own priority
+order — and above the ink crossover, so the card's dark ink is correct through
+the frame's edge. The glow is the bloom: one `box-shadow` of the token around
+the card's 2px frame — never a second colour, never the wash.
+
 ### §2.7 Focus
 
 **The ring is two-tone**, and that is structural rather than stylistic:
@@ -938,6 +955,7 @@ rendering choice that required correcting them would be rewriting them.
 | editing | §2.7 focus ring + visible caret |
 | selected (desktop) | outline, not a fill — a fill is the completion mark |
 | complete | §4.3 |
+| carried (B110) | the frame takes `--carried` + a soft bloom of the same token (§4.8) |
 
 Nothing here is colour alone (§1): every state has a geometry.
 
@@ -1128,6 +1146,27 @@ absent there, because it arms against records this board does not hold.
 Completing a reminder note just completes it: nothing recreates anything
 (recurring reminders stay open, B104/B107). Echoes are render-time references
 and do not travel into the PDF export (which draws board records, not echoes).
+
+### §4.8 The carried indicator (B110)
+
+*New in v2 (issue #169, B104/B110).* A note whose `carriedOn` (B108's carry
+field) equals the today key renders with its frame in `--carried` (§2.6.3) and
+a soft bloom of the same token — B104's border + glow grammar, never the
+whole-card fill (owner-rejected in #169 §3) and never the highlight layer. The
+treatment is recomputed at render from the record — the `.carried` class is the
+field's shadow, never stored style state: render derives it from the field
+against the today key, and completing the note clears `carriedOn` under B108's
+law, so a completed note never glows (complete treatment wins). The date
+comparison is what makes the marker self-clearing: a note carried on an earlier
+day and left where it landed renders plain, and the next carry re-sets the
+field if it carries again. The highlight wash (§2.6.1) and the carried frame
+are different layers and may sit on one card — the wash fills the text surface,
+the status dresses the frame, in the issue's priority order (highlight →
+status → plain). As with the highlight wash (B71), the state has no control of
+its own, so it carries no aria lever — the record is the truth and this table's
+geometry (frame + bloom) is the drawn form. §4.2's pressed still owns a held
+card: while the note is engaged the frame reasserts the ink, and the status
+returns on release.
 
 ---
 

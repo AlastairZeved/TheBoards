@@ -69,6 +69,12 @@
      ladder either. Cool by law (--danger is the only warm hue, §2.6): the
      water's own hue lifted bright, carrying --ink-dark at 9.48:1 (UIUX §2.6.2). */
   --reminder:        #52c4e2;
+  /* The carried glow (issue #169, B104/B110): the ONE status state beyond
+     normal/complete (B107 retired the red past-due). A per-note status the
+     RECORD asserts, like the highlight — so it does NOT rotate with the ladder
+     either. The highlight's own amber dropped a rung — status below attention,
+     the issue's priority order — carrying --ink-dark at 10.62:1 (UIUX §2.6.3). */
+  --carried:         #E1BE26;
   --accent-copy:     #698ebf;   /* the Copy tab's fixed identity fill — a fixed blue, never board-rotating (issue #131, B85) */
   --elevation:       0 2px 8px rgb(0 0 0 / 0.45);
   --elevation-inset: inset -3px 0 8px rgb(0 0 0 / 0.16), inset 0 2px 4px rgb(0 0 0 / 0.10);
@@ -825,6 +831,22 @@ html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so 
 .note.surfaced[data-src-cat="idea"]     { --note: #b9d2b2; }
 .note.surfaced[data-src-cat="unsorted"] { --note: #cec6ed; }
 .note.surfaced[data-src-cat="learning"] { --note: #e6c2c9; }
+
+/* ---- §4.8 The carried indicator (issue #169, B104/B110) ------------------
+   B104's status layer: a note carried onto its board today (B108's `carriedOn`
+   equals the today key) wears its frame in --carried plus a soft bloom of the
+   same token — yellow border + glow, never the whole-card fill (owner-rejected
+   in #169 §3) and never the highlight layer (§2.6.1): the wash fills the text
+   surface, the status dresses the frame, and a highlighted carried note wears
+   both. The class is the record field's shadow, recomputed at render
+   (setCarriedUi in render.js) — completing clears `carriedOn` under B108's law
+   and the class goes with it, so a completed note never glows. The pressed
+   rule BELOW still owns a held card (§4.2): the frame reasserts the ink while
+   the note is engaged, the status returning on release. */
+.note.carried .note-text {
+  border-color: var(--carried);
+  box-shadow: 0 0 8px 0 var(--carried);   /* the soft bloom (B104), one token */
+}
 
 /* Pressed (drag/pinch engaged): border thickens to 3px, padding compensates so
    nothing reflows — the "picked up" / "I have this" confirmation (§4.2). */

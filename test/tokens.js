@@ -100,6 +100,7 @@ const T = {
   accentRestore: '#b6dee2', accentPage: '#6d9cb0', danger: '#E2A08C',
   highlight: '#F2D64B',   // the per-note highlight wash (UIUX §2.6.1, B71)
   reminder: '#52c4e2',    // the per-note reminder glow (UIUX §2.6.2, B109)
+  carried: '#E1BE26',     // the per-note carried status (UIUX §2.6.3, B110)
 };
 /* B67 (issue #96): the same ladder at two more hues, one per board type. Each
    rung reproduces the To-Do rung's WCAG relative luminance to the 4dp UIUX §2.2
@@ -138,7 +139,7 @@ console.log('\n[1] The surface ladder — tokens declared, luminances reproduce 
     '--note': T.note, '--water-top': T.waterTop, '--water-mid': T.waterMid,
     '--water-bot': T.waterBot, '--ink-light': T.inkLight, '--ink-dark': T.inkDark,
     '--accent-restore': T.accentRestore, '--accent-page': T.accentPage, '--danger': T.danger,
-    '--reminder': T.reminder,
+    '--reminder': T.reminder, '--carried': T.carried,
   };
   for (const [name, hex] of Object.entries(need)) {
     ok(`${name} is ${hex}`, (declared[name] || '').toLowerCase() === hex.toLowerCase(),
@@ -242,7 +243,7 @@ console.log('\n[1b] The ladder rotates with the board type — three bindings, o
   // scene-level (the highlight means one thing on every board type — B71).
   for (const name of LADDER_NAMES.filter(n => n !== 'To-Do')) {
     const decl = propsIn(LADDER[name].sel);
-    for (const dead of ['--ink-light', '--ink-dark', '--accent-restore', '--accent-page', '--danger', '--highlight', '--reminder'])
+    for (const dead of ['--ink-light', '--ink-dark', '--accent-restore', '--accent-page', '--danger', '--highlight', '--reminder', '--carried'])
       ok(`${name}: ${dead} is not rebound per board type`, !(dead in decl), decl[dead]);
   }
 }
@@ -435,6 +436,29 @@ console.log('\n[5c] The reminder glow — value, dark-ink contrast, clock placem
     lum(T.reminder) > 0.1788, String(r4(lum(T.reminder))));
 }
 
+console.log('\n[5d] The carried glow — value, dark-ink contrast, frame placement (UIUX §2.6.3, B110)');
+{
+  ok(`--carried is ${T.carried}`, (declared['--carried'] || '').toLowerCase() === T.carried.toLowerCase(),
+    declared['--carried']);
+  // It carries the note's dark ink at the published 10.62:1 (UIUX §2.6.3).
+  ok('--carried with --ink-dark = 10.62', r2(contrast(T.carried, T.inkDark)) === 10.62,
+    String(r2(contrast(T.carried, T.inkDark))));
+  // B104's status layer is the FRAME, not the wash: the border recolours and
+  // one bloom of the same token goes around it — never a fill, never --highlight.
+  ok('--carried draws the carried frame (.note.carried .note-text border-color)',
+    /\.note\.carried \.note-text\s*{[^}]*border-color:\s*var\(--carried\)/s.test(css));
+  ok('--carried blooms the carried frame (one box-shadow of the same token)',
+    /\.note\.carried \.note-text\s*{[^}]*box-shadow:[^;}]*var\(--carried\)/s.test(css));
+  ok('--carried is never a fill or an accent text colour',
+    !/background:\s*var\(--carried\)/.test(css) && !/(?:^|[^-])color:\s*var\(--carried\)/.test(cssBody));
+  // Above the crossover (dark ink correct through the frame), below the wash
+  // (attention outranks status — #169 §3's priority order).
+  ok('--carried stays above the ink crossover (takes dark ink)',
+    lum(T.carried) > 0.1788, String(r4(lum(T.carried))));
+  ok('--carried sits a rung below the highlight wash (0.5297 < 0.6748, #169 §3 priority)',
+    lum(T.carried) < lum(T.highlight), String(r4(lum(T.carried))));
+}
+
 console.log('\n[6] The two-tone focus ring clears 3:1 on every ground by construction (UIUX §2.7)');
 {
   // The ring is built from the two poles, and B67 rotated neither, so every
@@ -613,10 +637,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is todo-boards-v55 — the bump that ships the clock-toggle reminders + surfacing (#169, B109)',
-    /const CACHE = 'todo-boards-v55';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v55, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v55';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is todo-boards-v56 — the bump that ships the carried indicator (issue #169, B110)',
+    /const CACHE = 'todo-boards-v56';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v56, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v56';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('TABLET_MQ is the B103 one-leg width floor: min-width 744px, orientation-blind',
     /window\.matchMedia\('\(min-width: 744px\)'\)/.test(app),

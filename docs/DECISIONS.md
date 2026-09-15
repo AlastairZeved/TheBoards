@@ -4133,3 +4133,38 @@ and gains §2.6.2's token checks. New test/reminder.js owns the B109 contract
 travel into the PDF export, which draws board records. **Open, unchanged:**
 recurring reminders, the month view, the carried indicator's styling (link 5
 reads `carriedOn`).
+
+### B110. The carried indicator: a note carried onto its board today wears B104's status layer — its frame takes `--carried` `#E1BE26` (UIUX §2.6.3) and a soft bloom of the same token, the yellow border + glow the owner's v3 design rules; never the whole-card fill (owner-rejected in #169 §3 as hyperbolic) and never the highlight layer; the trigger is B108's `carriedOn` read at render — the field equals the today key and nothing else — so the treatment is the field's shadow, recomputed at every render with no stored style state and no cleanup pass: a note carried on an earlier day and left where it landed renders plain by the date comparison alone, and completing the note clears the field under B108's law so the glow ends with it — complete treatment wins; the highlight wash (B71) and the carried frame are different layers that may sit on one card, the wash the fill and the status the frame, in the issue's priority order highlight → status → plain; a held note is §4.2's pressed and keeps the engaged look while it moves, the status returning on release (issue #169 §3, the carried-over indicator B104 promised and B107 made the only status state; keeps B108's `carriedOn` law verbatim — this change sets and clears NOTHING, it reads; keeps B107's red retirement, B104's never-the-highlight two-layer law, §2's token discipline for the new colour; waives nothing)
+
+**The token.** The status yellow is the highlight's own amber family, hue held
+(~49°) and dropped a rung: luminance 0.5297, below the wash's 0.6748 so
+attention outranks status exactly as the issue orders it, above the ink
+crossover (0.1788) so the card's dark ink stays correct through the frame, and
+carrying `--ink-dark` at 10.62:1. One new warm note value joins the wash's —
+the second a note can wear — while `--danger` stays the only warm ACCENT (§2.6;
+the accents live on chrome, the wash and the glow on notes). Like the wash and
+the reminder it does not rotate with the ladder; UIUX §2.6.3 owns the table,
+§4.8 owns the drawn form, and test/tokens.js gains the §2.6.3 checks ([5d]),
+its count moved with them.
+
+**The drawn form and §1.** The bloom is the state's geometry — a `box-shadow`
+of the token around the card's 2px frame — and the hue names which state wears
+it, the same standing as the highlight wash (B71): a state with no control of
+its own carries no aria lever, the record is the truth, and §4.2's states table
+gains the row. §4.2's pressed keeps precedence over the status frame (the rule
+order): a held card shows the engaged ink frame, the status returns on release.
+
+**The record.** No schema change and no lifecycle change: `carriedOn` is
+B108's, set by the carry and cleared by completion (B108's law, untouched);
+render reads it against `calKey(new Date())` and the class is its shadow
+(`setCarriedUi`, called from `makeNoteEl` and from `setNoteState`, which
+recomputes it the moment completion or restoration happens — no re-render
+dependency, no drift between record and look). `sw.js` CACHE bump v55→v56 and
+`app.js` OWN_BUILD v56 ship it; test/tokens.js re-pins both in the same PR. New
+test/carried.js owns the B110 contract (genuine CDP touch, B27b): carried
+renders frame+bloom, plain renders plain, completing removes the glow in place,
+highlight and carried coexist in their own layers, a stale `carriedOn` renders
+plain. The widget carrying the same mechanic is DROPPED (the owner's post-B107
+ruling — v3 notifications are none); no red status path anywhere in the diff —
+B107's retirement holds. **Open, unchanged:** recurring reminders, the month
+view.
