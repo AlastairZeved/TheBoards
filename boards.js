@@ -106,13 +106,17 @@ export const catOrder = (a, b) => (touchedAt(b) - touchedAt(a)) || boardOrder(a,
    per-category and module-level so a re-render keeps the reader's place, and
    it is shared by the rail and the list because the two are never on screen at
    once (applyMode pops the list state on the flip to desktop) — each renderer
-   clamps every render, so a differing capacity heals itself. catCap is the
-   budget the last render used, and catFilled the fill state it measured
+   clamps every render, so a differing capacity heals itself. boardUi.catCap is the
+   budget the last render used, and boardUi.catFilled the fill state it measured
    against — applyLayout compares both. */
-let catPage = { todo: 0, idea: 0, unsorted: 0, learning: 0 };
-let catCap = 0;                        // 0 = never rendered; the capacity check waits
-let catFilled = 0;                     // populated sections the last render measured
-let dragCancel = null;                 // the live card-drag's teardown, if one is mid-flight
+const boardUi = {
+  catPage: { todo: 0, idea: 0, unsorted: 0, learning: 0 },
+  catCap: 0,                           // 0 = never rendered; the capacity check waits
+  catFilled: 0,                        // populated sections the last render measured
+};
+const dragUi = {
+  dragCancel: null,                    // the live card-drag's teardown, if one is mid-flight
+};
 
 /* The per-page card budget, measured — never a constant (B42, restated B68).
    `filled` is how many of the drawn sections hold at least one board: an empty
@@ -155,8 +159,8 @@ export function catPageCap(filled, drawn) {
    shape. `makeCard` is what differs (a rail card or a list row). */
 function makeCatSection(cat, boards, cap, makeCard) {
   const pages = Math.max(1, Math.ceil(boards.length / cap));
-  catPage[cat] = Math.max(0, Math.min(catPage[cat], pages - 1));
-  const page = catPage[cat];
+  boardUi.catPage[cat] = Math.max(0, Math.min(boardUi.catPage[cat], pages - 1));
+  const page = boardUi.catPage[cat];
 
   const sec = document.createElement('div');
   sec.className = 'board-cat'; sec.dataset.cat = cat;
@@ -222,7 +226,7 @@ function makeCatSection(cat, boards, cap, makeCard) {
    replaces the clicked button, so focus is put back on its successor (or the
    nearest enabled sibling) — a keyboard reader pages without re-tabbing. */
 async function goCatPage(cat, p, key) {
-  catPage[cat] = p;
+  boardUi.catPage[cat] = p;
   // Page the surface that is actually showing this category: the drilled screen
   // (#list-rows, either platform) when the list overlay is open, else the
   // desktop rail (#pane-cards). Paging the hidden rail behind an open drill
@@ -269,7 +273,7 @@ function refocusCatAdd(host, cat) {
    debounced persist can't clobber a record it never holds, and a fresh get
    can't resurrect a board deleted mid-drag. */
 async function dropBoardCard(b, cat) {
-  catPage[cat] = 0;                    // the dropped card lands first — show it
+  boardUi.catPage[cat] = 0;                    // the dropped card lands first — show it
   if (state.current && state.current.id === b.id) {
     state.current.category = cat;
     state.current.catStamp = Date.now();
@@ -309,14 +313,14 @@ async function renderCat(cat) {
   const boards = all
     .map(b => (state.current && b.id === state.current.id) ? state.current : b)
     .filter(b => catOf(b) === cat);
-  catFilled = 1;
-  catCap = catPageCap(1, 1);                  // one section drawn: it takes the whole surface
+  boardUi.catFilled = 1;
+  boardUi.catCap = catPageCap(1, 1);                  // one section drawn: it takes the whole surface
   const focusCat = focusedCatAdd();
   el.listView.classList.remove('picker');
   el.listRows.setAttribute('role', 'list');   // a list of board rows (restored from the picker's menu)
   el.listRows.textContent = '';
   el.listRows.appendChild(
-    makeCatSection(cat, boards.sort(catOrder), catCap, makeListRow));
+    makeCatSection(cat, boards.sort(catOrder), boardUi.catCap, makeListRow));
   refocusCatAdd(el.listRows, focusCat);
 }
 
@@ -402,7 +406,7 @@ function attachBoardCardGestures(card, row, b, opts) {
     if (ghost) { ghost.remove(); ghost = null; }
     row.classList.remove('card-dragging');
     if (over) { over.classList.remove('drop-target'); over = null; }
-    dragCancel = null;
+    dragUi.dragCancel = null;
   };
   card.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;        // right-click stays the contextmenu path
@@ -427,7 +431,7 @@ function attachBoardCardGestures(card, row, b, opts) {
       clearTimeout(t);                 // movement cancels the long-press (B29)
       // Register the teardown: a re-render mid-drag destroys this card and its
       // capture, so the render must be able to cancel the gesture.
-      dragCancel = () => { down = false; dragging = false; clearDrag(); };
+      dragUi.dragCancel = () => { down = false; dragging = false; clearDrag(); };
       row.classList.add('card-dragging');
       // The same "the gesture just changed mode" signal the hold gives.
       if (!state.isDesktop && navigator.vibrate) navigator.vibrate(10);
@@ -566,7 +570,7 @@ export async function newBoardIn(cat) {
   board.category = cat;
   board.catStamp = Date.now();                          // lands first by catOrder, like a drop
   await idbPut(board);
-  catPage[cat] = 0;                                     // the new card's page — show it
+  boardUi.catPage[cat] = 0;                                     // the new card's page — show it
   // The branch is the routing invariant, not the mode: history.back() is only
   // lawful while the list's pushed state is still on the stack. An OS back
   // gesture or a mode flip clears listOpen before this fires — then the swap
@@ -613,7 +617,7 @@ export async function renderPane() {
   if (!state.isWide || !el.paneCards) return;   // wide: the rail exists on tablet too (B96)
   // A re-render tears the captured card out from under a live drag — pointerup
   // would never arrive, stranding the fixed ghost on screen. Cancel it first.
-  if (dragCancel) dragCancel();
+  if (dragUi.dragCancel) dragUi.dragCancel();
   const all = await idbGetAll();
   const buckets = { todo: [], idea: [], unsorted: [], learning: [] };
   // The open board buckets from memory, not the snapshot: `current` is
@@ -623,13 +627,13 @@ export async function renderPane() {
     const rec = (state.current && b.id === state.current.id) ? state.current : b;
     buckets[catOf(rec)].push(rec);
   }
-  catFilled = BOARD_CATS.filter(c => buckets[c].length).length;
-  catCap = catPageCap(catFilled);
+  boardUi.catFilled = BOARD_CATS.filter(c => buckets[c].length).length;
+  boardUi.catCap = catPageCap(boardUi.catFilled);
   const focusCat = focusedCatAdd();
   el.paneCards.textContent = '';
   for (const cat of BOARD_CATS)
     el.paneCards.appendChild(
-      makeCatSection(cat, buckets[cat].sort(catOrder), catCap, makePaneRow));
+      makeCatSection(cat, buckets[cat].sort(catOrder), boardUi.catCap, makePaneRow));
   refocusCatAdd(el.paneCards, focusCat);
 }
 
@@ -1092,7 +1096,7 @@ export function registerBoards() {
   // Registered here (boards owns the surface state); geometry fires the
   // hook from applyLayout without importing boards (cycle-break).
   onFrameReflow(() => {
-    if (catCap && catPageCap(catFilled, catView ? 1 : undefined) !== catCap) {
+    if (boardUi.catCap && catPageCap(boardUi.catFilled, catView ? 1 : undefined) !== boardUi.catCap) {
       if (listOpen) renderListSurface();
       else if (state.isWide && el.paneCards) renderPane();
     }

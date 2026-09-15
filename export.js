@@ -81,14 +81,14 @@ const PDF_CP1252 = {
    exists to avoid. Those characters export as '?', and the substitution is
    reported rather than swallowed: §10's law is that truncation is always
    indicated, and a silently mangled line is truncation. See DECISIONS B34. */
-let pdfLossy = false;
+const pdfUi = { pdfLossy: false };
 function pdfCode(ch) {
   const u = ch.codePointAt(0);
   if (u === 9) return 32;                              // tab -> space
   if ((u >= 32 && u <= 126) || (u >= 160 && u <= 255)) return u;
   const m = PDF_CP1252[u];
   if (m !== undefined) return m;
-  pdfLossy = true;
+  pdfUi.pdfLossy = true;
   return 63;
 }
 function pdfAdv(code, bold) {
@@ -785,10 +785,10 @@ export async function exportBoardPdf(board) {
       notes: (src.notes || []).filter(keep),
       parkingLot: (src.parkingLot || []).filter(keep),
     };
-    pdfLossy = false;
+    pdfUi.pdfLossy = false;
     const bytes = buildBoardPdf(rec);
     downloadBlob(new Blob([bytes], { type: 'application/pdf' }), pdfFilename(rec));
-    if (pdfLossy) showNotice(COPY.exportLossy, 'export', UNDO_MS);
+    if (pdfUi.pdfLossy) showNotice(COPY.exportLossy, 'export', UNDO_MS);
   } catch (e) {
     showNotice(COPY.exportError, 'export', UNDO_MS);
   }

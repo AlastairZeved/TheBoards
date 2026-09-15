@@ -17,14 +17,16 @@ export let LEGACY_H = 1000;                 // the LOGICAL_H the pre-B32 build w
                                      // B64 path before first paint.
 export let renderScale = 1, offX = 0, offY = 0;
 export let calSqueeze = false;
-let LOGICAL_W_TRUE = null;           // set only while squeezed
+const frameUi = {
+  LOGICAL_W_TRUE: null,               // set only while squeezed
 
-/* Frame-reflow hook (issue #182): applyLayout may need the surface
-   renderers to re-run after a frame change. The renderers live in boards,
-   and geometry must not import boards (cycle), so boards registers a
-   callback here at init. Single writer, module-local. */
-let frameReflow = null;
-export function onFrameReflow(fn) { frameReflow = fn; }
+  /* Frame-reflow hook (issue #182): applyLayout may need the surface
+     renderers to re-run after a frame change. The renderers live in boards,
+     and geometry must not import boards (cycle), so boards registers a
+     callback here at init. Single writer, module-local. */
+  frameReflow: null,
+};
+export function onFrameReflow(fn) { frameUi.frameReflow = fn; }
 
 
 /* CAL_RAIL_W (issue #158, B99): the collapsed calendar rail's unscaled width,
@@ -53,7 +55,7 @@ export function applyLayout() {
     renderScale = Math.min(vh / 1000, (vw - PANE_W - calW) / 900);
     LOGICAL_H = vh / renderScale;
     LOGICAL_W = (vw - PANE_W - calW) / renderScale;
-    LOGICAL_W_TRUE = calSqueeze
+    frameUi.LOGICAL_W_TRUE = calSqueeze
       ? (vw - PANE_W - CAL_RAIL_W) / renderScale   // the frame the board returns to on collapse
       : null;
     offX = PANE_W;
@@ -105,7 +107,7 @@ export function applyLayout() {
   // re-paginate. The re-render belongs to the BOARDS module (it owns the
   // surface state), so applyLayout fires a hook the boards register() fills
   // in — this breaks the geometry <-> boards import cycle at the root (#182).
-  if (frameReflow) frameReflow();
+  if (frameUi.frameReflow) frameUi.frameReflow();
   // No letterbox now: the toast sits 12px above the screen's bottom edge.
   document.documentElement.style.setProperty('--toast-bottom', '12px');
 }
@@ -164,7 +166,7 @@ export const toLogical = (clientX, clientY) => {
   // the frame the board returns to on close — so a grab's rebaseNote (the one
   // licensed write, B21) stamps where the user sees the note land in the room
   // it returns to. y is untouched (the squeeze is horizontal).
-  return { x: LOGICAL_W_TRUE ? x * (LOGICAL_W_TRUE / LOGICAL_W) : x, y };
+  return { x: frameUi.LOGICAL_W_TRUE ? x * (frameUi.LOGICAL_W_TRUE / LOGICAL_W) : x, y };
 };
 
 /* The calendar squeeze (R6): when the calendar panel is open on desktop or
@@ -173,7 +175,7 @@ export const toLogical = (clientX, clientY) => {
    right edge now. Every note's k changes with the frame, so the whole
    arrangement renders smaller and further left, exactly as B64's similarity
    law maps a frame change; nothing is written (P3 — the squeeze is a frame,
-   not an edit). The TRUE frame is kept in LOGICAL_W_TRUE while squeezed, and
+   not an edit). The TRUE frame is kept in frameUi.LOGICAL_W_TRUE while squeezed, and
    toLogical un-maps a drag's client point into it proportionally, so a
    grabbed note's rebaseNote writes TRUE-frame coordinates stamped rw/rh =
    the true frame (the inverse-transform write, R6's first clause) — the note
@@ -253,7 +255,7 @@ export function rebaseNote(note) {
   // grab against the TRUE frame — the one the board returns to on close —
   // so the note lands permanently where the user sees it land. (toLogical
   // has already un-mapped the drag's client point into true coordinates.)
-  note.rw = LOGICAL_W_TRUE || LOGICAL_W;
+  note.rw = frameUi.LOGICAL_W_TRUE || LOGICAL_W;
   note.rh = LOGICAL_H;
   // The wrap cap is NOT silent here, and that is deliberate (B64): under
   // min-k, rw = LOGICAL_W can exceed the old rw·k whenever the height ratio

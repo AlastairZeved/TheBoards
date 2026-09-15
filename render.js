@@ -340,14 +340,14 @@ export function clearLink() {
    — appended after the static furniture — above the z:1 furniture, the valid-
    integer realization of the issue's "z-index: 1.5" (B91). */
 const SVGNS = 'http://www.w3.org/2000/svg';
-let linkLayer = null;
+const renderUi = { linkLayer: null };
 const linkLineEls = new Map();       // link.id -> <line>
 function ensureLinkLayer() {
-  if (linkLayer) return;
-  linkLayer = document.createElementNS(SVGNS, 'svg');
-  linkLayer.id = 'link-layer';
-  linkLayer.setAttribute('aria-hidden', 'true');
-  el.board.appendChild(linkLayer);
+  if (renderUi.linkLayer) return;
+  renderUi.linkLayer = document.createElementNS(SVGNS, 'svg');
+  renderUi.linkLayer.id = 'link-layer';
+  renderUi.linkLayer.setAttribute('aria-hidden', 'true');
+  el.board.appendChild(renderUi.linkLayer);
 }
 // A note's centre in current board-logical px — the same math updateSelectionUI
 // uses (renderX + offsetWidth·effScale/2), read from the live DOM node.
@@ -361,7 +361,7 @@ function noteCenter(note, node) {
    until sanitizeBoard prunes it. Cheap no-op on a board that has never linked. */
 export function updateLinks() {
   const links = boardLinks();
-  if (!links.length && !linkLayer) return;
+  if (!links.length && !renderUi.linkLayer) return;
   ensureLinkLayer();
   const live = new Set();
   for (const link of links) {
@@ -374,7 +374,7 @@ export function updateLinks() {
     if (!line) {
       line = document.createElementNS(SVGNS, 'line');
       linkLineEls.set(link.id, line);
-      linkLayer.appendChild(line);
+      renderUi.linkLayer.appendChild(line);
     }
     line.setAttribute('x1', ca.x); line.setAttribute('y1', ca.y);
     line.setAttribute('x2', cb.x); line.setAttribute('y2', cb.y);
