@@ -21,13 +21,6 @@
 'use strict';
 
 /* --- 1. Constants & copy ------------------------------------------------- */
-let   LOGICAL_W = 900;               // mobile: = vw, the sheet is the viewport (B32); desktop: derived per layout (B20)
-let   LOGICAL_H = 1000;              // responsive: recomputed each layout to fill the viewport
-let   LEGACY_H = 1000;               // the LOGICAL_H the pre-B32 build would have produced
-                                     // on this device. Read ONLY by migrateLegacyBoards
-                                     // (B93): the render path no longer branches on it —
-                                     // boot adopts every rh-less note onto the single
-                                     // B64 path before first paint.
 const NOTE_MIN_W = 132;              // real minimum rendered note width (UIUX §4.5, B84):
                                      // wide enough to seat the 4-button on-select toolbar.
                                      // One number does three jobs — the wrap-cap floor
@@ -556,8 +549,6 @@ const state = {
   calOpen: false,         // the MOBILE full-screen calendar (B95's third screen)
   calExpanded: false,     // wide's expanded panel (B99) — rail-up is not "open"
 };
-let renderScale = 1, offX = 0, offY = 0;
-
 const noteEls = new Map();           // note.id -> element
 const lotEls = new Map();            // lotItem.id -> element
 
@@ -654,6 +645,20 @@ function persist() {
 }
 
 /* --- 4. Layout / scale-to-fit -------------------------------------------- */
+// The frame/geometry module's module-scope state (issue #182): the logical
+// coordinate space's own variables + the squeeze pair. Written only from this
+// region's layout math (the writers-map grep: every write-site is geometry).
+let LOGICAL_W = 900;                 // mobile: = vw, the sheet is the viewport (B32); desktop: derived per layout (B20)
+let LOGICAL_H = 1000;                // responsive: recomputed each layout to fill the viewport
+let LEGACY_H = 1000;                 // the LOGICAL_H the pre-B32 build would have produced
+                                     // on this device. Read ONLY by migrateLegacyBoards
+                                     // (B93): the render path no longer branches on it —
+                                     // boot adopts every rh-less note onto the single
+                                     // B64 path before first paint.
+let renderScale = 1, offX = 0, offY = 0;
+let calSqueeze = false;
+let LOGICAL_W_TRUE = null;           // set only while squeezed
+
 /* CAL_RAIL_W (issue #158, B99): the collapsed calendar rail's unscaled width,
    reserved from the frame on wide at ALL times — the rail is standing
    furniture (mockup 6), the room's third column, so its width is removed
@@ -815,8 +820,6 @@ const toLogical = (clientX, clientY) => {
    board renders exactly where it was. Export ignores the squeeze entirely
    (exportX/exportY read storage; R6's second clause). Overlap during the
    squeeze is accepted (R6, the owner's word) — no auto-untangling. */
-let calSqueeze = false;
-let LOGICAL_W_TRUE = null;           // set only while squeezed
 const CAL_PANEL_W = 320;             // unscaled CSS px the panel takes (mockup 6's ~⅓)
 
 function setCalSqueeze(on) {
