@@ -4003,3 +4003,36 @@ every async consequence, and the resync runs `syncMirror` on the live board
 record — the same record `saveNow` persists, so the two writes cannot
 disagree. No timeout, no second commit path. The calendar-side direction
 (B97's `startCalLineEdit` → `syncDateMirror`) is untouched.
+### B107. The end-of-day SMS summary is REMOVED — The Boards is a PWA with no backend (§3.2), and an outbound SMS requires a backend or an external outbound system, both hard-no product law; notifications reduce to the passive 2x2 home screen widget alone, which is itself ON HOLD pending a capability ruling (PWAs have no home-screen widget API, and faking one means shipping an installed app against the no-package law); the red past-due indicator is RETIRED as unsatisfiable — no time is stored anywhere in the record, so nothing can say "late" — and the carried-over yellow border + glow is the ONLY status state beyond normal/complete; the summary's tone/format question is retired with the SMS; the "Today's To Do History" rail is PENDING a separate owner ruling; and the boot landing is UNCONDITIONAL — every morning's first load auto-creates today's linked To-Do board even with zero events and boots onto it (issue #169, the owner's ruling of 2026-09-15, the comment of record on that issue; supersedes B105's events-exist-only landing condition and resolves B104's explicitly-unresolved past-due trigger by retiring it; keeps B105's once-per-day keyed mid-session day-roll check unchanged, B104's clock toggle and yellow carried state, §1.4's no-demands law, §3.2's no-backend law, B95's To-Do species; recurring reminders and the month view remain open; waives nothing)
+
+**The rulings.** The SMS end-of-day summary is removed from the v3 design.
+It was ruled adopted in B104 before anyone priced its delivery: sending an
+SMS requires a backend or an external outbound system, and §2.3's
+out-of-scope table already holds both as hard-no. With no summary there is
+nothing to tune, so the summary's "conversational, self-compassionate"
+tone-and-format question is retired with it. The red past-due indicator is
+retired for the reason B104 recorded when it left the trigger open: the
+clock toggle deliberately stores no time, so nothing in the record can say
+"late". The carried-over yellow state (border + soft glow, never the
+highlight layer) is the only status state beyond normal/complete. The 2x2
+widget is on hold, not adopted: PWAs have no home-screen widget API on any
+platform, and faking one means shipping an installed app, which collides
+with the no-package law — the options (drop it, or accept the standing
+calendar rail B99 as the at-a-glance surface) wait for a separate owner
+capability ruling. The "Today's To Do History" rail, defined in B104 as the
+summary's home on the board, is likewise pending a ruling — without a
+summary it needs a new reason to exist (a retrospective of carried items?)
+or it goes.
+
+**The landing.** #169 already rules Today's To Do is the landing page — the
+first thing the person sees. So each morning's first load auto-creates
+today's linked board (the B95 species, `ensureLinkedBoard`, title "MM/DD/YY
+To Do") even with zero events, and boot lands on it. B105's
+events-exist-only landing condition is superseded; B105's mid-session
+day-roll check — keyed once per day at boot() and renderCal(), so it can
+never steal focus mid-interaction — is kept unchanged.
+
+**The record.** PRD §2.3's notifications row gains SMS and outbound message
+systems and cites this ruling. Docs-only: no code, no `sw.js` CACHE bump,
+no redeploy (`**/*.md` is already paths-ignored in the deploy workflow).
+**Open, unchanged:** recurring reminders, the month view.
