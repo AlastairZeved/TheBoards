@@ -101,7 +101,11 @@ cd TheBoards
 python3 -m http.server 8000   # then visit http://localhost:8000
 ```
 
-Any static file server works; the app is served as-is.
+Any static file server works; the app is served as-is. The app is split into
+native ES modules (`app.js` imports `state.js`, `persistence.js`,
+`geometry.js`, `render.js`, `interactions.js`, `menus.js`, `export.js`,
+`boards.js`) — so it must be served over HTTP(S), not opened as a local
+`file://` (browsers block module imports on the file protocol).
 
 Data is per-device by design. The JSON export under **Export** is your backup
 and your way to move a library between devices; **Import** restores it.
@@ -110,7 +114,7 @@ and your way to move a library between devices; **Import** restores it.
 
 The shipped app has none — no frameworks, no bundler, no package manager, no
 runtime dependencies. Fonts (Montserrat Alternates) are self-hosted in
-`fonts/`, and the PDF exporter is hand-rolled in `app.js` rather than pulled
+`fonts/`, and the PDF exporter is hand-rolled in `export.js` rather than pulled
 from a library.
 
 The regression suite (dev-only, never shipped) needs Node and Playwright:

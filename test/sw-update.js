@@ -31,7 +31,11 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++
 // because sw.js's ASSETS lists the three woff2 files (B50) and install()
 // addAll's them — a 404 would fail the very install step 3 proves.
 const DIR = fs.mkdtempSync(path.join(require('os').tmpdir(), 'sw-check-'));
-for (const f of ['index.html', 'app.js', 'styles.css', 'manifest.json', 'favicon.ico']) {
+// issue #182: app.js is the module entry; its imports must ride along or
+// install()'s addAll fails on the first 404.
+for (const f of ['index.html', 'app.js', 'state.js', 'persistence.js', 'geometry.js',
+                 'render.js', 'interactions.js', 'menus.js', 'export.js', 'boards.js',
+                 'styles.css', 'manifest.json', 'favicon.ico']) {
   fs.copyFileSync(path.join(ROOT, f), path.join(DIR, f));
 }
 for (const dir of ['icons', 'fonts']) {

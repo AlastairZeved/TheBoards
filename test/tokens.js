@@ -36,7 +36,14 @@ const ok = (n, c, extra) => {
 const read = f => { try { return fs.readFileSync(path.join(ROOT, f), 'utf8'); } catch (e) { return ''; } };
 const css = read('styles.css');
 const html = read('index.html');
-const app = read('app.js');
+// issue #182: app.js is now the module entry; source-text pins must see the
+// whole app. `app` is the ordered concatenation of the split modules (the
+// entry re-exporting each keeps load order = this order), so every pin matches
+// whichever module now holds the text it asserts.
+const app = [
+  'state.js', 'persistence.js', 'geometry.js', 'render.js',
+  'interactions.js', 'menus.js', 'export.js', 'boards.js', 'app.js',
+].map(read).join('\n');
 const sw = read('sw.js');
 const swTest = read('test/sw-update.js');
 const iconScript = read('icons/make-icons.js');
@@ -201,7 +208,7 @@ console.log('\n[1b] The ladder rotates with the board type — three bindings, o
     /\.board-cat\[data-cat="idea"\]/.test(css) && /\.board-cat\[data-cat="unsorted"\]/.test(css) &&
     /\.board-cat\[data-cat="learning"\]/.test(css));
   ok('app.js sets the scope from the record and carries no colour of its own (B67)',
-    /el\.board\.dataset\.cat = catOf\(current\)/.test(app));
+    /el\.board\.dataset\.cat = catOf\(state\.current\)/.test(app));
   // The drag ghost is fixed off document.body, outside its section's scope, so
   // it has to carry the attribute itself or a green card turns blue in the air.
   ok('the card drag ghost carries its own scope (B67)',
@@ -586,10 +593,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is todo-boards-v49 — the bump that ships the handleTap dispatch split (#174)',
-    /const CACHE = 'todo-boards-v49';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v49, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v49';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is todo-boards-v51 — the bump that ships the ES-module split (#182)',
+    /const CACHE = 'todo-boards-v51';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v51, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v51';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('TABLET_MQ is the B103 one-leg width floor: min-width 744px, orientation-blind',
     /window\.matchMedia\('\(min-width: 744px\)'\)/.test(app),
@@ -605,7 +612,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /actionExport\.addEventListener\('click'[\s\S]*?buildMenu\(/.test(app) &&
     /COPY\.exportPdf/.test(app) && /COPY\.exportJson/.test(app));
   ok('each export leaf commits; the choice itself runs raw (B81)',
-    /action: \(\) => commitAction\(\(\) => exportBoardPdf\(current\)\)/.test(app) &&
+    /action: \(\) => commitAction\(\(\) => exportBoardPdf\(state\.current\)\)/.test(app) &&
     /action: \(\) => commitAction\(exportAllJson\)/.test(app));
   ok('exportAllJson flushes the debounce and backs up every board under the app tag',
     /async function exportAllJson/.test(app) && /flushSave\(\);\s*\n\s*const boards = await idbGetAll\(\)/.test(app) &&
@@ -629,7 +636,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('the calendar view carries the standing rail face (B99, mockup 6)',
     /id="cal-rail"/.test(html) && /calRail: document\.getElementById\('cal-rail'\)/.test(app));
   ok('the rail renders at boot on wide — furniture, no press (B99)',
-    /if \(isWide\) \{\s*\n\s*document\.documentElement\.classList\.add\('has-cal-rail'\);\s*\n\s*showCalRail\(\);/.test(app));
+    /if \(state\.isWide\) \{\s*\n\s*document\.documentElement\.classList\.add\('has-cal-rail'\);\s*\n\s*showCalRail\(\);/.test(app));
   ok('the rail is the mockup-6 species: vertical label, date, lit dot',
     /writing-mode: vertical-rl/.test(css) && /#cal-rail \.vlabel/.test(css) &&
     /#cal-rail \.cdot/.test(css) && /#cal-rail \.cdate/.test(css) &&
@@ -646,8 +653,8 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /el\.calRail\.addEventListener\('click'[\s\S]*?expandCalRail\(\);/.test(app) &&
     !/calRail[\s\S]{0,200}pushState/.test(app));
   ok('rail-up is not "open": the screen grammar rides calExpanded, not the furniture',
-    /let calExpanded = false;/.test(app) &&
-    /if \(isWide && calExpanded\) \{ collapseCalRail\(\); return; \}/.test(app));
+    /calExpanded: false,/.test(app) &&
+    /if \(state\.isWide && state\.calExpanded\) \{ collapseCalRail\(\); return; \}/.test(app));
   // --- Issue #156 / B98: the R1 top row is filled and meets the touch floor ---
   ok('the R1 row is filled at boot: each button gets its glyph + label (issue #156, B98)',
     /fillBoardAction\(el\.calBack, GLYPH\.calBack, COPY\.calBack\)/.test(app) &&

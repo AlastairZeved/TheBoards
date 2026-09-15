@@ -380,7 +380,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // A second board becomes `current`, so Alpha's card is now inactive.
     await page.click('.board-cat[data-cat="unsorted"] .cat-add');
     await page.waitForTimeout(700);
-    await page.evaluate(() => { current.notes.push(
+    await page.evaluate(() => { state.current.notes.push(
       { id: 'b1', text: 'BETAMARKER', x: 80, y: 300, rw: 900, rh: 1000, scale: 1, state: 'active' }); });
 
     await page.evaluate(() => {
@@ -413,7 +413,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // The husk rides along to prove the export's B8 sweep works on a copy:
     // renderBoard has already run, so nothing else is going to remove it.
     await page.evaluate(() => {
-      current.notes.push(
+      state.current.notes.push(
         { id: 'u1', text: 'UNSAVEDEDIT', x: 200, y: 400, rw: 900, rh: 1000, scale: 1, state: 'active' },
         { id: 'u2', text: '   ', x: 10, y: 10, rw: 900, rh: 1000, scale: 1, state: 'active' });
     });
@@ -431,7 +431,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     ok('the open board exports what is on screen', s.includes('(UNSAVEDEDIT)'));
     // B21: an export is a read. It filters its own copy and leaves live state
     // exactly as it found it, husk included.
-    const live = await page.evaluate(() => current.notes.map(n => n.id));
+    const live = await page.evaluate(() => state.current.notes.map(n => n.id));
     ok('exporting did not mutate live state', live.includes('u1') && live.includes('u2'),
        JSON.stringify(live));
     ok('no page errors', errors.length === 0, errors.join(' | '));
@@ -684,7 +684,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       scene.railCard.includes('rgb(109, 91, 131)'), scene.railCard);
 
     // Pointer-drag the inactive card onto To-Do.
-    const beforeId = await page.evaluate(() => current.id);
+    const beforeId = await page.evaluate(() => state.current.id);
     const dragId = await page.evaluate(() =>
       document.querySelector('.board-cat[data-cat="unsorted"] .pane-card:not(.active)').dataset.id);
     const from = await page.evaluate(() => {
@@ -725,7 +725,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       const rec = await idbGet(id);
       return !!rec && rec.category === 'todo' && typeof rec.catStamp === 'number';
     }, dragId));
-    ok('the drag did not switch boards', await page.evaluate(() => current.id) === beforeId);
+    ok('the drag did not switch boards', await page.evaluate(() => state.current.id) === beforeId);
 
     // B67: the rotation follows a swap, not just a load — and back again. The
     // card just dropped into To-Do, so opening it must repaint the page blue.
@@ -836,7 +836,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // total — two builds of the same records slice the same page.
     const unSorted = () => page.evaluate(async () => {
       const all = await idbGetAll();
-      return all.map(b => (current && b.id === current.id) ? current : b)
+      return all.map(b => (state.current && b.id === state.current.id) ? state.current : b)
                 .filter(b => catOf(b) === 'unsorted').sort(catOrder).map(b => b.id);
     });
     const unShown = () => page.evaluate(() =>
@@ -853,7 +853,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // Swap to a card that is on the page and is not already first, then edit
     // the board it opens. The swap alone must NOT reorder anything: leaving a
     // board is not updating it, so swapBoard's flush stamps nothing (B69).
-    const leaving = await page.evaluate(() => current.id);
+    const leaving = await page.evaluate(() => state.current.id);
     const stampOf = (id) => page.evaluate((i) => idbGet(i).then(r => r.updatedAt), id);
     const leftStamp = await stampOf(leaving);
     const target = shown0.find(id => id !== leaving && id !== order0[0]);
@@ -861,7 +861,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     if (target) {
     await page.click('.pane-card[data-id="' + target + '"]');
     await page.waitForTimeout(400);                     // swap crossfade (260) + margin
-    ok('the card opened its board', await page.evaluate(() => current.id) === target);
+    ok('the card opened its board', await page.evaluate(() => state.current.id) === target);
     ok('the swap did not stamp the board it left — leaving is not updating',
        (await stampOf(leaving)) === leftStamp,
        leftStamp + ' -> ' + (await stampOf(leaving)));
@@ -905,7 +905,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // sits in still lands first — the swap's flush must not outrank it.
     await page.click('.board-cat[data-cat="unsorted"] .cat-add');
     await page.waitForTimeout(800);
-    const made = await page.evaluate(() => current.id);
+    const made = await page.evaluate(() => state.current.id);
     ok('a board created beside the open one still lands first',
        (await unSorted())[0] === made && (await unShown())[0] === made,
        (await unShown()).join(','));
@@ -940,7 +940,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // (rw − x)/scale in authored units. e1 is cap-bound, so min(natural, cap)
     // is the cap itself on both sides and the two must agree exactly.
     const m = await page.evaluate(() => {
-      const note = current.notes.find(n => n.id === 'e1');
+      const note = state.current.notes.find(n => n.id === 'e1');
       const node = document.querySelector('[data-id="e1"]');
       const box = exportNoteBox(note);
       return { screenW: node.offsetWidth, exportW: box.w,
@@ -1002,7 +1002,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // Measured on the trimmed line — the hanging trailing spaces are not text.
     const exp = await page.evaluate(() => {
       const g = EXPORT_GEO;
-      const note = current.notes.find(n => n.id === 'c1');
+      const note = state.current.notes.find(n => n.id === 'c1');
       const box = exportNoteBox(note);
       return { left: g.border + g.notePadX, content: box.content,
                tx: g.border + g.notePadX
@@ -1049,7 +1049,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     ok('editor blurred', await page.evaluate(() =>
       !document.activeElement || !document.activeElement.classList.contains('note-text')));
     ok('text persisted', await page.evaluate(() =>
-      current.notes.length === 1 && current.notes[0].text === 'persist me'));
+      state.current.notes.length === 1 && state.current.notes[0].text === 'persist me'));
     // The SECOND click is the creating one: a note at once, no ghost (B81).
     await page.mouse.click(500, 300);
     await page.waitForTimeout(80);
@@ -1149,17 +1149,17 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       return hi('one') && hi('two') && !hi('three');
     }));
     ok('and it persisted on the records', await page.evaluate(() =>
-       current.notes.filter(n => n.highlighted).length === 2));
+       state.current.notes.filter(n => n.highlighted).length === 2));
     ok('the tab flips to Remove highlight', (await primaryBtn('note-tb-highlight')).label === 'Remove highlight',
        JSON.stringify(await primaryBtn('note-tb-highlight')));
     hb = await primaryBtn('note-tb-highlight');
     await page.mouse.click(hb.x, hb.y);
     await page.waitForTimeout(500);
     ok('toggling Highlight clears both', await page.evaluate(() =>
-       current.notes.filter(n => n.highlighted).length === 0));
+       state.current.notes.filter(n => n.highlighted).length === 0));
 
     // Delete → both selected leave together (200ms), ONE Undo toast, restore at index.
-    const origTexts = await page.evaluate(() => current.notes.map(n => n.text));
+    const origTexts = await page.evaluate(() => state.current.notes.map(n => n.text));
     const db = await primaryBtn('note-tb-delete');
     await page.mouse.click(db.x, db.y);
     await page.waitForTimeout(100);
@@ -1179,7 +1179,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.waitForTimeout(600);
     ok('both restored', (await noteCount(page)) === 3, 'count=' + await noteCount(page));
     ok('at their original indices', await page.evaluate((want) =>
-      JSON.stringify(current.notes.map(n => n.text)) === JSON.stringify(want), origTexts),
+      JSON.stringify(state.current.notes.map(n => n.text)) === JSON.stringify(want), origTexts),
       JSON.stringify(origTexts));
 
     // Complete and Copy run on the whole selection from the primary's toolbar.
@@ -1288,7 +1288,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     }));
 
     // Click To-Do's own control: it creates and opens the board instantly (B81).
-    const before = await page.evaluate(() => current.id);
+    const before = await page.evaluate(() => state.current.id);
     await page.click('.board-cat[data-cat="todo"] .cat-add');
     ok('no acknowledgment fill: the beat is retired (B81)',
        await page.evaluate(() => !document.querySelector('.cat-add.tapped')));
@@ -1298,14 +1298,14 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       const newest = all.reduce((a, b) => (b.createdAt > a.createdAt ? b : a));
       const first = document.querySelector('.board-cat[data-cat="todo"] .pane-card');
       return { cat: newest.category, stamp: typeof newest.catStamp,
-               opened: newest.id === current.id,
+               opened: newest.id === state.current.id,
                firstInTodo: !!first && first.dataset.id === newest.id };
     });
     ok('the record is written into To-Do, stamped, and open',
        rec.cat === 'todo' && rec.stamp === 'number' && rec.opened, JSON.stringify(rec));
     ok('and its card lands first in To-Do', rec.firstInTodo, JSON.stringify(rec));
     ok('and it is a new board, not the one that was open',
-       await page.evaluate(() => current.id) !== before);
+       await page.evaluate(() => state.current.id) !== before);
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
@@ -1637,16 +1637,16 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
     await page.evaluate(() => {
-      current.notes.length = 0; if (current.links) current.links.length = 0;
-      current.notes.push({ id:'la', text:'Alpha', x:90,  y:250, rw:LOGICAL_W, rh:LOGICAL_H, scale:1, state:'active' });
-      current.notes.push({ id:'lb', text:'Bravo', x:200, y:640, rw:LOGICAL_W, rh:LOGICAL_H, scale:1, state:'active' });
+      state.current.notes.length = 0; if (state.current.links) state.current.links.length = 0;
+      state.current.notes.push({ id:'la', text:'Alpha', x:90,  y:250, rw:LOGICAL_W, rh:LOGICAL_H, scale:1, state:'active' });
+      state.current.notes.push({ id:'lb', text:'Bravo', x:200, y:640, rw:LOGICAL_W, rh:LOGICAL_H, scale:1, state:'active' });
       renderBoard();
     });
     await page.waitForTimeout(150);
     const c = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.note')].map(n => {
       const r = n.getBoundingClientRect(); return [n.dataset.id, { x: r.x + r.width / 2, y: r.y + r.height / 2 }];
     })));
-    const links = () => page.evaluate(() => (current.links || []).length);
+    const links = () => page.evaluate(() => (state.current.links || []).length);
     const lines = () => page.evaluate(() => document.querySelectorAll('#link-layer line').length);
 
     // Right-click Alpha → a one-item Link menu; the desktop hint reads "Click...".
@@ -1688,11 +1688,11 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // and the file stays structurally valid (%PDF-…%%EOF, every xref resolves).
     const pdf = await page.evaluate(() => {
       const dec = (o) => typeof o === 'string' ? o : new TextDecoder('latin1').decode(o);
-      const withLink = dec(buildBoardPdf(current));
-      const saved = current.links.slice();
-      current.links = [];
-      const without = dec(buildBoardPdf(current));
-      current.links = saved;
+      const withLink = dec(buildBoardPdf(state.current));
+      const saved = state.current.links.slice();
+      state.current.links = [];
+      const without = dec(buildBoardPdf(state.current));
+      state.current.links = saved;
       const strokes = (s) => (s.match(/[\n ]S[\n ]/g) || []).length;
       return { withLink, sWith: strokes(withLink), sWithout: strokes(without) };
     });
