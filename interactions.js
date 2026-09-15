@@ -54,18 +54,22 @@ function classifyTarget(target) {
 }
 
 
-function onPointerDown(e) {
-  if (state.swallowTap) { state.swallowTap = false; return; }  // this press only dismissed a menu (B30)
+/* Presses the gesture recognizer must not own (early-return guards of
+   onPointerDown, verbatim): the one-press menu dismissal (B30), the native
+   buttons of the All-Boards grid and the board-action tabs (issue #112/B74,
+   #126/B83), secondary/middle buttons (issue #55), and text editing. */
+function pressIsInert(e) {
+  if (state.swallowTap) { state.swallowTap = false; return true; }  // this press only dismissed a menu (B30)
   // The All-Boards grid (issue #112 / B74) is drawn inside #lot, so its presses
   // bubble here — but it is a menu, not the board: let its buttons receive their
   // own native clicks rather than the recognizer swallowing them as lot capture.
-  if (e.target.closest('#lot-menu')) return;
+  if (e.target.closest('#lot-menu')) return true;
   // The board-action tabs (issue #126, B83) are native buttons too: the same
   // passthrough lets their clicks fire (All Boards / Export) with no gesture
   // armed and no preventDefault, so no note is captured under them. Presses on
   // the row's pointer-events:none frame never reach here (they hit the canvas
   // behind it), so only a real tab press returns — bare canvas still captures.
-  if (e.target.closest('#board-actions')) return;
+  if (e.target.closest('#board-actions')) return true;
   // Secondary/middle presses are inert to the recognizer (issue #55): a
   // right-click must reach the contextmenu listener with no gesture context
   // armed, or the press underneath the menu would drag/select/create. The
@@ -73,8 +77,12 @@ function onPointerDown(e) {
   // focusin's Tab-selects rule would collapse a multi-selection before the
   // contextmenu listener could act on it. contextmenu still fires: it is not
   // a compatibility mouse event, so canceling pointerdown leaves it alone.
-  if (e.button !== 0) { e.preventDefault(); return; }
-  if (isEditing(e.target)) return;                 // let text editing receive taps/caret
+  if (e.button !== 0) { e.preventDefault(); return true; }
+  return isEditing(e.target);                      // let text editing receive taps/caret
+}
+
+function onPointerDown(e) {
+  if (pressIsInert(e)) return;
   // Past that guard the recognizer owns this press outright, so the browser's
   // compatibility mouse events are suppressed at their source (B27). They are
   // dispatched after pointerup and, because setPointerCapture retargets them
@@ -489,6 +497,37 @@ function commitAnchor(node) {
 }
 
 /* Drag (PRD §6.3): free overlap, no snap, clamp to page bounds only. */
+
+/* Group drag (issue #55): grabbing a MEMBER of a multi-selection moves every
+   member by the same delta. Only the grabbed note surfaces (in startDrag) —
+   the others keep their z-order; every member wears .pressed. Grabbing a
+   non-member falls through to the single path, which collapses the set
+   (selectNote below) — today's behavior. */
+function collectGroupMembers(note, startLogical) {
+  g.group = [];
+  for (const id of selectedNoteIds()) {
+    const n = state.current.notes.find(m => m.id === id);
+    const memberNode = noteEls.get(id);
+    if (!n || !memberNode) continue;
+    // Per-member rebase — the one licensed grab-time write (B21), which
+    // with B40 also folds each member's scale multiplier; visually silent.
+    rebaseNote(n);
+    const fw = memberNode.offsetWidth * n.scale, fh = memberNode.offsetHeight * n.scale;
+    g.group.push({
+      note: n, node: memberNode, x0: n.x, y0: n.y,
+      // Per-member bounds, widened to admit the grab position exactly as
+      // the single path below (B40). Members hitting different clamps can
+      // compress the group's relative geometry at the sheet edge — accepted
+      // (B41): the alternative is a note the group can never park flush.
+      minX: Math.min(0, n.x), maxX: Math.max(n.x, Math.max(0, LOGICAL_W - fw)),
+      minY: Math.min(0, n.y), maxY: Math.max(n.y, Math.max(0, LOGICAL_H - fh)),
+    });
+    memberNode.classList.add('pressed');
+  }
+  g.groupX0 = startLogical.x; g.groupY0 = startLogical.y;
+  setSelectionHidden(true);
+}
+
 function startDrag() {
   if (linkSource !== null) clearLink();   // dragging a note exits link mode (issue #142, B91)
   g.mode = 'drag';
@@ -502,28 +541,7 @@ function startDrag() {
   // non-member falls through to the single path, which collapses the set
   // (selectNote below) — today's behavior.
   if (state.isDesktop && multiSel.size > 1 && multiSel.has(note.id)) {
-    g.group = [];
-    for (const id of selectedNoteIds()) {
-      const n = state.current.notes.find(m => m.id === id);
-      const memberNode = noteEls.get(id);
-      if (!n || !memberNode) continue;
-      // Per-member rebase — the one licensed grab-time write (B21), which
-      // with B40 also folds each member's scale multiplier; visually silent.
-      rebaseNote(n);
-      const fw = memberNode.offsetWidth * n.scale, fh = memberNode.offsetHeight * n.scale;
-      g.group.push({
-        note: n, node: memberNode, x0: n.x, y0: n.y,
-        // Per-member bounds, widened to admit the grab position exactly as
-        // the single path below (B40). Members hitting different clamps can
-        // compress the group's relative geometry at the sheet edge — accepted
-        // (B41): the alternative is a note the group can never park flush.
-        minX: Math.min(0, n.x), maxX: Math.max(n.x, Math.max(0, LOGICAL_W - fw)),
-        minY: Math.min(0, n.y), maxY: Math.max(n.y, Math.max(0, LOGICAL_H - fh)),
-      });
-      memberNode.classList.add('pressed');
-    }
-    g.groupX0 = startLogical.x; g.groupY0 = startLogical.y;
-    setSelectionHidden(true);
+    collectGroupMembers(note, startLogical);
     return;
   }
   rebaseNote(note);                  // grab math runs in current-frame units (issue #15)
@@ -1188,7 +1206,111 @@ export function copyText(text) {
 
 
 /* Region init (issue #182): top-level side effects, explicit register()
-   call from boot() — no module does load-time work. */
+   call from boot() — no module does load-time work. The document-level
+   listeners below are lifted verbatim into named handlers; registerInteractions
+   keeps them registered in the original order (board pointer handlers first). */
+
+function onFocusOut(e) {
+  const t = e.target;
+  if (!t.hasAttribute || !t.hasAttribute('contenteditable')) return;
+  disableEditing(t);
+  if (t.classList.contains('note-text')) commitNote(t.closest('.note'));
+  else if (t.classList.contains('lot-text')) commitLot(t.closest('.lot-item'));
+  else if (t.classList.contains('anchor')) commitAnchor(t);
+  state.editVVFloor = Infinity;   // next edit measures its own keyboard-up floor (B80)
+  // A viewport change held back during the edit lands now that nothing is at
+  // stake — the keyboard's own retraction resize would repeat it, but a
+  // rotation or fold has no such second chance.
+  if (state.layoutDeferred) { state.layoutDeferred = false; requestAnimationFrame(applyLayout); }
+}
+
+function onFocusIn(e) {
+  if (pointers.size) return;
+  const t = e.target;
+  if (!t.classList) return;
+  if (t.classList.contains('anchor') && !t.hasAttribute('contenteditable')) {
+    enableEditing(t);
+  } else if (t.classList.contains('note')) {
+    const note = state.current && state.current.notes.find(n => n.id === t.dataset.id);
+    if (!note) return;
+    if (state.isDesktop) {
+      // Tab selects; Enter edits (issue #13) — EXCEPT the menu's own focus
+      // return (issue #55): closeMenu hands focus back to the right-clicked
+      // member, and that hand-back must not collapse the multi-selection the
+      // menu just acted on. A real Tab onto a member still selects it, so
+      // keyboard focus and selection never diverge outside that one call.
+      if (!(menuReturnFocus && multiSel.size > 1 && multiSel.has(note.id))) selectNote(note.id);
+      return;
+    }
+    if (note.state === 'active') editText(t.querySelector('.note-text'));
+  } else if (t.classList.contains('lot-item')) {
+    const item = state.current && state.current.parkingLot.find(i => i.id === t.dataset.id);
+    if (!item) return;
+    if (state.isDesktop) { selectLot(item.id); return; }
+    if (item.state === 'active') editText(t.querySelector('.lot-text'));
+  }
+}
+
+function onKeyDown(e) {
+  if (!state.isDesktop || menuOpen) return;
+  // While a link is armed, Escape cancels it and every other key is inert (B91) —
+  // no selection exists to Delete/Enter into, and this must win over the grammar.
+  if (linkSource !== null) { if (e.key === 'Escape') clearLink(); return; }
+  const editing = isEditing(document.activeElement);
+  if (e.key === 'Escape') {
+    if (editing) { document.activeElement.blur(); }    // commit-on-blur path runs
+    else if (selected) clearSelection();
+  } else if ((e.key === 'Delete' || e.key === 'Backspace') && selected && !editing) {
+    e.preventDefault();
+    // A multi-selection deletes as one batch with one Undo (issue #55).
+    if (selected.kind === 'note' && multiSel.size > 1) { deleteNotes(selectedNoteIds()); return; }
+    const s = selected;
+    clearSelection();
+    if (s.kind === 'note') { const n = noteEls.get(s.id); if (n) deleteNote(n); }
+    else { const n = lotEls.get(s.id); if (n) deleteLot(n); }
+  } else if (e.key === 'Enter' && selected && !editing) {
+    e.preventDefault();
+    const s = selected;
+    if (s.kind === 'note') {
+      const rec = state.current.notes.find(n => n.id === s.id);
+      const n = noteEls.get(s.id);
+      if (rec && n && rec.state === 'active') {
+        clearSelection(); surfaceNote(n); editText(n.querySelector('.note-text'));
+      }
+    } else {
+      const rec = state.current.parkingLot.find(i => i.id === s.id);
+      const n = lotEls.get(s.id);
+      if (rec && n && rec.state === 'active') {
+        clearSelection(); editText(n.querySelector('.lot-text'));
+      }
+    }
+  }
+}
+
+function onInput(e) {
+  const t = e.target;
+  if (t.classList.contains('note-text')) {
+    const note = state.current.notes.find(n => n.id === t.closest('.note').dataset.id);
+    if (note) { note.text = t.textContent; setHitInset(t.closest('.note'), note); scheduleSave(); }
+  } else if (t.classList.contains('lot-text')) {
+    const item = state.current.parkingLot.find(i => i.id === t.closest('.lot-item').dataset.id);
+    // The lot sizes to its rendered rows, live (issue #106, B73) — the same
+    // capture feedback the band's anchor branch below already gives.
+    if (item) { item.text = t.textContent; updateBoardGeometry(); scheduleSave(); }
+  } else if (t.classList.contains('anchor')) {
+    state.current[t.dataset.anchor] = t.textContent;
+    t.classList.toggle('filled', !!t.textContent.length);
+    if (t.dataset.anchor === 'title' && state.isDesktop) updateActiveCardTitle();
+    if (t.dataset.anchor === 'title') syncViewTitle();   // the tab carries the board's name, live (issue #148 item 2)
+    // The band sizes to its tallest zone, live (B47) — and the title now has a
+    // geometry consequence of its own: the compartment's handle rides its
+    // bottom edge, so a title that grows past the floor moves it (B65). One
+    // call covers both; it is a no-op for whichever of the two did not change.
+    updateBoardGeometry();
+    scheduleSave();
+  }
+}
+
 export function registerInteractions() {
   el.board.addEventListener('pointerdown', onPointerDown);
 
@@ -1197,104 +1319,11 @@ export function registerInteractions() {
   el.board.addEventListener('pointerup', onPointerUp);
   el.board.addEventListener('pointercancel', onPointerUp);
 
-  document.addEventListener('focusout', (e) => {
-    const t = e.target;
-    if (!t.hasAttribute || !t.hasAttribute('contenteditable')) return;
-    disableEditing(t);
-    if (t.classList.contains('note-text')) commitNote(t.closest('.note'));
-    else if (t.classList.contains('lot-text')) commitLot(t.closest('.lot-item'));
-    else if (t.classList.contains('anchor')) commitAnchor(t);
-    state.editVVFloor = Infinity;   // next edit measures its own keyboard-up floor (B80)
-    // A viewport change held back during the edit lands now that nothing is at
-    // stake — the keyboard's own retraction resize would repeat it, but a
-    // rotation or fold has no such second chance.
-    if (state.layoutDeferred) { state.layoutDeferred = false; requestAnimationFrame(applyLayout); }
-  });
+  document.addEventListener('focusout', onFocusOut);
 
-  document.addEventListener('focusin', (e) => {
-    if (pointers.size) return;
-    const t = e.target;
-    if (!t.classList) return;
-    if (t.classList.contains('anchor') && !t.hasAttribute('contenteditable')) {
-      enableEditing(t);
-    } else if (t.classList.contains('note')) {
-      const note = state.current && state.current.notes.find(n => n.id === t.dataset.id);
-      if (!note) return;
-      if (state.isDesktop) {
-        // Tab selects; Enter edits (issue #13) — EXCEPT the menu's own focus
-        // return (issue #55): closeMenu hands focus back to the right-clicked
-        // member, and that hand-back must not collapse the multi-selection the
-        // menu just acted on. A real Tab onto a member still selects it, so
-        // keyboard focus and selection never diverge outside that one call.
-        if (!(menuReturnFocus && multiSel.size > 1 && multiSel.has(note.id))) selectNote(note.id);
-        return;
-      }
-      if (note.state === 'active') editText(t.querySelector('.note-text'));
-    } else if (t.classList.contains('lot-item')) {
-      const item = state.current && state.current.parkingLot.find(i => i.id === t.dataset.id);
-      if (!item) return;
-      if (state.isDesktop) { selectLot(item.id); return; }
-      if (item.state === 'active') editText(t.querySelector('.lot-text'));
-    }
-  });
+  document.addEventListener('focusin', onFocusIn);
 
-  document.addEventListener('keydown', (e) => {
-    if (!state.isDesktop || menuOpen) return;
-    // While a link is armed, Escape cancels it and every other key is inert (B91) —
-    // no selection exists to Delete/Enter into, and this must win over the grammar.
-    if (linkSource !== null) { if (e.key === 'Escape') clearLink(); return; }
-    const editing = isEditing(document.activeElement);
-    if (e.key === 'Escape') {
-      if (editing) { document.activeElement.blur(); }    // commit-on-blur path runs
-      else if (selected) clearSelection();
-    } else if ((e.key === 'Delete' || e.key === 'Backspace') && selected && !editing) {
-      e.preventDefault();
-      // A multi-selection deletes as one batch with one Undo (issue #55).
-      if (selected.kind === 'note' && multiSel.size > 1) { deleteNotes(selectedNoteIds()); return; }
-      const s = selected;
-      clearSelection();
-      if (s.kind === 'note') { const n = noteEls.get(s.id); if (n) deleteNote(n); }
-      else { const n = lotEls.get(s.id); if (n) deleteLot(n); }
-    } else if (e.key === 'Enter' && selected && !editing) {
-      e.preventDefault();
-      const s = selected;
-      if (s.kind === 'note') {
-        const rec = state.current.notes.find(n => n.id === s.id);
-        const n = noteEls.get(s.id);
-        if (rec && n && rec.state === 'active') {
-          clearSelection(); surfaceNote(n); editText(n.querySelector('.note-text'));
-        }
-      } else {
-        const rec = state.current.parkingLot.find(i => i.id === s.id);
-        const n = lotEls.get(s.id);
-        if (rec && n && rec.state === 'active') {
-          clearSelection(); editText(n.querySelector('.lot-text'));
-        }
-      }
-    }
-  });
+  document.addEventListener('keydown', onKeyDown);
 
-  el.board.addEventListener('input', (e) => {
-    const t = e.target;
-    if (t.classList.contains('note-text')) {
-      const note = state.current.notes.find(n => n.id === t.closest('.note').dataset.id);
-      if (note) { note.text = t.textContent; setHitInset(t.closest('.note'), note); scheduleSave(); }
-    } else if (t.classList.contains('lot-text')) {
-      const item = state.current.parkingLot.find(i => i.id === t.closest('.lot-item').dataset.id);
-      // The lot sizes to its rendered rows, live (issue #106, B73) — the same
-      // capture feedback the band's anchor branch below already gives.
-      if (item) { item.text = t.textContent; updateBoardGeometry(); scheduleSave(); }
-    } else if (t.classList.contains('anchor')) {
-      state.current[t.dataset.anchor] = t.textContent;
-      t.classList.toggle('filled', !!t.textContent.length);
-      if (t.dataset.anchor === 'title' && state.isDesktop) updateActiveCardTitle();
-      if (t.dataset.anchor === 'title') syncViewTitle();   // the tab carries the board's name, live (issue #148 item 2)
-      // The band sizes to its tallest zone, live (B47) — and the title now has a
-      // geometry consequence of its own: the compartment's handle rides its
-      // bottom edge, so a title that grows past the floor moves it (B65). One
-      // call covers both; it is a no-op for whichever of the two did not change.
-      updateBoardGeometry();
-      scheduleSave();
-    }
-  });
+  el.board.addEventListener('input', onInput);
 }
