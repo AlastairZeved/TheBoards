@@ -33,7 +33,7 @@ function classifyTarget(target) {
   // then the resize frame — both must win over the elements beneath them.
   const selBtn = target.closest('.sel-btn');
   if (selBtn) return { type: 'sel-btn', node: selBtn };
-  if (target.closest('#selection')) return { type: 'sel-frame', node: selEl };
+  if (target.closest('#selection')) return { type: 'sel-frame', node: selUi.selEl };
   // The board-action row (B83) needs no branch here: its tabs are native
   // buttons and onPointerDown returns before classify runs for anything inside
   // #board-actions (the #lot-menu passthrough's precedent), so the recognizer
@@ -209,15 +209,15 @@ function commitOpenEditor(node) {
    so B18a/b's `.tapped` beat and B18c's ghost are retired. Navigation (menu
    open, swap, edit-entry) and capture self-heal, so they take no guard at all —
    they call their work directly. */
-let pendingAction = null;
+const actionUi = { pendingAction: null };
 
 export function commitAction(fn) {
-  if (pendingAction) return;
+  if (actionUi.pendingAction) return;
   fn();
-  pendingAction = setTimeout(() => { pendingAction = null; }, ACTION_DELAY);
+  actionUi.pendingAction = setTimeout(() => { actionUi.pendingAction = null; }, ACTION_DELAY);
 }
 
-/* No blanket pendingAction guard here (issue #13): commitAction carries its own
+/* No blanket actionUi.pendingAction guard here (issue #13): commitAction carries its own
    drop-guard, so B18(d) holds exactly where a consequence fires — while inert
    taps (select, deselect) and navigation stay live regardless. */
 function handleTap(target, x, y, shift) {
@@ -326,7 +326,7 @@ function tapNote(target, x, y, shift) {
     // never pairs into the double-click window.
     if (shift) {
       toggleInSelection(note.id);
-      lastTap = { key: null, t: 0 };
+      tapUi.lastTap = { key: null, t: 0 };
       return;
     }
     // Click selects (instant, inert); a second click within the pairing
@@ -334,8 +334,8 @@ function tapNote(target, x, y, shift) {
     // never edit — same guard as the mobile tap path.
     const key = 'note:' + note.id, now = Date.now();
     if (selected && selected.kind === 'note' && selected.id === note.id &&
-        lastTap.key === key && now - lastTap.t < DBLCLICK_MS) {
-      lastTap = { key: null, t: 0 };
+        tapUi.lastTap.key === key && now - tapUi.lastTap.t < DBLCLICK_MS) {
+      tapUi.lastTap = { key: null, t: 0 };
       if (note.state === 'active') {
         clearSelection();
         surfaceNote(node);
@@ -343,7 +343,7 @@ function tapNote(target, x, y, shift) {
       }
     } else {
       selectNote(note.id);
-      lastTap = { key, t: now };
+      tapUi.lastTap = { key, t: now };
     }
     return;
   }
@@ -374,15 +374,15 @@ function tapLotItem(target, x, y) {
     if (commitOpenEditor(node)) return;
     const key = 'lot:' + item.id, now = Date.now();
     if (selected && selected.kind === 'lot' && selected.id === item.id &&
-        lastTap.key === key && now - lastTap.t < DBLCLICK_MS) {
-      lastTap = { key: null, t: 0 };
+        tapUi.lastTap.key === key && now - tapUi.lastTap.t < DBLCLICK_MS) {
+      tapUi.lastTap = { key: null, t: 0 };
       if (item.state === 'active') {
         clearSelection();
         editText(node.querySelector('.lot-text'));    // no coords → caret at end
       }
     } else {
       selectLot(item.id);
-      lastTap = { key, t: now };
+      tapUi.lastTap = { key, t: now };
     }
     return;
   }
@@ -738,8 +738,8 @@ export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
    setPointerCapture retargets click, so native listeners inside #board are
    unreliable by construction. */
 export let selected = null;                 // { kind: 'note'|'lot', id }
-let lastTap = { key: null, t: 0 };   // double-click pairing across taps
-let selEl = null;                     // the resize-frame overlay (ring + edges + handles); actions live on the note's toolbar (B84)
+const tapUi = { lastTap: { key: null, t: 0 } };   // double-click pairing across taps
+const selUi = { selEl: null };        // the resize-frame overlay (ring + edges + handles); actions live on the note's toolbar (B84)
 // Mobile-only "engaged" note (issue #136, B90): the note whose toolbar is shown
 // after a first tap — WITHOUT a keyboard. It is the select step desktop already
 // has via `selected`, which mobile lacked (there, engaging a note WAS editing it).
@@ -816,29 +816,29 @@ function dropFromSelection(id) {
   const node = noteEls.get(id);
   if (node) node.classList.remove('multi-selected');
   if (multiSel.size === 1) multiSel.clear();
-  if (selEl) selEl.classList.toggle('multi', multiSel.size > 1);
+  if (selUi.selEl) selUi.selEl.classList.toggle('multi', multiSel.size > 1);
 }
 
 function ensureSelectionEl() {
-  if (selEl) return;
-  selEl = document.createElement('div');
-  selEl.id = 'selection';
+  if (selUi.selEl) return;
+  selUi.selEl = document.createElement('div');
+  selUi.selEl.id = 'selection';
   // The outline is visual only; hit-testing lives in four edge bands + the
   // corner handles, so the note's interior stays clickable for the second
   // click of a double-click (a parent's hit area can't be carved out).
   const ring = document.createElement('div');
   ring.className = 'sel-ring';
-  selEl.appendChild(ring);
+  selUi.selEl.appendChild(ring);
   for (const side of ['n', 's', 'w', 'e']) {
     const b = document.createElement('div');
     b.className = 'sel-edge ' + side;
-    selEl.appendChild(b);
+    selUi.selEl.appendChild(b);
   }
   for (const corner of ['tl', 'tr', 'bl', 'br']) {
     const h = document.createElement('div');
     h.className = 'sel-handle ' + corner;
     h.setAttribute('aria-hidden', 'true');
-    selEl.appendChild(h);
+    selUi.selEl.appendChild(h);
   }
   // The overlay is the resize frame only now (B84): the ring, four edge bands
   // and four corner handles. A selected note's actions moved onto its own
@@ -858,7 +858,7 @@ function selectNote(id) {
   selected = { kind: 'note', id };
   node.classList.add('selected');
   ensureSelectionEl();
-  el.board.appendChild(selEl);
+  el.board.appendChild(selUi.selEl);
   updateSelectionUI();
 }
 
@@ -901,7 +901,7 @@ export function clearSelection() {
   if (selected.kind === 'note') {
     const node = noteEls.get(selected.id);
     if (node) node.classList.remove('selected');
-    if (selEl) selEl.remove();
+    if (selUi.selEl) selUi.selEl.remove();
   } else {
     const node = lotEls.get(selected.id);
     if (node) {
@@ -914,7 +914,7 @@ export function clearSelection() {
 }
 
 function setSelectionHidden(hidden) {  // drag/resize in flight: chrome steps aside
-  if (selEl) selEl.classList.toggle('hidden', hidden);
+  if (selUi.selEl) selUi.selEl.classList.toggle('hidden', hidden);
 }
 
 export function updateSelectionUI() {
@@ -922,13 +922,13 @@ export function updateSelectionUI() {
   if (selected.kind === 'note') {
     const note = state.current.notes.find(n => n.id === selected.id);
     const node = noteEls.get(selected.id);
-    if (!note || !node || !selEl) return;
+    if (!note || !node || !selUi.selEl) return;
     const w = node.offsetWidth * effScale(note), h = node.offsetHeight * effScale(note);
-    selEl.style.left = renderX(note) + 'px';
+    selUi.selEl.style.left = renderX(note) + 'px';
     const top = renderY(note);
-    selEl.style.top = top + 'px';
-    selEl.style.width = w + 'px';
-    selEl.style.height = h + 'px';
+    selUi.selEl.style.top = top + 'px';
+    selUi.selEl.style.width = w + 'px';
+    selUi.selEl.style.height = h + 'px';
     // The note's own toolbar carries the labels now (B84): re-derive its
     // Complete/Highlight marks and its above/below flip for the current geometry
     // (a drag or resize can have moved the note toward the sheet top).
@@ -936,7 +936,7 @@ export function updateSelectionUI() {
     reflectToolbarFlip(node, note);
     // Two or more selected: the overlay drops its resize grip (edges +
     // handles, hidden in CSS) — resize is single-selection only (issue #55).
-    selEl.classList.toggle('multi', multiSel.size > 1);
+    selUi.selEl.classList.toggle('multi', multiSel.size > 1);
     setSelectionHidden(false);
   } else {
     const node = lotEls.get(selected.id);
@@ -1146,13 +1146,13 @@ export function hideToast() {
 /* A message with no action. `save` is persistent (hideSaveError clears it when
    the write lands); `export` and `copy` carry a ttl, because nothing later will
    come along to retract them. */
-let noticeSeq = 0;
+const noticeUi = { noticeSeq: 0 };
 export function showNotice(text, mode, ttl) {
   if (el.toast.dataset.mode === 'undo') return;        // never clobber a pending undo
   // Each notice stamps the toast; the ttl timer only hides its own stamp. A
   // mode check alone let a stale timer hide a newer same-mode notice early —
   // copying two items inside 1.5s (issue #59) is how that became observable.
-  const seq = String(++noticeSeq);
+  const seq = String(++noticeUi.noticeSeq);
   el.toast.dataset.mode = mode;
   el.toast.dataset.seq = seq;
   el.toast.textContent = '';

@@ -684,8 +684,8 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('import coercion carries the calendar link (cal strict key, calReq finite)',
     /\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$/.test(app) && /calReq: Number\.isFinite/.test(app));
   ok('the squeeze is render-time state: true frame kept, nothing stored (R6)',
-    /let calSqueeze = false/.test(app) && /LOGICAL_W_TRUE/.test(app) &&
-    /note\.rw = LOGICAL_W_TRUE \|\| LOGICAL_W/.test(app));
+    /let calSqueeze = false/.test(app) && /frameUi\.LOGICAL_W_TRUE/.test(app) &&
+    /note\.rw = frameUi\.LOGICAL_W_TRUE \|\| LOGICAL_W/.test(app));
   // --- Issue #152 / B97: existing events are editable in place ---
   ok('an existing event line opens its existing editor on tap, with the caret re-asserted to the end after the native placement (issue #152, B97)',
     /line\.addEventListener\('click', \(e\) => \{\s*\n\s*if \(line\.hasAttribute\('contenteditable'\)\) return;\s*\n\s*e\.preventDefault\(\);\s*\n\s*startCalLineEdit\(line, ev\);\s*\n\s*setTimeout\(\(\) => caretToEnd\(line\), 0\);\s*\n\s*\}\)/.test(app));
