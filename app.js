@@ -1276,14 +1276,6 @@ function runNoteToolbarAction(btn) {
    without it, Enter on a selected note's tab would ALSO edit the note. The tabs
    are the keyboard route to Complete/Highlight/Copy the removed note menu used
    to be (B84). */
-el.board.addEventListener('keydown', (e) => {
-  const btn = e.target.closest && e.target.closest('.note-tb-btn');
-  if (!btn) return;
-  if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
-  e.preventDefault();
-  e.stopPropagation();
-  runNoteToolbarAction(btn);
-});
 
 function makeLotEl(item) {
   const node = document.createElement('div');
@@ -1442,6 +1434,19 @@ function updateLinks() {
   }
 }
 
+
+/* Region init (issue #182): top-level side effects, explicit register()
+   call from boot() — no module does load-time work. */
+function registerRender() {
+  el.board.addEventListener('keydown', (e) => {
+    const btn = e.target.closest && e.target.closest('.note-tb-btn');
+    if (!btn) return;
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    e.preventDefault();
+    e.stopPropagation();
+    runNoteToolbarAction(btn);
+  });
+}
 /* --- 7. Gesture recognizer ----------------------------------------------- */
 // One recognizer over the board. Targets: note | anchor | lot-item | lot | canvas.
 const pointers = new Map();          // pointerId -> {x,y,startX,startY}
@@ -1486,7 +1491,6 @@ function classifyTarget(target) {
   return { type: 'canvas', node: el.board };
 }
 
-el.board.addEventListener('pointerdown', onPointerDown);
 
 function onPointerDown(e) {
   if (state.swallowTap) { state.swallowTap = false; return; }  // this press only dismissed a menu (B30)
@@ -1556,7 +1560,6 @@ function onPointerDown(e) {
   }
 }
 
-el.board.addEventListener('pointermove', onPointerMove);
 function onPointerMove(e) {
   const p = pointers.get(e.pointerId);
   if (!p) return;
@@ -1576,8 +1579,6 @@ function onPointerMove(e) {
   if (g.mode === 'drag') updateDrag(e);
 }
 
-el.board.addEventListener('pointerup', onPointerUp);
-el.board.addEventListener('pointercancel', onPointerUp);
 function onPointerUp(e) {
   pointers.delete(e.pointerId);
   if (!g) return;
@@ -1873,113 +1874,16 @@ function createLotItem() {
 }
 
 /* Commit-on-blur for every editable region; empty new notes/items are discarded. */
-document.addEventListener('focusout', (e) => {
-  const t = e.target;
-  if (!t.hasAttribute || !t.hasAttribute('contenteditable')) return;
-  disableEditing(t);
-  if (t.classList.contains('note-text')) commitNote(t.closest('.note'));
-  else if (t.classList.contains('lot-text')) commitLot(t.closest('.lot-item'));
-  else if (t.classList.contains('anchor')) commitAnchor(t);
-  state.editVVFloor = Infinity;   // next edit measures its own keyboard-up floor (B80)
-  // A viewport change held back during the edit lands now that nothing is at
-  // stake — the keyboard's own retraction resize would repeat it, but a
-  // rotation or fold has no such second chance.
-  if (state.layoutDeferred) { state.layoutDeferred = false; requestAnimationFrame(applyLayout); }
-});
 
 /* Keyboard/AT users focus a region → enter edit. The pointer path owns taps, so
    auto-edit only when no pointer gesture is in control (otherwise a tabindexed
    note would open the keyboard on pointerdown before drag/long-press resolve). */
-document.addEventListener('focusin', (e) => {
-  if (pointers.size) return;
-  const t = e.target;
-  if (!t.classList) return;
-  if (t.classList.contains('anchor') && !t.hasAttribute('contenteditable')) {
-    enableEditing(t);
-  } else if (t.classList.contains('note')) {
-    const note = state.current && state.current.notes.find(n => n.id === t.dataset.id);
-    if (!note) return;
-    if (state.isDesktop) {
-      // Tab selects; Enter edits (issue #13) — EXCEPT the menu's own focus
-      // return (issue #55): closeMenu hands focus back to the right-clicked
-      // member, and that hand-back must not collapse the multi-selection the
-      // menu just acted on. A real Tab onto a member still selects it, so
-      // keyboard focus and selection never diverge outside that one call.
-      if (!(menuReturnFocus && multiSel.size > 1 && multiSel.has(note.id))) selectNote(note.id);
-      return;
-    }
-    if (note.state === 'active') editText(t.querySelector('.note-text'));
-  } else if (t.classList.contains('lot-item')) {
-    const item = state.current && state.current.parkingLot.find(i => i.id === t.dataset.id);
-    if (!item) return;
-    if (state.isDesktop) { selectLot(item.id); return; }
-    if (item.state === 'active') editText(t.querySelector('.lot-text'));
-  }
-});
 
 /* Desktop keyboard (additive, issue #4 "mnk"): inert while the menu is open —
    menuKeyHandler owns Escape/Tab/arrows there, and Delete must not destroy the
    selection underneath an open menu (issue #10). */
-document.addEventListener('keydown', (e) => {
-  if (!state.isDesktop || menuOpen) return;
-  // While a link is armed, Escape cancels it and every other key is inert (B91) —
-  // no selection exists to Delete/Enter into, and this must win over the grammar.
-  if (linkSource !== null) { if (e.key === 'Escape') clearLink(); return; }
-  const editing = isEditing(document.activeElement);
-  if (e.key === 'Escape') {
-    if (editing) { document.activeElement.blur(); }    // commit-on-blur path runs
-    else if (selected) clearSelection();
-  } else if ((e.key === 'Delete' || e.key === 'Backspace') && selected && !editing) {
-    e.preventDefault();
-    // A multi-selection deletes as one batch with one Undo (issue #55).
-    if (selected.kind === 'note' && multiSel.size > 1) { deleteNotes(selectedNoteIds()); return; }
-    const s = selected;
-    clearSelection();
-    if (s.kind === 'note') { const n = noteEls.get(s.id); if (n) deleteNote(n); }
-    else { const n = lotEls.get(s.id); if (n) deleteLot(n); }
-  } else if (e.key === 'Enter' && selected && !editing) {
-    e.preventDefault();
-    const s = selected;
-    if (s.kind === 'note') {
-      const rec = state.current.notes.find(n => n.id === s.id);
-      const n = noteEls.get(s.id);
-      if (rec && n && rec.state === 'active') {
-        clearSelection(); surfaceNote(n); editText(n.querySelector('.note-text'));
-      }
-    } else {
-      const rec = state.current.parkingLot.find(i => i.id === s.id);
-      const n = lotEls.get(s.id);
-      if (rec && n && rec.state === 'active') {
-        clearSelection(); editText(n.querySelector('.lot-text'));
-      }
-    }
-  }
-});
 
 /* Live growth = capture feedback; debounced persistence (PRD §4 writes). */
-el.board.addEventListener('input', (e) => {
-  const t = e.target;
-  if (t.classList.contains('note-text')) {
-    const note = state.current.notes.find(n => n.id === t.closest('.note').dataset.id);
-    if (note) { note.text = t.textContent; setHitInset(t.closest('.note'), note); scheduleSave(); }
-  } else if (t.classList.contains('lot-text')) {
-    const item = state.current.parkingLot.find(i => i.id === t.closest('.lot-item').dataset.id);
-    // The lot sizes to its rendered rows, live (issue #106, B73) — the same
-    // capture feedback the band's anchor branch below already gives.
-    if (item) { item.text = t.textContent; updateBoardGeometry(); scheduleSave(); }
-  } else if (t.classList.contains('anchor')) {
-    state.current[t.dataset.anchor] = t.textContent;
-    t.classList.toggle('filled', !!t.textContent.length);
-    if (t.dataset.anchor === 'title' && state.isDesktop) updateActiveCardTitle();
-    if (t.dataset.anchor === 'title') syncViewTitle();   // the tab carries the board's name, live (issue #148 item 2)
-    // The band sizes to its tallest zone, live (B47) — and the title now has a
-    // geometry consequence of its own: the compartment's handle rides its
-    // bottom edge, so a title that grows past the floor moves it (B65). One
-    // call covers both; it is a no-op for whichever of the two did not change.
-    updateBoardGeometry();
-    scheduleSave();
-  }
-});
 
 function commitNote(node) {
   const note = state.current.notes.find(n => n.id === node.dataset.id);
@@ -2720,6 +2624,118 @@ function copyText(text) {
   } else fallback();
 }
 
+
+/* Region init (issue #182): top-level side effects, explicit register()
+   call from boot() — no module does load-time work. */
+function registerInteractions() {
+  el.board.addEventListener('pointerdown', onPointerDown);
+
+  el.board.addEventListener('pointermove', onPointerMove);
+
+  el.board.addEventListener('pointerup', onPointerUp);
+  el.board.addEventListener('pointercancel', onPointerUp);
+
+  document.addEventListener('focusout', (e) => {
+    const t = e.target;
+    if (!t.hasAttribute || !t.hasAttribute('contenteditable')) return;
+    disableEditing(t);
+    if (t.classList.contains('note-text')) commitNote(t.closest('.note'));
+    else if (t.classList.contains('lot-text')) commitLot(t.closest('.lot-item'));
+    else if (t.classList.contains('anchor')) commitAnchor(t);
+    state.editVVFloor = Infinity;   // next edit measures its own keyboard-up floor (B80)
+    // A viewport change held back during the edit lands now that nothing is at
+    // stake — the keyboard's own retraction resize would repeat it, but a
+    // rotation or fold has no such second chance.
+    if (state.layoutDeferred) { state.layoutDeferred = false; requestAnimationFrame(applyLayout); }
+  });
+
+  document.addEventListener('focusin', (e) => {
+    if (pointers.size) return;
+    const t = e.target;
+    if (!t.classList) return;
+    if (t.classList.contains('anchor') && !t.hasAttribute('contenteditable')) {
+      enableEditing(t);
+    } else if (t.classList.contains('note')) {
+      const note = state.current && state.current.notes.find(n => n.id === t.dataset.id);
+      if (!note) return;
+      if (state.isDesktop) {
+        // Tab selects; Enter edits (issue #13) — EXCEPT the menu's own focus
+        // return (issue #55): closeMenu hands focus back to the right-clicked
+        // member, and that hand-back must not collapse the multi-selection the
+        // menu just acted on. A real Tab onto a member still selects it, so
+        // keyboard focus and selection never diverge outside that one call.
+        if (!(menuReturnFocus && multiSel.size > 1 && multiSel.has(note.id))) selectNote(note.id);
+        return;
+      }
+      if (note.state === 'active') editText(t.querySelector('.note-text'));
+    } else if (t.classList.contains('lot-item')) {
+      const item = state.current && state.current.parkingLot.find(i => i.id === t.dataset.id);
+      if (!item) return;
+      if (state.isDesktop) { selectLot(item.id); return; }
+      if (item.state === 'active') editText(t.querySelector('.lot-text'));
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!state.isDesktop || menuOpen) return;
+    // While a link is armed, Escape cancels it and every other key is inert (B91) —
+    // no selection exists to Delete/Enter into, and this must win over the grammar.
+    if (linkSource !== null) { if (e.key === 'Escape') clearLink(); return; }
+    const editing = isEditing(document.activeElement);
+    if (e.key === 'Escape') {
+      if (editing) { document.activeElement.blur(); }    // commit-on-blur path runs
+      else if (selected) clearSelection();
+    } else if ((e.key === 'Delete' || e.key === 'Backspace') && selected && !editing) {
+      e.preventDefault();
+      // A multi-selection deletes as one batch with one Undo (issue #55).
+      if (selected.kind === 'note' && multiSel.size > 1) { deleteNotes(selectedNoteIds()); return; }
+      const s = selected;
+      clearSelection();
+      if (s.kind === 'note') { const n = noteEls.get(s.id); if (n) deleteNote(n); }
+      else { const n = lotEls.get(s.id); if (n) deleteLot(n); }
+    } else if (e.key === 'Enter' && selected && !editing) {
+      e.preventDefault();
+      const s = selected;
+      if (s.kind === 'note') {
+        const rec = state.current.notes.find(n => n.id === s.id);
+        const n = noteEls.get(s.id);
+        if (rec && n && rec.state === 'active') {
+          clearSelection(); surfaceNote(n); editText(n.querySelector('.note-text'));
+        }
+      } else {
+        const rec = state.current.parkingLot.find(i => i.id === s.id);
+        const n = lotEls.get(s.id);
+        if (rec && n && rec.state === 'active') {
+          clearSelection(); editText(n.querySelector('.lot-text'));
+        }
+      }
+    }
+  });
+
+  el.board.addEventListener('input', (e) => {
+    const t = e.target;
+    if (t.classList.contains('note-text')) {
+      const note = state.current.notes.find(n => n.id === t.closest('.note').dataset.id);
+      if (note) { note.text = t.textContent; setHitInset(t.closest('.note'), note); scheduleSave(); }
+    } else if (t.classList.contains('lot-text')) {
+      const item = state.current.parkingLot.find(i => i.id === t.closest('.lot-item').dataset.id);
+      // The lot sizes to its rendered rows, live (issue #106, B73) — the same
+      // capture feedback the band's anchor branch below already gives.
+      if (item) { item.text = t.textContent; updateBoardGeometry(); scheduleSave(); }
+    } else if (t.classList.contains('anchor')) {
+      state.current[t.dataset.anchor] = t.textContent;
+      t.classList.toggle('filled', !!t.textContent.length);
+      if (t.dataset.anchor === 'title' && state.isDesktop) updateActiveCardTitle();
+      if (t.dataset.anchor === 'title') syncViewTitle();   // the tab carries the board's name, live (issue #148 item 2)
+      // The band sizes to its tallest zone, live (B47) — and the title now has a
+      // geometry consequence of its own: the compartment's handle rides its
+      // bottom edge, so a title that grows past the floor moves it (B65). One
+      // call covers both; it is a no-op for whichever of the two did not change.
+      updateBoardGeometry();
+      scheduleSave();
+    }
+  });
+}
 /* --- 10. Long-press menu ------------------------------------------------- */
 let menuOpen = false, menuKeyHandler = null, menuOutsideHandler = null;
 let menuReturnFocus = false;         // true only inside closeMenu's synchronous focus return
@@ -2754,19 +2770,12 @@ function fillBoardAction(btn, glyph, label) {
   const l = document.createElement('span'); l.className = 'label'; l.textContent = label;
   btn.append(g, l);
 }
-fillBoardAction(el.actionBoards, GLYPH.boards, COPY.calBoardTab);
-fillBoardAction(el.actionExport, GLYPH.export, COPY.export);
-fillBoardAction(el.actionImport, GLYPH.import, COPY.import);
-fillBoardAction(el.actionCalendar, GLYPH.calendar, COPY.calendar);
 /* The calendar's R1 top row (issue #156, B98): the same fill, the same family.
    Back wears its own page-turn mark (GLYPH.calBack — drawn for B95's R1 and
    wired here for the first time); All Boards and Export wear the same marks
    as their board-row siblings, because they are the same acts. Filling at
    boot is what makes the row controls at all — the issue's "untappable /
    invisible" report was three empty <button>s rendering as blank squares. */
-fillBoardAction(el.calBack, GLYPH.calBack, COPY.calBack);
-fillBoardAction(el.calBoards, GLYPH.boards, COPY.calAllBoards);
-fillBoardAction(el.calExport, GLYPH.export, COPY.calExport);
 
 /* The toggle wears the act it will perform (B43/B71's grammar, not a fixed
    noun): on the board it offers All boards; while the All-Boards surface is up
@@ -2785,10 +2794,6 @@ function syncBoardActions() {
 /* All Boards is pure navigation: it commits nothing a stray tap could
    duplicate, so it runs raw, no commitAction (B81). goToList opens the list /
    lot-grid; returnToBoard pops back however deep. */
-el.actionBoards.addEventListener('click', () => {
-  if (listOpen || lotMenuOpen) returnToBoard();
-  else goToList();
-});
 /* Export is now a CHOICE (issue #140, B92): the tab opens the app's one menu
    species — buildMenu, the same popup the note's Link item wears, anchored at
    the pressed tab — with PDF · JSON as its two leaves. The choice itself is
@@ -2798,44 +2803,18 @@ el.actionBoards.addEventListener('click', () => {
    one board you're looking at (issue #43); JSON backs up every board.
    Anchored at the button, not the pointer: the menu is the tab's own next
    state, not a context menu that happens to be nearby. */
-el.actionExport.addEventListener('click', (e) => {
-  const r = e.currentTarget.getBoundingClientRect();
-  buildMenu([
-    { label: COPY.exportPdf, glyph: GLYPH.export, action: () => commitAction(() => exportBoardPdf(state.current)) },
-    { label: COPY.exportJson, glyph: GLYPH.boards, action: () => commitAction(exportAllJson) },
-  ], r.left, r.bottom);
-});
 /* Import commits too — boards can be overwritten — so its one step (opening
    the file dialog) runs under the same drop-guard. The dialog itself is the
    hidden input's mechanism (issue #140): the visible control is the tab, the
    platform's own picker does the choosing, and nothing is named twice. The
    input is reset before each open so picking the SAME file twice still fires
    change — a browser fires it only when the value changes. */
-el.actionImport.addEventListener('click', () => {
-  commitAction(() => {
-    el.importFile.value = '';
-    el.importFile.click();
-  });
-});
-el.importFile.addEventListener('change', () => {
-  const file = el.importFile.files && el.importFile.files[0];
-  if (file) importBoardsJson(file);
-});
 
 /* Calendar (issue #145): the fourth board-level tab. Navigation, like All
    boards — it commits nothing a stray tap could duplicate (B81), so it runs
    raw. The calendar view is a third screen, so it pushes its own history
    state { v: 'cal' }: the OS back gesture returns from it (B9, unshadowed),
    and its OWN Back button is the always-visible route (R1). */
-el.actionCalendar.addEventListener('click', () => {
-  if (state.calOpen) return;
-  // The rail is wide's entry (B99); the tab is mobile's and pushes its own
-  // history state { v: 'cal' }: the OS back gesture returns from it (B9,
-  // unshadowed), and its OWN Back button is the always-visible route (R1).
-  if (state.isWide) { showCal(); return; }
-  history.pushState({ v: 'cal' }, '');
-  showCal();
-});
 /* The tabs are focusable things inside #board, and the desktop keyboard grammar
    (Enter edits the selection, Delete destroys it) listens on document and keys
    off `selected` alone, not focus — so a tab focused over a selected note would
@@ -2846,11 +2825,6 @@ el.actionCalendar.addEventListener('click', () => {
    Enter keydown, so a held key would fire the tab's action (an export!) over
    and over, since commitAction only rate-limits to ACTION_DELAY. preventDefault
    on the repeats suppresses the synthesized click, so a held Enter acts once. */
-el.boardActions.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' && e.key !== 'Delete' && e.key !== 'Backspace') return;
-  e.stopPropagation();
-  if (e.repeat) e.preventDefault();
-});
 
 /* Desktop right-click on a note opens its Link menu (issue #142, B91) — the
    desktop parallel to the mobile long-press, and the note's one relational
@@ -2859,22 +2833,6 @@ el.boardActions.addEventListener('keydown', (e) => {
    Link item. A right-click on the canvas, an anchor, the lot, or an editing note
    still falls through to the browser's own menu, as before; the board card's own
    contextmenu listener (its delete menu, B24) is a different element, untouched. */
-el.board.addEventListener('contextmenu', (ev) => {
-  if (!state.isDesktop) return;                           // mobile arms Link by long-press
-  if (linkSource) { ev.preventDefault(); return; }  // already arming: left-click a note to finish
-  const noteNode = ev.target.closest('.note');
-  if (!noteNode || isEditing(ev.target)) return;    // non-note / text edit keeps the native menu
-  ev.preventDefault();
-  let x = ev.clientX, y = ev.clientY;
-  if (!x && !y) {                                   // Shift+F10 fires contextmenu at 0,0
-    const r = noteNode.getBoundingClientRect();
-    x = r.left + r.width / 2; y = r.top + r.height / 2;
-  }
-  // No menuInvoker: closeMenu's focus-return would run the focusin Tab-selects
-  // rule (issue #55) and stray-select the source note. The mouse user finishes
-  // the link by clicking the target, so no focus return is needed.
-  openMenuFor({ type: 'note', node: noteNode }, x, y);
-});
 
 function buildMenu(items, clientX, clientY) {
   closeMenu();
@@ -2964,6 +2922,76 @@ function closeMenu() {
   }
 }
 
+
+/* Region init (issue #182): top-level side effects, explicit register()
+   call from boot() — no module does load-time work. */
+function registerMenus() {
+  fillBoardAction(el.actionBoards, GLYPH.boards, COPY.calBoardTab);
+  fillBoardAction(el.actionExport, GLYPH.export, COPY.export);
+  fillBoardAction(el.actionImport, GLYPH.import, COPY.import);
+  fillBoardAction(el.actionCalendar, GLYPH.calendar, COPY.calendar);
+
+  fillBoardAction(el.calBack, GLYPH.calBack, COPY.calBack);
+  fillBoardAction(el.calBoards, GLYPH.boards, COPY.calAllBoards);
+  fillBoardAction(el.calExport, GLYPH.export, COPY.calExport);
+
+  el.actionBoards.addEventListener('click', () => {
+    if (listOpen || lotMenuOpen) returnToBoard();
+    else goToList();
+  });
+
+  el.actionExport.addEventListener('click', (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    buildMenu([
+      { label: COPY.exportPdf, glyph: GLYPH.export, action: () => commitAction(() => exportBoardPdf(state.current)) },
+      { label: COPY.exportJson, glyph: GLYPH.boards, action: () => commitAction(exportAllJson) },
+    ], r.left, r.bottom);
+  });
+
+  el.actionImport.addEventListener('click', () => {
+    commitAction(() => {
+      el.importFile.value = '';
+      el.importFile.click();
+    });
+  });
+  el.importFile.addEventListener('change', () => {
+    const file = el.importFile.files && el.importFile.files[0];
+    if (file) importBoardsJson(file);
+  });
+
+  el.actionCalendar.addEventListener('click', () => {
+    if (state.calOpen) return;
+    // The rail is wide's entry (B99); the tab is mobile's and pushes its own
+    // history state { v: 'cal' }: the OS back gesture returns from it (B9,
+    // unshadowed), and its OWN Back button is the always-visible route (R1).
+    if (state.isWide) { showCal(); return; }
+    history.pushState({ v: 'cal' }, '');
+    showCal();
+  });
+
+  el.boardActions.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== 'Delete' && e.key !== 'Backspace') return;
+    e.stopPropagation();
+    if (e.repeat) e.preventDefault();
+  });
+
+  el.board.addEventListener('contextmenu', (ev) => {
+    if (!state.isDesktop) return;                           // mobile arms Link by long-press
+    if (linkSource) { ev.preventDefault(); return; }  // already arming: left-click a note to finish
+    const noteNode = ev.target.closest('.note');
+    if (!noteNode || isEditing(ev.target)) return;    // non-note / text edit keeps the native menu
+    ev.preventDefault();
+    let x = ev.clientX, y = ev.clientY;
+    if (!x && !y) {                                   // Shift+F10 fires contextmenu at 0,0
+      const r = noteNode.getBoundingClientRect();
+      x = r.left + r.width / 2; y = r.top + r.height / 2;
+    }
+    // No menuInvoker: closeMenu's focus-return would run the focusin Tab-selects
+    // rule (issue #55) and stray-select the source note. The mouse user finishes
+    // the link by clicking the target, so no focus return is needed.
+    openMenuFor({ type: 'note', node: noteNode }, x, y);
+  });
+}
 /* --- 10.5 PDF export (issue #43) -----------------------------------------
    A board leaves the device as a .pdf, not a screenshot. PDF is a text format
    and the base-14 fonts need no embedding, so the whole exporter is written
@@ -4903,32 +4931,6 @@ function renderCal() {
    calendar's stack compresses, nothing is covered). Export opens the B92
    choice menu anchored at the pressed control — PDF's leaf is the 7-day
    reference sheet (b8's exporter), JSON the whole-library backup. */
-el.calBack.addEventListener('click', () => {
-  // On wide, Back IS the collapse arrow (B99): the panel returns to the rail,
-  // the squeeze lifts — no history to pop (the rail pushed none). On mobile,
-  // Back pops the pushed {v:'cal'} state (B9's route, visible — R1).
-  if (state.isWide && state.calExpanded) { collapseCalRail(); return; }
-  goCalBack();
-});
-el.calRail.addEventListener('click', () => {
-  // Furniture's one act: expand (B99). Pure navigation, no commit (B81).
-  if (!state.isWide || state.calExpanded) return;
-  expandCalRail();
-});
-el.calBoards.addEventListener('click', (e) => {
-  if (state.isDesktop) return;               // B100: no All-Boards on desktop — the rail is the all-boards surface
-  const r = e.currentTarget.getBoundingClientRect();
-  history.pushState({ v: 'list' }, '');
-  listOpen = true;
-  showList();
-});
-el.calExport.addEventListener('click', (e) => {
-  const r = e.currentTarget.getBoundingClientRect();
-  buildMenu([
-    { label: COPY.exportPdf, glyph: GLYPH.export, action: () => commitAction(() => exportCalPdf()) },
-    { label: COPY.exportJson, glyph: GLYPH.boards, action: () => commitAction(exportAllJson) },
-  ], r.left, r.bottom);
-});
 
 /* The back gesture drives the three levels now (B9, never shadowed): {v:'cal'}
    the calendar, {v:'cat'} a drilled category, {v:'list'} the picker, no state
@@ -4941,27 +4943,59 @@ el.calExport.addEventListener('click', (e) => {
    drilled category, {v:'list'} the picker, no state the board. Popping from a
    drill to the picker re-opens it on the surface the mode uses — the mobile
    grid or the desktop screen. */
-window.addEventListener('popstate', () => {
-  popping = false;                     // the nav returnToBoard began has landed (B83)
-  closeMenu();
-  const s = history.state;
-  // B99: on wide the calendar is furniture — the rail never enters this
-  // grammar (calOpen is mobile's screen flag). A stray {v:'cal'} landing on
-  // wide collapses the panel (the mobile-era entry has no wide meaning);
-  // mobile keeps its full-screen view.
-  if (s && s.v === 'cal') { showCal(); }
-  else if (state.calOpen || state.calExpanded) { hideCal(); }     // landing anywhere else closes the calendar first
-  else if (s && s.v === 'cat') {
-    if (state.isDesktop) { showBoardFromList(); }   // B100: desktop has no drill either — a stray landing (old-build history) heals to the board
-    else { showCat(s.cat); }
-  }
-  else if (s && s.v === 'list') {
-    if (state.isDesktop) { showBoardFromList(); }   // B100: desktop pushes no {v:'list'} — a stray landing (old-build history) heals to the board
-    else { catView = null; hideListView(); showList(); }  // the drill's panel slides down as the grid returns (B82)
-  }
-  else { showBoardFromList(); }
-});
 
+
+/* Region init (issue #182): top-level side effects, explicit register()
+   call from boot() — no module does load-time work. */
+function registerBoards() {
+  el.calBack.addEventListener('click', () => {
+    // On wide, Back IS the collapse arrow (B99): the panel returns to the rail,
+    // the squeeze lifts — no history to pop (the rail pushed none). On mobile,
+    // Back pops the pushed {v:'cal'} state (B9's route, visible — R1).
+    if (state.isWide && state.calExpanded) { collapseCalRail(); return; }
+    goCalBack();
+  });
+  el.calRail.addEventListener('click', () => {
+    // Furniture's one act: expand (B99). Pure navigation, no commit (B81).
+    if (!state.isWide || state.calExpanded) return;
+    expandCalRail();
+  });
+  el.calBoards.addEventListener('click', (e) => {
+    if (state.isDesktop) return;               // B100: no All-Boards on desktop — the rail is the all-boards surface
+    const r = e.currentTarget.getBoundingClientRect();
+    history.pushState({ v: 'list' }, '');
+    listOpen = true;
+    showList();
+  });
+  el.calExport.addEventListener('click', (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    buildMenu([
+      { label: COPY.exportPdf, glyph: GLYPH.export, action: () => commitAction(() => exportCalPdf()) },
+      { label: COPY.exportJson, glyph: GLYPH.boards, action: () => commitAction(exportAllJson) },
+    ], r.left, r.bottom);
+  });
+
+  window.addEventListener('popstate', () => {
+    popping = false;                     // the nav returnToBoard began has landed (B83)
+    closeMenu();
+    const s = history.state;
+    // B99: on wide the calendar is furniture — the rail never enters this
+    // grammar (calOpen is mobile's screen flag). A stray {v:'cal'} landing on
+    // wide collapses the panel (the mobile-era entry has no wide meaning);
+    // mobile keeps its full-screen view.
+    if (s && s.v === 'cal') { showCal(); }
+    else if (state.calOpen || state.calExpanded) { hideCal(); }     // landing anywhere else closes the calendar first
+    else if (s && s.v === 'cat') {
+      if (state.isDesktop) { showBoardFromList(); }   // B100: desktop has no drill either — a stray landing (old-build history) heals to the board
+      else { showCat(s.cat); }
+    }
+    else if (s && s.v === 'list') {
+      if (state.isDesktop) { showBoardFromList(); }   // B100: desktop pushes no {v:'list'} — a stray landing (old-build history) heals to the board
+      else { catView = null; hideListView(); showList(); }  // the drill's panel slides down as the grid returns (B82)
+    }
+    else { showBoardFromList(); }
+  });
+}
 /* --- 12. Boot + service worker ------------------------------------------- */
 window.addEventListener('resize', onViewportResize);
 if (window.visualViewport) window.visualViewport.addEventListener('resize', onViewportResize);
@@ -4982,6 +5016,10 @@ async function boot() {
   // the guard that makes the phase-2 module split verifiable (import hoisting must
   // never reorder boot), not scaffolding to strip. test/boot-order.js pins them.
   applyInitialMode();               // html arrangement classes (state is initialized)
+  registerRender();                 // toolbar keydown
+  registerInteractions();           // pointer/focus/keydown/input listeners
+  registerMenus();                  // board-action row fill + click/contextmenu listeners
+  registerBoards();                 // calendar + popstate listeners
   console.debug('boot:layout');
   applyLayout();                 // establishes LEGACY_H before the migration reads it —
                                  // the first applyLayout otherwise fires inside openBoardObj,
