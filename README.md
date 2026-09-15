@@ -267,47 +267,10 @@ If you want to change behavior, the expectations are simple:
 - **Bump the `sw.js` `CACHE` version** on every shipped change — it is the one
   string that says which build is live, and the test suite pins it.
 
-## Testing
-
-Dev-only tooling; nothing here is served, bundled, or shipped. Each script is
-a standalone Node script driving a real Chromium via Playwright and exits
-non-zero on failure — there is no test runner or framework. As of
-`todo-boards-v48`, the four suites together assert 1,011 checks.
-
-```sh
-python3 -m http.server 8000        # serve the repo root
-npm install playwright             # dev-only; not committed
-node test/tokens.js                # the design contract: UIUX §2's tables recomputed from the shipped hexes (no browser)
-node test/mobile.js                # touch capture, gesture recognizer, band/lot geometry
-node test/desktop.js               # desktop grammar, rail, PDF export
-node test/sw-update.js             # asserts a shipped change actually reaches an installed PWA
-```
-
-`test/tokens.js` needs no server or browser. `sw-update.js` serves its own
-throwaway copy on port 8199 (override with `SW_TEST_PORT`). `BOARDS_URL`
-overrides the served URL for the other suites; `CHROMIUM_PATH` points at a
-specific Chromium binary. Taps are dispatched as genuine touch events rather
-than synthesized clicks, because the class of bug these suites exist to catch
-lived in the browser's touch-to-mouse compatibility events.
-
-CI runs on every push; the Pages workflow additionally curls the deployed
-`sw.js` and fails if it does not match the commit — a silent deploy failure is
-treated as a shipped bug, not a non-event.
-
 ## Maintainers
 
 - [AlastairZeved](https://github.com/AlastairZeved) — design, product, and
   direction.
-
-## Thanks
-
-- [Claude](https://claude.ai) — pair implementation, from port discipline to
-  the regression suites, under the owner's rulings.
-- The [Malleable Systems Collective](https://malleable.systems/) — for a
-  forum where spatial-first, cognitive-first software has company.
-- [Richard Litt](https://github.com/RichardLitt) and the
-  [Standard Readme](https://github.com/RichardLitt/standard-readme)
-  contributors — this README follows their spec.
 
 ## Contributing
 
@@ -316,7 +279,7 @@ Questions and proposals go to
 is also where design questions are settled: a ruling made on an issue
 describes itself in the issue thread and lands in `DECISIONS.md`.
 
-Pull requests are accepted. Requirements:
+Pull requests are accepted. Requirements:ghjb
 
 - **Behavior changes resolve against the governing records.** Read
   [The Governing Records](#the-governing-records) first; a PR that changes
