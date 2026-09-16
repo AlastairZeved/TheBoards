@@ -66,6 +66,14 @@ function applyMode() {
     showCalRail();                   // the rail re-renders on every flip to wide (B99)
   } else {
     document.documentElement.classList.remove('has-cal-rail');
+    // Issue #219: the rail is wide furniture — flip back to narrow and the
+    // mobile state must be restored exactly as hideCal's mobile path leaves
+    // it: the view hidden by attribute (mobile's only concealment), no rail
+    // face. The furniture pushed no history and set no state flags, so this
+    // is all the teardown there is.
+    el.calView.hidden = true;
+    el.calView.classList.remove('rail-open', 'panel');
+    el.calRail.hidden = true;
   }
 }
 DESKTOP_MQ.addEventListener('change', applyMode);
@@ -215,7 +223,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v66';
+const OWN_BUILD = 'v67';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {
