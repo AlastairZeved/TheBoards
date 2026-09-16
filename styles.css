@@ -1774,11 +1774,12 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
 #cal-back  { margin-right: auto; }     /* anchored left (R1) */
 #cal-boards{ margin-left: auto; margin-right: auto; }  /* centred */
 #cal-export{ margin-left: 0; }         /* anchored right */
-/* B100 (issue #157): desktop's calendar row is Back + Export only (mockup 6's
-   drawn row was never an All-Boards surface on wide). With the centred button
-   gone, Export takes the row's right anchor itself. */
-html.desktop #cal-boards { display: none; }
-html.desktop #cal-export { margin-left: auto; }
+/* B100 (issue #157) as widened by B119 (issue #212): wide's calendar row is
+   Back + Export only — the centred All Boards control retires on tablet the
+   same way it retired on desktop. With it gone, Export takes the row's
+   right anchor itself. */
+html.wide #cal-boards { display: none; }
+html.wide #cal-export { margin-left: auto; }
 #cal-stack {
   flex: 1;
   display: flex;
@@ -2003,12 +2004,12 @@ html.desktop #cal-export { margin-left: auto; }
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--ink-dark);
 }
-/* B100 (issue #157): desktop has no All-Boards tab — the left rail (B24)
-   already lists every category with every board, so the tab is a second door
-   to the same room. Same mechanism B99 used to retire the Calendar tab on
-   wide. Mobile and tablet keep the tab: it is their only way into the
-   lot-grid picker. */
-html.desktop #action-boards { display: none; }
+/* B100 (issue #157) as widened by B119 (issue #212): wide (desktop ∪ tablet)
+   has no All-Boards tab — the left board rail (B24) is the one All-Boards
+   surface on wide, on tablet from behind B118's collapsed face. Same mechanism
+   B99 used to retire the Calendar tab on wide. Mobile keeps the tab: it is
+   mobile's only way into the lot-grid picker (B74). */
+html.wide #action-boards { display: none; }
 html.wide #action-calendar { display: none; }   /* the rail replaces the tab (B99) */
 html.wide:not(.has-cal-rail) #cal-view { display: none; }
 html.wide #board.swapping { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1); }

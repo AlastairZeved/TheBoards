@@ -665,10 +665,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is todo-boards-v65 — the B118 bump that folds the All-Boards rail (issue #211)',
-    /const CACHE = 'todo-boards-v65';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v65, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v65';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is todo-boards-v66 — the B119 bump that retires the All tab on tablet (issue #212)',
+    /const CACHE = 'todo-boards-v66';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v66, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v66';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('TABLET_MQ is the B103 one-leg width floor: min-width 744px, orientation-blind',
     /window\.matchMedia\('\(min-width: 744px\)'\)/.test(app),

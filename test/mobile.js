@@ -733,8 +733,8 @@ async function openCat(page, cat) {
     // B101 (issue #164): the shape gate catches the unfolded Fold at its real
     // zoom levels. 904x846 is the device at display zoom −2 (the owner's
     // screenshots' CSS size); 1092x1030 at default. Both must be tablet, and
-    // the 904 session must render the FULL tablet path: rail, retired tab,
-    // B100's lot-grid picker with no overlay, the retired calendar tab.
+    // the 904 session must render the FULL tablet path: rail, both retired
+    // tabs (B119), the standing calendar rail.
     for (const [w, h] of [[904, 846], [1092, 1030]]) {
       const fold = await newMobilePage(browser, { width: w, height: h });
       const fg = await fold.page.evaluate(() => ({
@@ -742,21 +742,23 @@ async function openCat(page, cat) {
         wide: document.documentElement.classList.contains('wide'),
         paneW: document.getElementById('pane').getBoundingClientRect().width,
         calTabGone: getComputedStyle(document.getElementById('action-calendar')).display === 'none',
-        allTab: getComputedStyle(document.getElementById('action-boards')).display !== 'none',
+        allTabGone: getComputedStyle(document.getElementById('action-boards')).display === 'none',
         calRailShown: !document.getElementById('cal-rail').hidden,
       }));
-      ok(`${w}x${h} (unfolded Fold) is tablet: the ${Math.round(fg.paneW)}px collapsed face, calendar tab retired, All tab kept (B100, B118)`,
-        fg.tablet && fg.wide && fg.paneW === 40 && fg.calTabGone && fg.allTab && fg.calRailShown,
+      ok(`${w}x${h} (unfolded Fold) is tablet: the ${Math.round(fg.paneW)}px collapsed face, calendar tab retired, All tab retired (B119, B118)`,
+        fg.tablet && fg.wide && fg.paneW === 40 && fg.calTabGone && fg.allTabGone && fg.calRailShown,
         JSON.stringify(fg));
-      await fold.page.evaluate(() => document.getElementById('action-boards').click());
+      // B119: the picker has no door on tablet — the tab is retired and the
+      // calendar panel's #cal-boards is guarded inert on wide.
+      await fold.page.evaluate(() => document.getElementById('cal-boards').click());
       await fold.page.waitForTimeout(300);
-      const grid = await fold.page.evaluate(() => ({
-        open: !document.getElementById('lot-menu').hidden,
-        cats: document.querySelectorAll('#lot-menu .cat-button').length,
-        overlay: !document.getElementById('list-view').hidden,
+      const noDoor = await fold.page.evaluate(() => ({
+        pickerClosed: document.getElementById('lot-menu').hidden &&
+          !document.getElementById('lot').classList.contains('menu-open'),
+        listView: document.getElementById('list-view').hidden,
       }));
-      ok(`${w}x${h}: the picker is the lot-grid (B100), not the overlay`,
-        grid.open && grid.cats === 4 && !grid.overlay, JSON.stringify(grid));
+      ok(`${w}x${h}: the picker has no door on tablet (B119) — #cal-boards is inert, #list-view stays dark`,
+        noDoor.pickerClosed && noDoor.listView, JSON.stringify(noDoor));
       ok(`${w}x${h} no page errors`, fold.errors.length === 0, fold.errors.join(' | '));
       await fold.ctx.close();
     }
@@ -799,50 +801,26 @@ async function openCat(page, cat) {
     ok('no page errors', errors.length === 0, errors.join(' | '));
   }
 
-  // ---- 11b4. The tablet picker is the lot-grid (B100, issue #157) -----------
-  // Same 984x1450 session's next leg (the ctx is open until here): B100
-  // (issue #157) made tablet's picker the lot-grid — mobile's species. The
-  // tab STAYS on tablet (the owner's ruling: tablet keeps its way into the
-  // grid) and tapping it turns the Parking Lot into the 2x2 grid;
-  // #list-view never shows here. The drill (level 2) is still the rising
-  // panel — html:not(.desktop) — untouched by B100.
-  console.log('\n[11b4] The tablet picker is the lot-grid (B100)');
+  // ---- 11b4. The picker has no door on tablet (B119, issue #212) -----------
+  // Same 984x1450 session's next leg (the ctx is open until here): B119
+  // (issue #212) retires the All tab on tablet and guards the calendar
+  // panel's #cal-boards on wide — the picker has no door on tablet; the left
+  // rail is the one All-Boards surface (B96/B118). The drill and back stack
+  // the old B100 leg exercised live on mobile only ([19]).
+  console.log('\n[11b4] The picker has no door on tablet (B119)');
   {
-    await page.evaluate(() => document.getElementById('action-boards').click());
+    const doorTab = await page.evaluate(() =>
+      getComputedStyle(document.getElementById('action-boards')).display === 'none');
+    await page.evaluate(() => document.getElementById('cal-boards').click());
     await page.waitForTimeout(300);
-    const pick = await page.evaluate(() => {
-      const menu = document.getElementById('lot-menu');
-      const btns = [...menu.querySelectorAll('.cat-button')];
-      const mr = menu.getBoundingClientRect();
-      return {
-        open: !menu.hidden && document.getElementById('lot').classList.contains('menu-open'),
-        cats: btns.map(b => b.dataset.cat),
-        gw: mr.width, gh: mr.height,
-        listView: document.getElementById('list-view').hidden,
-      };
-    });
-    ok('the All tab opens the lot-grid picker on tablet (B100) — #list-view stays dark',
-       pick.open && pick.cats.join(',') === 'todo,unsorted,idea,learning' &&
-       pick.gw > 0 && pick.gh > 0 && pick.listView, JSON.stringify(pick));
-    await page.evaluate(() => {
-      const t = [...document.querySelectorAll('#lot-menu .cat-button')].find(x => x.dataset.cat === 'todo');
-      t.click();
-    });
-    await page.waitForTimeout(400);
-    const drill = await page.evaluate(() => ({
-      grid: document.getElementById('lot-menu').hidden,
-      rows: !document.getElementById('list-rows').hidden ||
-        document.querySelectorAll('#list-rows .board-cat').length > 0,
-      oneCat: (() => { const s = [...document.querySelectorAll('#list-rows .board-cat')];
-                       return s.length === 1 && s[0].dataset.cat === 'todo'; })(),
+    const shut = await page.evaluate(() => ({
+      pickerClosed: document.getElementById('lot-menu').hidden &&
+        !document.getElementById('lot').classList.contains('menu-open'),
+      listView: document.getElementById('list-view').hidden,
     }));
-    ok('drilling steps the grid aside and rises the one-category panel (B82 species)',
-       drill.grid && drill.rows && drill.oneCat, JSON.stringify(drill));
-    await page.evaluate(() => history.go(-2));
-    await page.waitForTimeout(400);
-    ok('back pops the whole nav stack: the real lot returns (B9)',
-       await page.evaluate(() => document.getElementById('lot-menu').hidden &&
-         !document.getElementById('lot').classList.contains('menu-open')));
+    ok('the All tab is display:none on tablet — no door on the board (B119)', doorTab);
+    ok('#cal-boards is inert on tablet — the picker never opens, #list-view stays dark (B119)',
+       shut.pickerClosed && shut.listView, JSON.stringify(shut));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
