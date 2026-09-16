@@ -100,12 +100,13 @@ a midpoint.
 | `--frame` | `#698ebf` | the card's border and both full-width rules — §2.5, B61 | 0.2611 |
 | `--note` | `#a0d4da` | the note | 0.5962 |
 
-**The hexes above are the To-Do board's.** Since B67 (and B74, issue #112) the
-ladder has four bindings — one per board type, the same seven rungs at four
-hues, each rung holding the luminance in the right-hand column exactly. §2.2.2
-gives the other three. Every ratio in this document is computed from that
-column, so every ratio in this document holds on all four; where a number is
-genuinely per-ladder, it is printed per-ladder (§4.3 is the only such table).
+**The hexes above are the To-Do board's.** Since B67 (and B74, issue #112; and
+issue #168) the ladder has five bindings — one per board type, plus the
+Calendar view — the same seven rungs at five hues, each rung holding the
+luminance in the right-hand column exactly. §2.2.2 gives the other four. Every
+ratio in this document is computed from that column, so every ratio in this
+document holds on all five; where a number is genuinely per-ladder, it is
+printed per-ladder (§4.3 is the only such table).
 
 `--furniture` was retired by B46; `--band` and the `--shelf` texture are
 retired by B58 — the second swap renamed the deep's token honestly
@@ -198,20 +199,24 @@ enough apart to read as two depths, when their job is to read as one.
 ### §2.2.2 The ladder rotates with the board type
 
 **A board type is a whole scene, not a rung on one** (B67, issue #96; a fourth
-scene added by B74, issue #112). To-Do boards keep the water blue above. Idea
-boards take a deep hunter green, Note boards a deep violet, Learning boards a
-pale rose — and each is *the same ladder*, rotated in hue and in nothing else.
+scene added by B74, issue #112; a fifth binding added by issue #168). To-Do
+boards keep the water blue above. Idea boards take a deep hunter green, Note
+boards a deep violet, Learning boards a pale rose — and each is *the same
+ladder*, rotated in hue and in nothing else. The Calendar view (§3.4) wears a
+fifth binding of the same ladder, rotated to orange and bound on `#cal-view`
+the way To-Do binds on `:root` — it is a body-level section, so the rebinding
+re-scopes exactly the calendar chrome and nothing else.
 
-| Rung | To-Do | Idea | Note | Learning | Rel. luminance |
-|---|---|---|---|---|---|
-| `--deep` | `#020812` | `#000a06` | `#0c0512` | `#11040b` | 0.0023 |
-| `--card` | `#08152c` | `#001a0e` | `#1e0f28` | `#260e12` | 0.0077 |
-| `--water-top` | `#34697f` | `#486b49` | `#6d5b83` | `#855562` | 0.1237 |
-| `--water-mid` | `#255265` | `#345439` | `#534769` | `#6a414c` | 0.0737 |
-| `--water-bot` | `#163646` | `#1f3825` | `#382e47` | `#472a35` | 0.0325 |
-| `--water-bot-a` | `22 54 70` | `31 56 37` | `56 46 71` | `71 42 53` | (the bottom stop, as channels) |
-| `--frame` | `#698ebf` | `#52997f` | `#9d80b9` | `#b57a9b` | 0.2611 |
-| `--note` | `#a0d4da` | `#b9d2b2` | `#cec6ed` | `#e6c2c9` | 0.5962 |
+| Rung | To-Do | Idea | Note | Learning | Calendar | Rel. luminance |
+|---|---|---|---|---|---|---|
+| `--deep` | `#020812` | `#000a06` | `#0c0512` | `#11040b` | `#110501` | 0.0023 |
+| `--card` | `#08152c` | `#001a0e` | `#1e0f28` | `#260e12` | `#251002` | 0.0077 |
+| `--water-top` | `#34697f` | `#486b49` | `#6d5b83` | `#855562` | `#815a42` | 0.1237 |
+| `--water-mid` | `#255265` | `#345439` | `#534769` | `#6a414c` | `#694432` | 0.0737 |
+| `--water-bot` | `#163646` | `#1f3825` | `#382e47` | `#472a35` | `#462d1a` | 0.0325 |
+| `--water-bot-a` | `22 54 70` | `31 56 37` | `56 46 71` | `71 42 53` | `70 45 26` | (the bottom stop, as channels) |
+| `--frame` | `#698ebf` | `#52997f` | `#9d80b9` | `#b57a9b` | `#b48158` | 0.2611 |
+| `--note` | `#a0d4da` | `#b9d2b2` | `#cec6ed` | `#e6c2c9` | `#e3c6aa` | 0.5962 |
 
 **The derivation is hue and only hue.** Each rung was converted to OKLCH, its
 hue moved, and the result re-solved against sRGB so that its **WCAG relative
@@ -219,23 +224,28 @@ luminance reproduces the To-Do rung's** — the right-hand column is one number
 per row because it is one number per row. The family's own internal hue spread
 (the shipped blue runs 205° at the note to 261° at the card) is narrowed as it
 rotates, so each scene reads as one hue rather than smearing across a 56° arc.
-The Learning rose runs a tight ~345°–11° arc (crossing 0°):
+The Learning rose runs a tight ~345°–11° arc (crossing 0°); the Calendar orange
+runs ~47°–66°:
 
-| Rung | To-Do H / L / C | Idea H / L / C | Note H / L / C | Learning H / L / C |
-|---|---|---|---|---|
-| `--deep` | 251.6° / 0.132 / 0.027 | 171.0° / 0.129 / 0.025 | 309.1° / 0.136 / 0.032 | 345.6° / 0.136 / 0.031 |
-| `--card` | 260.8° / 0.199 / 0.050 | 161.3° / 0.192 / 0.043 | 310.3° / 0.203 / 0.052 | 10.9° / 0.203 / 0.041 |
-| `--water-top` | 227.5° / 0.494 / 0.066 | 145.1° / 0.491 / 0.067 | 304.7° / 0.504 / 0.066 | 2.1° / 0.507 / 0.066 |
-| `--water-mid` | 228.2° / 0.415 / 0.059 | 148.3° / 0.413 / 0.059 | 300.2° / 0.424 / 0.057 | 2.5° / 0.427 / 0.059 |
-| `--water-bot` | 232.7° / 0.317 / 0.047 | 150.7° / 0.314 / 0.046 | 302.3° / 0.323 / 0.045 | 355.6° / 0.325 / 0.046 |
-| `--frame` | 255.7° / 0.639 / 0.085 | 167.8° / 0.629 / 0.083 | 307.3° / 0.648 / 0.089 | 345.1° / 0.650 / 0.085 |
-| `--note` | 205.0° / 0.836 / 0.054 | 138.9° / 0.836 / 0.051 | 294.6° / 0.846 / 0.054 | 4.9° / 0.847 / 0.042 |
+| Rung | To-Do H / L / C | Idea H / L / C | Note H / L / C | Learning H / L / C | Calendar H / L / C |
+|---|---|---|---|---|---|
+| `--deep` | 251.6° / 0.132 / 0.027 | 171.0° / 0.129 / 0.025 | 309.1° / 0.136 / 0.032 | 345.6° / 0.136 / 0.031 | 51.5° / 0.134 / 0.029 |
+| `--card` | 260.8° / 0.199 / 0.050 | 161.3° / 0.192 / 0.043 | 310.3° / 0.203 / 0.052 | 10.9° / 0.203 / 0.041 | 55.7° / 0.201 / 0.044 |
+| `--water-top` | 227.5° / 0.494 / 0.066 | 145.1° / 0.491 / 0.067 | 304.7° / 0.504 / 0.066 | 2.1° / 0.507 / 0.066 | 52.4° / 0.503 / 0.063 |
+| `--water-mid` | 228.2° / 0.415 / 0.059 | 148.3° / 0.413 / 0.059 | 300.2° / 0.424 / 0.057 | 2.5° / 0.427 / 0.059 | 46.6° / 0.424 / 0.059 |
+| `--water-bot` | 232.7° / 0.317 / 0.047 | 150.7° / 0.314 / 0.046 | 302.3° / 0.323 / 0.045 | 355.6° / 0.325 / 0.046 | 57.3° / 0.323 / 0.048 |
+| `--frame` | 255.7° / 0.639 / 0.085 | 167.8° / 0.629 / 0.083 | 307.3° / 0.648 / 0.089 | 345.1° / 0.650 / 0.085 | 59.3° / 0.645 / 0.085 |
+| `--note` | 205.0° / 0.836 / 0.054 | 138.9° / 0.836 / 0.051 | 294.6° / 0.846 / 0.054 | 4.9° / 0.847 / 0.042 | 66.1° / 0.844 / 0.050 |
 
 > **OKLCH lightness and chroma are the aiming coordinates, not the pinned
 > ones.** They are held as closely as 8-bit sRGB allows — L within 0.010, C
 > within 0.007 on the Idea and Note ladders; the Learning rose binds a little
 > harder (L within 0.013, C within 0.012), and its note is deliberately paler
-> than its aim (C 0.042 vs 0.054) — and they cannot be held *exactly*, because
+> than its aim (C 0.042 vs 0.054); the Calendar orange holds L within 0.009
+> and C within 0.006, its card spending a little chroma to the pin (C 0.044
+> against the blue's 0.050, where the sRGB maximum at that luminance is 0.049
+> — the pin, not the gamut, is what spends it) — and they cannot be held
+> *exactly*, because
 > OKLab lightness and WCAG luminance are different functions and a hue rotation
 > cannot preserve both. Luminance is the one that is pinned, because luminance
 > is what every ratio in this document is made of, and it is what §2.2.1 rule 1
@@ -257,13 +267,15 @@ does not exist in sRGB, and no amount of searching will find one.
 > **Because luminance is preserved, every ratio this document publishes is
 > preserved.** §2.3's five ink pairings, §2.5's seven adjacencies, §2.7's ring
 > table and §2.3.1's crossover are all functions of luminance alone, and B67
-> moved no luminance (B74 added a fourth ladder the same way). `test/tokens.js`
-> asserts each of them against **all four** ladders with a single expected
+> moved no luminance (B74 added a fourth ladder the same way, issue #168 a
+> fifth). `test/tokens.js`
+> asserts each of them against **all five** ladders with a single expected
 > number, so a hue that drags a rung off its luminance fails the suite rather
 > than the eye.
 
-**§2.2.1 rule 4 is satisfied for all twenty-one new values** (fourteen from
-B67, seven more from B74's Learning rose). Every one is outside §2.3.2's
+**§2.2.1 rule 4 is satisfied for all twenty-eight new values** (fourteen from
+B67, seven more from B74's Learning rose, seven more from issue #168's
+Calendar orange). Every one is outside §2.3.2's
 forbidden band (0.163–0.196), every ground below §2.3.1's 0.1788 crossover
 still takes `--ink-light`, and every note still takes `--ink-dark` —
 necessarily, since each sits at its To-Do rung's luminance.
@@ -438,7 +450,7 @@ mark *on the water* is worst at its lightest:
 | note / canvas | **12.36** | — | fill |
 | note / water (lightest stop) | **3.72** | — | fill |
 
-**Every row holds on all four ladders** (§2.2.2). An adjacency is always
+**Every row holds on all five ladders** (§2.2.2). An adjacency is always
 between two rungs of the *same* scene — a board never mixes ladders — and the
 two rungs sit at the same pair of luminances whichever hue the board wears.
 
@@ -843,6 +855,14 @@ board** toggle states its act in its label (B43/B71's grammar), so no
 `aria-pressed` rides alongside.
 
 ### §3.4 The calendar view (B95, issue #145; tier shipped by B96, issue #155; events editable by B97, issue #152; standing rail by B99, issue #158)
+
+The calendar wears the app's **fifth ladder** (issue #168): the same eight
+rungs at an orange arc (~47°–66°), bound on `#cal-view` the way To-Do binds
+on `:root` — a rebinding, never an override, so the rail, the R1 row, the day
+cards' water fall and date compartments, and the month view's today cell all
+carry the hue through `var()` (§2.2.2). Linked boards opened from a day card
+keep their own category scopes — nothing inside `#cal-view` carries
+`data-cat`.
 
 The third screen. Full-screen on mobile (`html:not(.wide)`). On any wide
 screen — desktop or tablet (`html.wide`) — the calendar is **standing
@@ -1846,7 +1866,7 @@ Per surface, what would actually fail if the words above were violated today:
 | Clause | Pinned by |
 |---|---|
 | §2 — every token, every ratio | `test/tokens.js` (`PRD §9.6`): every table here recomputed from the shipped hexes, each range at its worst extreme, plus the sync points, the accent placement rule, self-hosting and B53's pair |
-| §2.2.2 — four ladders, one axis | `test/tokens.js` [1b] parses the palette **per scope** (`:root`, `#board[data-cat="idea"]`, `#board[data-cat="unsorted"]`, `#board[data-cat="learning"]`), asserts each rung's luminance against the shared column, asserts the two spellings of the darkest stop agree (`--water-bot` / `--water-bot-a`), and asserts `--chrome`, the ink poles and the accents are *not* rebound. §2.3/§2.5/§2.7's tables are then run against all four ladders with one expected number each |
+| §2.2.2 — five ladders, one axis | `test/tokens.js` [1b] parses the palette **per scope** (`:root`, `#board[data-cat="idea"]`, `#board[data-cat="unsorted"]`, `#board[data-cat="learning"]`, `#cal-view`), asserts each rung's luminance against the shared column, asserts the two spellings of the darkest stop agree (`--water-bot` / `--water-bot-a`), asserts nothing inside `#cal-view` re-scopes the ladder (issue #168), and asserts `--chrome`, the ink poles and the accents are *not* rebound. §2.3/§2.5/§2.7's tables are then run against all five ladders with one expected number each |
 | §3 — band and lot geometry | `test/mobile.js` [9c]/[11b]/[11c] and `test/desktop.js` [D8] — moved with B47/B54 when the band shipped, recomputing rule-y from the formula (88 floor / 107 at three lines); `test/mobile.js` [21] and `test/desktop.js` [D21] pin the board-action row above the lot, prove its live tabs clear the touch/pointer floor (B95's re-grammar; B100's desktop retirement means the row's two visible tabs), export a PDF, and confirm the `#title-menu` handle is gone (B83); §3.4's calendar is pinned by `test/tokens.js`'s issue-#145 block (window computed at render, one mirror writer, link coercion, squeeze as render-time state) |
 | §3/§7 — `EXPORT_GEO` agreement | `test/mobile.js` [11c] pins export geometry to the rendered board — the intended tripwire |
 | §4 — wrap, similarity render, centred text | `test/mobile.js` (B39 scenarios; [12c] pins B64's fold/rotate similarity — shape held, size uniform, storage untouched, round trip exact; [18b] computes the alignment, editing and at rest) and `test/desktop.js` [D13] (the silent cross-frame grab folds k) and [D17b] — the computed style, plus the centring inset parsed out of page 1's content stream (B62) |

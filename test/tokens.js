@@ -14,11 +14,12 @@
  * pole-flipped on the lot by B58), and the sw-update.js marker pair
  * (UIUX §16.3).
  *
- * Since B67 (issue #96) the ladder has THREE bindings — one per board type,
- * the same rungs at three hues (UIUX §2.2.2). Every §2 table below is asserted
- * against all three with one expected number, because B67 moved no luminance;
- * only §4.3's alpha composites are stated per ladder. The palette is therefore
- * parsed per scope rather than flat: see propsIn() below.
+ * Since B67 (issue #96) the ladder has rotated per board type — and since
+ * issue #168 the Calendar view carries a fifth binding of its own. Every §2
+ * table below is asserted against all five with one expected number, because
+ * the rotations moved no luminance; only §4.3's alpha composites are stated
+ * per ladder. The palette is therefore parsed per scope rather than flat: see
+ * propsIn() below.
  *
  * Run: node test/tokens.js
  */
@@ -127,6 +128,16 @@ const LADDER = {
   'Learning': { sel: '#board[data-cat="learning"]',
              deep: '#11040b', card: '#260e12', frame: '#b57a9b', note: '#e6c2c9',
              waterTop: '#855562', waterMid: '#6a414c', waterBot: '#472a35' },
+  // The fifth ladder — the Calendar, orange (issue #168). Bound on #cal-view the
+  // way To-Do binds on :root (the calendar is a body-level section, and nothing
+  // inside it carries data-cat), so the rebinding re-scopes exactly the calendar
+  // chrome. Same axis: every rung reproduces the To-Do rung's luminance to 4dp
+  // and its 2dp ratios; the arc runs ~47-66deg. Unlike the other rotations it
+  // has no .board-cat/.card-drag-ghost mirrors — no cards render inside it —
+  // so it is excluded from the section-tray loops below.
+  'Calendar': { sel: '#cal-view',
+             deep: '#110501', card: '#251002', frame: '#b48158', note: '#e3c6aa',
+             waterTop: '#815a42', waterMid: '#694432', waterBot: '#462d1a' },
 };
 const LADDER_NAMES = Object.keys(LADDER);
 // The retired sand family (B58/B59): present anywhere = the swap regressed.
@@ -167,7 +178,7 @@ console.log('\n[1] The surface ladder — tokens declared, luminances reproduce 
   }
 }
 
-console.log('\n[1b] The ladder rotates with the board type — three bindings, one axis (UIUX §2.2.2, B67)');
+console.log('\n[1b] The ladder rotates — five bindings, one axis (UIUX §2.2.2, B67, B74, #168)');
 {
   // The rung -> token-name map, and the luminance each rung must hold on EVERY
   // ladder. This is the whole claim of B67: hue moves, the axis does not.
@@ -221,8 +232,9 @@ console.log('\n[1b] The ladder rotates with the board type — three bindings, o
     /\.card-drag-ghost\[data-cat="learning"\]/.test(css));
   // A section's cards draw the water's upper fall, so the two stops they read
   // must agree with the board's — one hue, not two. The drag ghost is a single
-  // card with no tray, so it takes only these two.
-  for (const name of LADDER_NAMES.filter(n => n !== 'To-Do')) {
+  // card with no tray, so it takes only these two. The Calendar is excluded:
+  // no board cards render inside it (nothing there carries data-cat).
+  for (const name of LADDER_NAMES.filter(n => n !== 'To-Do' && n !== 'Calendar')) {
     const lad = LADDER[name], cat = lad.sel.match(/"([^"]+)"/)[1];
     const cardScope = propsIn(`.board-cat[data-cat="${cat}"]`);
     ok(`${name}: the card's water agrees with the board's`,
@@ -231,8 +243,9 @@ console.log('\n[1b] The ladder rotates with the board type — three bindings, o
   }
   // issue #107 (B72): each rotating section is a framed, tinted tray in its own
   // family, so it also rebinds --frame (its inset frame) and --card (its ground)
-  // to the board's — the barrier is the family's, not the chrome's.
-  for (const name of LADDER_NAMES.filter(n => n !== 'To-Do')) {
+  // to the board's — the barrier is the family's, not the chrome's. Calendar
+  // excluded, same reason as above.
+  for (const name of LADDER_NAMES.filter(n => n !== 'To-Do' && n !== 'Calendar')) {
     const lad = LADDER[name], cat = lad.sel.match(/"([^"]+)"/)[1];
     const scope = propsIn(`.board-cat[data-cat="${cat}"]`);
     ok(`${name}: the section tray carries its family frame + ground (issue #107)`,
@@ -245,6 +258,19 @@ console.log('\n[1b] The ladder rotates with the board type — three bindings, o
     const decl = propsIn(LADDER[name].sel);
     for (const dead of ['--ink-light', '--ink-dark', '--accent-restore', '--accent-page', '--danger', '--highlight', '--reminder', '--carried'])
       ok(`${name}: ${dead} is not rebound per board type`, !(dead in decl), decl[dead]);
+  }
+  // issue #168: the Calendar ladder is bound on #cal-view alone. The section is
+  // a body-level sibling of #board-view (so it inherits no board scope), and
+  // the day cards it builds carry no data-cat — nothing inside re-scopes the
+  // eight rungs, or the orange would smear onto board renderings and the
+  // rebinding would leak past the view.
+  ok('#cal-view is a body-level section, not a child of #board-view (issue #168)',
+    /<\/section>\s*(?:<!--[\s\S]*?-->\s*)?<section id="cal-view"/.test(html));
+  {
+    const i = app.indexOf('export function makeCalDay');
+    const body = i >= 0 ? app.slice(i, app.indexOf('\n}', i)) : '';
+    ok('makeCalDay stamps no data-cat: nothing inside #cal-view re-scopes the ladder (issue #168)',
+      i >= 0 && !/data-cat|dataset\.cat/.test(body));
   }
 }
 
@@ -538,6 +564,7 @@ console.log('\n[8] The scratch pair moves together: 0.62 over 0.12, both poles (
     'Idea':  { note: 4.51, top: 3.22, mid: 4.11, bot: 5.49, buriedNote: 1.27, buriedTop: 1.30 },
     'Note':  { note: 4.54, top: 3.20, mid: 4.12, bot: 5.50, buriedNote: 1.27, buriedTop: 1.28 },
     'Learning': { note: 4.54, top: 3.19, mid: 4.11, bot: 5.50, buriedNote: 1.27, buriedTop: 1.28 },
+    'Calendar': { note: 4.57, top: 3.19, mid: 4.10, bot: 5.49, buriedNote: 1.28, buriedTop: 1.29 },
   };
   for (const lname of LADDER_NAMES) {
     const lad = LADDER[lname], want = MARKS[lname];
@@ -638,10 +665,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is todo-boards-v62 — the bump that ships the #195 identity rename',
-    /const CACHE = 'todo-boards-v62';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v62, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v62';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is todo-boards-v63 — the bump that ships the #168 calendar palette',
+    /const CACHE = 'todo-boards-v63';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v63, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v63';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('TABLET_MQ is the B103 one-leg width floor: min-width 744px, orientation-blind',
     /window\.matchMedia\('\(min-width: 744px\)'\)/.test(app),
