@@ -2413,6 +2413,48 @@ async function openCat(page, cat) {
     await ctx.close();
   }
 
+  // ---- 25b. Non-today cards shrink to their text; the bottom stays empty (issue #170)
+  // The law: a non-today day card is sized by its content — two lines of event
+  // text read comfortably, nothing clipped — today keeps its viewport share
+  // (the 1.6 grow, ~152px on this rig), and the freed height sits at the bottom
+  // of #cal-stack with nothing stubbed into it (the month view's ground, #191).
+  console.log('\n[25b] Calendar: non-today cards shrink; the bottom stays empty (issue #170)');
+  {
+    const { ctx, page, errors } = await newMobilePage(browser);
+    await page.evaluate(async () => {
+      const key = calKey(new Date());
+      const b = newBoardRecord();
+      b.title = '09/16/26 To Do'; b.cal = key; b.calReq = 1;
+      b.requirements = 'a long event line that must wrap onto two comfortable lines';
+      const ev = newCalEvent(key, 'a long event line that must wrap onto two comfortable lines');
+      await idbPut(b); await idbPut(ev);
+    });
+    await page.evaluate(() => document.getElementById('action-calendar').click());
+    await page.waitForTimeout(400);
+    const g = await page.evaluate(() => {
+      const stack = document.getElementById('cal-stack').getBoundingClientRect();
+      const days = [...document.querySelectorAll('.cal-day')];
+      const line = [...document.querySelectorAll('.cal-line')]
+        .find(l => l.textContent === 'a long event line that must wrap onto two comfortable lines');
+      return {
+        today: +days[0].getBoundingClientRect().height.toFixed(1),
+        others: days.slice(1).map(d => +d.getBoundingClientRect().height.toFixed(1)),
+        lineHeight: +line.getBoundingClientRect().height.toFixed(1),
+        bottomGap: +(stack.bottom - days[6].getBoundingClientRect().bottom).toFixed(1),
+      };
+    });
+    ok('today keeps its viewport share (the 1.6 grow, ~152px on this rig)',
+      Math.abs(g.today - 152) <= 4, String(g.today));
+    ok('a wrapping event renders two readable lines, unclipped',
+      g.lineHeight >= 30 && g.lineHeight <= 38, String(g.lineHeight));
+    ok('non-today cards shrink to their content (two lines + capture row)',
+      g.others.every(h => h > 40 && h < 80), JSON.stringify(g.others));
+    ok('the freed height sits empty at the bottom — no stub, no fill',
+      g.bottomGap > 150, String(g.bottomGap));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   // ---- 26. the calendar's R1 top row is filled and meets the floor (issue #156, B98) ----
   // The bug: the three #cal-top buttons shipped as EMPTY elements — fillBoardAction
   // was never run for them, so they rendered as 12x16 blank squares (the issue's

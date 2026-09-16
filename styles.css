@@ -1722,7 +1722,7 @@ html.desktop #cal-export { margin-left: auto; }
   position: relative;
   border-radius: 4px;
   overflow: hidden;
-  flex: 1 1 0;
+  flex: 0 0 auto;                      /* issue #170: the card is its content's size, not the viewport's — the freed height falls out the bottom, unstubbed (the month view's ground, #191) */
   min-height: 44px;
   display: grid;
   grid-template-columns: 84px 1fr;     /* date card left-anchored, one timeline zone (v2 refinement) */
@@ -1750,7 +1750,8 @@ html.desktop #cal-export { margin-left: auto; }
 }
 .cal-line {
   font-size: 12px; line-height: 1.4; color: var(--ink-light);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden; overflow-wrap: break-word;   /* #170: the line may wrap — two lines read, a third never draws */
 }
 .cal-line.complete { text-decoration: line-through; opacity: .55; }
 .cal-add {
@@ -1766,12 +1767,13 @@ html.desktop #cal-export { margin-left: auto; }
 .cal-add:hover, .cal-add:focus-visible { opacity: 1; }
 .cal-line[contenteditable] {
   outline: none;
-  white-space: pre-wrap;               /* the editor may wrap; rest is ellipsized */
+  display: block; -webkit-line-clamp: unset;   /* the editor grows freely; the clamp is for the read, not the write */
+  white-space: pre-wrap;               /* the editor may wrap; rest is clamped to two lines */
 }
 /* Attention recedes with distance from now (the mockups' law): today lit,
    the rest receded — scale and luminance, never icons. */
-.cal-day.today { flex: 1.6 1 0; outline: 2px solid var(--ink-light); outline-offset: 1px;
-  box-shadow: 0 0 0 3px var(--ink-dark); }
+.cal-day.today { flex: 1.6 1 0; max-height: calc(21.05% - 9px); outline: 2px solid var(--ink-light); outline-offset: 1px;
+  box-shadow: 0 0 0 3px var(--ink-dark); }   /* #170: the cap is today's old flex share — 1.6/7.6 of the stack minus the gaps — so today's size survives the shrink verbatim; the leftovers it no longer absorbs sit at the bottom, empty */
 .cal-day.today .cal-d1 { font-size: 14px; }
 .cal-day.near { opacity: .88; }
 .cal-day.near::before { filter: brightness(.8); }
