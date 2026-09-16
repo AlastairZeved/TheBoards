@@ -1,5 +1,5 @@
 /* ============================================================================
-   To-Do Boards — app.js  (vanilla, no dependencies, no build step)
+   TheBoards — app.js  (vanilla, no dependencies, no build step)
 
    Sections:
      1. Constants & copy

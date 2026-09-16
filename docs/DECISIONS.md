@@ -1,4 +1,4 @@
-# DECISIONS.md — To-Do Boards v1
+# DECISIONS.md — TheBoards v1
 
 Where `PRD.md` / `UIUX.md` make a decision, it is followed exactly. This file
 records only (a) the one place the two documents conflict internally, and
@@ -4632,3 +4632,7 @@ Fix), the owner's ruling of record.
 ### B115. The two re-homing menu options are REMOVED in full — "Add to existing board" and "Create new board with this as first card", the pair B108 gave the manually added card on a linked To-Do board, were never requested and leave no trace of their addition: the long-press/right-click menu of a manual add is the shipped set minus those two options, and no buildMenu leaf, board chooser, or second picker surface exists for re-homing a manual add (issue #205, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/205; supersedes ONLY the re-homing clause of B108 — the morning lifecycle itself is untouched: `ensureLinkedBoard`, the carry-forward MOVE with its same logical x/y, and `carriedOn` all stay exactly as shipped; the manual add stays non-propagating — the note exists once, on the day board it was typed onto, and the reminder pass and a later link remain the only ways a card reaches a second board; keeps B108's manual-add definition — `board.cal` set, no `carriedOn`, surfaced cards and carried cards don't get it, B114's menu armament, B91's menu as narrowed by B114, B109's echo surfacing, §1's state-is-never-colour-alone; waives nothing)
 
 **Source:** issue #205 (owner): “Immediately remove them and leave no trace of their addition. Scope creep will not be tolerated.” — https://github.com/AlastairZeved/TheBoards/issues/205
+
+### B116. The app's declared identity is the single string "TheBoards" — manifest.json `name` becomes "TheBoards" and every user-visible identity surface (document title, runtime document.title templates, PDF Producer, file/doc headers) carries that one string; `"short_name"` stays "Boards" — the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/195 (feature copy is untouched: "To-Do Boards" as a board-section name alongside Note/Learning/Idea Boards is section naming, not app identity; the already-generated `.desktop` launcher on an installed machine keeps its old `Name=` until the app is removed and reinstalled — expected, not a regression)
+
+**Source:** issue #195 (owner): “The identity should be one string.” and on short_name: “keep or retire short_name (ruling needed — launcher truncation on narrow panels argues for keeping it).” — https://github.com/AlastairZeved/TheBoards/issues/195
