@@ -61,6 +61,7 @@ function applyMode() {
   applyLayout();
   if (state.isWide) {
     renderPane();
+    document.documentElement.classList.add('has-cal-rail');  // B99: re-arm the rail's CSS gate on every return to wide (issue #213)
     showCalRail();                   // the rail re-renders on every flip to wide (B99)
   } else {
     document.documentElement.classList.remove('has-cal-rail');
@@ -208,7 +209,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v63';
+const OWN_BUILD = 'v64';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

@@ -2024,6 +2024,25 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await ctx.close();
   }
 
+  console.log('\n[D25] The standing rail survives a desktop→narrow→desktop flip (issue #213, B99)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    ok('has-cal-rail present at boot', await page.evaluate(() =>
+      document.documentElement.classList.contains('has-cal-rail')));
+    await page.setViewportSize({ width: 384, height: 846 });   // flip to narrow
+    await page.waitForTimeout(400);
+    ok('narrow tears the rail class down', await page.evaluate(() =>
+      !document.documentElement.classList.contains('has-cal-rail')));
+    await page.setViewportSize({ width: 1440, height: 900 });  // flip back to desktop
+    await page.waitForTimeout(400);
+    ok('has-cal-rail is re-added on the flip back to wide', await page.evaluate(() =>
+      document.documentElement.classList.contains('has-cal-rail')));
+    ok('#cal-view is visible again', await page.evaluate(() =>
+      document.getElementById('cal-view').getBoundingClientRect().width > 0));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   await browser.close();
   console.log('\n=== desktop: ' + pass + ' passed, ' + fail + ' failed ===');
   process.exit(fail ? 1 : 0);
