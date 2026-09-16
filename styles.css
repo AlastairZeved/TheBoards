@@ -155,6 +155,27 @@
   --frame:       #b57a9b;
   --note:        #e6c2c9;
 }
+/* The Calendar — the fifth ladder (issue #168). The calendar is a body-level
+   section, so this binds the way To-Do binds on :root: the ladder is rebound
+   under #cal-view and nothing inside it carries data-cat (makeCalDay builds
+   plain divs), so the rebinding re-scopes exactly the calendar chrome — the
+   rail, the R1 row, the day cards' water fall and date compartments, and the
+   month view's today cell, which reads the same var(--water-*) fall. Every
+   rung reproduces the To-Do rung's WCAG luminance to the 4dp UIUX §2.2 prints
+   AND its 2dp ink ratios (test/tokens.js asserts it against this ladder too);
+   the arc runs ~47–66deg, narrowed like the other rotations, and the residuals
+   are recorded in §2.2.2. Linked boards opened FROM the calendar keep their
+   own data-cat scopes — they are #board elements, not children of this one. */
+#cal-view {
+  --deep:        #110501;
+  --card:        #251002;
+  --water-top:   #815a42;
+  --water-mid:   #694432;
+  --water-bot:   #462d1a;
+  --water-bot-a: 70 45 26;
+  --frame:       #b48158;
+  --note:        #e3c6aa;
+}
 /* A list/rail card is a small rendering of what it names (UIUX §10), so it
    previews its board's hue. Since issue #107 (B72) a section is a framed,
    tinted tray in its own family, so it now reads FOUR rungs of the rotated
