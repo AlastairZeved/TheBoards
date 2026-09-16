@@ -4,7 +4,7 @@
 // week stack. This suite drives the real page (mobile viewport — the tight
 // one) and asserts the issue's six features as shipped behaviour: one dot per
 // event-bearing day no matter the event count, the pale band across the
-// current week's row, today in the to-do boards' water blue, the two month
+// current week's row, today in the calendar's orange fall, the two month
 // nav buttons, and the tap that swaps the week view to the tapped date's
 // Sunday-first week. Pure display: nothing here writes records.
 //
@@ -38,7 +38,7 @@ async function monthReady(page, minCells = 1) {
 (async () => {
   const browser = await chromium.launch({ ...launchOpts });
 
-  console.log('\n[M1] Dots, today\'s blue, the current-week band (mobile)');
+  console.log('\n[M1] Dots, today\'s cell, the current-week band (mobile)');
   {
     const { ctx, page, errors } = await newPage(browser);
     // Two events on today (the one-dot law's hard case), one on today+2.
@@ -92,7 +92,7 @@ async function monthReady(page, minCells = 1) {
     ok('two event-bearing days, two dots total', Object.keys(m.byDay).length === 2, JSON.stringify(m.byDay));
     ok('the dot is --accent-page, the palette shade (rgb(109,156,176))', m.dotColor === 'rgb(109, 156, 176)', m.dotColor);
     ok('exactly one today cell', m.todays === 1, String(m.todays));
-    ok('today wears the to-do boards\' water blue (the #34697f fall)', /52,\s*105,\s*127/.test(m.todayBg.replace(/\s+/g, ' ')) || /52, 105, 127/.test(m.todayBg), m.todayBg);
+    ok('today wears the calendar\'s own orange fall (the #815a42 gradient)', /129,\s*90,\s*66/.test(m.todayBg.replace(/\s+/g, ' ')) || /129, 90, 66/.test(m.todayBg), m.todayBg);
     ok('the current week\'s band is one row of 7 contiguous cells', m.nWk === 7 && m.wkRows.length === 1 && m.contiguous, JSON.stringify(m));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
