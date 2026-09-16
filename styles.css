@@ -716,6 +716,38 @@ body {
   box-shadow: 0 0 0 4px var(--ink-dark);
 }
 
+/* ---- §4.5a The note's Title tab (issue #173, B120) -----------------------
+   A header-style tab peeking from BEHIND the card's top-left corner — a note
+   slid up from behind, its header showing. A CHILD of the note (it scales with
+   the card's transform — no scaling code), positioned over the card's top-left
+   corner with its feet tucked behind the card body: .note-text paints at
+   z-index 1 over this tab's z-index 0, so only the strip above the top edge
+   shows. Rendered only when the record carries a title (B21's read-site
+   default); an empty title leaves no element and no reserved space. */
+.note-title {
+  position: absolute;
+  top: -19px;                          /* the peek: the strip above the card's top edge */
+  left: -4px;                          /* it juts past the corner — slid up from behind */
+  z-index: 0;                          /* under the card body (.note-text), over the hit collar */
+  max-width: calc(100% + 4px);
+  padding: 2px 10px;
+  border: 2px solid var(--ink);        /* the card's own frame hand (§4.5) */
+  border-bottom: 0;                    /* the tucked edge continues behind the card */
+  border-radius: 3px 3px 0 0;
+  background: var(--frame);
+  color: var(--ink);
+  font-size: 13px; font-weight: 600; line-height: 1.3;   /* header-like: the band-label tab's ink (§3.1) */
+  white-space: nowrap;                 /* a single-line Title (B120) */
+  overflow: hidden; text-overflow: ellipsis;
+  text-align: left;
+  outline: none;
+}
+.note-title:focus {                    /* the two-tone ring (§2.7), same as the note */
+  outline: 2px solid var(--ink-light);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--ink-dark);
+}
+
 /* ---- §4.5 The note's action toolbar (B84, issue #126) -------------------
    A real minimum rendered width, so a note is always at least a toolbar wide.
    It floors only NON-empty notes: an empty note keeps no frame (§6.2) and shows
@@ -724,25 +756,28 @@ body {
    floor — a note can never be sized narrower than its own row. */
 .note-text:not(:empty) { min-width: 132px; }   /* = NOTE_MIN_W (UIUX §4.5) */
 
-/* Three flat tabs on the note's top edge — Complete/Restore · Highlight ·
+/* Three flat tabs on the note's bottom edge — Complete/Restore · Highlight ·
    Delete, the menu's B43 order, Delete last in --danger (Copy left for the note
    menu, B114). A CHILD of the note, so
    it scales with it and is never wider than the note (the min-width above seats
    it). Styled as the band-label tab (§3.1): --frame fill, .on-light ink at
-   13px/600, 3px radius — NOT a pill. Drawn always; shown only on select/focus. */
+   13px/600, 3px radius — NOT a pill. Drawn always; shown only on select/focus.
+   B120 moves the row here from the top edge: flush ON the bottom edge, no gap
+   (B87's principle survives), centred on the card (B88's left anchor yields). */
 .note-toolbar {
   position: absolute;
-  left: 0;                             /* left-anchored, far left (issue #134, B88) */
-  bottom: 100%;                        /* flush ON the note's top edge, no gap (issue #133, B87) */
+  top: 100%;                           /* flush ON the note's bottom edge, no gap (issue #173, B120) */
+  left: 50%;                           /* centred on the card (issue #173, B120) */
+  transform: translateX(-50%);
   display: flex;
   gap: 3px;
   z-index: 3;                          /* above the note's text and scratch */
   opacity: 0; visibility: hidden;      /* shown by the select/focus rule below */
   transition: opacity 200ms cubic-bezier(0.22, 0.61, 0.36, 1), visibility 0s 200ms;
 }
-/* No room above near the sheet top: the row flips to sit at the top edge instead
-   (reflectToolbarFlip toggles .tb-flip). */
-.note.tb-flip .note-toolbar { bottom: auto; top: 0; }
+/* No room below near the sheet bottom: the row flips to sit just inside the
+   bottom edge instead (reflectToolbarFlip toggles .tb-flip — B120's re-aim). */
+.note.tb-flip .note-toolbar { top: auto; bottom: 0; }
 /* An empty note shows no row (it has no frame either, §6.2). The row follows the
    text in DOM, so the general-sibling selector reaches it without :has(). */
 .note-text:empty ~ .note-toolbar { display: none; }
@@ -797,8 +832,8 @@ html:not(.desktop) .note:focus-within:not(.pressed) .note-toolbar {
   opacity: 1; visibility: visible;
   transition: opacity 200ms cubic-bezier(0.22, 0.61, 0.36, 1), visibility 0s;
 }
-/* A selected note rises so its toolbar clears any note overlapping its top edge
-   (mobile surfaces the engaged note; desktop selection does not, B22). */
+/* A selected note rises so its toolbar clears any note overlapping its bottom
+   edge (mobile surfaces the engaged note; desktop selection does not, B22). */
 html.desktop .note.selected { z-index: 3; }
 html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so its toolbar clears overlaps, without a write (issue #136, B90) */
 

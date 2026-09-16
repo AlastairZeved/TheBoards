@@ -7,7 +7,7 @@ import { LOGICAL_H, LOGICAL_W, applyLayout, applyNoteWidth, caretToEnd, effScale
 import { rebaseNote, renderX, renderY, setHitInset, toLogical, updateBoardGeometry } from './geometry.js';
 import { applyCompleteA11y, boardLinks, clearLink, linkSource, lotEls, makeLotEl, makeNoteEl, noteEls } from './render.js';
 import { runClockAction } from './render.js';
-import { reflectToolbarFlip, removeLinksForNote, runNoteToolbarAction, setCarriedUi, syncViewTitle, toggleLink, updateLinks, updateNoteToolbar } from './render.js';
+import { reflectToolbarFlip, removeLinksForNote, runNoteToolbarAction, setCarriedUi, syncViewTitle, toggleLink, updateLinks, updateNoteToolbar, ensureNoteTitleEl } from './render.js';
 import { menuOpen, menuReturnFocus, openMenuFor } from './menus.js';
 import { renderPane, updateActiveCardTitle, writeThroughRequirements } from './boards.js';
 
@@ -475,6 +475,32 @@ function commitNote(node) {
   note.text = node.querySelector('.note-text').textContent;
   if (note.text.trim().length === 0) { removeNoteSilently(note, node); return; }  // no empty frames ever
   saveNow();
+}
+/* The Title's commit (issue #173, B120): the note text's own commit-on-blur
+   path — the B81 guard family's home. An emptied title clears the field the
+   B21 way (the key is deleted; absence is off) and the tab goes with it. */
+function commitNoteTitle(node) {
+  const note = state.current.notes.find(n => n.id === node.dataset.id);
+  if (!note) return;
+  const tab = node.querySelector('.note-title');
+  if (!tab) return;
+  const v = tab.textContent.replace(/\n/g, '').trim();
+  if (v) { note.title = v; tab.textContent = v; }
+  else { delete note.title; tab.remove(); }
+  saveNow();
+}
+/* The menu's Add/Edit Title act (issue #173, B120): the tab is created empty
+   if the note has none, then the cursor lands in it with the keyboard ready —
+   the issue's expected behavior, verbatim. Editing raises the note (B27) like
+   every other edit entry. Arming is edit-entry — navigation, no drop-guard. */
+export function editNoteTitle(node) {
+  const note = state.current.notes.find(n => n.id === node.dataset.id);
+  if (!note) return;
+  const tab = ensureNoteTitleEl(node);
+  surfaceNote(node);
+  enableEditing(tab);
+  tab.focus();
+  caretToEnd(tab);
 }
 function removeNoteSilently(note, node) {
   if (selected && selected.kind === 'note' && selected.id === note.id) clearSelection();
@@ -1239,6 +1265,7 @@ function onFocusOut(e) {
   if (!t.hasAttribute || !t.hasAttribute('contenteditable')) return;
   disableEditing(t);
   if (t.classList.contains('note-text')) commitNote(t.closest('.note'));
+  else if (t.classList.contains('note-title')) commitNoteTitle(t.closest('.note'));
   else if (t.classList.contains('lot-text')) commitLot(t.closest('.lot-item'));
   else if (t.classList.contains('anchor')) commitAnchor(t);
   state.editVVFloor = Infinity;   // next edit measures its own keyboard-up floor (B80)

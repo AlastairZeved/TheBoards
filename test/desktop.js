@@ -1446,9 +1446,9 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.waitForTimeout(200);
     await page.mouse.click(905, 605, { button: 'right' });
     await page.waitForTimeout(200);
-    ok('right-click on a note opens its two-item Copy · Link menu (B91, B114)',
+    ok('right-click on a note opens its Copy · Add Title · Link menu (B91, B114; B120)',
        await page.evaluate(() => document.querySelector('#menu').hidden === false &&
-         [...document.querySelectorAll('#menu button')].map(b => b.textContent.trim()).join('|') === 'Copy|Link'));
+         [...document.querySelectorAll('#menu button')].map(b => b.textContent.trim()).join('|') === 'Copy|Add Title|Link'));
     await page.keyboard.press('Escape');
     await page.waitForTimeout(150);
     ok('Escape dismisses the Link menu', await page.evaluate(() =>
@@ -1708,9 +1708,9 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // Right-click Alpha → its Copy · Link menu (B114); the desktop hint reads "Click...".
     await page.mouse.click(c.la.x, c.la.y, { button: 'right' });
     await page.waitForTimeout(150);
-    ok('right-click opens a two-item Copy · Link menu', await page.evaluate(() =>
+    ok('right-click opens a Copy · Add Title · Link menu (B120)', await page.evaluate(() =>
       document.querySelector('#menu').hidden === false &&
-      [...document.querySelectorAll('#menu button')].map(b => b.textContent.trim()).join('|') === 'Copy|Link'));
+      [...document.querySelectorAll('#menu button')].map(b => b.textContent.trim()).join('|') === 'Copy|Add Title|Link'));
     await page.evaluate(() =>
       [...document.querySelectorAll('#menu button')].find(b => /Link/.test(b.textContent)).click());
     await page.waitForTimeout(80);
@@ -2183,6 +2183,100 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
          !document.documentElement.classList.contains('wide') &&
          getComputedStyle(document.getElementById('action-boards')).display !== 'none'));
     await mctx.close();
+  }
+
+  console.log('\n[D28] The note Title (issue #173, B120): menu item, edit entry, behind-tab, bottom-edge toolbar');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    await page.mouse.click(800, 600);
+    await page.waitForTimeout(500);
+    await page.keyboard.type('titled note');
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(200);
+    // (e) An empty title renders nothing — no tab, no reserved space.
+    ok('a note with no title renders no tab (B120)', await page.evaluate(() =>
+      !document.querySelector('.note .note-title')));
+    const center = () => page.evaluate(() => {
+      const r = document.querySelector('.note').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    // (a) The menu item, wearing the act it will perform (B43/B71).
+    let box = await center();
+    await page.mouse.click(box.x, box.y, { button: 'right' });
+    await page.waitForTimeout(150);
+    ok('the note menu offers Add Title between Copy and Link (B120)', await page.evaluate(() =>
+      [...document.querySelectorAll('#menu button')].map(b => b.textContent.trim()).join('|') === 'Copy|Add Title|Link'));
+    // (b) Choosing it puts the cursor in the title, keyboard ready.
+    await page.evaluate(() =>
+      [...document.querySelectorAll('#menu button')].find(b => b.textContent.trim() === 'Add Title').click());
+    await page.waitForTimeout(120);
+    ok('Add Title focuses the title for typing (B120)', await page.evaluate(() =>
+      document.activeElement.classList.contains('note-title') &&
+      document.activeElement.hasAttribute('contenteditable')));
+    await page.keyboard.type('Quarterly Numbers');
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(200);
+    ok('the committed title persisted to the record', await page.evaluate(() =>
+      state.current.notes[0].title === 'Quarterly Numbers'));
+    // (c) The behind-tab at the top-left, and it survives a reload (idb round-trip).
+    const geo = await page.evaluate(() => {
+      const n = document.querySelector('.note').getBoundingClientRect();
+      const t = document.querySelector('.note .note-title').getBoundingClientRect();
+      return { peeked: t.top < n.top, tucked: t.bottom > n.top, leftish: t.left <= n.left + 4 };
+    });
+    ok('the title peeks from behind the card top-left (B120)', geo.peeked && geo.tucked && geo.leftish, JSON.stringify(geo));
+    const boardId = await page.evaluate(() => state.current.id);
+    await reopen(page, boardId);
+    ok('the title survives a reload (idb round-trip)', await page.evaluate(() =>
+      document.querySelector('.note .note-title') &&
+      document.querySelector('.note .note-title').textContent === 'Quarterly Numbers'));
+    box = await center();
+    await page.mouse.click(box.x, box.y, { button: 'right' });
+    await page.waitForTimeout(150);
+    ok('the menu item now reads Edit Title (B43/B71)', await page.evaluate(() =>
+      [...document.querySelectorAll('#menu button')].some(b => b.textContent.trim() === 'Edit Title')));
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(120);
+    // (d) The toolbar hangs from the bottom edge, centred on the card, a scaling child.
+    await page.mouse.click(box.x, box.y);
+    await page.waitForTimeout(250);
+    const tb = await page.evaluate(() => {
+      const n = document.querySelector('.note.selected');
+      if (!n) return null;
+      const r = n.getBoundingClientRect(), t = n.querySelector('.note-toolbar').getBoundingClientRect();
+      return { flush: t.top >= r.bottom - 2,
+               centred: Math.abs((t.left + t.width / 2) - (r.left + r.width / 2)) < 3,
+               child: n.querySelector('.note-toolbar').parentNode === n,
+               within: t.width <= r.width + 1 };
+    });
+    ok('the toolbar sits flush at the bottom edge, centred, a scaling child (B120)',
+       tb && tb.flush && tb.centred && tb.child && tb.within, JSON.stringify(tb));
+    // The flip re-aims: near the sheet bottom the row flips inside the edge.
+    const flipped = await page.evaluate(async () => {
+      state.current.notes[0].y = LOGICAL_H - 30;
+      renderBoard();
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const el = document.querySelector('.note');
+      const r = el.getBoundingClientRect(), t = el.querySelector('.note-toolbar').getBoundingClientRect();
+      return { flip: el.classList.contains('tb-flip'), inside: t.bottom <= r.bottom + 2 };
+    });
+    ok('near the sheet bottom the row flips inside the bottom edge (B120)',
+       flipped.flip && flipped.inside, JSON.stringify(flipped));
+    // Clearing: an emptied title deletes the field (B21) and the tab with it.
+    box = await center();
+    await page.mouse.click(box.x, box.y, { button: 'right' });
+    await page.waitForTimeout(150);
+    await page.evaluate(() =>
+      [...document.querySelectorAll('#menu button')].find(b => b.textContent.trim() === 'Edit Title').click());
+    await page.waitForTimeout(120);
+    await page.keyboard.press('Control+a');
+    await page.keyboard.press('Backspace');
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(200);
+    ok('an emptied title deletes the field and the tab (B21, B120)', await page.evaluate(() =>
+      !document.querySelector('.note .note-title') && !('title' in state.current.notes[0])));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
   }
 
   await browser.close();

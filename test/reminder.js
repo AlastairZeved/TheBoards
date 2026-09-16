@@ -269,7 +269,7 @@ async function seedBoard(page, title, cat, notes) {
     await page.waitForTimeout(300);
     const labels = await page.evaluate(() => [...document.querySelectorAll('#menu [role="menuitem"]')].map(l => l.textContent));
     ok('a manual add\'s menu is Copy + Link, no re-homing pair (no reminder interference)',
-      JSON.stringify(labels) === JSON.stringify(['Copy', 'Link']) && !labels.includes('Go to Board'), JSON.stringify(labels));
+      JSON.stringify(labels) === JSON.stringify(['Copy', 'Add Title', 'Link']) && !labels.includes('Go to Board'), JSON.stringify(labels));
     await tap(page, 5, 5);
     await page.waitForTimeout(200);
     ok('no page errors', errors.length === 0, errors.join(' | '));

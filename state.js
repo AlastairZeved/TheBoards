@@ -98,6 +98,9 @@ export const COPY = {
   highlightAll: 'Highlight all', unhighlightAll: 'Remove highlights',
   deleted: 'Deleted', undo: 'Undo',
   copy: 'Copy', copied: 'Copied', copyError: 'Couldn’t copy.',
+  // The note's Title (issue #173, B120): the toggle wears the act it will
+  // perform (B43/B71) — Add when the note has none, Edit when one exists.
+  addTitle: 'Add Title', editTitle: 'Edit Title',
   // Note linking (issue #142, B91): a relationship the user asserts between two
   // notes by connecting them — long-press/right-click a note → Link → the next
   // note tapped. The hint states the act while the mode is armed; linked/unlinked
@@ -186,6 +189,9 @@ export const GLYPH = {
   // the drawn line it leaves below — "colour is laid onto this", in the board's
   // own hand. Redrawn, not code-point-swapped, if it fails to read at 16px.
   highlight: MARK(16, '<path d="M9.5 2.5l4 4-6 6-4 1 1-4z"/><path d="M2 14.5h6"/>'),
+  // The Title (issue #173, B120): a header rule over a header line — the mark
+  // of a heading, the thing the tab renders.
+  title:    MARK(16, '<path d="M3 3.5h10M8 3.5v9"/>'),
   // Two nodes joined by a line (issue #142, B91): the mark IS the thing it makes —
   // a connection between two notes, no arrowhead, in the board's own hand.
   link:     MARK(16, '<circle cx="4" cy="12" r="1.6"/><circle cx="12" cy="4" r="1.6"/><path d="M5.3 10.7l5.4-5.4"/>'),

@@ -2161,7 +2161,7 @@ async function openCat(page, cat) {
     ok('a note long-press opens a menu (B91)',
        await page.evaluate(() => document.querySelector('#menu').hidden === false));
     const items = await page.evaluate(() => [...document.querySelectorAll('#menu button')].map(b => b.textContent.trim()));
-    ok('its items are Copy then Link', items.join('|') === 'Copy|Link', JSON.stringify(items));
+    ok('its items are Copy, Add Title, then Link (B120)', items.join('|') === 'Copy|Add Title|Link', JSON.stringify(items));
 
     // Choose Link → the mode arms with a hint; tap Bravo → one link + one line.
     await chooseLink();
@@ -2510,6 +2510,64 @@ async function openCat(page, cat) {
       const b = document.getElementById('board').getBoundingClientRect();
       return Math.abs(b.width - 390) < 1 && Math.abs(b.left) < 1;
     }));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  console.log('\n[25] The note Title (issue #173, B120): long-press menu arms it; toolbar at the bottom edge');
+  {
+    const { ctx, page, errors } = await newMobilePage(browser);
+    // B108 lands boot on today's linked board; this grammar is a plain-board
+    // contract — swap to a plain board first (section 24's precedent).
+    await page.evaluate(async () => {
+      const b = (await idbGetAll()).find(r => r.title !== undefined && !r.cal);
+      if (b && b.id !== state.current.id) swapBoard(b.id);
+    });
+    await page.waitForTimeout(500);
+    await page.evaluate(() => {
+      state.current.notes.length = 0;
+      state.current.notes.push({ id:'tt', text:'Titled', x:80, y:250, rw:LOGICAL_W, rh:LOGICAL_H, scale:1, state:'active' });
+      renderBoard();
+    });
+    await page.waitForTimeout(150);
+    const c = await page.evaluate(() => {
+      const r = document.querySelector('.note').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    // Long-press → the menu carries Add Title (B120); choosing it focuses the
+    // title with the keyboard ready — the mobile parallel of D28's (a)/(b).
+    await tap(page, c.x, c.y, 700);
+    await page.waitForTimeout(150);
+    ok('long-press menu offers Add Title (B120)', await page.evaluate(() =>
+      [...document.querySelectorAll('#menu button')].some(b => b.textContent.trim() === 'Add Title')));
+    await page.evaluate(() =>
+      [...document.querySelectorAll('#menu button')].find(b => b.textContent.trim() === 'Add Title').click());
+    await page.waitForTimeout(150);
+    ok('Add Title focuses the title for typing (B120)', await page.evaluate(() =>
+      document.activeElement.classList.contains('note-title') &&
+      document.activeElement.hasAttribute('contenteditable')));
+    await page.keyboard.type('My Title');
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(200);
+    ok('the committed title renders the behind-tab and persists', await page.evaluate(() =>
+      state.current.notes[0].title === 'My Title' && !!document.querySelector('.note .note-title')));
+    // The engaged note's toolbar hangs from the bottom edge, centred (B120) —
+    // the long-press path's own grammar (first tap engages, B90).
+    await tap(page, c.x, c.y);
+    await page.waitForTimeout(250);
+    if (!(await page.evaluate(() => !!document.querySelector('.note.engaged')))) {
+      await tap(page, c.x, c.y);                           // an edit consumed the first tap (B90)
+      await page.waitForTimeout(250);
+    }
+    const tb = await page.evaluate(() => {
+      const n = document.querySelector('.note.engaged');
+      if (!n) return null;
+      const r = n.getBoundingClientRect(), t = n.querySelector('.note-toolbar').getBoundingClientRect();
+      return { flush: t.top >= r.bottom - 2,
+               centred: Math.abs((t.left + t.width / 2) - (r.left + r.width / 2)) < 3 };
+    });
+    ok('the engaged note toolbar sits flush at the bottom edge, centred (B120)',
+       tb && tb.flush && tb.centred, JSON.stringify(tb));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }

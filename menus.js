@@ -2,7 +2,7 @@
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { COPY, GLYPH, el, state } from './state.js';
 import { beginLink, completeSurfaced, copyNoteTexts, linkSource, surfacedMap } from './render.js';
-import { commitAction, g, isEditing } from './interactions.js';
+import { commitAction, editNoteTitle, g, isEditing } from './interactions.js';
 import { exportAllJson, exportBoardPdf, importBoardsJson } from './export.js';
 import { goToList, listOpen, lotMenuOpen, returnToBoard, showCal, swapBoard } from './boards.js';
 
@@ -40,6 +40,12 @@ export function openMenuFor(target, clientX, clientY) {
   // item; copyNoteTexts joins the multi-selection primary-first when the
   // desktop grammar reaches the menu with one live.
   items.push({ label: COPY.copy, glyph: GLYPH.copy, action: () => copyNoteTexts(id) });
+  // The Title (issue #173, B120): the menu's second kind of act, beside Copy
+  // and Link. The toggle wears the act it will perform (B43/B71) — Add when
+  // the note has no title, Edit when it carries one. Edit-entry is
+  // navigation, so it runs raw (B81), like Link.
+  items.push({ label: note.title ? COPY.editTitle : COPY.addTitle,
+               glyph: GLYPH.title, action: () => editNoteTitle(target.node), raw: true });
   // A note's one relational action (issue #142, B91): Link arms link mode, then
   // the next note tapped is connected (handleTap's linkSource branch). beginLink
   // runs inside buildMenu's commitAction wrapper — arming is idempotent, fine.

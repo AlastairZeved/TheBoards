@@ -146,7 +146,7 @@ async function tap(page, x, y, holdMs = 30) {
       }
     }
 
-    console.log('\n[M5] Manual add and carried note menus: Copy + Link, no re-homing (B114, B115) (B27b)');
+    console.log('\n[M5] Manual add and carried note menus: Copy, Add Title, Link — no re-homing (B114, B115, B120) (B27b)');
     {
       // A manual add: tap empty paper, type, commit.
       await tap(page, 200, 500);
@@ -166,7 +166,7 @@ async function tap(page, x, y, holdMs = 30) {
       let labels = await page.evaluate(() =>
         [...document.querySelectorAll('#menu [role="menuitem"]')].map(l => l.textContent));
       ok('manual add\'s menu is Copy (B114) then Link — the re-homing options are gone (B115)',
-        JSON.stringify(labels) === JSON.stringify(['Copy', 'Link']), JSON.stringify(labels));
+        JSON.stringify(labels) === JSON.stringify(['Copy', 'Add Title', 'Link']), JSON.stringify(labels));
       // Carry-forward's marker keeps a re-homed day-board card out of the pair:
       // the carried note's menu carries Copy (B114) then Link.
       const cbox = await page.evaluate(() => {
@@ -181,7 +181,7 @@ async function tap(page, x, y, holdMs = 30) {
       labels = await page.evaluate(() =>
         [...document.querySelectorAll('#menu [role="menuitem"]')].map(l => l.textContent));
       ok('a carried note\'s menu is Copy then Link (B114)',
-        JSON.stringify(labels) === JSON.stringify(['Copy', 'Link']), JSON.stringify(labels));
+        JSON.stringify(labels) === JSON.stringify(['Copy', 'Add Title', 'Link']), JSON.stringify(labels));
       await tap(page, 5, 5);
       await page.waitForTimeout(200);
     }
