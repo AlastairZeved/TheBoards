@@ -1181,7 +1181,7 @@ export function renderCal() {
   // 44px touch floor vs the 24px pointer floor, so B96's tablet tier
   // inherits the right one. Half-pixel headroom, per the board row's note.
   el.calTop.style.setProperty('--hit', (hitInset(el.calTop, 1) + 0.5) + 'px');
-  const days = calWindow();
+  const days = calWeekAnchor ? calWeekOf(calWeekAnchor) : calWindow();
   flushSave();
   idbGetAll().then((all) => {
     const events = eventsOf(all);      // event records ride the boards store (§1.7)
@@ -1190,7 +1190,108 @@ export function renderCal() {
       const dayEvents = calEventsOf(events, day.key);
       el.calStack.appendChild(makeCalDay(day, dayEvents, board));
     }
+    renderCalMonth(new Set(events.map((e) => e.date)));
   });
+}
+
+/* --- The month view (issue #191) ------------------------------------------
+   A compact month grid in the viewport space #170 freed at the stack's
+   bottom — no new rail, no new tab. Pure display: the only act a cell
+   carries is the tap that swaps the week view to that date's week, run raw
+   (navigation commits nothing, B81's rail precedent). Two anchors, both
+   render-time state, nothing stored (R4's law): the month on show
+   (calMonthAnchor, starts at today's month) and the week the stack shows
+   (calWeekAnchor — null means the shipped today+6 window; a tap replaces it
+   with the tapped date's Sunday-first week). */
+let calMonthAnchor = null;
+let calWeekAnchor = null;
+
+const MO_WDS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+/* The Sunday-first week containing `anchor`: seven consecutive days, today
+   flagged by key comparison (the flag is computed, not positional — the
+   tapped week usually does not contain today). */
+function calWeekOf(anchor) {
+  const days = [];
+  const start = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - anchor.getDay());
+  const tk = calKey(new Date());
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    days.push({ key: calKey(d), date: d, today: calKey(d) === tk });
+  }
+  return days;
+}
+
+function renderCalMonth(evDays) {
+  const now = new Date();
+  const a = calMonthAnchor || now;
+  el.calMonth.textContent = '';
+  // The head: back one month (left), the label, forward one month (right).
+  const head = document.createElement('div');
+  head.className = 'mo-head';
+  const label = document.createElement('div');
+  label.className = 'mo-label';
+  label.textContent = a.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  const back = document.createElement('button');
+  back.type = 'button';
+  back.className = 'mo-nav';
+  back.setAttribute('aria-label', 'Previous month');
+  back.textContent = '‹';
+  const fwd = back.cloneNode();
+  fwd.setAttribute('aria-label', 'Next month');
+  fwd.textContent = '›';
+  const nav = (dy, dm) => () => {
+    calMonthAnchor = new Date(a.getFullYear() + dy, a.getMonth() + dm, 1);
+    renderCal();                       // re-fetches the events; the grid redraws
+  };
+  back.addEventListener('click', nav(0, -1));
+  fwd.addEventListener('click', nav(0, 1));
+  head.append(back, label, fwd);
+  el.calMonth.appendChild(head);
+  // The weekday letters, then the day grid: leading blanks to Sunday-align
+  // the 1st; adjacent-month days are not drawn (the compact form, per the
+  // issue's structure-only template).
+  const grid = document.createElement('div');
+  grid.className = 'mo-grid';
+  for (const wd of MO_WDS) {
+    const c = document.createElement('div');
+    c.className = 'mo-wd';
+    c.textContent = wd;
+    grid.appendChild(c);
+  }
+  const tk = calKey(now);
+  const wkKeys = new Set(calWeekOf(now).map((d) => d.key));   // the current week's band
+  const lead = new Date(a.getFullYear(), a.getMonth(), 1).getDay();
+  const nDays = new Date(a.getFullYear(), a.getMonth() + 1, 0).getDate();
+  for (let i = 0; i < lead; i++) grid.appendChild(document.createElement('div'));
+  for (let d = 1; d <= nDays; d++) {
+    const date = new Date(a.getFullYear(), a.getMonth(), d);
+    const key = calKey(date);
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'mo-cell'
+      + (key === tk ? ' today' : '')                    // today wears the to-do boards' water blue
+      + (wkKeys.has(key) ? ' wk' : '')                  // the pale band across the current week
+      + (evDays.has(key) ? ' ev' : '');                 // one dot per event-bearing day
+    cell.setAttribute('aria-label',
+      date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
+      + (evDays.has(key) ? ', has events' : ''));
+    const n = document.createElement('span');
+    n.textContent = d;
+    cell.appendChild(n);
+    if (evDays.has(key)) {
+      const dot = document.createElement('span');
+      dot.className = 'mo-dot';
+      dot.setAttribute('aria-hidden', 'true');
+      cell.appendChild(dot);
+    }
+    cell.addEventListener('click', () => {
+      calWeekAnchor = date;
+      renderCal();                       // the week view swaps to the tapped week
+    });
+    grid.appendChild(cell);
+  }
+  el.calMonth.appendChild(grid);
 }
 
 /* The top row's three acts (R1). Back pops the pushed state. All Boards opens

@@ -2413,12 +2413,12 @@ async function openCat(page, cat) {
     await ctx.close();
   }
 
-  // ---- 25b. Non-today cards shrink to their text; the bottom stays empty (issue #170)
+  // ---- 25b. Non-today cards shrink to their text; the ground carries the month view (issue #170 + #191)
   // The law: a non-today day card is sized by its content — two lines of event
-  // text read comfortably, nothing clipped — today keeps its viewport share
-  // (the 1.6 grow, ~152px on this rig), and the freed height sits at the bottom
-  // of #cal-stack with nothing stubbed into it (the month view's ground, #191).
-  console.log('\n[25b] Calendar: non-today cards shrink; the bottom stays empty (issue #170)');
+  // text read comfortably, nothing clipped — today keeps the stack's dominant
+  // share (the 1.6 grow, its cap now against the shorter stack the month view
+  // shares the ground with, issue #191).
+  console.log('\n[25b] Calendar: non-today cards shrink; the ground carries the month view (issue #170 + #191)');
   {
     const { ctx, page, errors } = await newMobilePage(browser);
     await page.evaluate(async () => {
@@ -2441,16 +2441,21 @@ async function openCat(page, cat) {
         others: days.slice(1).map(d => +d.getBoundingClientRect().height.toFixed(1)),
         lineHeight: +line.getBoundingClientRect().height.toFixed(1),
         bottomGap: +(stack.bottom - days[6].getBoundingClientRect().bottom).toFixed(1),
+        month: (() => { const r = document.getElementById('cal-month').getBoundingClientRect();
+                        return { top: +r.top.toFixed(1), bottom: +r.bottom.toFixed(1), h: +r.height.toFixed(1) }; })(),
+        stackBottom: +stack.bottom.toFixed(1),
+        vh: window.innerHeight,
       };
     });
-    ok('today keeps its viewport share (the 1.6 grow, ~152px on this rig)',
-      Math.abs(g.today - 152) <= 4, String(g.today));
+    ok('today stays the stack\'s dominant card (the 1.6 grow, capped by the stack the month view shares)', 
+      g.today === Math.max(g.today, ...g.others) && g.today > 90, String(g.today));
     ok('a wrapping event renders two readable lines, unclipped',
       g.lineHeight >= 30 && g.lineHeight <= 38, String(g.lineHeight));
     ok('non-today cards shrink to their content (two lines + capture row)',
       g.others.every(h => h > 40 && h < 80), JSON.stringify(g.others));
-    ok('the freed height sits empty at the bottom — no stub, no fill',
-      g.bottomGap > 150, String(g.bottomGap));
+    ok('the freed ground below the stack now carries the month view (issue #191)',
+      g.bottomGap > 0 && g.month.h > 100 && g.month.top >= g.stackBottom - 1 && g.month.bottom <= g.vh,
+      JSON.stringify(g));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }

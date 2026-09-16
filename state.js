@@ -433,6 +433,7 @@ export const el = {
   calBack: document.getElementById('cal-back'),
   calBoards: document.getElementById('cal-boards'),
   calExport: document.getElementById('cal-export'),
+  calMonth: document.getElementById('cal-month'),       // the month view's ground (issue #191)
   actionCalendar: document.getElementById('action-calendar'), // 4th board-action tab (R7.2)
 };
 export const anchorEls = {
