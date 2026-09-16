@@ -127,3 +127,13 @@ switch. Dark-only (B16 retired). No backend, bundler, framework, or
 `package.json`. Each refusal is argued in `PRD.md`'s out-of-scope table —
 boundedness is the feature. If a request collides with this list, the answer
 is a PRD amendment and an owner ruling first, not code.
+
+## Never do (record law — issue #207)
+
+`docs/DECISIONS.md` is law, and law is stated by the owner, never authored by
+an agent. Agents transcribe owner decisions; they do not make them. Every
+entry in DECISIONS.md must carry a `Source:` line quoting the owner's
+statement verbatim (issue, PR comment, or chat quote the owner confirmed)
+with a link to it. An entry without a source line is not law — it is an agent
+invention and any QA pass may delete it on sight. Agents never author, amend,
+or supersede rulings except to transcribe an owner statement.

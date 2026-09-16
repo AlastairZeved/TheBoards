@@ -2772,6 +2772,7 @@ uniform navigation-first order. `test/mobile.js` [16]/[21] and
 
 ---
 
+**Source:** issue #113 (owner): “When selecting the ‘menu’ button on the title card, the order from top to bottom should read: ‘All Boards’, ‘Export’” — https://github.com/AlastairZeved/TheBoards/issues/113
 ### B76. The section header hangs below the rule as a tab in the rule's own ink (issue #111; supersedes B47/B54's "label above the rule" and B54's band budget; keeps B47's full-width rule and content-sizing, and B37's law)
 
 Issue #111: the two band headers — *Components* (left), *Requirements* (right) —
@@ -2824,6 +2825,7 @@ the rule (was: bottom 10px above it) and that the tab carries a `--frame` fill.
 
 ---
 
+**Source:** issue #111 (owner): “move the titles for ‘Components’ and ‘Requirements’ to below the boundary lines of their sections … anchored to the same boundary line, just underneath the line instead of the top” — https://github.com/AlastairZeved/TheBoards/issues/111
 ### B77. A category tile/tray re-asserts its own rung — To-Do included (issue #112 follow-up; corrects B74's picker/tray colour, which left To-Do with no block of its own)
 
 The All-Boards menu drew the To-Do tile in the *current board's* colour: pink
@@ -2859,6 +2861,7 @@ simply clear their controls with room to spare.
 
 ---
 
+**Source:** issue #112 (owner): “The category buttons fill the Entire parking lot space in a 2x2 grid. From top left going clockwise: ‘To Do’, ‘Notes’, ‘learning’, ‘ideas’” — https://github.com/AlastairZeved/TheBoards/issues/112
 ### B79. An installed PWA asks for its own updates — `registration.update()` on load and on every foreground (issue #111 follow-up; makes the CACHE-bump discipline actually reach installed apps)
 
 `sw.js`'s version-stamped `CACHE` is only half the contract: it decides *which*
@@ -2917,6 +2920,7 @@ desktop already deselects on Escape and click-away (§8.5, B41).
 
 ---
 
+**Source:** issue #119 (owner): “When keyboard is put away, deselect active text note. Currently it remains selected and requires a tap before any other action which is incorrect” — https://github.com/AlastairZeved/TheBoards/issues/119
 ### B81. Actions commit on release, with no latency; only B18's drop-guard survives (supersedes B18's 400 ms window and its (a) fill / (b) controls-fill / (c) ghost; discharges B18's and B27's "impermanence" clauses by re-interrogating the number to zero; revises B22's and B27's "creation / swap / menu keep the window"; keeps B18(d) "first tap wins")
 
 The task: drop the 400 ms `delayAction` latency. B18's own impermanence clause
@@ -3050,6 +3054,7 @@ the desktop drill and its tests are untouched.
 
 ## AB. The board's actions come out of hiding (issue #126)
 
+**Source:** issue #125 (owner): “the menu should slide upwards from the parking lot to a third of the total viewport height to keep visibility of current board being viewed” — https://github.com/AlastairZeved/TheBoards/issues/125
 ### B83. All boards and Export become a flat-tab row above the Parking Lot (supersedes B65's `Menu` handle; re-homes the anchor menu's entry points onto declared controls; keeps the mobile anchor long-press and B75's item order)
 
 **The principle: a declared control beats a hidden gesture, and a control that
@@ -3210,6 +3215,7 @@ the row (or the retained `#selection` frame) and assert a right-click opens no a
 menu. The board-menu/export tests (mobile [15]/[16], desktop anchor/export) are
 untouched and still pass.
 
+**Source:** issue #126 (owner): “Add a horizontal row of small, pill shaped buttons, Above every new note created, anchored to the upper boundary edge of the note card … Button #1: Complete/restore … Button #2: highlight/de-highlight … Button #3, Copy … Button #4: delete” — https://github.com/AlastairZeved/TheBoards/issues/126
 ### B85. The Highlight and Copy tabs take fixed identity fills — amber and blue (issue #131; refines B84/UIUX §4.5, which filled all four tabs with `--frame` and told them apart by glyph; adds `--accent-copy`; leaves the highlight STATE — the B71 wash and its inset border — untouched)
 
 Resolved against *zero cognitive tax* and *every pixel earns its place*. The note
@@ -3225,6 +3231,7 @@ The owner accepted that on a To-Do board, where `--frame` is already `#698ebf`, 
 fixed blue equals the frame-filled Complete tab — the one board where the two blues meet.
 Complete keeps `--frame`. Values in UIUX §2.6.1/§4.5; `sw.js` `CACHE` → v35.
 
+**Source:** issue #131 (owner): “Change highlight buttons color to yellow / Change copy buttons color to blue” — https://github.com/AlastairZeved/TheBoards/issues/131
 ### B86. The note toolbar and board-action tabs grow to finger size (issue #132; re-tunes the tab metrics of B84/UIUX §4.5 and B83/UIUX §3.3; keeps §6's 44/24px hit floor and B7's decoupled `--hit` collar; stays within `NOTE_MIN_W`)
 
 Resolved against *zero cognitive tax*. The flat tabs were sized to the band label they
@@ -3237,6 +3244,7 @@ the collar — on the note side the hand-tuned `::before` retunes to `top: -12px
 taller box; the board side's collar is JS-computed and adjusts itself. Values in UIUX
 §3.3/§4.5; `CACHE` → v35.
 
+**Source:** issue #132 (owner): “Make all buttons slightly larger to accommodate finger size. Includes note card buttons and menu buttons above parking lot” — https://github.com/AlastairZeved/TheBoards/issues/132
 ### B87. The note toolbar and board-action row anchor flush on the boundary edge — the gap is removed (issue #133; supersedes B84/UIUX §4.5's "12px above the note's top edge" and B83/UIUX §3.3's "8px clear of the lot's top edge, free-standing"; re-tunes `TB_ROW_H`)
 
 Resolved against *every pixel earns its place*. Both rows hovered above their boundary
@@ -3248,6 +3256,7 @@ edge). The note's flip threshold `TB_ROW_H` follows the gapless row from 34 to 3
 note near the sheet top still flips its toolbar to just inside the edge. The tabs keep
 their round corners; nothing merges with a rule. Values in UIUX §3.3/§4.5; `CACHE` → v35.
 
+**Source:** issue #133 (owner): “Bring all menu buttons for note cards and parking lot Down so they sit directly on the upper boundary edge Of note card/parking lot” — https://github.com/AlastairZeved/TheBoards/issues/133
 ### B88. The note toolbar and board-action row left-anchor, not centred (issue #134; supersedes the centred cluster of B84/UIUX §4.5 and B83/UIUX §3.3)
 
 Resolved against *every pixel earns its place*. Both rows were centred on their object.
@@ -3258,6 +3267,7 @@ edge, so the first tab always sits in the same place. The note toolbar drops
 fits inside a 132px note (B86) — which is why B86 held the tab size under `NOTE_MIN_W`.
 Values in UIUX §3.3/§4.5; `CACHE` → v35.
 
+**Source:** issue #134 (owner): “Move all buttons to the far left Of note card and parking lot, not centered.” — https://github.com/AlastairZeved/TheBoards/issues/134
 ### B89. The board-list category buttons take their board's water field as ground, not `--card` (issue #135; supersedes B74/UIUX §10's "the picker button is the `--card` tray, enlarged" for `.cat-button`; extends B77's per-family re-assertion to `.cat-button`'s `--water-*`)
 
 Resolved against *every pixel earns its place*. The All-Boards picker tiles grounded in
@@ -3274,6 +3284,7 @@ re-assert on `.cat-button[data-cat]` too, exactly the leak B77 closed for `--fra
 Scope is `.cat-button`; the section trays `.board-cat` keep `--card`. Values in UIUX
 §2.2.2/§10; `CACHE` → v35.
 
+**Source:** issue #135 (owner): “Use the board background color as the category buttons background color” — https://github.com/AlastairZeved/TheBoards/issues/135
 ### B90. Mobile — a first tap selects and reveals the note's toolbar with no keyboard, a second tap edits with the caret at the end (issue #136; supersedes B84's mobile "engaged = editing / `:focus-within`" reveal and, for a note edit, B14's caret-at-touch-point; adds the `.engaged` state; keeps B27a's synchronous focus, B81(b)'s raw edit-entry, B22's no-write-on-select)
 
 Resolved against *capture precedes structure* and *zero cognitive tax*. On mobile,
@@ -3293,6 +3304,7 @@ entering an editor commits a view, not a consequence). A completed note only eve
 clears on tap-away and on delete, and the now-orphaned `editNoteText` wrapper is retired.
 Caret value in UIUX §5; `CACHE` → v35.
 
+**Source:** issue #136 (owner): “tap a note once to select it and reveal buttons, tap a note a second time to edit it and open keyboard. Cursor placement is always at end of text.” — https://github.com/AlastairZeved/TheBoards/issues/136
 ### B91. Notes can be linked — a thin line the user draws between two notes, armed by a revived note long-press (mobile) / right-click (desktop) (issue #142; partially reverses B84's retirement of the note long-press/right-click menu, for a NEW relational plane only; extends B67's per-type `--frame`; keeps B84's toolbar for per-note state, B81's commit-on-release, B31/B8's husk sweep, UIUX §9's undo)
 
 Resolved against **relationships asserted not inferred** (PRD §1) — the board's
@@ -3445,6 +3457,7 @@ the retired anchor branch; the Playwright suites gain the Export choice menu,
 a JSON round-trip (export → wipe storage → import → restored), the bad-file
 path, and the anchor long-press/right-click asserting nothing opens.
 
+**Source:** issue #140 (owner): “Clicking existing Export button above the parking lot should now open a menu with two options: ‘PDF’ & ‘JSON’. Add an ‘Import’ button to the right of the ‘Export’ button” — https://github.com/AlastairZeved/TheBoards/issues/140
 ### B93. Legacy-frame adoption — a one-time boot migration writes every pre-B32 note onto the single B64 path, retiring B32's two-path rescue (issue #141; waives B32/B21's "stored `y` is never mutated" for this one deliberate write alone — incidental clamps remain as forbidden as ever)
 
 B32's admission — a pre-B32 note's authoring height is device-dependent and
@@ -3606,6 +3619,7 @@ the calendar view), `§10` (the third screen), `PRD §4.1` (the extended
 record shape) move with it.
 ## AE. The tablet tier (issue #155)
 
+**Source:** issue #145 (owner, RTCB specification): “The Rolling Temporal Calendar Board (RTCB) introduces a 7-day rolling temporal view to TheBoards” — https://github.com/AlastairZeved/TheBoards/issues/145
 ### B96. Three device classes, two axes: capability keeps the grammar (B19 untouched), width gains a tablet tier — `min-width: 984px`, the unfolded Z Fold 7 — that joins a `wide` arrangement (desktop ∪ tablet: the rail, the calendar panel, the squeeze) without ever flipping the touch grammar; the tablet tier B95/R3 ruled is now shipped (issue #155; the owner's approval of the 2026-09-02 solutions comment is the ruling's substance; keeps B19's capability law, B20's wide geometry, B64's similarity mapping, B81's commit-on-release, B9's back-gesture law — and waives nothing)
 
 **The classes, evaluated in order — no viewport falls between grammars:**
@@ -3682,6 +3696,7 @@ at end → edit → persist → mirror re-synced; [25] additionally pins the emp
 commit's discard and the completed event's surviving strike.
 `UIUX §3.4`'s Capture note now covers the existing line's editing contract.
 
+**Source:** issue #152 (owner): “tapping an existing calendar event in calendar view should bring up keyboard to edit and place cursor at the end of the text” — https://github.com/AlastairZeved/TheBoards/issues/152
 ### B98. The calendar's R1 top row renders its acts and meets the touch floor: each button is filled — drawn mark + label, the row-control species' whole self — its visual frame clears the 44px floor as drawn, the §6 decoupled collar tops up the width where the row is tight, and hover, press, and keyboard focus are each stated (issue #156; keeps B95/R1's acts and anchors untouched — no new control, no grammar change; keeps §6/B7's collar law, B86's finger-size logic applied to the frame itself, §2.7/§8's closed motion and state set — and waives nothing)
 
 **The defect was a row that never got dressed.** `index.html` declared the
@@ -3713,6 +3728,7 @@ trio in the shipped bytes.
 
 ## AG. The standing calendar rail (issue #158)
 
+**Source:** issue #156 (owner): “Resize the three buttons at the top of the viewport in 7 day calendar view and follow best UIUX practices.” — https://github.com/AlastairZeved/TheBoards/issues/156
 ### B99. On wide screens the calendar is standing furniture, not a tab: a 40px rail pinned to the viewport's right edge — "Calendar Board" reading vertically, today's date, a lit dot — reserves its width from the frame at all times, one tap expands it into the R6 panel (320px, the board reflowing beside it), and the panel's Back collapses it; the Calendar tab retires on wide and the action row is three tabs there (issue #158; mockup 6 (`docs/mockups/rtcb-6-desktop-rail.html`) is the ruling's substance — the owner's three corrections of 2026-09-03: the button was the mobile species, wide always meant a rail, and opening it DOES reflow the board; keeps B95/R6's squeeze machinery untouched, B95/R7.2's mobile row, B9's back-gesture law as mobile's pushed route, B81's commit-on-release, B97's in-place editing, B98's R1 row — and waives nothing)
 
 **The furniture law.** B95 recorded the calendar's wide entry as the action
@@ -3822,6 +3838,7 @@ state the retirement.
 
 ## AI. The foldable shape gate (issue #164)
 
+**Source:** issue #157 (owner): “the Board Categories displays as a 2x2 button grid in the parking lot section as it does in tablet mode and mobile mode” — https://github.com/AlastairZeved/TheBoards/issues/157
 ### B101. The tablet tier's width gate grows a second leg — the foldable shape: `min-width: 840px` AND `max-aspect-ratio: 23/20` — because B96's 984px was calibrated believing it WAS the unfolded Z Fold 7's CSS viewport, and the device's real Samsung Browser viewport sits below it at common zoom levels, classifying the unfolded Fold mobile and rendering the full-screen calendar with no rail; the shape gate admits the unfolded inner display at every zoom and nothing else (issue #164; retunes B96's width rule, which stays for tablets and iPad landscape; keeps B96's device-class rulings — cover screen mobile, iPad portrait mobile, capability keeps the grammar — and waives nothing)
 
 **The bug was a constant calibrated from the wrong number.** B96 recorded
@@ -3977,8 +3994,10 @@ backend law and needs a separate owner ruling before any implementation card
 exists. (3) Open questions stay open: recurring reminders, the month view,
 the summary's exact text format, and the week-absent first-load edge case.
 
+**Source:** issue #169 §1 (owner, v3 design of record): “Clock icon in the bottom-right of every note card on every board. Tapping the clock toggles it on/off — no pop-up, no time picker, no time logic whatsoever.” — https://github.com/AlastairZeved/TheBoards/issues/169
 ### B105. The day-roll launch: when the app boots, or the day rolls under an open app, and TODAY's date carries at least one calendar event, the app lands on that date's linked To-Do board — the B95 species R5 already fills with the day's events — via swapBoard's existing route, the Requirements mirror's creation-order lines already in place; with no events nothing is created and boot lands where it always has (issue #153's premise "check if today's date has any events. If it does, launch"; the check is keyed ONCE PER DAY: it runs at boot() and at renderCal() only when the today key changed since the last check — the open-app-past-midnight case — so it can never steal focus mid-interaction; the board's creation is a consequence and runs under commitAction's guard (B81) exactly as addCalEvent's R5 chain does, but the landing itself is the plain swapBoard route, raw navigation (B81's live navigation); keeps B95's board species and R5's creation-on-first-event, B9's History-API-only routes, B21's read-site defaulting; the empty-morning auto-create stays #169 carry-forward territory, not built here; waives nothing)
 
+**Source:** issue #153 (owner): “Upon checking date and rolling calendar view to today’s view, also check if today’s date has any events. If it does, launch a new Today’s To Do” — https://github.com/AlastairZeved/TheBoards/issues/153
 ### B106. The mirror writes through both ways: a board-side edit of a Requirements line inside the mirror's span writes through to the event record it mirrors — mirrorEventsOf's positional law, span line i ↔ event i — and a board-side deletion of span lines deletes the mirrored events (event-deletion semantics, never demotion), the span shrinking to follow; lines after the span are hand lines this path never touches, and a board-side ADDITION lands after the span as a hand line, because insertion inside the span is positionally ambiguous and is not a supported gesture (issue #154; supersedes B95's one-writer law — each surface is now the writer for its own edits, converging through syncMirror/syncDateMirror with the self-recorded span (calReq) as arbiter; the write-through is part of the anchor's own commitAnchor commit under B81's commit-on-release, not a timeout beside it; no new storage, no schema change — events still ride the boards store; keeps B97's calendar-side in-place editing untouched, B8, B21's read-site defaulting, B81 — and waives nothing)
 
 **The two directions of one law.** B95 ruled the mirror one-writer: the
@@ -4003,6 +4022,8 @@ every async consequence, and the resync runs `syncMirror` on the live board
 record — the same record `saveNow` persists, so the two writes cannot
 disagree. No timeout, no second commit path. The calendar-side direction
 (B97's `startCalLineEdit` → `syncDateMirror`) is untouched.
+
+**Source:** issue #154 (owner): “Requirements section today’s to do board should be linked to calendar view for today’s events and allow 2 way editing.” — https://github.com/AlastairZeved/TheBoards/issues/154
 ### B107. The end-of-day SMS summary is REMOVED — The Boards is a PWA with no backend (§3.2), and an outbound SMS requires a backend or an external outbound system, both hard-no product law; notifications reduce to the passive 2x2 home screen widget alone, which is itself ON HOLD pending a capability ruling (PWAs have no home-screen widget API, and faking one means shipping an installed app against the no-package law); the red past-due indicator is RETIRED as unsatisfiable — no time is stored anywhere in the record, so nothing can say "late" — and the carried-over yellow border + glow is the ONLY status state beyond normal/complete; the summary's tone/format question is retired with the SMS; the "Today's To Do History" rail is PENDING a separate owner ruling; and the boot landing is UNCONDITIONAL — every morning's first load auto-creates today's linked To-Do board even with zero events and boots onto it (issue #169, the owner's ruling of 2026-09-15, the comment of record on that issue; supersedes B105's events-exist-only landing condition and resolves B104's explicitly-unresolved past-due trigger by retiring it; keeps B105's once-per-day keyed mid-session day-roll check unchanged, B104's clock toggle and yellow carried state, §1.4's no-demands law, §3.2's no-backend law, B95's To-Do species; recurring reminders and the month view remain open; waives nothing)
 
 **The rulings.** The SMS end-of-day summary is removed from the v3 design.
@@ -4037,6 +4058,7 @@ systems and cites this ruling. Docs-only: no code, no `sw.js` CACHE bump,
 no redeploy (`**/*.md` is already paths-ignored in the deploy workflow).
 **Open, unchanged:** recurring reminders, the month view.
 
+**Source:** owner ruling of record, 2026-09-15, comment on issue #169: “The end-of-day SMS summary is **removed** from the v3 design.” — https://github.com/AlastairZeved/TheBoards/issues/169#issuecomment-5686227320
 ### B108. The morning lifecycle: each morning's first load auto-creates today's linked To-Do board (the B95 species, `ensureLinkedBoard`, title "MM/DD/YY To Do") even with zero events, boots onto it, and carries YESTERDAY's incomplete notes forward — a MOVE, not a copy: every note on yesterday's linked board whose state is not 'complete' moves onto today's board at its same logical x/y, and yesterday's board keeps its completed notes; the carried note's absence from yesterday's board is accepted because History is retrospective reference (no links, no navigation between the day boards); each carried note wears `carriedOn` = the carrying day's date key — the transient daily marker the carried indicator (link 4) styles off, self-clearing by date comparison with no cleanup pass, set again to each new today by each later carry, and CLEARED by completing the note; and a MANUALLY ADDED card on a linked To-Do board — `board.cal` set, no `carriedOn`; surfaced cards (the reminder pass, a later link) and carried cards don't get it — HAD the two re-homing options on its long-press/right-click menu ("Add to existing board", "Create new board with this as first card"), REMOVED IN FULL by B115, the owner's ruling on issue #205 — a manual add is not tied to any other board, and it never propagates to other boards (issue #169 §2; implements B107's unconditional landing; supersedes B105's events-exist-only MORNING condition — the boot path — while B105's mid-session day-roll under an open app stays exactly as shipped: the once-per-day keyed check still runs at boot() and renderCal() on today-key change, and the mid-session roll still navigates only when the day carries events and carries nothing forward; keeps B81's commit-on-release for the whole launch consequence chain, B9's History routes, B21's read-site defaulting for `carriedOn` (no schema change — the field is written when the carry writes the note), B95's To-Do species and R5's event-on-first-add, B106's mirror ownership of the Requirements section; waives nothing)
 
 **The morning.** B107 ruled the landing unconditional; this builds it. The
@@ -4128,6 +4150,7 @@ travel into the PDF export, which draws board records. **Open, unchanged:**
 recurring reminders, the month view, the carried indicator's styling (link 5
 reads `carriedOn`).
 
+**Source:** issue #169 §1–§2 (owner, v3 design of record): “A note card with an active reminder is automatically surfaced to Today’s To Do board”; “Notes pulled from other boards retain their original background color as a visual reference to their source board.” — https://github.com/AlastairZeved/TheBoards/issues/169
 ### B110. The carried indicator: a note carried onto its board today wears B104's status layer — its frame takes `--carried` `#E1BE26` (UIUX §2.6.3) and a soft bloom of the same token, the yellow border + glow the owner's v3 design rules; never the whole-card fill (owner-rejected in #169 §3 as hyperbolic) and never the highlight layer; the trigger is B108's `carriedOn` read at render — the field equals the today key and nothing else — so the treatment is the field's shadow, recomputed at every render with no stored style state and no cleanup pass: a note carried on an earlier day and left where it landed renders plain by the date comparison alone, and completing the note clears the field under B108's law so the glow ends with it — complete treatment wins; the highlight wash (B71) and the carried frame are different layers that may sit on one card, the wash the fill and the status the frame, in the issue's priority order highlight → status → plain; a held note is §4.2's pressed and keeps the engaged look while it moves, the status returning on release (issue #169 §3, the carried-over indicator B104 promised and B107 made the only status state; keeps B108's `carriedOn` law verbatim — this change sets and clears NOTHING, it reads; keeps B107's red retirement, B104's never-the-highlight two-layer law, §2's token discipline for the new colour; waives nothing)
 
 **The token.** The status yellow is the highlight's own amber family, hue held
@@ -4163,6 +4186,7 @@ ruling — v3 notifications are none); no red status path anywhere in the diff �
 B107's retirement holds. **Open, unchanged:** recurring reminders, the month
 view.
 
+**Source:** issue #169 §3 (owner, v3 design of record): “Adopted: Border + Soft Glow” with “Carried Over … Yellow border + yellow glow”; “Rejected: Red coloring of entire note card. This is overengineered, hyperbolic, and visually aggressive.” — https://github.com/AlastairZeved/TheBoards/issues/169
 ### B111. The "Today's To Do History" rail is KILLED — it existed to hold the end-of-day summary, the summary is gone (B107), and it gets no new job: Today's To Do is just the board, historical reference remains the past days' linked boards in the lists, and no rail and no new surface is built; and the 2x2 home screen widget is DROPPED — a PWA cannot render a home-screen widget on any platform, and the workarounds (an installed app, an APK) break the no-package and no-backend laws, so the at-a-glance surface is the app itself, via B107's unconditional morning landing, while the standing calendar rail (B99) remains what it already is — not a widget substitute, just itself; with both gone, v3 notifications are NONE — consistent with §1.4's no-demands law, nothing pushes and nothing sits outside the app, and the status-indicator glow (B110) lives only on the board (issue #169, the owner's follow-up ruling of 2026-09-15, the comment of record: https://github.com/AlastairZeved/TheBoards/issues/169#issuecomment-5686476517; supersedes B107's two pending clauses — the widget's ON-HOLD-pending-a-capability-ruling clause and the History rail's PENDING-a-separate-owner-ruling clause — by ruling both out outright, and B110's standing reference to the widget as dropped is confirmed rather than amended; keeps B107's SMS removal, red past-due retirement, carried-only status and unconditional morning landing, B110's border + glow grammar and every colour it pinned, B99's calendar rail untouched, B104's clock toggle, §1.4's no-demands law and §3.2's no-backend law; recurring reminders and the month view remain the only open questions; waives nothing)
 
 **The rulings.** The "Today's To Do History" rail is killed. B104 defined it
@@ -4191,6 +4215,7 @@ edited in place. Docs-only: no code, no `sw.js` CACHE bump, no redeploy
 (`**/*.md` is already paths-ignored in the deploy workflow). **Open,
 unchanged:** recurring reminders, the month view.
 
+**Source:** owner ruling of record, 2026-09-15, comment on issue #169: “The ‘Today’s To Do History’ rail is killed.” / “The 2x2 home screen widget is dropped.” — https://github.com/AlastairZeved/TheBoards/issues/169#issuecomment-5686476517
 ### B112. Boot opens a BOARD: the most-recent pick — at launch in `app.js` and in `boards.js`' `ensureCurrentValid` — filters `title !== undefined` before the reduce, because events ride the boards store (B105) with no `updatedAt`, `undefined > anything` is false, and an unfiltered reduce over the raw store returns its first record verbatim: a store whose lowest uuid is an event record booted that event as the board and crashed `renderBoard`'s `sanitizeBoard` before the rail, the checkDayRoll, or anything else — found as a CI desktop-suite flake (D25, runs 35031082327 / 35019985397) that reproduced 4-of-4 deterministically once seeded event-first, the app-crash root cause the test's timing narrative had been covering; the pick is now the most-recent record that HAS a title, in both sites, the same guard twice because they are the same reduce (issue: the D25 CI-flake investigation; keeps B108's bootstrap intent — launch lands the board the user last touched, the pick's purpose is untouched and an events-first store simply has no candidate, so the empty-store branch creates a fresh board as it already did; keeps B21's read-site defaulting — the rule is computed at the read, no stored flag, and an old event record renders correctly as an event wherever it is actually opened; keeps B105's event records verbatim — nothing gains a title, nothing gains an `updatedAt`, the guard is the read-site's, not the record's; waives nothing)
 
 **The record.** No schema change, no lifecycle change: the filter is two
@@ -4233,6 +4258,7 @@ the summary's text format retired with the SMS (B107), the week-absent
 first-load case built in B108's unconditional landing, recurring reminders
 ruled out here, and the month view pointed at #191 rather than left open.
 
+**Source:** owner ruling of record, 2026-09-15, comment on issue #169: “Recurring reminders: NO.” / “Month view: deferred, not dead.” — https://github.com/AlastairZeved/TheBoards/issues/169#issuecomment-5691814223
 ### B114. Copy re-homes from the note's on-select toolbar to the note's long-press/right-click menu — the toolbar becomes three tabs, Complete · Highlight · Delete, and `--accent-copy` retires with its tab (issue #171, the owner's ruling of record; supersedes B84's Complete·Copy·Delete-on-toolbar clause and B85's `--accent-copy` fixed-blue identity clause; narrows B91's menu scope from relational-only to one state act leading one relational act; keeps B84's on-select toolbar and its on-select reveal, B86's tab metrics, B87/B88's anchoring, B90's mobile first-tap select, B91's Link armament verbatim, B109's echo surfacing, §1's state-is-never-colour-alone; waives nothing)
 
 **The ruling.** Copy moves off the note's on-select toolbar into the note's
@@ -4290,4 +4316,7 @@ branch's move, and the `sw.js` CACHE bump are the implementation card's
 work, gated behind this card's merge. Cited: issue #171 (Spatial Reasoning
 Fix), the owner's ruling of record.
 
+**Source:** issue #171 (owner): “I keep long tapping notes and looking for the copy button instinctually, so better just move it there instead of fighting the app.” — https://github.com/AlastairZeved/TheBoards/issues/171
 ### B115. The two re-homing menu options are REMOVED in full — "Add to existing board" and "Create new board with this as first card", the pair B108 gave the manually added card on a linked To-Do board, were never requested and leave no trace of their addition: the long-press/right-click menu of a manual add is the shipped set minus those two options, and no buildMenu leaf, board chooser, or second picker surface exists for re-homing a manual add (issue #205, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/205; supersedes ONLY the re-homing clause of B108 — the morning lifecycle itself is untouched: `ensureLinkedBoard`, the carry-forward MOVE with its same logical x/y, and `carriedOn` all stay exactly as shipped; the manual add stays non-propagating — the note exists once, on the day board it was typed onto, and the reminder pass and a later link remain the only ways a card reaches a second board; keeps B108's manual-add definition — `board.cal` set, no `carriedOn`, surfaced cards and carried cards don't get it, B114's menu armament, B91's menu as narrowed by B114, B109's echo surfacing, §1's state-is-never-colour-alone; waives nothing)
+
+**Source:** issue #205 (owner): “Immediately remove them and leave no trace of their addition. Scope creep will not be tolerated.” — https://github.com/AlastairZeved/TheBoards/issues/205
