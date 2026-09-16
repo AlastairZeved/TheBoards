@@ -1374,7 +1374,7 @@ export function registerBoards() {
   });
   el.paneCollapse.addEventListener('click', collapsePane);
   el.calBoards.addEventListener('click', (e) => {
-    if (state.isDesktop) return;               // B100: no All-Boards on desktop — the rail is the all-boards surface
+    if (state.isWide) return;                  // B100 on desktop, widened by B119: no All-Boards on wide — the rail is the all-boards surface
     const r = e.currentTarget.getBoundingClientRect();
     history.pushState({ v: 'list' }, '');
     listOpen = true;

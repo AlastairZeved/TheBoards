@@ -2130,6 +2130,61 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await ctx.close();
   }
 
+  // ---- D27. B119 on tablet: the All tab retires, wide's one All-boards
+  // surface is the rail -----------------------------------------------
+  // B119 (issue #212) widens B100's hide from html.desktop to html.wide, so
+  // the tab dies on tablet too (the rail is already the all-boards menu
+  // there, B96/B118). The calendar panel's #cal-boards retires the same way:
+  // hide and click guard widen isDesktop → isWide. Below 744px nothing
+  // changes: mobile keeps the tab (B74's picker entry) and its four-tab row —
+  // mobile.js pins that surface.
+  console.log("\n[D27] B119: the All tab retires on tablet — the rail is wide's one All-boards surface (issue #212)");
+  {
+    // Tablet fixture: 800px is TABLET_MQ (≥744) without DESKTOP_MQ (≥1024).
+    const ctx = await browser.newContext({ viewport: { width: 800, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto(URL);
+    await page.waitForTimeout(600);
+    ok('html.wide set, html.desktop unset at 800px — tablet joins the wide tier',
+       await page.evaluate(() => document.documentElement.classList.contains('wide') &&
+         !document.documentElement.classList.contains('desktop')));
+    ok('the All-boards tab is display:none on tablet — the hide widened to html.wide (B119)',
+       await page.evaluate(() =>
+         getComputedStyle(document.getElementById('action-boards')).display === 'none'));
+    ok('two tabs on tablet (B119): Export, Import',
+       await page.evaluate(() => {
+         const btns = [...document.querySelectorAll('#board-actions .board-action')]
+           .filter(b => getComputedStyle(b).display !== 'none');
+         return btns.length === 2 && /Export/.test(btns[0].textContent) &&
+           /Import/.test(btns[1].textContent);
+       }));
+    // The calendar panel's All Boards control is inert on wide: the click
+    // guard returns before any pushState, so no {v:'list'} lands and the
+    // #list-view drill never shows.
+    ok("#cal-boards's click is inert on tablet — the guard widened to isWide (B119)",
+       await page.evaluate(async () => {
+         const before = history.length;
+         document.getElementById('cal-boards').click();
+         await new Promise(r => setTimeout(r, 200));
+         return history.length === before &&
+           document.getElementById('list-view').hidden &&
+           getComputedStyle(document.getElementById('list-view')).display === 'none';
+       }));
+    await ctx.close();
+
+    // Mobile fixture: below 744px the tab stays — mobile's entry into the
+    // lot-grid picker (B74).
+    const mctx = await browser.newContext({ viewport: { width: 500, height: 900 } });
+    const mpage = await mctx.newPage();
+    await mpage.goto(URL);
+    await mpage.waitForTimeout(600);
+    ok('the All-boards tab stays visible below 744px — mobile keeps its four tabs (B119)',
+       await mpage.evaluate(() =>
+         !document.documentElement.classList.contains('wide') &&
+         getComputedStyle(document.getElementById('action-boards')).display !== 'none'));
+    await mctx.close();
+  }
+
   await browser.close();
   console.log('\n=== desktop: ' + pass + ' passed, ' + fail + ' failed ===');
   process.exit(fail ? 1 : 0);
