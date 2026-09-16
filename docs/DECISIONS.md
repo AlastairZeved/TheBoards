@@ -4037,7 +4037,7 @@ systems and cites this ruling. Docs-only: no code, no `sw.js` CACHE bump,
 no redeploy (`**/*.md` is already paths-ignored in the deploy workflow).
 **Open, unchanged:** recurring reminders, the month view.
 
-### B108. The morning lifecycle: each morning's first load auto-creates today's linked To-Do board (the B95 species, `ensureLinkedBoard`, title "MM/DD/YY To Do") even with zero events, boots onto it, and carries YESTERDAY's incomplete notes forward — a MOVE, not a copy: every note on yesterday's linked board whose state is not 'complete' moves onto today's board at its same logical x/y, and yesterday's board keeps its completed notes; the carried note's absence from yesterday's board is accepted because History is retrospective reference (no links, no navigation between the day boards); each carried note wears `carriedOn` = the carrying day's date key — the transient daily marker the carried indicator (link 4) styles off, self-clearing by date comparison with no cleanup pass, set again to each new today by each later carry, and CLEARED by completing the note; and a MANUALLY ADDED card on a linked To-Do board — `board.cal` set, no `carriedOn`; surfaced cards (the reminder pass, a later link) and carried cards don't get it — gains the two re-homing options on its long-press/right-click menu, in the issue's order: "Add to existing board" (a second buildMenu leaf listing the boards; choosing one MOVES the note there, top of z-order, same logical x/y) and "Create new board with this as first card" (a fresh board record, category 'todo', the note its first card) — a manual add is not tied to any other board, so re-homing MOVES the note, never copies it, and a manual add never propagates to other boards (issue #169 §2; implements B107's unconditional landing; supersedes B105's events-exist-only MORNING condition — the boot path — while B105's mid-session day-roll under an open app stays exactly as shipped: the once-per-day keyed check still runs at boot() and renderCal() on today-key change, and the mid-session roll still navigates only when the day carries events and carries nothing forward; keeps B81's commit-on-release for the whole launch consequence chain, B9's History routes, B21's read-site defaulting for `carriedOn` (no schema change — the field is written when the carry writes the note), B95's To-Do species and R5's event-on-first-add, B106's mirror ownership of the Requirements section; waives nothing)
+### B108. The morning lifecycle: each morning's first load auto-creates today's linked To-Do board (the B95 species, `ensureLinkedBoard`, title "MM/DD/YY To Do") even with zero events, boots onto it, and carries YESTERDAY's incomplete notes forward — a MOVE, not a copy: every note on yesterday's linked board whose state is not 'complete' moves onto today's board at its same logical x/y, and yesterday's board keeps its completed notes; the carried note's absence from yesterday's board is accepted because History is retrospective reference (no links, no navigation between the day boards); each carried note wears `carriedOn` = the carrying day's date key — the transient daily marker the carried indicator (link 4) styles off, self-clearing by date comparison with no cleanup pass, set again to each new today by each later carry, and CLEARED by completing the note; and a MANUALLY ADDED card on a linked To-Do board — `board.cal` set, no `carriedOn`; surfaced cards (the reminder pass, a later link) and carried cards don't get it — HAD the two re-homing options on its long-press/right-click menu ("Add to existing board", "Create new board with this as first card"), REMOVED IN FULL by B115, the owner's ruling on issue #205 — a manual add is not tied to any other board, and it never propagates to other boards (issue #169 §2; implements B107's unconditional landing; supersedes B105's events-exist-only MORNING condition — the boot path — while B105's mid-session day-roll under an open app stays exactly as shipped: the once-per-day keyed check still runs at boot() and renderCal() on today-key change, and the mid-session roll still navigates only when the day carries events and carries nothing forward; keeps B81's commit-on-release for the whole launch consequence chain, B9's History routes, B21's read-site defaulting for `carriedOn` (no schema change — the field is written when the carry writes the note), B95's To-Do species and R5's event-on-first-add, B106's mirror ownership of the Requirements section; waives nothing)
 
 **The morning.** B107 ruled the landing unconditional; this builds it. The
 once-per-day guard (`rollDay` in boards.js) already distinguished "a fresh
@@ -4062,19 +4062,13 @@ Completing the note (single toolbar, selection bulk — both route through
 the flag describes a carry, not incompleteness. The field is a read-site
 default (B21): old records lack it, which is falsy.
 
-**The manual add's way out.** A card typed straight onto today's To-Do
-board belongs to no other board (#169 §2), so its menu grows two ways OUT,
-not ways around: "Add to existing board" opens the app's one menu species
-nested a leaf deeper, listing the boards by title — choosing one moves the
-note (top of z-order, same logical x/y, source re-rendered); "Create new
-board with this as first card" spawns the record and lands the note in it.
-Neither propagates: the note moves off the day board and exists once. The
-labels are the issue's own wording, verbatim. These options appear for
-manual adds only — a carried note already came from somewhere, and the
-surfaced card's "Go to Board" belongs to the reminder pass that will
-create those cards. The board chooser is a flat menu list: fine at
-realistic board counts, and a second picker surface would be chrome
-without a job.
+**The manual add's way out — closed.** The two menu options this ruling
+described — "Add to existing board" and "Create new board with this as
+first card" — were never requested and are removed in full by B115, the
+owner's ruling on issue #205. The manual add keeps the shipped menu set
+minus those two options, stays non-propagating, and belongs to no other
+board; the reminder pass and a later link remain the only ways a card
+reaches a second board.
 
 **The record.** `sw.js` CACHE bump v53→v54 ships it; test/tokens.js's two
 build-pin assertions re-pin to v54 in the same PR. The day-roll suite's
@@ -4295,3 +4289,5 @@ card: the styles.css token/rule removal, the `runNoteToolbarAction` copy
 branch's move, and the `sw.js` CACHE bump are the implementation card's
 work, gated behind this card's merge. Cited: issue #171 (Spatial Reasoning
 Fix), the owner's ruling of record.
+
+### B115. The two re-homing menu options are REMOVED in full — "Add to existing board" and "Create new board with this as first card", the pair B108 gave the manually added card on a linked To-Do board, were never requested and leave no trace of their addition: the long-press/right-click menu of a manual add is the shipped set minus those two options, and no buildMenu leaf, board chooser, or second picker surface exists for re-homing a manual add (issue #205, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/205; supersedes ONLY the re-homing clause of B108 — the morning lifecycle itself is untouched: `ensureLinkedBoard`, the carry-forward MOVE with its same logical x/y, and `carriedOn` all stay exactly as shipped; the manual add stays non-propagating — the note exists once, on the day board it was typed onto, and the reminder pass and a later link remain the only ways a card reaches a second board; keeps B108's manual-add definition — `board.cal` set, no `carriedOn`, surfaced cards and carried cards don't get it, B114's menu armament, B91's menu as narrowed by B114, B109's echo surfacing, §1's state-is-never-colour-alone; waives nothing)
