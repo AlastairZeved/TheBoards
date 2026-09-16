@@ -1,4 +1,4 @@
-# PRD.md — To-Do Boards
+# PRD.md — TheBoards
 
 **Status:** v1 of the specification, written after the MVP. The app was built
 first; this document reconstructs its product rules from the working code and

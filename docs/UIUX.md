@@ -1,4 +1,4 @@
-# UIUX.md — To-Do Boards
+# UIUX.md — TheBoards
 
 **Status:** v2. This is the rendering authority — the document `app.js`,
 `styles.css` and `DECISIONS.md` have cited as `UIUX §x` since the first commit,
