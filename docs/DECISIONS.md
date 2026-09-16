@@ -4208,3 +4208,33 @@ strings, same assertions). test/desktop.js's D25 — the test that caught it —
 seeds a single clean linked pair with createdAt-ordered events and waits on
 the landed state, so an event-first regression fails loud instead of
 racing. **Open, unchanged:** recurring reminders, the month view.
+
+### B113. Recurring reminders are RULED OUT — the reminder shipped in B108/B109 is the complete feature: a reminder is set once by the clock toggle and completing the note completes it — nothing reschedules it, nothing recreates it, and re-tapping the clock is the only way a reminder returns; and the month view is not undecided either — it is DEFERRED to issue #191 ("New component: month view calendar in Calendar view"), parked behind issue #170 (the calendar card size reduction), pointed elsewhere rather than left open (issue #169, the owner's ruling of record of 2026-09-15, the comment: https://github.com/AlastairZeved/TheBoards/issues/169#issuecomment-5691814223, on the now-closed issue; supersedes B104's explicitly-open clause on recurring reminders and the month view and the "recurring reminders and the month view remain open" / "Open, unchanged" clauses of B107, B108, B109, B110, B111 and B112 — by number, not edited in place; keeps B104's no-time-stored law — a recurring schedule needs dates and the record carries none — B109's toggle-and-echo mechanism verbatim, B108's completion of the note as the reminder's end; waives nothing)
+
+**The ruling.** Recurring reminders are out. B104 recorded them as explicitly
+undecided, alongside the month view, in the same breath as the reminder
+itself; the owner's 2026-09-15 ruling on #169 closes the question: no
+recurring reminders. The clock toggle sets or clears, the reminder surfaces
+the note to that morning's To-Do board, and completing the note is the end of
+it — a completed reminder is complete. The only return path is the person's
+own tap on the clock.
+
+**Why the no-time law already decided it.** A recurring reminder is a
+schedule, and a schedule needs dates; B104 ruled that no time concept lives
+anywhere in the record (`reminder: true` or absent, B21's absence-is-off
+idiom). Recurrence would either smuggle dates into the record or need a
+second surface to manage them — both collide with the ruling the reminder
+was built under. Ruling it out is the consistent reading, not a new law.
+
+**The month view.** Not open, and not dead: deferred to #191, parked behind
+#170 (the calendar card size reduction). #191's body is intentionally empty
+for the owner to fill in later — the decision of record is the deferral
+itself, and this entry only points at it.
+
+**The record.** PRD §2.3's reminders row is amended to name recurring
+reminders as out of scope. Docs-only: no code, no `sw.js` CACHE bump, no
+redeploy (`**/*.md` is paths-ignored in the deploy workflow). B104's open
+list is closed by the rulings since: the past-due trigger retired (B107),
+the summary's text format retired with the SMS (B107), the week-absent
+first-load case built in B108's unconditional landing, recurring reminders
+ruled out here, and the month view pointed at #191 rather than left open.
