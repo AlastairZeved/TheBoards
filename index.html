@@ -30,6 +30,16 @@
          Sits outside #board, so the gesture recognizer never sees its events.
          display:none unless html.desktop; hidden from AT off-desktop too. -->
     <aside id="pane" class="on-dark" aria-label="Boards">
+      <!-- B118 (issue #211): the collapsed All-Boards face — B99's rail grammar
+           on the pane. One tap expands; the pane's own name reads vertically.
+           #pane-collapse is the expanded pane's arrow: the pane has no Back,
+           the arrow IS the collapse affordance. -->
+      <button type="button" id="pane-rail" aria-label="All Boards" aria-expanded="false"
+              hidden>
+        <span class="vlabel" aria-hidden="true">All Boards</span>
+      </button>
+      <button type="button" id="pane-collapse" class="cal-act on-light" aria-label="Collapse the boards rail"
+              hidden></button>
       <div id="pane-cards"></div>
     </aside>
 

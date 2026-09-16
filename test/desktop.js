@@ -36,6 +36,14 @@ async function newDesktopPage(browser) {
   await page.waitForTimeout(400);
   return { ctx, page, errors };
 }
+// B118 (issue #211): the rail boots collapsed — suites that mouse-drive the
+// rail's cards expand it first, exactly as a user would (tap the face).
+async function expandRail(page) {
+  await page.click('#pane-rail');
+  await page.waitForTimeout(300);
+  if (!(await page.evaluate(() => !document.getElementById('pane').classList.contains('rail-open'))))
+    throw new Error('expandRail: the pane did not expand');
+}
 const noteCount = page => page.evaluate(() => document.querySelectorAll('.note').length);
 
 (async () => {
@@ -137,6 +145,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
   console.log('\n[D5] Board rail: create, swap, delete');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
+    await expandRail(page);
     const n0 = await page.evaluate(() => document.querySelectorAll('#pane-cards .pane-card').length);
     await page.click('.board-cat[data-cat="unsorted"] .cat-add');
     await page.waitForTimeout(700);
@@ -158,6 +167,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
   console.log('\n[D6] Right-click a card opens the danger menu; keyboard still works');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
+    await expandRail(page);
     await page.click('.board-cat[data-cat="unsorted"] .cat-add');
     await page.waitForTimeout(700);
     await page.evaluate(() => {
@@ -384,6 +394,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
   console.log('\n[D10] Export a card that is not the open board');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
+    await expandRail(page);
     await page.evaluate(async () => {
       const a = newBoardRecord();
       a.title = 'Board Alpha';
@@ -391,6 +402,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       await idbPut(a);
     });
     await reopen(page, 'Board Alpha');
+    await expandRail(page);              // the reload re-boots the rail collapsed (B118)
     // A second board becomes `current`, so Alpha's card is now inactive.
     await page.click('.board-cat[data-cat="unsorted"] .cat-add');
     await page.waitForTimeout(700);
@@ -420,6 +432,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
   console.log('\n[D11] Export the open board, including unsaved edits');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
+    await expandRail(page);
     await page.click('.board-cat[data-cat="unsorted"] .cat-add');
     await page.waitForTimeout(700);
     // Straight into `current`, with no time for the debounced save to land —
@@ -565,10 +578,15 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     ok('visual width unchanged across the grab (<1px)',
       Math.abs(after - before.w) < 1, before.w + ' -> ' + after);
     // rebaseNote folded the similarity ratio (B64): scale becomes old·k,
-    // rw/rh the current frame. At 1440x900 with B99's standing calendar rail,
-    // LOGICAL_W = (1440-300-40)/0.9 = 1222.22 and LOGICAL_H = 1000, so
-    // k = min(lw/384, 1000/846) ≈ 1.182 (unchanged — the height still binds).
-    const lw = (1440 - 300 - 40) / 0.9;   // B99: the 40px rail is reserved from the frame
+    // rw/rh where the grab is stamped. At 1440x900 with B99's standing
+    // calendar rail and B118's collapsed All-Boards face (boot default), the
+    // LIVE frame is the two 40px faces — LOGICAL_W = (1440-40-40)/0.9 =
+    // 1511.11 — so k = min(lw/384, 1000/846) ≈ 1.182 (the height binds). But
+    // R6's discipline is mirrored (B118): the grab stamps the RESTING frame —
+    // the room the board returns to on expand — (1440-300-40)/0.9 = 1222.22,
+    // exactly as a cal-squeeze grab stamps the unsqueezed frame.
+    const lw = (1440 - 40 - 40) / 0.9;        // the live frame: both faces collapsed
+    const resting = (1440 - 300 - 40) / 0.9;  // the room the board returns to on expand
     const k = Math.min(lw / 384, 1000 / 846);
     const stored = await page.evaluate(() => new Promise(res => {
       const rq = indexedDB.open('boards-db');
@@ -579,8 +597,8 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     }));
     ok('stored scale ≈ old·k after the grab',
       !!stored && Math.abs(stored.scale - k) < 0.001, stored && String(stored.scale));
-    ok('rw rebased to the current frame',
-      !!stored && Math.abs(stored.rw - lw) < 0.01, stored && String(stored.rw));
+    ok('rw rebased to the resting frame the board returns to (B118\'s mirrored R6)',
+      !!stored && Math.abs(stored.rw - resting) < 0.01, stored && String(stored.rw));
     ok('rh rebased to the current frame',
       !!stored && stored.rh === 1000, stored && String(stored.rh));
     ok('no page errors', errors.length === 0, errors.join(' | '));
@@ -632,6 +650,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
   console.log('\n[D16] Rail categories: To-Do / Idea / Note, drag between, pager (issue #58)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
+    await expandRail(page);
     const heads = await page.evaluate(() =>
       [...document.querySelectorAll('#pane-cards .cat-head span:first-child')].map(s => s.textContent));
     ok('four category headers in order (issue #112: To Do, Notes, Learning, Ideas)',
@@ -778,6 +797,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     });
     const cur = await page.evaluate(() => state.current.id);
     await reopen(page, cur);
+    await expandRail(page);              // the reload re-boots the rail collapsed (B118)
     ok('categorization survives the reload', await page.evaluate((id) => {
       const first = document.querySelector('.board-cat[data-cat="todo"] .pane-card');
       return !!first && first.dataset.id === id;
@@ -1231,6 +1251,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
   console.log('\n[D20] Per-category New board on the rail: head row, pager below, create-in-category (issue #88)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
+    await expandRail(page);
     // Every section holds something, so every section draws its whole grid —
     // head, control, cards, pager — which is what this scenario measures. (An
     // empty one collapses to its head row under B68.) Note Boards is seeded
@@ -1250,6 +1271,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       await put(null, 8, 'Fill');            // no category written: Unsorted by default
     });
     await reopen(page, 'To-do 0');
+    await expandRail(page);              // the reload re-boots the rail collapsed (B118)
 
     ok('the global New board buttons are gone', await page.evaluate(() =>
       !document.querySelector('#new-board') && !document.querySelector('#pane-new')));
@@ -2039,6 +2061,71 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       document.documentElement.classList.contains('has-cal-rail')));
     ok('#cal-view is visible again', await page.evaluate(() =>
       document.getElementById('cal-view').getBoundingClientRect().width > 0));
+    ok('the pane re-enters collapsed on the flip back to wide (B118)', await page.evaluate(() =>
+      document.getElementById('pane').classList.contains('rail-open') &&
+      !document.getElementById('pane-rail').hidden));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  console.log('\n[D26] B118: the collapsible All-Boards rail (issue #211)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    // (a) boot on desktop: the collapsed face IS the pane — 40px, the card
+    // list hidden, the board filling what the pane freed.
+    ok('boot: the collapsed face is present and visible (B118 default)', await page.evaluate(() => {
+      const p = document.getElementById('pane'), r = document.getElementById('pane-rail');
+      return p.classList.contains('rail-open') && !r.hidden &&
+        getComputedStyle(p).width === '40px' && r.getBoundingClientRect().height > 100;
+    }));
+    ok('boot: the pane card list is hidden', await page.evaluate(() =>
+      getComputedStyle(document.getElementById('pane-cards')).display === 'none'));
+    ok('boot: the board fills the freed width (offx 40, the two-faces frame)', await page.evaluate(() => {
+      const offx = parseFloat(getComputedStyle(document.getElementById('board')).getPropertyValue('--offx'));
+      return Math.abs(offx - 40) < 0.5 && Math.abs(window.LOGICAL_W - (1440 - 40 - 40) / 0.9) < 1;
+    }));
+    // (b) tap on the face: the pane expands to its 300px with cards rendered.
+    await page.click('#pane-rail');
+    await page.waitForTimeout(300);
+    ok('tap: the pane expands to 300px with its cards rendered', await page.evaluate(() => {
+      const p = document.getElementById('pane');
+      return !p.classList.contains('rail-open') && getComputedStyle(p).width === '300px' &&
+        document.getElementById('pane-rail').hidden &&
+        !document.getElementById('pane-collapse').hidden &&
+        document.querySelectorAll('#pane-cards .pane-card').length > 0;
+    }));
+    ok('tap: the board re-reserves the pane (offx 300)', await page.evaluate(() => {
+      const offx = parseFloat(getComputedStyle(document.getElementById('board')).getPropertyValue('--offx'));
+      return Math.abs(offx - 300) < 0.5 && Math.abs(window.LOGICAL_W - (1440 - 300 - 40) / 0.9) < 1;
+    }));
+    // (c) the arrow is the collapse affordance.
+    await page.click('#pane-collapse');
+    await page.waitForTimeout(300);
+    ok('arrow: the pane collapses back to the 40px face', await page.evaluate(() => {
+      const p = document.getElementById('pane');
+      return p.classList.contains('rail-open') && getComputedStyle(p).width === '40px' &&
+        !document.getElementById('pane-rail').hidden &&
+        document.getElementById('pane-collapse').hidden &&
+        getComputedStyle(document.getElementById('pane-cards')).display === 'none';
+    }));
+    // (d) the calendar rail's own grammar is untouched by its sibling.
+    await page.click('#cal-rail');
+    await page.waitForTimeout(300);
+    const calOpen = await page.evaluate(() => {
+      const v = document.getElementById('cal-view');
+      return v.classList.contains('panel') && !v.classList.contains('rail-open') &&
+        document.getElementById('cal-rail').hidden;
+    });
+    await page.click('#cal-back');
+    await page.waitForTimeout(300);
+    const calClosed = await page.evaluate(() => {
+      const v = document.getElementById('cal-view');
+      return v.classList.contains('rail-open') && !document.getElementById('cal-rail').hidden;
+    });
+    ok('the calendar rail still expands and collapses (B99 untouched)', calOpen && calClosed,
+       JSON.stringify({ calOpen, calClosed }));
+    ok('and the pane did not follow the calendar', await page.evaluate(() =>
+      document.getElementById('pane').classList.contains('rail-open')));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }

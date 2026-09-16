@@ -1423,6 +1423,53 @@ html.wide #pane {
   gap: 8px;                            /* = CAT_SEC_GAP in app.js */
 }
 
+/* ---- The collapsible All-Boards rail (issue #211, B118) -------------------
+   B99's calendar-rail grammar on the pane: on wide the rail boots COLLAPSED
+   to the 40px face — the same --cal-rail-w, one rail-width law, two rails —
+   with the pane's own name reading vertically; the face is one tap-target
+   and its tap is the expand. Collapsed face = #pane-rail; expanded face =
+   #pane-collapse + #pane-cards, renderPane's cards unchanged. The arrow is
+   the collapse affordance (the pane has no Back). Raw navigation both ways
+   (B81): the frame re-reads the rail width via setPaneCollapsed. Mobile
+   never sees any of it (#pane is display:none there). */
+html.wide #pane.rail-open {
+  width: var(--cal-rail-w, 40px);
+  padding: 0;
+  align-items: stretch;
+  justify-content: center;
+  background: var(--card);             /* the collapsed face's own paper (B99's idiom) */
+  box-shadow: none;
+}
+html.wide #pane.rail-open #pane-cards,
+html.wide #pane.rail-open #pane-collapse { display: none; }
+#pane-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--ink-light);
+  font: inherit;
+  cursor: pointer;
+}
+#pane-rail .vlabel {
+  writing-mode: vertical-rl;
+  font-size: 12px; font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+}
+#pane-rail:hover { filter: brightness(1.1); }
+#pane-rail:focus-visible {
+  outline: 2px solid var(--ink-light);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--ink-dark);
+}
+#pane-collapse { align-self: flex-start; }
+
 /* ---- Rail categories: the desktop skin of the shared §10.5 grid. Same four
    children, same areas — only the row heights and the control's size step
    down, for the desktop pointer rather than a fingertip. The fixed heights

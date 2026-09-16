@@ -697,8 +697,9 @@ async function openCat(page, cat) {
     }));
     ok('984x1450 is tablet (html.tablet + html.wide, NOT html.desktop)',
       g.tablet && g.wide && !g.desktop, JSON.stringify(g));
-    ok('the rail renders beside the sheet (wide arrangement)', g.paneW > 100, String(g.paneW));
-    ok('the sheet origin sits at the rail width (B20 offX)', g.offx === '300px', g.offx);
+    ok('the rail renders beside the sheet (wide arrangement, B118\'s collapsed face)',
+      g.paneW === 40, String(g.paneW));
+    ok('the sheet origin sits at the collapsed face (B118 offX)', g.offx === '40px', g.offx);
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(500);
     // B99: the tab is hidden on wide; the standing rail is the entry. On a
@@ -744,8 +745,8 @@ async function openCat(page, cat) {
         allTab: getComputedStyle(document.getElementById('action-boards')).display !== 'none',
         calRailShown: !document.getElementById('cal-rail').hidden,
       }));
-      ok(`${w}x${h} (unfolded Fold) is tablet: rail ${Math.round(fg.paneW)}px, calendar tab retired, All tab kept (B100)`,
-        fg.tablet && fg.wide && fg.paneW > 100 && fg.calTabGone && fg.allTab && fg.calRailShown,
+      ok(`${w}x${h} (unfolded Fold) is tablet: the ${Math.round(fg.paneW)}px collapsed face, calendar tab retired, All tab kept (B100, B118)`,
+        fg.tablet && fg.wide && fg.paneW === 40 && fg.calTabGone && fg.allTab && fg.calRailShown,
         JSON.stringify(fg));
       await fold.page.evaluate(() => document.getElementById('action-boards').click());
       await fold.page.waitForTimeout(300);
