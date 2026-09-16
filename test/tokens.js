@@ -665,11 +665,18 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is todo-boards-v68 — the #173 bump that adds the note Title and moves the toolbar to the bottom edge',
-    /const CACHE = 'todo-boards-v68';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v68, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v68';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v69 — the #217 identity rename to "Zezed Boards", version bumped (shipped bytes changed)',
+    /const CACHE = 'zeved-boards-v69';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v69, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v69';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
+  ok('the self-heal deletes both cache lineages: the handshake regex reads the new name, the deletion filter keeps the retired todo-boards prefix',
+    /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
+    /startsWith\('zeved-boards-v'\) \|\| k\.startsWith\('todo-boards-v'\)/.test(app));
+  ok('the identity is the single string "Zezed Boards" (B121): manifest name, <title>, the three runtime document.title templates, PDF Producer',
+    manifest.name === 'Zezed Boards' && /<title>Zezed Boards<\/title>/.test(html) &&
+    (app.match(/· Zezed Boards/g) || []).length === 3 && /: 'Zezed Boards';/.test(app) &&
+    /pdfStr\('Zezed Boards'\)/.test(app));
   ok('TABLET_MQ is the B103 one-leg width floor: min-width 744px, orientation-blind',
     /window\.matchMedia\('\(min-width: 744px\)'\)/.test(app),
     (app.match(/TABLET_MQ = window\.matchMedia\([^)]*\)/) || [])[0]);

@@ -1,5 +1,5 @@
 /* ============================================================================
-   TheBoards — app.js  (vanilla, no dependencies, no build step)
+   Zezed Boards — app.js  (vanilla, no dependencies, no build step)
 
    Sections:
      1. Constants & copy

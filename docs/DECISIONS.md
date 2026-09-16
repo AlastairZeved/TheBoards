@@ -1,4 +1,4 @@
-# DECISIONS.md — TheBoards v1
+# DECISIONS.md — Zezed Boards v1
 
 Where `PRD.md` / `UIUX.md` make a decision, it is followed exactly. This file
 records only (a) the one place the two documents conflict internally, and
@@ -4208,6 +4208,9 @@ screen's own asserts are the living proof the gate excludes them.
 
 ### B102. The service worker registers with `updateViaCache: 'none'`, and the app runs a build handshake 20s after launch — it fetches `sw.js` with `cache: 'reload'`, compares the served `todo-boards-v<N>` against its own stamped build, and on a second consecutive mismatch purges every `todo-boards-*` Cache-Storage entry, unregisters the worker, and reloads once (issue #164; the six-day, three-engine stall the issue exposed was the update CHECK being answered from a cache — skipWaiting, `reg.update()`, SWR and now `updateViaCache` all assume the ask reaches the server; the handshake is the layer that verifies it did; keeps B79's no-mid-session-reload law — the heal lands on the reload the handshake itself performs, between thoughts; keeps B21 — data is never touched: Cache Storage and IndexedDB are different stores, and the handshake never opens the latter — and waives nothing)
 
+**Pointer, 2026-09-16:** B121 — issue #217 — renames the CACHE lineage this ruling describes: the CACHE constant is now `zeved-boards-v<N>`, and the self-heal's deletion filter keeps the retired `todo-boards-v*` prefix so pre-rename caches still clean up. The handshake mechanism itself stands.
+
+
 **The failure no layer owned.** The user's devices (LibreWolf desktop, Samsung
 Internet, IronFox — three engines, two platforms) rendered a pre-v44 shell for
 six days while the deploy was verifiably live: all 15 `ASSETS` returned 200,
@@ -4659,6 +4662,8 @@ Fix), the owner's ruling of record.
 
 **Source:** issue #195 (owner): “The identity should be one string.” and on short_name: “keep or retire short_name (ruling needed — launcher truncation on narrow panels argues for keeping it).” — https://github.com/AlastairZeved/TheBoards/issues/195
 
+**Pointer, 2026-09-16:** B121 — issue #217 — supersedes this ruling's identity string only: the app's declared identity is now "Zezed Boards", and the service-worker CACHE lineage `todo-boards-v*` retires with it. The `short_name` "Boards" clause and the section-naming carve-out stand.
+
 ### B117. The Calendar view gets its own color palette — the fifth binding of the luminance-pinned ladder, rotated to orange — the same eight rungs (`--deep`, `--card`, `--water-top`, `--water-mid`, `--water-bot`, `--water-bot-a`, `--frame`, `--note`) bound on `#cal-view` the way To-Do binds on `:root`, every rung reproducing the To-Do rung's WCAG relative luminance to the 4dp UIUX §2.2 prints and its 2dp ink ratios, the arc narrowed to ~47°–66° so the view reads as one hue (issue #168, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/168; keeps B67/B74's ladder law — hue is the only free axis, luminance is the pinned coordinate, the binding is a rebinding of the token names and never a background override, and `--chrome`, the ink poles and the accents do not rotate; the calendar is a body-level section and nothing inside it carries `data-cat`, so the rebinding re-scopes exactly the calendar chrome — rail, R1 row, day cards, month view — and linked boards opened from a day card keep their own category scopes; residuals recorded in UIUX §2.2.2, the suite now parses `#cal-view` as a fifth scope and runs every §2 table against all five ladders; waives nothing)
 
 **Source:** issue #168 (owner): “The Calendar should have its own color palette that matches the luminescence and palettes for each category The Boards but The Calendar will use Orange.” — https://github.com/AlastairZeved/TheBoards/issues/168
@@ -4738,3 +4743,18 @@ merge. No CACHE bump here.
 
 **Pointer audit:** dated one-line pointers added at B87, B88, B91's arm
 paragraph, and UIUX §4.5 (twice) and §7.
+
+### B121. The app's declared identity is the single string "Zezed Boards" — every user-visible and project-facing surface carries it: manifest.json `name`, index.html `<title>`, the three runtime document.title templates, the PDF Producer, the file/doc headers, and README/AGENTS/humans/robots/sitemap/SECURITY — and no trace of "TheBoards" remains on live surfaces; the service-worker CACHE renames `todo-boards-v*` → `zeved-boards-v*` with a paired version bump (shipped bytes changed) and the build handshake in lockstep, the self-heal's deletion filter widened to both prefixes so old caches still clean up on activate; the storage keys never rename — IndexedDB `boards-db` and its `boards` store keep their names, renaming would orphan every user's boards — the data-loss exception to "no trace"; feature copy stays untouched — "To-Do Boards" as a board-section name alongside Note/Learning/Idea Boards is section naming, not app identity (issue #217, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/217; supersedes B116's identity-string clause — "TheBoards"; keeps B116's `short_name` clause and its section-naming carve-out, B21's storage-key law and every storage key it protects, §3.2's no-backend law; the repo and Pages URLs keep their current spelling until the owner renames the repo manually AFTER this PR merges, per the issue's note; waives nothing)
+
+**Source:** issue #217 (owner): "Full renaming to Zezed Boards. No trace of TheBoards should exist in codebase or read.me anymore. Zeved Boards v1.0 baby!" and: "the Repo will be renamed by me manually AFTER this PR is merged, not before." — https://github.com/AlastairZeved/TheBoards/issues/217
+
+**The ruling.** The identity is one string again, renamed. What the grep may
+still find is exhaustively classified: DECISIONS.md's verbatim quotes and the
+dated pointers (owner-provenance records), the dated artifacts in
+docs/plans/ and docs/review-2026-08-31.md and docs/mockups/favicon/ (records,
+not live surfaces), and the literal repo/Pages URLs (they redirect after the
+manual repo rename; pointing them at the new name now would 404 this PR's own
+CI). The old cache prefix survives in exactly two places, both deliberate:
+app.js's self-heal filter (so pre-rename caches still delete on the
+mismatch path) and sw-update's fixture of the retired worker. Storage keys
+are law: `boards-db`/`boards` outlive every rename.

@@ -207,7 +207,7 @@ if ('serviceWorker' in navigator) {
    sw.js's CACHE, the one string that names a build), fetches sw.js with
    cache:'reload' — browser cache AND SWR both bypassed; the network is the
    authority — and on the second consecutive mismatch deletes every
-   todo-boards cache, unregisters the worker, and reloads once. Two strikes,
+   zeved-boards-v* cache (and any retired todo-boards-v* predecessor), unregisters the worker, and reloads once. Two strikes,
    so one bad response (a captive portal, a proxy error page) cannot nuke a
    healthy install; the sessionStorage counter dies with the tab. After the
    reload the freshly-registered worker reinstalls from the network (install
@@ -217,19 +217,19 @@ if ('serviceWorker' in navigator) {
    does nothing: there is no authority to compare against.
 
    DATA IS NEVER TOUCHED. The self-heal deletes Cache Storage entries (the
-   `todo-boards-v*` copies of the app shell) and unregisters the worker —
+   `zeved-boards-v*` and any retired `todo-boards-v*` copies of the app shell) and unregisters the worker —
    nothing else. The boards live in IndexedDB (`boards-db`), a different
    store the handshake never opens, and B21's read-site defaulting means an
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v68';
+const OWN_BUILD = 'v69';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {
       if (!res.ok) return;
       return res.text().then((text) => {
-        const m = text.match(/todo-boards-v(\d+)/);
+        const m = text.match(/zeved-boards-v(\d+)/);
         if (!m) return;                       // unparseable: never act blind
         const served = 'v' + m[1];
         if (served === OWN_BUILD) {
@@ -240,7 +240,7 @@ if ('serviceWorker' in navigator && 'caches' in window) {
         if (seen === served) {
           // twice in a row, same wrong answer: the caches are stale. Self-heal.
           caches.keys().then((keys) =>
-            Promise.all(keys.filter((k) => k.startsWith('todo-boards-v'))
+            Promise.all(keys.filter((k) => k.startsWith('zeved-boards-v') || k.startsWith('todo-boards-v'))
               .map((k) => caches.delete(k)))
           ).then(() => navigator.serviceWorker.getRegistration())
            .then((reg) => reg && reg.unregister())
