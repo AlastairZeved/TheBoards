@@ -2,7 +2,7 @@
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { COPY, GLYPH, anchorEls, calKey, el, state, uuid } from './state.js';
 import { idbGet, idbGetAll, idbPut, saveNow, scheduleSave } from './persistence.js';
-import { applyLayout, applyNoteWidth, effScale, renderX, renderY, setHitInset } from './geometry.js';
+import { applyLayout, applyNoteWidth, effScale, LOGICAL_H, renderX, renderY, setHitInset } from './geometry.js';
 import { clearSelection, commitAction, completeNote, copyText, deleteNotes, hideToast, isEditing, multiSel } from './interactions.js';
 import { restoreNote, selected, selectedNoteIds, setSelectedNotesHighlight, setSelectedNotesState, showNotice, showUndo, toggleHighlight } from './interactions.js';
 import { syncBoardActions } from './menus.js';
@@ -118,14 +118,17 @@ export function makeNoteEl(note) {
   scratch.setAttribute('aria-hidden', 'true');
 
   node.appendChild(text); node.appendChild(scratch);
+  renderNoteTitle(node, note);                               // the Title tab (B120) — absent when empty
   node.appendChild(makeClockBtn(note));                      // the reminder toggle (B109)
   setReminderUi(node, note);                                 // class + aria follow the record
   setCarriedUi(node, note);                                  // the carried status shadow (B110)
   node.appendChild(makeNoteToolbar(note));                   // the on-select action row (B84)
   applyCompleteA11y(node, note.state === 'complete');
-  reflectToolbarFlip(node, note);                            // above the note, or below near the sheet top
+  // Both reads need layout, so they run once the node is in the DOM (the same
+  // frame as the caller's appendChild): the hit collar measures, and the flip
+  // measures the note's bottom for the row's near-sheet-bottom flip (B120).
+  requestAnimationFrame(() => { setHitInset(node, note); reflectToolbarFlip(node, note); });
   noteEls.set(note.id, node);
-  requestAnimationFrame(() => setHitInset(node, note));
   return node;
 }
 
@@ -324,13 +327,41 @@ export function updateNoteToolbar(node, note) {
   if (hl) hl.setAttribute('aria-label', note.highlighted ? COPY.unhighlight : COPY.highlight);
 }
 
-/* The row hangs above the note's top edge; a note near the sheet top has no room
-   there, so it flips to sit just inside the top edge instead (UIUX §4.5). The row
-   is a note child, so its board-logical height scales with the note (effScale) —
-   the threshold does too. renderY is stable across fold/renderScale. */
-const TB_ROW_H = 32;                  // ~the row's own height at scale 1, no gap — flush on-edge (issue #133, B87)
+/* The row hangs BELOW the note's bottom edge, centred (issue #173, B120); a note
+   near the sheet bottom has no room there, so it flips to sit just inside the
+   bottom edge instead (the same one flip, re-aimed). The row is a note child,
+   so its board-logical height scales with the note (effScale) — the threshold
+   does too. renderY is stable across fold/renderScale. */
+const TB_ROW_H = 32;                  // ~the row's own height at scale 1, no gap — flush on-edge (issue #133, B87; edge re-aimed by B120)
 export function reflectToolbarFlip(node, note) {
-  node.classList.toggle('tb-flip', renderY(note) < TB_ROW_H * effScale(note));
+  node.classList.toggle('tb-flip',
+    renderY(note) + node.offsetHeight + TB_ROW_H * effScale(note) > LOGICAL_H);
+}
+
+/* The note's optional Title (issue #173, B120): a header-style tab peeking from
+   BEHIND the card's top-left corner. One element factory, two callers — the
+   render path (the record already carries a title) and the menu's edit path
+   (the tab is created empty for typing). It is a CHILD of the note, so it
+   scales with it; z-index 0 keeps it above the note's hit collar but under the
+   card body (.note-text, z-index 1), which covers the tab's tucked feet — the
+   peek reads as a note slid up from behind. */
+export function ensureNoteTitleEl(node) {
+  let tab = node.querySelector('.note-title');
+  if (tab) return tab;
+  tab = document.createElement('div');
+  tab.className = 'note-title';
+  tab.addEventListener('keydown', (e) => {           // a single line: Enter commits
+    if (e.key === 'Enter') { e.preventDefault(); tab.blur(); }
+  });
+  node.prepend(tab);                                 // before .note-text: the card body paints over it
+  return tab;
+}
+/* The render path: an empty title (the B21 read-site default) renders nothing —
+   no tab, no reserved space; a non-empty one renders (or updates) the tab. */
+export function renderNoteTitle(node, note) {
+  const t = note.title || '';
+  if (!t) { const tab = node.querySelector('.note-title'); if (tab) tab.remove(); return; }
+  ensureNoteTitleEl(node).textContent = t;
 }
 
 /* Copy one note's text — or, where the desktop multi-selection reaches the menu,
