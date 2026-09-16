@@ -1209,6 +1209,9 @@ desktop code path.
 | Caret on edit | at the end (B90 — was the touch point, B14) | at the end (B26) |
 | Boards | full-screen list | always-visible rail |
 
+(2026-09-16: the desktop rail's always-visible geometry reads subject to B118
+— issue #211 — which makes it collapsible on wide, collapsed by default.)
+
 `MOVE_THRESHOLD = 16px` of slop before a drag begins or a long-press cancels
 (B29). `LONGPRESS_MS = 500`; any release before that with movement under
 threshold commits as a tap (B5).
@@ -1388,6 +1391,11 @@ so `#list-view` has no entry path on desktop and never shows. The drill's
 B82 split survives as code (rising panel under `html:not(.desktop)`), simply
 unreachable on desktop; wide's board row is **two tabs** (Export · Import) and
 the calendar's R1 row is **Back + Export**.
+
+(2026-09-16: B118 — issue #211 — supersedes the rail's always-visible 300px
+geometry: on wide the rail ships collapsed as a 40px face, mirroring the
+calendar rail, and expands to the 300px pane on tap. The rest of this
+section's rail grammar stands.)
 
 **Both surfaces order a section by last touch, newest first** (B69, superseding
 B24's immutable slot): the key is the later of `updatedAt` (written on every

@@ -2976,7 +2976,9 @@ and a 2×2 reads clockwise. The board's own gesture recognizer, which captures
 `#lot`, is taught to ignore `#lot-menu` so the buttons receive native clicks.
 Desktop is untouched by this part: it keeps its always-visible rail (now four
 sections), and its "All boards" fills `#list-view` with the same four-button
-picker.
+picker. (Pointer, 2026-09-16: the rail's always-visible geometry is superseded
+by B118 — issue #211 — collapsed by default on wide; B100 has since retired
+this desktop picker clause.)
 
 **One design language across all three surfaces.** A category button — a
 mobile grid tile or a desktop picker tile — is B72's framed tinted tray made
@@ -3281,7 +3283,9 @@ the guard leaves the panel up. Its top edge is the Lot's own `--frame` rule
 (B61), rounded and on `--elevation` as the transient surface it is (§2.4).
 **Desktop keeps the full-screen overlay** (B74's `#list-view`, `inset:0`): the
 always-on rail already leaves the board reachable there, so the panel is the
-phone's alone. The value lives in `UIUX §10`.
+phone's alone. (Pointer, 2026-09-16: B118 — issue #211 — makes the rail
+collapsible on wide, collapsed by default; this rationale now reads subject to
+B118.) The value lives in `UIUX §10`.
 
 **Three across.** The shorter panel would show fewer boards than B74's full
 screen, so the horizontal axis buys the density back: B70 halved the card to
@@ -4095,6 +4099,11 @@ all. They're already visible in the left rail." Three clauses, one stroke:
    what mockup 6 drew all along, so this clause also reconciles the build
    with its own drawing (`#cal-export` takes the right anchor
    `margin-left:auto` once the centred button is gone).
+
+   **Pointer, 2026-09-16:** B118 — issue #211 — makes the rail collapsible
+   on wide, collapsed by default; the rail remains desktop's all-boards
+   surface, one tap away, and this entry's "already visible in the left
+   rail" rationale reads subject to B118.
 3. **The overlay retires on desktop only.** `#list-view` survives as the
    B82 mobile/tablet rising panel for drilled categories — B82's species
    split is untouched — but desktop can never show it: no tab pushes
@@ -4640,3 +4649,7 @@ Fix), the owner's ruling of record.
 ### B117. The Calendar view gets its own color palette — the fifth binding of the luminance-pinned ladder, rotated to orange — the same eight rungs (`--deep`, `--card`, `--water-top`, `--water-mid`, `--water-bot`, `--water-bot-a`, `--frame`, `--note`) bound on `#cal-view` the way To-Do binds on `:root`, every rung reproducing the To-Do rung's WCAG relative luminance to the 4dp UIUX §2.2 prints and its 2dp ink ratios, the arc narrowed to ~47°–66° so the view reads as one hue (issue #168, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/168; keeps B67/B74's ladder law — hue is the only free axis, luminance is the pinned coordinate, the binding is a rebinding of the token names and never a background override, and `--chrome`, the ink poles and the accents do not rotate; the calendar is a body-level section and nothing inside it carries `data-cat`, so the rebinding re-scopes exactly the calendar chrome — rail, R1 row, day cards, month view — and linked boards opened from a day card keep their own category scopes; residuals recorded in UIUX §2.2.2, the suite now parses `#cal-view` as a fifth scope and runs every §2 table against all five ladders; waives nothing)
 
 **Source:** issue #168 (owner): “The Calendar should have its own color palette that matches the luminescence and palettes for each category The Boards but The Calendar will use Orange.” — https://github.com/AlastairZeved/TheBoards/issues/168
+
+### B118. The board rail is collapsible furniture on wide: it ships COLLAPSED — a 40px face mirroring B99's calendar rail at the viewport's left edge — one tap expands it into B24's 300px pane, and an arrow control collapses it back (issue #211, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/211; supersedes ONLY B24's geometry/presence clause — the pane at "a fixed 300 CSS px", always present; keeps B24's sunken-pane identity (`--pane`, inset shadow — embedded, not floating), its card grammar, its comparator as carried forward by B69, swap-in-place with no history push, its create/delete paths, its 150ms crossfade and setTimeout-sequenced teardown, and keeps B100's rail-is-desktop's-all-boards-surface clause — the rail still names every category with every board, from behind its face until expanded; the collapsed-by-default state is the owner's session ruling of 2026-09-16; wide is B96's tier as retuned by B103 — desktop ∪ tablet; this record rules the collapse grammar and the collapsed-by-default state and nothing further about the collapsed face's contents — no B99 mechanic beyond the expand/collapse grammar issue #211 names is carried to the pane by this entry; waives nothing)
+
+**Source:** issue #211 (owner): “New behavior: 'All Boards' menu on the left side of the viewport functions just like the 'Calendar' rail on the right side of the viewport by being tappable to expand with an arrow button to collapse.” — https://github.com/AlastairZeved/TheBoards/issues/211; collapsed-by-default: owner session ruling, 2026-09-16: “Starts collapsed like the Calendar rail — true mirror: two 40px rails, board fills the viewport, tap the rail to expand.”
