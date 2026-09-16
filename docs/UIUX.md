@@ -1071,6 +1071,9 @@ empty note is exempt (it keeps no frame, §6.2, and shows no row), so it stays f
 to be its true width; `createNote` floors a new note's `x` `NOTE_MIN_W` back from
 the right edge so its frame never spills off the sheet.
 
+(2026-09-16: B120 — issue #173 — the row this floor seats moves to the note's
+bottom edge, centred; the minimum itself stays.)
+
 **The tabs are flat, in the band-label's hand** (§3.1 — the same tab that names
 Components and Requirements), not pills and not the `.sel-btn` raised control:
 
@@ -1096,6 +1099,11 @@ sheet top where there is no room above (`reflectToolbarFlip`, whose `TB_ROW_H`
 threshold is now 32 for the gapless row). Each tab keeps a 44px-tall hit target
 expanded upward (§6, B7's decoupled-hit idiom) so a row of three never overlaps a
 neighbour. Focus wears the two-tone ring (§2.7).
+
+(2026-09-16: B120 — issue #173 — supersedes this paragraph's edge and anchor
+clauses for the note toolbar: the row moves to the note's BOTTOM edge, centred
+on the card; `reflectToolbarFlip` re-reads for near-sheet-bottom. The gapless
+edge, show/hide grammar and hit targets stand.)
 
 **Shown only on select/focus** (the owner's call — not always drawn), by the same
 state that raises the resize frame: `.note.selected` on desktop (B22); on mobile a
@@ -1295,6 +1303,11 @@ on a desktop multi-selection that includes the tapped note, it copies the
 item is a real button (`GLYPH.copy`, labelled `Copy`), so keyboard access rides
 the menu. A surfaced echo carries no Copy (§4.7) — its record lives on the
 source board.
+
+(2026-09-16: B120 — issue #173 — extends the note menu's item list: a new
+"Add Title" item arms the note's optional Title, a header-style tab peeking
+from behind the card's top-left corner. Copy's first position and the
+ordering rule stand.)
 
 **Highlight** (issue #105, B71) is a note-only toggle: it washes the whole note
 in `--highlight` (§2.6.1) and, chosen again, returns it to the board's default
