@@ -4238,3 +4238,60 @@ list is closed by the rulings since: the past-due trigger retired (B107),
 the summary's text format retired with the SMS (B107), the week-absent
 first-load case built in B108's unconditional landing, recurring reminders
 ruled out here, and the month view pointed at #191 rather than left open.
+
+### B114. Copy re-homes from the note's on-select toolbar to the note's long-press/right-click menu — the toolbar becomes three tabs, Complete · Highlight · Delete, and `--accent-copy` retires with its tab (issue #171, the owner's ruling of record; supersedes B84's Complete·Copy·Delete-on-toolbar clause and B85's `--accent-copy` fixed-blue identity clause; narrows B91's menu scope from relational-only to one state act leading one relational act; keeps B84's on-select toolbar and its on-select reveal, B86's tab metrics, B87/B88's anchoring, B90's mobile first-tap select, B91's Link armament verbatim, B109's echo surfacing, §1's state-is-never-colour-alone; waives nothing)
+
+**The ruling.** Copy moves off the note's on-select toolbar into the note's
+long-press (mobile) / right-click (desktop) menu (`openMenuFor`). The toolbar
+is three tabs from here on — **Complete · Highlight · Delete**, order
+otherwise unchanged, Delete still last in `--danger` — and Copy is the menu's
+**first item**, before Link. Precedent is the echo menu (B109), which leads
+with Complete: a state act on the note itself comes before the relational
+act, because the menu is opened *on* a note and the note's own state is the
+closer hand. The item is `GLYPH.copy` labelled `COPY.copy`, a real button
+like every menu item, so keyboard access survives the move — the toolbar's
+keyboard route keeps working through the surviving three tabs, and Copy's
+keyboard access is the menu's own focusable item.
+
+**Semantics move verbatim, they do not shrink.** The menu's Copy is exactly
+the toolbar's copy branch (`runNoteToolbarAction`): tapped on a single note
+it copies that note's text; where the desktop multi-select grammar reaches
+the menu (multiSel active, the tapped note in the selection), it copies the
+**joined text of the whole selection, primary first, one `\n` between**. No
+blur-first dance, no new state — the same `copyText` of the same live
+`note.text`.
+
+**Echoes get no Copy.** B109's surfaced echoes keep their menu as it is —
+Complete and Go to Board only. An echo is a render-time reference; its record
+lives on the source board, outside `state.current`, the same stranding that
+already keeps Link off the echo menu. The toolbar change retires the Copy tab
+on every note that renders one, echo or not, so no path serves a Copy of a
+record the board does not hold.
+
+**`--accent-copy` retires with its tab.** The token (§2.6.1, `#698ebf`, B85)
+had exactly one consumer, `.note-tb-copy`; both die with the toolbar change.
+The Highlight tab keeps B85's amber identity fill — B85's identity-fill
+principle survives for Highlight, only its blue half is superseded. The
+token-suite expected count moves with the token; the implementation card
+declares before/after numbers. `NOTE_MIN_W`'s toolbar budget recomputes for
+three tabs; the minimum itself stays.
+
+**Why the record changes shape without breaking B84.** B84 moved a note's
+actions out of a hidden gesture onto a declared row, and B114 moves one of
+the four back — but Copy was always the odd one out: a read-only act, no
+note state it flips, nothing to see afterwards (the copied toast is its whole
+afterimage). Complete, Highlight and Delete each change the note and earn the
+always-reachable row; Copy is an act *on* the text, and the menu — now a
+superset of its B91 self — is where acts that don't wear state belong. B91's
+revived menu was scoped to relational actions so it would not compete with
+the toolbar; with Copy as a menu resident, B91's scope narrows: the note
+menu carries one state act leading one relational act, and the toolbar keeps
+the state acts that wear state.
+
+**The record.** Rendered values — the three-tab row, the menu item's
+position, the multi-select semantics, the echo exclusion, the retired
+token — live in `UIUX §2.6.1`, `§4.5`, `§4.7` and `§7`. Docs-only on this
+card: the styles.css token/rule removal, the `runNoteToolbarAction` copy
+branch's move, and the `sw.js` CACHE bump are the implementation card's
+work, gated behind this card's merge. Cited: issue #171 (Spatial Reasoning
+Fix), the owner's ruling of record.
