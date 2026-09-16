@@ -5,7 +5,7 @@ import { LONGPRESS_MS, MOVE_THRESHOLD, PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP
 import { calEventsOf, calKey, calWindow, el, ensureLinkedBoard, newBoardRecord, newCalEvent, state } from './state.js';
 import { syncMirror, mirrorEventsOf } from './state.js';
 import { flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, saveTimer, scheduleSave } from './persistence.js';
-import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze } from './geometry.js';
+import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze, setPaneCollapsed } from './geometry.js';
 import { applyBoardCat, renderBoard, syncViewTitle } from './render.js';
 import { commitAction, g, hideToast, leave, showUndo, undoTimer } from './interactions.js';
 import { buildMenu, closeMenu, syncBoardActions } from './menus.js';
@@ -876,6 +876,33 @@ function collapseCalRail() {
   renderCalRail();
 }
 
+/* --- 11.6 The collapsible All-Boards rail (issue #211, B118) ---------------
+   The left rail mirrors B99's calendar-rail grammar: on wide it boots
+   COLLAPSED to the 40px face (#pane-rail, the pane's own name reading
+   vertically), one tap expands it to the 300px pane — renderPane's cards,
+   unchanged — and the expanded pane's arrow (#pane-collapse) folds it back.
+   The arrow is the collapse affordance, the pane's Back-double (the pane has
+   no Back of its own). Raw navigation both ways (B81/B24): no history is
+   pushed, nothing is committed. The board reflows through the frame: the
+   collapsed face frees the sheet, the expanded pane reserves it (R6's
+   discipline, mirrored in setPaneCollapsed). */
+export function expandPane() {
+  el.pane.classList.remove('rail-open');
+  el.paneRail.hidden = true;
+  el.paneRail.setAttribute('aria-expanded', 'true');
+  el.paneCollapse.hidden = false;
+  setPaneCollapsed(false);            // the frame re-reserves the pane's 300px
+  renderPane();
+}
+
+export function collapsePane() {
+  el.pane.classList.add('rail-open');
+  el.paneRail.hidden = false;
+  el.paneRail.setAttribute('aria-expanded', 'false');
+  el.paneCollapse.hidden = true;
+  setPaneCollapsed(true);             // the 40px face only; the board fills the freed width
+}
+
 export function showCal() {
   // Wide enters through the standing rail (B99); mobile keeps the pushed
   // full-screen view (B95's mobile path, unchanged).
@@ -1340,6 +1367,12 @@ export function registerBoards() {
     if (!state.isWide || state.calExpanded) return;
     expandCalRail();
   });
+  el.paneRail.addEventListener('click', () => {
+    // The face's one act: expand (B118). Raw navigation, no commit (B81).
+    if (!state.isWide) return;
+    expandPane();
+  });
+  el.paneCollapse.addEventListener('click', collapsePane);
   el.calBoards.addEventListener('click', (e) => {
     if (state.isDesktop) return;               // B100: no All-Boards on desktop — the rail is the all-boards surface
     const r = e.currentTarget.getBoundingClientRect();

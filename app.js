@@ -9,7 +9,7 @@ import { closeMenu, fillBoardAction, registerMenus } from './menus.js';
 import { EXPORT_GEO, EXPORT_W, buildBoardPdf, exportBoardPdf, exportCalPdf, exportNoteBox, exportX, pdfTextW } from './export.js';
 import { BOARD_CATS, GRID_ORDER, catOf, catOrder, catPageCap, catView, drillCat, goToList, listOpen, lotMenuOpen } from './boards.js';
 import { checkDayRoll, makeCalDay, newBoardIn, openBoardObj, popping, registerBoards, renderCal, renderPane, returnToBoard, showCalRail, startCalLineEdit } from './boards.js';
-import { swapBoard, swapping, syncDateMirror } from './boards.js';
+import { swapBoard, swapping, syncDateMirror, collapsePane } from './boards.js';
 
 // Test-observability bridge (issue #182): the black-box suites drive the page
 // through page.evaluate, which reads page globals. Module scope does not leak
@@ -60,6 +60,7 @@ function applyMode() {
   }
   applyLayout();
   if (state.isWide) {
+    collapsePane();                  // B118: every return to wide re-enters through the collapsed face
     renderPane();
     document.documentElement.classList.add('has-cal-rail');  // B99: re-arm the rail's CSS gate on every return to wide (issue #213)
     showCalRail();                   // the rail re-renders on every flip to wide (B99)
@@ -100,6 +101,11 @@ async function boot() {
   // the guard that makes the phase-2 module split verifiable (import hoisting must
   // never reorder boot), not scaffolding to strip. test/boot-order.js pins them.
   applyInitialMode();               // html arrangement classes (state is initialized)
+  // B118 (issue #211): wide boots into its resting arrangement — the All-Boards
+  // rail collapsed — BEFORE any layout, migration, or render reads the frame.
+  // setPaneCollapsed skips its layout here (state.current is still null); the
+  // boot:layout applyLayout below computes the collapsed frame.
+  if (state.isWide) collapsePane();
   registerRender();                 // toolbar keydown
   registerInteractions();           // pointer/focus/keydown/input listeners
   registerMenus();                  // board-action row fill + click/contextmenu listeners
@@ -209,7 +215,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v64';
+const OWN_BUILD = 'v65';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

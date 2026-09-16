@@ -665,10 +665,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is todo-boards-v64 — the bump that re-arms the rail on a reflip (issue #213)',
-    /const CACHE = 'todo-boards-v64';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v64, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v64';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is todo-boards-v65 — the B118 bump that folds the All-Boards rail (issue #211)',
+    /const CACHE = 'todo-boards-v65';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v65, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v65';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('TABLET_MQ is the B103 one-leg width floor: min-width 744px, orientation-blind',
     /window\.matchMedia\('\(min-width: 744px\)'\)/.test(app),
@@ -709,6 +709,8 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /id="cal-rail"/.test(html) && /calRail: document\.getElementById\('cal-rail'\)/.test(app));
   ok('the rail renders at boot on wide — furniture, no press (B99)',
     /if \(state\.isWide\) \{\s*\n\s*document\.documentElement\.classList\.add\('has-cal-rail'\);\s*\n\s*showCalRail\(\);/.test(app));
+  ok('wide boots into the collapsed rail BEFORE the first layout reads the frame (B118)',
+    /applyInitialMode\(\);[^]*?if \(state\.isWide\) collapsePane\(\);[^\n]*\n\s*registerRender\(\);/.test(app));
   // --- Issue #191: the month view in the Calendar viewport's freed ground ---
   ok('the month view lives in #cal-view below the stack; the grid is Sunday-first 7-col (issue #191)',
     /id="cal-month"/.test(html) && /calMonth: document\.getElementById\('cal-month'\)/.test(app) &&

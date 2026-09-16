@@ -150,6 +150,7 @@ export const COPY = {
   // return, and the tab is not visible there.
   calBoardTab: 'All', calendar: 'Calendar',
   calToday: 'Today', calBack: 'Back', calAllBoards: 'All Boards', calExport: 'Export',
+  paneCollapse: 'Collapse',   // the expanded All-Boards rail's arrow (issue #211, B118)
   // A day card's header: "Today" then the long date; the future days read
   // weekday + MM/DD (the mockups' own voice).
   calTitle: 'Calendar Board',
@@ -203,6 +204,10 @@ export const GLYPH = {
   // glyph must, not because anything is scheduled.
   clock:     MARK(16, '<circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/>'),
   calBack:   MARK(16, '<path d="M9.5 3.5L5 8l4.5 4.5"/><path d="M5 8h6.5"/>'),
+  // The pane's collapse arrow (issue #211, B118): the chevron alone — it does
+  // not "go back" anywhere, it folds the rail, so it borrows nothing from the
+  // page-turn pair.
+  paneCollapse: MARK(16, '<path d="M9.5 3.5L5 8l4.5 4.5"/>'),
 };
 
 // contenteditable mode: prefer plaintext-only (Chromium/Samsung Internet — the
@@ -412,6 +417,8 @@ export const el = {
   toast: document.getElementById('toast'),
   pane: document.getElementById('pane'),
   paneCards: document.getElementById('pane-cards'),
+  paneRail: document.getElementById('pane-rail'),         // the collapsed All-Boards face (issue #211, B118)
+  paneCollapse: document.getElementById('pane-collapse'), // the expanded pane's collapse arrow (B118)
   boardActions: document.getElementById('board-actions'),   // the board-action row (B83)
   actionBoards: document.getElementById('action-boards'),   // All Boards ⇄ This board toggle
   actionExport: document.getElementById('action-export'),   // Export this board (PDF · JSON, B92)

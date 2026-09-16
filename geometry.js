@@ -17,6 +17,7 @@ export let LEGACY_H = 1000;                 // the LOGICAL_H the pre-B32 build w
                                      // B64 path before first paint.
 export let renderScale = 1, offX = 0, offY = 0;
 export let calSqueeze = false;
+export let paneCollapsed = false;   // the All-Boards rail's collapsed face (issue #211, B118)
 const frameUi = {
   LOGICAL_W_TRUE: null,               // set only while squeezed
 
@@ -60,13 +61,16 @@ function computeFrame(vw, vh) {
     // is open — the standing rail IS the reservation; expanded, the panel
     // takes the rail's place and its full width replaces the 40.
     const calW = calSqueeze ? CAL_PANEL_W : CAL_RAIL_W;
-    renderScale = Math.min(vh / 1000, (vw - PANE_W - calW) / 900);
+    // B118 (issue #211): the left rail collapses to the calendar rail's own
+    // 40px — one rail-width law, two rails — and the sheet fills what it frees.
+    const paneW = paneCollapsed ? CAL_RAIL_W : PANE_W;
+    renderScale = Math.min(vh / 1000, (vw - paneW - calW) / 900);
     LOGICAL_H = vh / renderScale;
-    LOGICAL_W = (vw - PANE_W - calW) / renderScale;
-    frameUi.LOGICAL_W_TRUE = calSqueeze
-      ? (vw - PANE_W - CAL_RAIL_W) / renderScale   // the frame the board returns to on collapse
+    LOGICAL_W = (vw - paneW - calW) / renderScale;
+    frameUi.LOGICAL_W_TRUE = (calSqueeze || paneCollapsed)
+      ? (vw - PANE_W - CAL_RAIL_W) / renderScale   // the resting frame the board returns to
       : null;
-    offX = PANE_W;
+    offX = paneW;
     offY = 0;
     LEGACY_H = LOGICAL_H;            // desktop geometry is unchanged by B32
   } else {
@@ -203,6 +207,17 @@ const CAL_PANEL_W = 320;             // unscaled CSS px the panel takes (mockup 
 export function setCalSqueeze(on) {
   if (calSqueeze === on) return;
   calSqueeze = on;
+  if (state.current) applyLayout();
+}
+
+/* B118 (issue #211): the pane's collapse is the same mechanism pointed the
+   other way — the resting frame reserves PANE_W, the collapsed face reserves
+   the rail-width law's 40. While collapsed, LOGICAL_W_TRUE holds the resting
+   (expanded) frame, so toLogical/rebaseNote un-map a drag into the room the
+   board returns to on expand — the R6 discipline, mirrored. */
+export function setPaneCollapsed(collapsed) {
+  if (paneCollapsed === collapsed) return;
+  paneCollapsed = collapsed;
   if (state.current) applyLayout();
 }
 
