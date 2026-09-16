@@ -165,12 +165,13 @@ async function tap(page, x, y, holdMs = 30) {
       await page.waitForTimeout(300);
       let labels = await page.evaluate(() =>
         [...document.querySelectorAll('#menu [role="menuitem"]')].map(l => l.textContent));
-      ok('manual add\'s menu offers the two re-homing options, in the issue\'s order',
-        JSON.stringify(labels.slice(0, 2)) === JSON.stringify(['Add to existing board', 'Create new board with this as first card']),
+      ok('manual add\'s menu offers Copy (B114) then the two re-homing options, in the issue\'s order',
+        labels[0] === 'Copy' &&
+        JSON.stringify(labels.slice(1, 3)) === JSON.stringify(['Add to existing board', 'Create new board with this as first card']),
         JSON.stringify(labels));
       ok('Link is still on the menu', labels.includes('Link'), JSON.stringify(labels));
       // Carry-forward's marker keeps a re-homed day-board card out of the pair:
-      // the carried note's menu carries Link alone.
+      // the carried note's menu carries Copy (B114) then Link.
       const cbox = await page.evaluate(() => {
         const n = [...document.querySelectorAll('.note')].find(n => n.textContent.includes('carry me two'));
         const r = n.getBoundingClientRect();
@@ -182,8 +183,8 @@ async function tap(page, x, y, holdMs = 30) {
       await page.waitForTimeout(300);
       labels = await page.evaluate(() =>
         [...document.querySelectorAll('#menu [role="menuitem"]')].map(l => l.textContent));
-      ok('a carried note\'s menu is Link alone',
-        JSON.stringify(labels) === JSON.stringify(['Link']), JSON.stringify(labels));
+      ok('a carried note\'s menu is Copy then Link (B114)',
+        JSON.stringify(labels) === JSON.stringify(['Copy', 'Link']), JSON.stringify(labels));
       await tap(page, 5, 5);
       await page.waitForTimeout(200);
 

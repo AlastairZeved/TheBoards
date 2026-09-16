@@ -75,7 +75,6 @@
      either. The highlight's own amber dropped a rung — status below attention,
      the issue's priority order — carrying --ink-dark at 10.62:1 (UIUX §2.6.3). */
   --carried:         #E1BE26;
-  --accent-copy:     #698ebf;   /* the Copy tab's fixed identity fill — a fixed blue, never board-rotating (issue #131, B85) */
   --elevation:       0 2px 8px rgb(0 0 0 / 0.45);
   --elevation-inset: inset -3px 0 8px rgb(0 0 0 / 0.16), inset 0 2px 4px rgb(0 0 0 / 0.10);
 }
@@ -704,8 +703,9 @@ body {
    floor — a note can never be sized narrower than its own row. */
 .note-text:not(:empty) { min-width: 132px; }   /* = NOTE_MIN_W (UIUX §4.5) */
 
-/* Four flat tabs on the note's top edge — Complete/Restore · Highlight · Copy ·
-   Delete, the menu's B43 order, Delete last in --danger. A CHILD of the note, so
+/* Three flat tabs on the note's top edge — Complete/Restore · Highlight ·
+   Delete, the menu's B43 order, Delete last in --danger (Copy left for the note
+   menu, B114). A CHILD of the note, so
    it scales with it and is never wider than the note (the min-width above seats
    it). Styled as the band-label tab (§3.1): --frame fill, .on-light ink at
    13px/600, 3px radius — NOT a pill. Drawn always; shown only on select/focus. */
@@ -744,18 +744,18 @@ body {
    --ink-dark, so the tab differs from the other three by fill + glyph, not colour
    alone (§1) — Delete last and distinct, the menu's B43 order. */
 .note-tb-delete { background: var(--danger); }
-/* Highlight and Copy wear their own fixed identity fills, so the four tabs differ
-   by fill + glyph, not colour alone (§1): amber and blue are button chrome (which
+/* Highlight wears its own fixed identity fill, so the tabs differ
+   by fill + glyph, not colour alone (§1): amber is button chrome (which
    action), never the note's state. The highlight STATE stays the wash + the inset
-   rule below; Copy's blue (--accent-copy) is fixed, not board-rotating (issue #131, B85). */
+   rule below. (Copy's fixed blue filled a fourth tab until B114 re-homed Copy to
+   the note menu and retired the token with it.) */
 .note-tb-highlight { background: var(--highlight); }
-.note-tb-copy      { background: var(--accent-copy); }
 /* Highlight's "on" state is a geometry, not colour alone (§1): an inset border
    while the note wears the amber wash. The wash is the real signal; this only
    labels the toggle and flips its aria-label (updateNoteToolbar). */
 .note.highlight .note-tb-highlight { box-shadow: inset 0 0 0 2px var(--ink-dark); }
 /* Decoupled hit area (§6, B7's idiom): the small tab keeps a 44px-tall tap target,
-   expanded UPWARD only so a row of four never overlaps a neighbour or the note. */
+   expanded UPWARD only so a row of three never overlaps a neighbour or the note. */
 .note-tb-btn::before {
   content: "";
   position: absolute;

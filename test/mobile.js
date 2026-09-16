@@ -265,8 +265,8 @@ async function openCat(page, cat) {
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
     });
     // On mobile the FIRST tap SELECTS a note — it reveals the toolbar with no
-    // keyboard and no edit (B90). (A long-press now arms the Link menu, B91 —
-    // covered in [24]; here a short tap engages the note.)
+    // keyboard and no edit (B90). (A long-press now arms the note's Copy · Link
+    // menu, B91/B114 — covered in [24]; here a short tap engages the note.)
     await tap(page, box.x, box.y);
     await page.waitForTimeout(200);
     // The engaged note shows its toolbar via the .engaged class, not by editing.
@@ -284,34 +284,33 @@ async function openCat(page, cat) {
         deleteBg: document.querySelector('.note-tb-delete') ? bg(document.querySelector('.note-tb-delete')) : '',
         completeBg: document.querySelector('.note-tb-complete') ? bg(document.querySelector('.note-tb-complete')) : '',
         highlightBg: document.querySelector('.note-tb-highlight') ? bg(document.querySelector('.note-tb-highlight')) : '',
-        copyBg: document.querySelector('.note-tb-copy') ? bg(document.querySelector('.note-tb-copy')) : '',
       };
     });
     ok('the first tap engages the note and shows its toolbar (B90)', tb.engaged && tb.visible, JSON.stringify(tb));
     ok('the first tap does not open the keyboard — no edit yet (B90)', !tb.editing);
-    // B43 order, carried onto the row (B84): Complete · Highlight · Copy · Delete.
-    ok('toolbar is Complete · Highlight · Copy · Delete', tb.labels.length === 4 &&
+    // B43 order on the row (B84); Copy re-homed to the long-press menu (B114):
+    // Complete · Highlight · Delete.
+    ok('toolbar is Complete · Highlight · Delete', tb.labels.length === 3 &&
        /Complete/.test(tb.labels[0]) && /Highlight/.test(tb.labels[1]) &&
-       /Copy/.test(tb.labels[2]) && /Delete/.test(tb.labels[3]), JSON.stringify(tb.labels));
+       /Delete/.test(tb.labels[2]), JSON.stringify(tb.labels));
     ok('Delete is last and distinct — the --danger fill, not the frame fill',
        tb.lastIsDelete && tb.deleteBg !== tb.completeBg,
        JSON.stringify({ last: tb.lastIsDelete, del: tb.deleteBg, comp: tb.completeBg }));
-    // Identity fills (B85): Highlight is a fixed amber, Copy a fixed blue — neither
-    // rotates with the board type the way Complete's --frame does. On a To-Do board
-    // Copy's fixed blue equals the frame blue, the owner's accepted call (issue #131).
+    // Identity fill (B85): Highlight is a fixed amber — it does not rotate with
+    // the board type the way Complete's --frame does. (Copy's fixed blue retired
+    // with its tab — B114.)
     ok('Highlight wears the fixed amber fill (B85)', tb.highlightBg === 'rgb(242, 214, 75)', tb.highlightBg);
-    ok('Copy wears the fixed blue fill (B85)', tb.copyBg === 'rgb(105, 142, 191)', tb.copyBg);
     const rot = await page.evaluate(() => {
       const board = document.getElementById('board');
       const prev = board.dataset.cat;
-      board.dataset.cat = 'idea';            // a green board: --frame rotates, the identity fills do not
+      board.dataset.cat = 'idea';            // a green board: --frame rotates, the identity fill does not
       const bg = s => getComputedStyle(document.querySelector(s)).backgroundColor;
-      const out = { hi: bg('.note-tb-highlight'), copy: bg('.note-tb-copy'), comp: bg('.note-tb-complete') };
+      const out = { hi: bg('.note-tb-highlight'), comp: bg('.note-tb-complete') };
       board.dataset.cat = prev;
       return out;
     });
-    ok('the identity fills stay fixed while Complete follows the board (B85)',
-       rot.hi === 'rgb(242, 214, 75)' && rot.copy === 'rgb(105, 142, 191)' && rot.comp !== 'rgb(105, 142, 191)',
+    ok('the identity fill stays fixed while Complete follows the board (B85)',
+       rot.hi === 'rgb(242, 214, 75)' && rot.comp !== 'rgb(105, 142, 191)',
        JSON.stringify(rot));
     // Notes carry no Export (that is board-level, on the anchor menu).
     ok('the note toolbar has no Export', !tb.labels.some(l => /Export/i.test(l)), JSON.stringify(tb.labels));
@@ -1331,8 +1330,8 @@ async function openCat(page, cat) {
     await ctx.close();
   }
 
-  // ---- 17. Copy from the note's toolbar (issue #59, B84) -------------------
-  console.log('\n[17] Toolbar Copy shows the Copied notice');
+  // ---- 17. Copy from the note's long-press menu (issue #59, B84; B114) -----
+  console.log('\n[17] Menu Copy shows the Copied notice');
   {
     const { ctx, page, errors } = await newMobilePage(browser);
     await ctx.grantPermissions(['clipboard-read', 'clipboard-write']);
@@ -1345,17 +1344,15 @@ async function openCat(page, cat) {
       const r = document.querySelector('.note').getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
     });
-    await tap(page, box.x, box.y);                       // engage → the toolbar shows
+    await tap(page, box.x, box.y, 700);                  // long-press → the note menu (B91; Copy first, B114)
     await page.waitForTimeout(200);
-    const btn = await page.evaluate(() => {
-      const b = document.querySelector('.note-tb-copy');
-      if (!b) return null;
-      const r = b.getBoundingClientRect();
-      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-    });
-    ok('the toolbar offers Copy', !!btn);
-    if (btn) {
-      await tap(page, btn.x, btn.y);
+    const menu = await page.evaluate(() =>
+      [...document.querySelectorAll('#menu button')].map(b => b.textContent.trim()));
+    ok('the long-press menu offers Copy first', menu.length >= 2 && menu[0] === 'Copy',
+       JSON.stringify(menu));
+    if (menu[0] === 'Copy') {
+      await page.evaluate(() =>
+        [...document.querySelectorAll('#menu button')].find(b => b.textContent.trim() === 'Copy').click());
       await page.waitForTimeout(300);
       ok('Copied notice shows', await page.evaluate(() => {
         const t = document.querySelector('#toast');
@@ -2149,7 +2146,8 @@ async function openCat(page, cat) {
   }
 
   // ---- 24. Note linking (issue #142, B91) ----------------------------------
-  // Long-press a note → a single-item Link menu → tap another note draws a
+  // Long-press a note → its Copy · Link menu (B114) → tap Link → tap another
+  // note draws a
   // --frame line between their centres, below the notes and click-through;
   // re-linking the pair removes it; a stray tap cancels; deleting a note prunes.
   console.log('\n[24] Note linking: long-press → Link → tap target (issue #142, B91)');
@@ -2178,13 +2176,13 @@ async function openCat(page, cat) {
     const chooseLink = () => page.evaluate(() =>
       [...document.querySelectorAll('#menu button')].find(b => /Link/.test(b.textContent)).click());
 
-    // Long-press Alpha → a one-item Link menu.
+    // Long-press Alpha → its Copy · Link menu (Copy first, B114).
     await tap(page, c.la.x, c.la.y, 700);
     await page.waitForTimeout(120);
     ok('a note long-press opens a menu (B91)',
        await page.evaluate(() => document.querySelector('#menu').hidden === false));
     const items = await page.evaluate(() => [...document.querySelectorAll('#menu button')].map(b => b.textContent.trim()));
-    ok('its only item is Link', items.length === 1 && /Link/.test(items[0]), JSON.stringify(items));
+    ok('its items are Copy then Link', items.join('|') === 'Copy|Link', JSON.stringify(items));
 
     // Choose Link → the mode arms with a hint; tap Bravo → one link + one line.
     await chooseLink();

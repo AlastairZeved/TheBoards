@@ -1,7 +1,7 @@
 /* --- 10. Long-press menu ------------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { COPY, GLYPH, el, newBoardRecord, state } from './state.js';
-import { beginLink, completeSurfaced, linkSource, renderBoard, surfacedMap } from './render.js';
+import { beginLink, completeSurfaced, copyNoteTexts, linkSource, renderBoard, surfacedMap } from './render.js';
 import { idbGetAll, idbPut, saveNow } from './persistence.js';
 import { commitAction, g, isEditing } from './interactions.js';
 import { exportAllJson, exportBoardPdf, importBoardsJson } from './export.js';
@@ -44,6 +44,13 @@ export function openMenuFor(target, clientX, clientY) {
     return;
   }
   if (!note) return;                    // a stale id (the record was discarded mid-press)
+  // Copy (issue #171, B114): re-homed from the note toolbar's retired tab, the
+  // menu's FIRST item — the note's own state act before the relational acts,
+  // the echo menu's Complete-first precedent (B109). Not raw: a copy is a
+  // consequence, so it commits under buildMenu's drop-guard like every other
+  // item; copyNoteTexts joins the multi-selection primary-first when the
+  // desktop grammar reaches the menu with one live.
+  items.push({ label: COPY.copy, glyph: GLYPH.copy, action: () => copyNoteTexts(id) });
   // A note's one relational action (issue #142, B91): Link arms link mode, then
   // the next note tapped is connected (handleTap's linkSource branch). beginLink
   // runs inside buildMenu's commitAction wrapper — arming is idempotent, fine.

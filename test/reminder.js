@@ -260,7 +260,7 @@ async function seedBoard(page, title, cat, notes) {
       echoes: document.querySelectorAll('.note.surfaced').length }));
     ok('manual add\'s reminder is set and stays put — no self-echo',
       got.rec === true && got.echoes === 0, JSON.stringify(got));
-    // The manual add's menu is untouched (B108): re-homing pair first, Link last.
+    // The manual add's menu is untouched (B108/B114): Copy first, re-homing pair, Link last.
     const nbox = await page.evaluate(() => {
       const r = [...document.querySelectorAll('.note')].find(n => n.textContent.includes('manual reminder')).getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
@@ -268,8 +268,9 @@ async function seedBoard(page, title, cat, notes) {
     await tap(page, nbox.x, nbox.y, 700);
     await page.waitForTimeout(300);
     const labels = await page.evaluate(() => [...document.querySelectorAll('#menu [role="menuitem"]')].map(l => l.textContent));
-    ok('a manual add\'s menu keeps B108\'s pair and Link (no reminder interference)',
-      JSON.stringify(labels.slice(0, 2)) === JSON.stringify(['Add to existing board', 'Create new board with this as first card'])
+    ok('a manual add\'s menu keeps B114\'s Copy + B108\'s pair and Link (no reminder interference)',
+      labels[0] === 'Copy' &&
+      JSON.stringify(labels.slice(1, 3)) === JSON.stringify(['Add to existing board', 'Create new board with this as first card'])
       && labels.includes('Link') && !labels.includes('Go to Board'), JSON.stringify(labels));
     await tap(page, 5, 5);
     await page.waitForTimeout(200);

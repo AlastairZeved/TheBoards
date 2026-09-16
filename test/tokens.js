@@ -577,10 +577,11 @@ console.log('\n[8b] The note toolbar minimum width — one number, JS and CSS ag
   const cssMin = Number((css.match(/\.note-text:not\(:empty\)\s*{[^}]*min-width:\s*(\d+)px/) || [])[1]);
   ok('NOTE_MIN_W is a real minimum, not the old 60', jsMin >= 120, String(jsMin));
   ok('the CSS .note-text min-width equals NOTE_MIN_W', jsMin === cssMin, `js=${jsMin} css=${cssMin}`);
-  // The row is four flat tabs, delete last in --danger as a fill (not accent text).
-  ok('the toolbar draws four tabs, delete in --danger fill',
+  // The row is three flat tabs (Copy re-homed to the note menu, B114), delete
+  // last in --danger as a fill (not accent text).
+  ok('the toolbar draws three tabs, delete in --danger fill',
      /note-tb-complete/.test(app) && /note-tb-highlight/.test(app) &&
-     /note-tb-copy/.test(app) && /note-tb-delete/.test(app) &&
+     /note-tb-delete/.test(app) &&
      /\.note-tb-delete\s*{[^}]*background:\s*var\(--danger\)/.test(css));
 }
 
@@ -637,10 +638,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is todo-boards-v57 — the bump that ships the boot-pick guard (the D25 flake root cause)',
-    /const CACHE = 'todo-boards-v57';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v57, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v57';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is todo-boards-v58 — the bump that ships the Copy-to-note-menu move (B114, issue #171)',
+    /const CACHE = 'todo-boards-v58';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v58, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v58';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('TABLET_MQ is the B103 one-leg width floor: min-width 744px, orientation-blind',
     /window\.matchMedia\('\(min-width: 744px\)'\)/.test(app),

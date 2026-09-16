@@ -452,7 +452,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await ctx.close();
   }
 
-  console.log('\n[D15] Toolbar: Complete · Highlight · Copy · Delete; instant Copy + notice (issue #59, B84)');
+  console.log('\n[D15] Toolbar: Complete · Highlight · Delete; Copy lives on the note menu (issue #59, B84; B114)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
     await ctx.grantPermissions(['clipboard-read', 'clipboard-write']);
@@ -469,29 +469,30 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.waitForTimeout(150);
     const labels = await page.evaluate(() =>
       [...document.querySelectorAll('.note.selected .note-tb-btn')].map(b => b.getAttribute('aria-label')));
-    ok('four tabs in order Complete · Highlight · Copy · Delete',
-       labels.join('|') === 'Complete|Highlight|Copy|Delete', JSON.stringify(labels));
-    const btn = await page.evaluate(() => {
-      const b = document.querySelector('.note.selected .note-tb-copy');
-      if (!b) return null;
-      const r = b.getBoundingClientRect();
-      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-    });
-    ok('the Copy tab is hittable', !!btn);
-    if (btn) {
-      // A sentinel proves the clipboard really changed, and does so at once.
-      await page.evaluate(() => navigator.clipboard.writeText('sentinel'));
-      await page.mouse.click(btn.x, btn.y);
-      await page.waitForTimeout(100);
-      ok('the note text is copied at once (B81)', await page.evaluate(() =>
-        navigator.clipboard.readText().then(t => t === 'take this text', () => false)));
-      ok('Copied notice shows', await page.evaluate(() => {
-        const t = document.querySelector('#toast');
-        return t.classList.contains('show') && /Copied/.test(t.textContent);
-      }));
-      ok('the note is still selected — Copy is not destructive', await page.evaluate(() =>
-        !!document.querySelector('.note.selected')));
-    }
+    ok('three tabs in order Complete · Highlight · Delete (B114)',
+       labels.join('|') === 'Complete|Highlight|Delete', JSON.stringify(labels));
+    // Copy is the note menu's FIRST item now (B114) — right-click opens it over
+    // the selection, and the copy still lands at once (B81) with its notice.
+    await page.mouse.click(box.x, box.y, { button: 'right' });
+    await page.waitForTimeout(150);
+    const menu = await page.evaluate(() =>
+      [...document.querySelectorAll('#menu button')].map(b => b.textContent.trim()));
+    ok('the note menu offers Copy first (B114)',
+       menu.length >= 2 && menu[0] === 'Copy' && !menu.slice(1).includes('Copy'),
+       JSON.stringify(menu));
+    // A sentinel proves the clipboard really changed, and does so at once.
+    await page.evaluate(() => navigator.clipboard.writeText('sentinel'));
+    await page.evaluate(() =>
+      [...document.querySelectorAll('#menu button')].find(b => b.textContent.trim() === 'Copy').click());
+    await page.waitForTimeout(100);
+    ok('the menu item copies the note text at once (B81)', await page.evaluate(() =>
+      navigator.clipboard.readText().then(t => t === 'take this text', () => false)));
+    ok('Copied notice shows', await page.evaluate(() => {
+      const t = document.querySelector('#toast');
+      return t.classList.contains('show') && /Copied/.test(t.textContent);
+    }));
+    ok('the note is still selected — Copy is not destructive', await page.evaluate(() =>
+      !!document.querySelector('.note.selected')));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
@@ -1120,14 +1121,14 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
        Math.abs(d1.x - d2.x) < 1 && Math.abs(d1.y - d2.y) < 1, JSON.stringify({ d1, d2 }));
     ok('and the delta is the drag (~60px)', d1.x > 45 && d1.x < 75, JSON.stringify(d1));
 
-    // Right-click a note now opens its Link menu (B91) — the relational plane,
+    // Right-click a note now opens its Copy · Link menu (B91; B114) — the relational plane,
     // separate from the multi-selection's state actions on the primary's toolbar.
     // It must not disturb the selection; Escape dismisses it before the toolbar
     // test below.
     const m1 = await rectOf('one');
     await page.mouse.click(m1.cx, m1.cy, { button: 'right' });
     await page.waitForTimeout(150);
-    ok('right-click on a note opens its Link menu (B91)', await page.evaluate(() =>
+    ok('right-click on a note opens its Copy · Link menu (B91, B114)', await page.evaluate(() =>
       document.querySelector('#menu').hidden === false &&
       [...document.querySelectorAll('#menu button')].some(b => /Link/.test(b.textContent))));
     ok('the right-click left the selection intact', await page.evaluate(() =>
@@ -1192,7 +1193,9 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       JSON.stringify(state.current.notes.map(n => n.text)) === JSON.stringify(want), origTexts),
       JSON.stringify(origTexts));
 
-    // Complete and Copy run on the whole selection from the primary's toolbar.
+    // Complete runs on the whole selection from the primary's toolbar; Copy
+    // does the same from the primary's note menu (B114) — right-click the
+    // primary and the menu's Copy joins the selection, primary first.
     const s1 = await rectOf('one');
     await page.mouse.click(s1.cx, s1.cy);
     await page.waitForTimeout(100);
@@ -1209,8 +1212,15 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
         .find(x => x.querySelector('.note-text').textContent === t).classList.contains('complete');
       return st('one') && st('two') && !st('three');
     }));
-    const cbtn = await primaryBtn('note-tb-copy');
-    await page.mouse.click(cbtn.x, cbtn.y);
+    // The primary (selected.id) drives the menu's multi-selection join.
+    const pr = await page.evaluate(() => {
+      const r = document.querySelector('.note.selected').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await page.mouse.click(pr.x, pr.y, { button: 'right' });
+    await page.waitForTimeout(150);
+    await page.evaluate(() =>
+      [...document.querySelectorAll('#menu button')].find(b => b.textContent.trim() === 'Copy').click());
     await page.waitForTimeout(300);
     ok('Copy with two selected joins the texts, primary first', await page.evaluate(() =>
       navigator.clipboard.readText().then(t => t === 'two\none', () => false)));
@@ -1396,8 +1406,8 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // B100: the All-boards flow is gone from desktop — no tab, no picker, no
     // #list-view. The left rail (D20's surface) is the all-boards surface.
 
-    // Right-click on a note opens its Link menu (B91) — the ONLY menu a
-    // right-click can still open on the board (B92): an anchor, the canvas, or
+    // Right-click on a note opens its Copy · Link menu (B91; Copy first, B114) —
+    // the ONLY menu a right-click can still open on the board (B92): an anchor, the canvas, or
     // the lot keeps the browser's own menu / opens nothing.
     // B108 lands boot on the day board; this grammar (Link alone, B91) is a
     // plain-board contract — a manual add on a linked board carries the two
@@ -1414,10 +1424,9 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.waitForTimeout(200);
     await page.mouse.click(905, 605, { button: 'right' });
     await page.waitForTimeout(200);
-    ok('right-click on a note opens its one-item Link menu (B91)',
+    ok('right-click on a note opens its two-item Copy · Link menu (B91, B114)',
        await page.evaluate(() => document.querySelector('#menu').hidden === false &&
-         [...document.querySelectorAll('#menu button')].length === 1 &&
-         /Link/.test(document.querySelector('#menu button').textContent)));
+         [...document.querySelectorAll('#menu button')].map(b => b.textContent.trim()).join('|') === 'Copy|Link'));
     await page.keyboard.press('Escape');
     await page.waitForTimeout(150);
     ok('Escape dismisses the Link menu', await page.evaluate(() =>
@@ -1647,7 +1656,8 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
   }
 
   // ---- D-link. Note linking (issue #142, B91) ------------------------------
-  // Right-click a note → a one-item Link menu → click another note draws the
+  // Right-click a note → its Copy · Link menu (B114) → click Link → click
+  // another note draws the
   // line; the completing click does NOT select the target; the line sits below
   // notes and is click-through; the link persists and reaches the PDF.
   console.log('\n[D-link] Note linking: right-click → Link → click target (issue #142, B91)');
@@ -1673,14 +1683,14 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     const links = () => page.evaluate(() => (state.current.links || []).length);
     const lines = () => page.evaluate(() => document.querySelectorAll('#link-layer line').length);
 
-    // Right-click Alpha → a one-item Link menu; the desktop hint reads "Click...".
+    // Right-click Alpha → its Copy · Link menu (B114); the desktop hint reads "Click...".
     await page.mouse.click(c.la.x, c.la.y, { button: 'right' });
     await page.waitForTimeout(150);
-    ok('right-click opens a one-item Link menu', await page.evaluate(() =>
+    ok('right-click opens a two-item Copy · Link menu', await page.evaluate(() =>
       document.querySelector('#menu').hidden === false &&
-      [...document.querySelectorAll('#menu button')].length === 1 &&
-      /Link/.test(document.querySelector('#menu button').textContent)));
-    await page.evaluate(() => document.querySelector('#menu button').click());
+      [...document.querySelectorAll('#menu button')].map(b => b.textContent.trim()).join('|') === 'Copy|Link'));
+    await page.evaluate(() =>
+      [...document.querySelectorAll('#menu button')].find(b => /Link/.test(b.textContent)).click());
     await page.waitForTimeout(80);
     ok('Link arms the mode with a "Click…" hint', await page.evaluate(() =>
       linkSource !== null && /Click/i.test((document.querySelector('#toast .msg') || {}).textContent || '')));
