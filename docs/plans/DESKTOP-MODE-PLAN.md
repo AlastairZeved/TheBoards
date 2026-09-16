@@ -1,5 +1,7 @@
 # Desktop Mode for TheBoards — Implementation Plan (Issue #4)
 
+> **Renamed, 2026-09-16:** the app identity is now "Zezed Boards" (DECISIONS.md B121). This plan is a dated record; its period spelling of the identity is untouched.
+
 > **Status: decisions resolved, implemented.** All nine flagged decisions were ruled on
 > (issues #8–#16, companion specs in PRs #28–#35) and the implementation ships in this
 > branch. Six defaults confirmed; three overridden: board create/delete (#10 — no

@@ -64,11 +64,11 @@ export function applyBoardCat() {
    applies to the anchor); the picker and a drilled category name themselves. */
 export function syncViewTitle() {
   const s = history.state;
-  if (s && s.v === 'cat') document.title = `${COPY['cat' + s.cat[0].toUpperCase() + s.cat.slice(1)] || s.cat} · TheBoards`;
-  else if (s && s.v === 'list') document.title = `All boards · TheBoards`;
+  if (s && s.v === 'cat') document.title = `${COPY['cat' + s.cat[0].toUpperCase() + s.cat.slice(1)] || s.cat} · Zezed Boards`;
+  else if (s && s.v === 'list') document.title = `All boards · Zezed Boards`;
   else {
     const titled = state.current && !!(state.current.title && state.current.title.trim().length);
-    document.title = titled ? `${state.current.title} · TheBoards` : 'TheBoards';
+    document.title = titled ? `${state.current.title} · Zezed Boards` : 'Zezed Boards';
   }
 }
 
