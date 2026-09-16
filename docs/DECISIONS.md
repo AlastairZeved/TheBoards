@@ -65,6 +65,8 @@ because the spec resolves its own conflict.
 
 ---
 
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ## B. Silent choices (resolved by the principles)
 
 ### B1. Icons — artwork & generation
@@ -76,6 +78,10 @@ Generated once by a dependency-free Node script (`node:zlib` PNG encoder) so the
 deliverables stay static and buildless; the maskable variant keeps the motif
 inside the ~80% safe zone with paper bleeding to the edges.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B2. `contenteditable` is toggled on only while editing
 Notes/anchors/lot lines are made `contenteditable` on entering edit and reverted
 on blur, rather than being permanently editable. **Why:** permanent
@@ -85,11 +91,19 @@ breaking capture-vs-manipulate. Toggling gives the recognizer full control
 (zero cognitive tax) while keyboard/AT users still enter edit via `focusin`.
 `role="textbox"` + `aria-multiline` are always present for AT (UIUX §12).
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B3. `contenteditable="plaintext-only"`
 Editable regions use `plaintext-only` (the primary device is Chromium/Samsung
 Internet), with a runtime feature-check falling back to `"true"` where
 unsupported. **Why:** the data model is plain strings; rich markup from paste
 would be un-representable and off-model. Text capture never breaks either way.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B4. Pinch origin & drift
 UIUX §4.1 requires `transform-origin: top-left` (so stored `x,y` stays truthful);
@@ -99,11 +113,19 @@ there is no drift to compensate; the two requirements coincide. The only
 position adjustment on pinch is re-clamping into the page when a grown footprint
 would cross the boundary (the only constraint §6.3 allows).
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B5. Tap recognition upper bound
 UIUX §5 defines Tap as `<250 ms` and Long-press as `500 ms`, leaving 250–500 ms
 undefined. **Decision:** any release **before** the 500 ms long-press fires, with
 movement < 10 px, commits as a tap. A slow, deliberate press that isn't a
 long-press should still act (zero cognitive tax) rather than do nothing.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B6. Parking Lot uses block flow, not the absolute canvas
 Lot items are stacked in normal document flow inside `#lot-items`. This is **not**
@@ -113,17 +135,29 @@ where position permanence lives. Lot items have **no `x/y`** in the data model
 correct, faithful layout. Notes on the canvas remain strictly absolutely
 positioned.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B7. Decoupled 44 px hit floor
 Each note carries a computed `--hit` inset on a transparent `::before` expander,
 sized so `inset · scale · renderScale ≥ 44 px` physical, recomputed on
 scale/edit/resize. **Why:** honors Fitts / PRD §5.3 without altering the visual
 frame — hit area is generous, never pixel-perfect to visual bounds (UIUX §6).
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B8. Empty-frame discard uses `trim()`
 A note/lot line committed with only whitespace is discarded, not just one with
 literal zero length. **Why:** “no empty frames ever exist” (PRD §6.2) — a
 whitespace-only frame reads as empty. Tap-empty always creates a note (§6.2), so
 a transient empty editor may exist *while editing*; it vanishes on blur.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B9. Navigation & OS back via the History API
 Opening the board list `pushState`s a `{v:'list'}` entry; selecting a row or
@@ -132,10 +166,18 @@ demands the OS/browser back action is *never intercepted or disabled* — this
 makes back return to the board naturally, with no interception, and keeps the
 board (not the list) as the app's resting state.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B10. Empty-database first launch
 PRD §8.1/§6.7 assume a board exists at launch but don't say what a truly empty
 install shows. **Decision:** create and open one blank board (four anchors). The
 desk always shows a working page (UIUX §1); the list is never the landing view.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B11. Manifest `orientation` + colors
 `orientation: "any"`, `theme_color`/`background_color` = `--paper` (`#EEEBEF`).
@@ -144,12 +186,20 @@ and survive fold/unfold, so orientation is not locked; paper is the surface the
 user should perceive as the app, including the launch splash. `theme-color` is
 also set per-scheme in `index.html` so the system UI matches the active theme.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B12. Browser pinch-zoom disabled (`touch-action: none`, `user-scalable=no`)
 **Why:** the board explicitly never pans or zooms (PRD §5.1); a two-finger pinch
 is reserved for scaling the *note*. Letting the browser also pinch-zoom would
 make the note-scale gesture ambiguous. The app provides its own uniform
 scale-to-fit, so native zoom is redundant here. This is a deliberate,
 spec-driven trade, scoped to this fixed-page tool.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B13. Persistence timing & resilience
 Keystrokes debounce at 300 ms; blur, drag-end, pinch-end, complete/restore,
@@ -159,10 +209,18 @@ on failure the polite `role="status"` toast “Couldn’t save — retrying.” 
 auto-retries, and never blocks capture (UIUX §12) — a pending Undo toast is never
 clobbered by it.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B14. Caret at the tapped point
 Editing places the caret at the touch point via `caretRangeFromPoint` /
 `caretPositionFromPoint`, falling back to end-of-text. Serves “edit at tap point”
 (UIUX §5) directly.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B15. Focus-ring color follows the palette
 With the "Aubergine on Mist" palette (B16), `--focus-ring` is retuned into the
@@ -170,6 +228,10 @@ family — muted indigo `#4A4E82` (light) and `#A0A2D8` (dark, a new override th
 old blue didn't need). It stays a 2 px ring at 2 px offset (non-color-alone), so
 robustness comes from geometry, not hue; the retune only keeps the indicator in
 the same low-chroma world as the poles (light ring 6.6:1 on paper, dark 7.4:1).
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B16. Palette — "Aubergine on Mist"
 The token set is retuned from a warm paper/ink to a muted-plum pairing: poles
@@ -183,6 +245,10 @@ impermanent value choice, not costume: the system stays a single near-monochrome
 scale generated from two poles (UIUX §1 "identity from structure"). `--ink-rgb` stays
 channel-synced to `--ink` for the scratch-out text. Icons (B1) regenerated in the new
 poles to keep the installed-app identity in sync.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B17. Layout — "grow the canvas" fill replaces the letterbox
 B11/B12 framed the page as a fixed 900×1000 sheet shown with a *contain* fit
@@ -205,6 +271,10 @@ survives only as the pre-paint background and is no longer visible in normal use
 would silently move committed work). Notes are still clamped into the current page at
 creation/drag/pinch, so new placement always lands on-page, and off-page notes reappear
 when the device returns to a taller orientation. This favors the primary portrait / Z Fold use.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B18. The 400 ms action window is acknowledged, not idle
 Every click interaction now commits **400 ms** after release rather than on the same
@@ -258,6 +328,8 @@ intact — correctly, since reduced-motion is about vestibular safety, not about
 
 ---
 
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ## C. Desktop mode (issue #4; decisions ruled in issues #8–#16, specs in PRs #28–#35)
 
 ### B19. Desktop-mode detection
@@ -272,6 +344,10 @@ would strictly reduce a touch-only device, while mobile mode costs it nothing. M
 flips tear down live state (selection, menu, a pushed list entry via `history.back()`
 so B9 holds, half-finished gestures). No persistence, no override.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B20. Desktop geometry — min-anchored axis inversion beside an unscaled rail
 `renderScale = min(vh/1000, (vw − 300)/900)`; `LOGICAL_H = vh/renderScale`;
 `LOGICAL_W = (vw − 300)/renderScale`; `offX = 300` (the rail is unscaled chrome; the
@@ -283,6 +359,10 @@ furniture never collides, at any window shape. The extra width is the issue's ne
 surface. Mobile's B17 branch is untouched; the furniture CSS became width-agnostic
 (`right:24`, `left:24;right:24`, `calc(50% − 200px)`) — arithmetically identical at 900.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B21. Cross-device note `x` — scaled, not clamped, not fixed (overrides the B17 default)
 Desktop's variable `LOGICAL_W` lets a note's `x` exceed a phone's 900-unit sheet. Ruling
 (issue #15): positions render **proportionally** in both directions. Each note carries
@@ -293,6 +373,10 @@ leaving stored `x` untouched — a viewport change never mutates data. Gestures 
 grab math runs in current-frame units unchanged. Legacy notes read as `rw = 900` — true
 by construction, so there is no migration. `y` needs none of this (`LOGICAL_H ≥ 1000`
 everywhere); the Parking Lot has no `x`/`y`.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B22. Desktop selection is instant, inert state; B18 governs actions
 Click selects; the selection (and its dismissal, and the second-click edit entry) is
@@ -308,6 +392,10 @@ chrome is one overlay in board space: it inherits `renderScale`, never `note.sca
 and its buttons are recognizer-routed because `setPointerCapture` retargets native
 clicks inside `#board`. Frame-drag resize shares pinch's scale/clamp/hit math.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B23. Creation surfaces deselect first; the hit floor is 24 px on desktop
 With a selection active, a click on a creation surface (empty canvas *or* the lot
 background — one rule) only deselects; with none, capture runs exactly as on mobile.
@@ -316,6 +404,10 @@ exclusive and commit-on-blur doesn't reselect. So near-miss dismissals don't lan
 invisible hit collar and reselect (or re-edit) the note, `HIT_FLOOR` drops 44 → 24 px
 on desktop only — WCAG 2.5.8 AA, the pointer-agnostic floor; B7's 44 px (2.5.5 AAA,
 fingertip) stands untouched on mobile.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B24. The board rail replaces the list view on desktop
 A full-height sunken rail (`--pane`, slightly darker paper, inset shadow — embedded,
@@ -337,6 +429,10 @@ open board heals `current` immediately via `ensureCurrentValid()` (no list scree
 Consequence: the menu *can* open on desktop, so the desktop keyboard handler is inert
 while `menuOpen`.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B25. Parking Lot on desktop
 Same select grammar as notes (click selects, double-click edits, Complete/Restore +
 Delete; no resize — they are not frames). The selected row draws a frame: an explicit,
@@ -348,6 +444,10 @@ the last, most actionable row. The lot grows to 210 px (`34 + 4·44`, four rows)
 the desktop canvas; mobile keeps 128 px. Notes committed near the sheet bottom may
 overlap the taller lot; they render above it (z-order) and are not moved — B17.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B26. Desktop caret and Undo scope
 Double-click (and Enter on a selection) enters edit with the caret at the **end** —
 issue #4's explicit instruction, a desktop-only override of B14's caret-at-tap-point,
@@ -358,6 +458,8 @@ rail turns into a one-click accident). Board-delete Undo is cross-board-safe and
 survives switches — the toast now carries a scope for exactly this distinction.
 
 ---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ## D. Capture reliability on the device (the note-creation tap issue)
 
@@ -420,6 +522,10 @@ is not weakened; it is made unnecessary by a mechanism already in the system.
 **Impermanence:** the 400 ms itself is untouched and still felt-not-derived. If it is ever
 re-interrogated to zero, this entry collapses into it and B18c's ghost goes with it.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B28. The sheet holds still while a note is being written
 
 `interactive-widget=resizes-visual` in the viewport meta, **plus** a JS guard that skips
@@ -448,6 +554,10 @@ layout change with no second resize coming after blur, so the guard remembers it
 `focusout` applies it. B17's "committed notes are never re-clamped on resize" is untouched
 and now easier to hold — mid-edit there is no longer a resize to re-clamp against.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B29. Touch slop 10 px → 16 px
 
 B5 quotes "<10 px" from UIUX §5. On a 7.6-inch foldable held one-handed, a fingertip rolls
@@ -457,6 +567,10 @@ short of any intentional drag. Same license B18 grants itself: a felt value, re-
 against the device rather than defended from the page it was written on. The constant is
 shared by drag-start, long-press-cancel and list rows, so the recognizer stays coherent at
 one number rather than three.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B30. A long-press on a creation surface captures; dismissing a menu does not
 
@@ -475,6 +589,10 @@ can reproduce the crash.
 **Dismissal.** The `pointerdown` that closes an open menu is inert — it no longer also
 creates a note on the paper the menu was covering. Dismissal is a retraction, not a choice
 of what was underneath.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B31. No empty frame outlives its editor
 
@@ -506,6 +624,10 @@ CDP, mobile emulation) and cover every claim above; run against the pre-fix comm
 reproduce the video's symptoms exactly, including the `TypeError` and the mid-edit sheet
 collapse. They are the standing regression net for anything that touches the recognizer.
 The device remains the only authority on B28's directive.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ## E. Mobile legibility (issue #37)
 
@@ -547,6 +669,10 @@ at 1 it simply meets the floor with real geometry instead of a ~100-unit invisib
 keyboard deferral is untouched and now load-bearing in a second way — an unguarded resize would
 move every note, and a gesture during one would bake a keyboard-shrunken `rh` into storage.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B33. The top band is drawn furniture, not a by-product of content (issue #38)
 Three symptoms, one cause: the title card had no frame, there was no rule under Components /
 Requirements, and both headers vanished the moment text was typed. The anchors' only rule was
@@ -580,6 +706,10 @@ one was tapped; `#lot-rule` can, because it belongs to one.
 reference puts notes. No `app.js` change; `.filled` keeps its one remaining job, the card's
 placeholder. Not changed, and inconsistent with the reference until it is: `#lot-header` sits
 *below* its rule where the wireframe puts it above.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ## F. Export (issue #43)
 
@@ -653,6 +783,10 @@ which is why it has not been done yet. `Export` becomes a submenu with `PDF` as 
 a second format exists. The hatch is inline ruled lines; past ~1 MB the order is a Form XObject,
 then `/FlateDecode` — noting the latter makes the build async and breaks the plaintext assertions.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ## G. Band and lot proportions
 
 ### B35. B32 preserved the fractions, not the proportions they were chosen for (supersedes B33's card width; overrides the four-row lot)
@@ -716,6 +850,10 @@ but restoring 24 px is its own call about hierarchy and has not been made.
 *Impermanent.* `EXPORT_GEO` in `app.js` restates all of this a second time against the 900-unit
 export sheet, because the exporter cannot read computed CSS from a board it never renders. Four
 values moved here that a shared constants module would have moved once.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions) B35 is superseded — ratified as historical record, per the ruling.
 
 ### B36. A shipped change reached `main` and never reached the device (supersedes B35's "known, not fixed")
 
@@ -785,6 +923,10 @@ on the one viewport anybody checked.
 landscape. It only turns landscape at the `132px` floor. So the floor, not the fraction, is the
 number to argue about if a landscape card on a phone matters more than band height. Nobody has
 made that call.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions) B36 is superseded — ratified as historical record, per the ruling.
 
 ### B37. The band is sized by the type it holds, not by the sheet (supersedes B36's band paragraph; overrides B35's three-row lot on a phone)
 
@@ -878,6 +1020,10 @@ horizontal geometry is doing its job.
 rendered board rather than to a literal, which is as close to one source as two files get without
 a shared module.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B38. The band reads rule → header → content, and the card is a compartment (issues #51, #52)
 
 Two complaints, one cause each, both in the top band. **#52 — the title card's frame.**
@@ -959,6 +1105,8 @@ a shared module.
 
 ---
 
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ## H. Note width (issue #53)
 
 ### B39. A note wraps at the sheet's right edge, not at a predetermined width (resolves B40's cap residue)
@@ -1025,6 +1173,8 @@ Supersedes PRD §6.2's 45% cap as read by B32 ("--note-max-w set in applyLayout"
 per-note var is the pattern now) and B40's exportNoteBox cap; B40 is annotated in place.
 
 ---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ## I. Homothetic note rendering (issue #57)
 
@@ -1096,6 +1246,8 @@ together.
 
 ---
 
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ## J. Desktop dismissal and multi-selection (issues #54, #55)
 
 ### B41. Click-away while editing commits and dismisses, never creates; shift-click herds notes
@@ -1141,6 +1293,8 @@ handles, the shared drag delta, the menu shape, and the batch Undo round-trip.
 
 ---
 
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ## K. The desktop rail's categories (issue #58)
 
 ### B42. The rail sorts into To-Do / Idea / Unsorted, and each section pages (supersedes B24's overflow ellipsis)
@@ -1170,6 +1324,8 @@ statement). B24's "when boards overflow the rail, the bottom edge says so"
 makes it actionable.
 
 ---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ## L. The menus: All boards, and Copy (issues #59, #60)
 
@@ -1209,6 +1365,8 @@ third button arrives centred and equally spaced for free; `test/desktop.js` [D15
 the empty B18 window, and the clipboard round-trip.
 
 ---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ## M. The board list's categories (issue #74)
 
@@ -1276,6 +1434,8 @@ inside this issue.
 
 ---
 
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ## N. The v2 design system (PRs #76–#81; proof sheets 1–7)
 
 ### B45. v2 is the design system, and the specification is sized to the change (supersedes the draft that retired this file)
@@ -1321,6 +1481,8 @@ and plausibly in a Latin subset; six fall back.
 
 ---
 
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B46. The surfaces take the scene: seven proof rounds land deep dusk (supersedes B16's poles and the flat sheet; B18's letter bends, its job does not)
 
 The palette was not argued into place; it was rendered into place. Seven proof-sheet
@@ -1347,6 +1509,10 @@ indistinguishable from the completion mark. A resting fill is neither a state ch
 nor a mark, the pressed state still thickens (2px → 3px), and the scratch-out is still
 ink texture at ≥90% coverage. Nothing in the window lies.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B47. The band is a section above its rule, and both ends of the sheet close the same way (supersedes B35/B38's gutter-inset rule and B37's fixed budget; keeps B37's law and B38's compartment)
 
 Reading down: **content, then its header sitting on the rule, then the rule as the
@@ -1364,6 +1530,10 @@ the band by 22px, occludes the rule, and draws three sides with the sheet's own 
 edge as the fourth. `EXPORT_GEO` and the geometry assertions in `test/mobile.js` /
 `test/desktop.js` move **with this ruling when it ships, not before** (`UIUX §16.3`).
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B48. The light theme is retired, not made optional (supersedes B16; halves B11; hardens B34's export palette)
 
 Dark-only, because `PRD §1.2`'s P4 forbids the question a theme asks. The whole light
@@ -1376,6 +1546,10 @@ preference into a necessity — `PDF_PAPER` / `PDF_INK` / `PDF_SHADE` stop being
 derivable from `:root` and become the export's own named palette (`UIUX §15`). The
 `icons/` motif regenerates from the new poles, as B16 regenerated it under B1.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B49. The note takes its colour, and the radius moves to 3 (extends B39/B40's homothetic reading; the ring re-derives to 4)
 
 The note rests as `--note` behind its 2px ink frame at radius **3px**. The
@@ -1386,6 +1560,10 @@ rendered proofs overruled it: at 3px the note still reads as drawn at every scal
 can take (`NOTE_MIN_W = 60` under the uniform scale keeps it near-square — the B39/B40
 constraint), and the ring re-derives to 4 by the same 1px-outside law.
 `EXPORT_GEO.radius` mirrors the move by hand (`UIUX §16`).
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B50. One typeface, self-hosted; the marks are drawn, not typed
 
@@ -1404,6 +1582,10 @@ fonts under any Latin face — the objection `app.js` already applies to `🗑` 
 multiplied by six. A symbol asked to render identically everywhere in one voice is not
 text; type is the wrong medium for that job.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B51. Three records, one home per value (supersedes B45's document-shape clause)
 
 B45 sized the specification to the change, and half of that ruling stands: restating
@@ -1418,6 +1600,10 @@ attempt proved it by desynchronising `PRD.md` and `UIUX.md` inside a single PR. 
 four overlapping v2 PRs collapse into one, and the proof sheets gain a committed
 reference (`proofs/`) so the next session reads the render rather than
 re-deriving the design from rival documents.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B52. The room joins the water: chrome takes the band's value, and the accents re-derive into the settled families (supersedes the round-1 chrome and accent values; discharges `UIUX §16.1`'s "largest open gap")
 
@@ -1474,6 +1660,10 @@ sheet 9, "A Well, Furnished", renders the ratified system whole, with nothing
 beside it, and is committed at `proofs/proof-9-a-well-furnished.html` as
 the rendered reference alongside sheet 7.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B53. The strike and its burial are one decision: 0.62 over 0.12 (supersedes `UIUX §4.3`'s 0.97/0.40 letter; keeps its law)
 
 The scratch-out's three stroke families at 0.97 were tuned when the completed
@@ -1499,6 +1689,10 @@ before taste voted) — and the buried text lands at 1.28:1: a smudge that still
 says *something was here*, with the words gone at any zoom the app can
 produce.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B54. The band label takes the pixel back: 13px (supersedes B38's 12px letter; keeps B38's rule and B37's law)
 
 B38 chose 12px as "the largest whole px at which the widest measured
@@ -1520,6 +1714,8 @@ unchanged).
 
 ---
 
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ## O. The recolor ships (PR #86; the shipped round)
 
 ### B55. The platform edge wears the sky: one theme-color, #020812 (completes B48's collapse; extends B52 off the page)
@@ -1537,6 +1733,10 @@ value; `test/tokens.js` holds the three in agreement and requires the value to
 be a declared token. Ruled by Rob against the rendered pair on the shipped
 round's review sheet.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B56. The icon grounds the note on the water (B1's motif under B48's regeneration)
 
 B48 ordered the `icons/` motif regenerated from the new poles, as B16
@@ -1551,6 +1751,10 @@ committed this time (`icons/make-icons.js`, dependency-free `node:zlib`,
 `--ground=sky` kept as a flag), so the next regeneration edits a script
 rather than reverse-engineering three PNGs. Ruled by Rob on the shipped
 round's review sheet.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B57. The cover screen keeps its three lot rows: the ceiling re-derives under full bleed (amends B37's threshold as kept by B47; ratifies the sheets' 166)
 
@@ -1578,6 +1782,8 @@ items at 384×846 draw 166 to the sheet's bottom edge. Ruled by Rob on the
 shipped round's review sheet.
 
 ---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ## P. The second swap (the ruled what-if; proof sheet 10)
 
@@ -1623,6 +1829,10 @@ ramps, ratified grain over the deep.
 each release matches its own paperwork, and the record stays honest
 about the order in which the design was found.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B59. The primary takes the accent about boards (supersedes §14's sand fill; completes the sand's retirement)
 
 The `New board` button wore `--sand-base` because the shelf was sand
@@ -1637,6 +1847,10 @@ drain becomes the accent as text on a near-black ground, exactly
 §2.6's placement. With the sand gone nowhere survives it, and the
 application's one warm hue is the destructive one.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B60. The icon follows the note's ground: the deep (supersedes B56)
 
 B56 ruled "the note on the water" when the note lived on the water.
@@ -1648,6 +1862,10 @@ the pale note blazing on the near-black at 12.36:1. The generator's
 default flips (`icons/make-icons.js --ground=deep`; the water stays a
 flag), and the three PNGs regenerate. B56's water render remains in
 the record as the shipped v2 icon it briefly was.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B61. Both ends close with the same line: the lot's rule takes --frame (supersedes §2.5's "shelf's own ink" clause; completes §3.1's idiom)
 
@@ -1662,6 +1880,8 @@ its seam at 5.95/3.77 (B58), and the lot's, a section mark over a
 carry.
 
 ---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ## Q. The note's text is centered (issue #82)
 
@@ -1721,6 +1941,10 @@ computed style on `.note-text`, and [D17b] parses page 1's content stream
 to prove a deliberately short line inside a cap-wide note draws with its
 `Tm` x operand inset from the note's left content edge — centred in the
 file, not just in the DOM.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 ## R. Creation moves into the categories (issue #88)
 
 ### B63. Every category makes its own boards, and the pager steps below the cards (supersedes B44's merged strip and its three-per-page clause; supersedes B24's and B44's create-to-Unsorted flows; supersedes §14's "single primary control" claim; renames Unsorted's label only)
@@ -1782,6 +2006,10 @@ exactly as it already disambiguates the pager's twelve arrows. **The
 rename is the label alone:** `COPY.catUnsorted` becomes `Note Boards`;
 the storage key `'unsorted'`, `BOARD_CATS`, `catOf`, `data-cat` and the
 buckets are untouched (B21/B42/B44's read-site idiom — no migration).
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ## S. The similarity transform (issues #65, #75)
 
@@ -1890,6 +2118,8 @@ untouched, round trip exact) and `test/desktop.js` [D13] (the silent grab
 folds k); `UIUX §11` now states the law and `PRD §2.5`'s deferral row closes.
 
 ---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ## T. The menu gets a door (issue #94)
 
@@ -2002,6 +2232,10 @@ handle is a *second door to one room*. The day the anchor menu grows a third
 item, or a second control wants the same corner, this becomes a question about
 what the compartment is for — not a question about this chip.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ## U. The list opens onto the boards (issue #95)
 
 ### B66. The board list carries no page heading (supersedes B43's `#list-title` clause; B43's "All boards" rename stands)
@@ -2075,6 +2309,10 @@ B30's `swallowTap` makes a dismissing press inert only where it lands on
 could not be a board card, and `.cat-add` and the pager are controls. It is a
 `.cat-head`: aria-hidden furniture carrying no listener of its own, picked at
 run time from whichever head the open menu is not covering.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ## V. New background colours for the Idea and Note boards (issue #96)
 
@@ -2230,6 +2468,10 @@ the return swap repaints it violet. `proofs/proof-10-the-second-swap.html`
 renders all three scenes side by side; nothing tests that file, so it
 was updated in the same commit.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ## W. Four cards a page (issue #97)
 
 ### B68. An empty category collapses to its head row, and the rows sit on the touch floor (supersedes B44's "two empty thirds" clause and B63's two-cards-per-page clause; B42's "measured, never a constant" law stands and is restated)
@@ -2320,6 +2562,10 @@ lands on a *collapsed* To-Do, which is the obligation this entry takes on.
 exists to state still exists at the larger budget, each with an explicit
 `pages >= 3` assertion so the seeds can never again go quietly vacuous.
 `UIUX §10` carries the sizes.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ## X. The board list reorders itself (issue #97)
 
@@ -2445,6 +2691,10 @@ board's `updatedAt` alone), the page (a rebuild keeps the reader where they
 turned to) and B63's create-beside-the-open-board. `UIUX §10` states the order,
 `PRD §4.2` the flush, `PRD §6.7` the cost.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ## Y. Two cards to a row (issue #97, reopened)
 
 ### B70. A row carries two cards: the list doubles sideways, since §6 closed the vertical (supersedes B68's per-page counts and UIUX §10's budget formula; keeps B68's collapse, its row heights and B42's measured-not-constant law)
@@ -2489,6 +2739,10 @@ To Do` now ellipsizes where it did not. That is `UIUX §10`'s existing rule —
 truncation is always indicated, never a hard cut — and the trade is deliberate:
 a title you can read half of and reach in one screen beats a title you can read
 all of on page two. The board's own title card is unaffected.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ## Y. A note the user can mark (issue #105)
 
@@ -2539,6 +2793,10 @@ reads **Highlight** on a plain note and **Remove highlight** on a lit one (plura
 noun that would leave the user to guess which way the toggle points. The value
 itself lives in UIUX §2.6.1, as the rendering authority requires; this entry
 records why the axis exists.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ## Z. Barriers between the categories in the list (issue #107)
 
@@ -2594,6 +2852,8 @@ section carries its family's `--frame` and `--card`, beside the existing check
 that its cards carry the family's water.
 
 ---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B73. The Parking Lot sizes to its measured content, not its item count (supersedes B37's whole-row budget and B47/B57's row-count ceiling for the lot; leaves the band's own content-sizing untouched)
 
@@ -2651,6 +2911,8 @@ that a pathological lot is held at the half-sheet cap; the pre-existing
 empty-floor (122) and three-row (166) assertions stand unchanged.
 
 ---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ## AA. A fourth category, and the All-Boards menu becomes a picker (issue #112)
 
@@ -2751,6 +3013,8 @@ the measured single-category budget on the drilled screen. `test/desktop.js`
 
 ---
 
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B75. The anchor menu leads with navigation: `All boards · Export` (issue #113; supersedes the `Export · All boards` order recorded in B43 and B65)
 
 The title-card menu read top→bottom `Export · All boards`. That was the one
@@ -2845,6 +3109,8 @@ resolved `--frame` is To-Do blue `#698ebf`.
 
 ---
 
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B78. The board categories are named "To Do · Notes · Learning · Ideas" — no redundant "Boards" (issue #112; supersedes the "…Boards" labels of B63's "Note Boards" and B74's "Learning Boards" in the category-name context)
 
 The All-Boards menu, the mobile grid, the drilled-screen header and the desktop
@@ -2886,6 +3152,8 @@ stranded on an `update()`-less build — that needs a one-time cache clear; it
 prevents the next stranding.
 
 ---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B80. Dismissing the mobile keyboard puts the note away (issue #119)
 
@@ -2986,6 +3254,8 @@ for cat-add and the title handle; `test/tokens.js` drops the `.tapped` selectors
 from its accent-on-chrome whitelist and pins v31.
 
 ---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B82. The drilled category is a panel that rises to a third of the viewport, three cards across, each a two-line title over a "Last Updated" stamp (issue #125; refines B74's full-screen mobile drill to a slide-up panel; supersedes B70's two-across for the mobile list, and B68's 44px height for the mobile drilled card only; keeps B42/B68/B74's measured budget, B9's back gesture, B28/B32's keyboard-safe layout, B24's setTimeout-sequenced teardown, the rail's own card untouched)
 
@@ -3151,6 +3421,10 @@ menus) still assert their menus unchanged.
 two board-level actions. The day a third is asked for, or a note-level action
 wants to sit beside them, this becomes a question about what the row is for —
 not a question about where to wedge one more tab.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B84. A note wears its own action toolbar; the note long-press menu and the desktop right-click note menu are retired, and a note has a real minimum width (issue #126; supersedes the note branch of the long-press menu A1/B43 and its B71 Highlight item; supersedes the desktop right-click note menu of B22/issue #55; supersedes the `#selection` overlay's Complete·Copy·Delete of B22/issue #59; leaves the anchor board menu B75/B34, `buildMenu`/`closeMenu`/`#menu`, the lot's inline desktop actions B25, and the board-card menu B24 untouched)
 
@@ -3357,6 +3631,10 @@ cards) as a neutral hairline, from the same export-geometry centres the notes us
 Rendered values (stroke, layer z-order, hint/menu copy, the `link` mark, PDF weight)
 in UIUX §4.6/§13.3; `CACHE` → v36.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ## AC. Export chooses, Import joins the row, the anchor menu retires (issue #140)
 
 ### B92. The board-action row grows a third tab, Import; Export opens a PDF · JSON choice menu; the anchor long-press/right-click menu is retired outright (issue #140; supersedes B83's "exactly two board-level actions" clause and the anchor-menu survival that B83/B84 carried forward from B75; leaves B75's board-card menu, B24's lot menu on desktop, and B91's note Link menu untouched)
@@ -3516,6 +3794,8 @@ the rescue.
 
 ---
 
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B94. The favicon is B1's full motif, purpose-rasterized at 16/32/48 on the water; the tab title is chrome that names the current view (issue #148; leaves B1's icon motif, B58's ground, and UIUX §1's identity law untouched — the favicon is the identity re-derived for the one surface it had never been drawn for)
 
 **The favicon.** Browsers were handed `icon-192.png` and squeezed it to 16px
@@ -3541,6 +3821,10 @@ surface: no tab bar, no header, no mode.
 `humans.txt`; `robots.txt`/`sitemap.xml` state the one crawlable URL.
 `syncViewTitle()` is the single writer, called from `renderBoard`,
 `showList`, `showCat`, and the title anchor's input branch.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 
 ## AD. The rolling temporal calendar (issue #145)
@@ -3662,6 +3946,10 @@ present, `--offx` at 300, calendar docking as the 320px panel under
 `squeeze`. `test/desktop.js` untouched (the desktop grammar and its MQ are
 byte-identical). `UIUX §3.4`'s calendar note now states the mobile path as
 `html:not(.wide)`.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 ## AF. Editable calendar events (issue #152)
 
 ### B97. An existing calendar event is editable in place: the line's own tap opens its existing editor — focused, caret always at the end of the text — inside the tap gesture; commit-on-blur writes the event and re-syncs the mirror; an empty commit discards; a second tap while editing cannot re-arm the editor (issue #152; keeps B95's calendar grammar untouched — no new surface, no mode, no control beyond the line itself; keeps B8's discard rule, B81's commit discipline via the re-arm guard, the mirror's one-writer law — and waives nothing)
@@ -3774,6 +4062,10 @@ gone, rail present, tap expands to the 320px docked panel under the squeeze,
 Back collapses to the 40px rail with the squeeze lifted. `UIUX §3.3` (the
 three/four-tab grammar) and §3.4 (the rail) move with it.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ## AH. One picker, the Parking Lot — and desktop's All-boards tab retires (issue #157)
 
 ### B100. The All-boards picker is the Parking Lot turned into the 2×2 grid on every surface that has the tab — mobile and tablet; desktop's All-boards tab retires entirely, from the board's action row and from the calendar's R1 row alike, because the left rail (B24) already lists every category with every board; `#list-view`'s full-screen overlay face retires with them (issue #157; supersedes B74 Part 3's desktop clause, B83's wide All tab, B95/R1's wide calendar row, B82's desktop-overlay half, and B99's three-tab count; keeps B24's rail, B82's rising panel, B96's tiers, B9's back stack, B74's grid mechanics, B81's commit-on-release — and waives nothing)
@@ -3885,6 +4177,10 @@ the aspect edge 840×731/840×730, cover landscape, the [11b] window, iPad
 portrait, the Fold in portrait orientation). [11b]'s 980×715 and the cover
 screen's own asserts are the living proof the gate excludes them.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions) B101 is superseded — ratified as historical record, per the ruling.
+
 
 ## AJ. The update check can be pinned — updateViaCache and the build handshake (issue #164)
 
@@ -3924,6 +4220,10 @@ red→green proof lives in the issue: a Firefox profile pinned to a v43
 worker with the new shell deployed records strike `v43`, heals on the
 second load, reinstalls the true worker, and the seeded board survives.
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 
 ## AK. Tablet mode is orientation-blind (issue #164, final ruling)
 
@@ -3958,6 +4258,10 @@ cover-portrait still mobile); [11b]'s short-window scenario moves below the
 floor (720×540, 600×450 — the mobile sheet's law under test is unchanged,
 its free-canvas floors re-measured at 60%/50% for the squat shapes).
 `UIUX §3.4`/§10 tier notes move with it.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B104. Reminders arrive as a CLOCK TOGGLE, not a clock — one tap per note card sets or clears a reminder with no time picker, no pop-up and no due-time stored anywhere in the record; an active clock glows and surfaces its card to that morning's To-Do board, which is the EXISTING B95 per-date linked board (`ensureLinkedBoard`, title "MM/DD/YY To Do") and not a new board species; status is BORDER + GLOW — red past due, yellow carried over — a separate semantic layer that never borrows the highlight layer (issue #169, the owner's v3 Reminders design of 2026-09-02; narrows PRD §2.3's out-of-scope row and amends PRD §1.4; keeps §1.4's no-demands law — the board still asks nothing, the person taps the clock, nothing pings or pushes; keeps B95's To-Do species and B21's defaulted-at-read-site idiom for any future record field; waives nothing, but two triggers are explicitly unresolved — see below)
 
@@ -4100,6 +4404,10 @@ B107 superseded; the new test/morning.js suite owns the B108 contract.
 **Open, unchanged:** recurring reminders, the month view, the reminder
 surfacing pass, the carried indicator's styling (it reads `carriedOn`).
 
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
+
 ### B109. The reminder pass: every note card carries a CLOCK TOGGLE bottom-right — one tap sets or clears the reminder (no picker, no dialog, no time concept anywhere in the record — the key is simply `reminder: true` or absent, B21's absence-is-off idiom), the active clock takes the `--reminder` fill with a bloom of the same token, and a reminder-active note SURFACES to today's linked To-Do board as a render-time ECHO — one source of truth, no copy records (issue #169 §2, the reminder pass B104 promised; keeps B104's clock-toggle ruling verbatim, B107's retirement of the red past-due state and of SMS, B81's commit-on-release for the tap, B9's plain swap route for navigation, §2's token discipline for the new colour; waives nothing)
 
 **The rulings.** (1) The toggle: a drawn clock mark (`GLYPH.clock`, §13.3's
@@ -4227,6 +4535,10 @@ strings, same assertions). test/desktop.js's D25 — the test that caught it —
 seeds a single clean linked pair with createdAt-ordered events and waits on
 the landed state, so an event-first regression fails loud instead of
 racing. **Open, unchanged:** recurring reminders, the month view.
+
+---
+
+**Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
 ### B113. Recurring reminders are RULED OUT — the reminder shipped in B108/B109 is the complete feature: a reminder is set once by the clock toggle and completing the note completes it — nothing reschedules it, nothing recreates it, and re-tapping the clock is the only way a reminder returns; and the month view is not undecided either — it is DEFERRED to issue #191 ("New component: month view calendar in Calendar view"), parked behind issue #170 (the calendar card size reduction), pointed elsewhere rather than left open (issue #169, the owner's ruling of record of 2026-09-15, the comment: https://github.com/AlastairZeved/TheBoards/issues/169#issuecomment-5691814223, on the now-closed issue; supersedes B104's explicitly-open clause on recurring reminders and the month view and the "recurring reminders and the month view remain open" / "Open, unchanged" clauses of B107, B108, B109, B110, B111 and B112 — by number, not edited in place; keeps B104's no-time-stored law — a recurring schedule needs dates and the record carries none — B109's toggle-and-echo mechanism verbatim, B108's completion of the note as the reminder's end; waives nothing)
 
