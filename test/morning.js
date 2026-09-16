@@ -146,7 +146,7 @@ async function tap(page, x, y, holdMs = 30) {
       }
     }
 
-    console.log('\n[M5] Manual add\'s menu carries the two re-homing options; a carried note\'s does not (B27b)');
+    console.log('\n[M5] Manual add and carried note menus: Copy + Link, no re-homing (B114, B115) (B27b)');
     {
       // A manual add: tap empty paper, type, commit.
       await tap(page, 200, 500);
@@ -165,11 +165,8 @@ async function tap(page, x, y, holdMs = 30) {
       await page.waitForTimeout(300);
       let labels = await page.evaluate(() =>
         [...document.querySelectorAll('#menu [role="menuitem"]')].map(l => l.textContent));
-      ok('manual add\'s menu offers Copy (B114) then the two re-homing options, in the issue\'s order',
-        labels[0] === 'Copy' &&
-        JSON.stringify(labels.slice(1, 3)) === JSON.stringify(['Add to existing board', 'Create new board with this as first card']),
-        JSON.stringify(labels));
-      ok('Link is still on the menu', labels.includes('Link'), JSON.stringify(labels));
+      ok('manual add\'s menu is Copy (B114) then Link — the re-homing options are gone (B115)',
+        JSON.stringify(labels) === JSON.stringify(['Copy', 'Link']), JSON.stringify(labels));
       // Carry-forward's marker keeps a re-homed day-board card out of the pair:
       // the carried note's menu carries Copy (B114) then Link.
       const cbox = await page.evaluate(() => {
@@ -187,78 +184,6 @@ async function tap(page, x, y, holdMs = 30) {
         JSON.stringify(labels) === JSON.stringify(['Copy', 'Link']), JSON.stringify(labels));
       await tap(page, 5, 5);
       await page.waitForTimeout(200);
-
-      // "Create new board with this as first card": the manual note MOVES.
-      await tap(page, nbox.x, nbox.y, 700);
-      await page.waitForTimeout(300);
-      const createBtn = await page.evaluate(() => {
-        const b = [...document.querySelectorAll('#menu [role="menuitem"]')]
-          .find(b => b.textContent.includes('Create new board'));
-        if (!b) return null;
-        const r = b.getBoundingClientRect();
-        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-      });
-      await tap(page, createBtn.x, createBtn.y);
-      await page.waitForTimeout(400);
-      const moved = await page.evaluate(async (tk) => {
-        const all = await idbGetAll();
-        const host = all.find(b => b.notes && b.notes.some(n => n.text === 'fresh manual note'));
-        const t = all.find(r => r.cal === tk);
-        return { hostTitle: host && host.title, hostCat: host && host.category,
-                 noteXY: host && host.notes[0] && { x: host.notes[0].x, y: host.notes[0].y },
-                 stillOnDay: t.notes.some(n => n.text === 'fresh manual note') };
-      }, today);
-      ok('the manual note moved onto a NEW board, same x/y, still category todo',
-        moved.hostTitle === '' && moved.hostCat === 'todo' && moved.noteXY &&
-        typeof moved.noteXY.x === 'number', JSON.stringify(moved));
-      ok('it left the day board (MOVE, not copy)', moved.stillOnDay === false, JSON.stringify(moved));
-
-      // "Add to existing board": the nested leaf list names the boards.
-      // Re-add a fresh manual note to exercise the add-to-existing path.
-      await tap(page, 60, 500);
-      await page.waitForTimeout(60);
-      await page.keyboard.type('second manual note');
-      await page.evaluate(() => document.activeElement.blur());
-      await page.waitForTimeout(250);
-      const sbox = await page.evaluate(() => {
-        const n = [...document.querySelectorAll('.note')].find(n => n.textContent.includes('second manual note'));
-        if (!n) return null;
-        const r = n.getBoundingClientRect();
-        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-      });
-      ok('the second manual note captured', !!sbox);
-      await tap(page, sbox.x, sbox.y, 700);
-      await page.waitForTimeout(300);
-      const addBtn = await page.evaluate(() => {
-        const b = [...document.querySelectorAll('#menu [role="menuitem"]')]
-          .find(b => b.textContent.includes('Add to existing board'));
-        if (!b) return null;
-        const r = b.getBoundingClientRect();
-        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-      });
-      await tap(page, addBtn.x, addBtn.y);
-      await page.waitForTimeout(400);
-      const leaf = await page.evaluate(() => {
-        const b = [...document.querySelectorAll('#menu [role="menuitem"]')]
-          .find(b => b.textContent.includes('Sample board'));
-        if (!b) return null;
-        const r = b.getBoundingClientRect();
-        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-      });
-      ok('the chooser lists the existing boards', !!leaf);
-      if (leaf) {
-        await tap(page, leaf.x, leaf.y);
-        await page.waitForTimeout(400);
-        const moved2 = await page.evaluate(async (tk) => {
-          const all = await idbGetAll();
-          const host = all.find(b => b.title === 'Sample board');
-          const t = all.find(r => r.cal === tk);
-          return { onHost: host.notes.some(n => n.text === 'second manual note'),
-                   stillOnDay: t.notes.some(n => n.text === 'second manual note') };
-        }, today);
-        ok('it moved onto the chosen board and left the day board',
-          moved2.onHost === true && moved2.stillOnDay === false, JSON.stringify(moved2));
-      }
     }
     ok('no page errors across the interaction blocks', errors.length === 0, errors.join(' | '));
     await ctx.close();
