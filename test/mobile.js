@@ -2488,6 +2488,32 @@ async function openCat(page, cat) {
     await ctx.close();
   }
 
+  console.log('\n[27] Wide→narrow flip tears the calendar-rail furniture down (issue #219)');
+  {
+    const { ctx, page, errors } = await newMobilePage(browser, { width: 390, height: 846 });
+    await page.setViewportSize({ width: 800, height: 846 });   // cross TABLET_MQ: tablet arrangement
+    await page.waitForTimeout(400);
+    ok('at 800 the rail is up (furniture, B99)', await page.evaluate(() => {
+      const v = document.getElementById('cal-view'), r = document.getElementById('cal-rail');
+      return !v.hidden && v.classList.contains('rail-open') && !r.hidden &&
+        document.documentElement.classList.contains('has-cal-rail');
+    }));
+    await page.setViewportSize({ width: 390, height: 846 });   // the landscape→portrait round trip
+    await page.waitForTimeout(400);
+    ok('back at 390 the view is hidden by attribute', await page.evaluate(() =>
+      document.getElementById('cal-view').hidden === true));
+    ok('no rail-open class survives the flip', await page.evaluate(() =>
+      !document.getElementById('cal-view').classList.contains('rail-open')));
+    ok('the rail face is hidden', await page.evaluate(() =>
+      document.getElementById('cal-rail').hidden === true));
+    ok('the board is full-width again', await page.evaluate(() => {
+      const b = document.getElementById('board').getBoundingClientRect();
+      return Math.abs(b.width - 390) < 1 && Math.abs(b.left) < 1;
+    }));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   await browser.close();
   console.log('\n=== mobile: ' + pass + ' passed, ' + fail + ' failed ===');
   process.exit(fail ? 1 : 0);
