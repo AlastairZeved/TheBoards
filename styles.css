@@ -1783,6 +1783,83 @@ html.desktop #cal-export { margin-left: auto; }
 .cal-day.far .cal-date { background: #030813; }
 .cal-day.far .cal-line { color: rgb(244 245 241 / .62); }
 
+/* --- §3.5 The month view (issue #191) -------------------------------------
+   The compact month grid in the ground #170 freed below the day stack. Pure
+   display + the tap-to-week-swap; palette only: the current-week band is the
+   ink-light wash at reading-alpha (the recede idiom above), today wears the
+   to-do boards' own water fall, the event dot is --accent-page (the primary
+   fill — a shade within the palette, never a new colour). */
+#cal-month {
+  flex: 0 0 auto;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mo-head { display: flex; align-items: center; gap: 4px; }
+.mo-nav {
+  border: none; border-radius: 3px;
+  background: transparent;
+  color: var(--ink-light); opacity: .7;
+  font: inherit; font-size: 18px; font-weight: 600; line-height: 1;
+  min-width: 36px; min-height: 32px;
+  cursor: pointer;
+  transition: filter 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@media (hover: hover) { .mo-nav:hover { opacity: 1; } }
+.mo-nav:active { filter: brightness(0.92); }
+.mo-nav:focus-visible {
+  outline: 2px solid var(--ink-light);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--ink-dark);
+}
+.mo-label { flex: 1; text-align: center; font-size: 12px; font-weight: 600; color: var(--ink-light); }
+.mo-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  row-gap: 1px;
+}
+.mo-wd {
+  text-align: center;
+  font-size: 9px; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-light); opacity: .55;
+  padding-bottom: 2px;
+}
+.mo-cell {
+  position: relative;
+  border: none;
+  background: transparent;
+  color: var(--ink-light);
+  font: inherit; font-size: 11px;
+  min-height: 24px;
+  padding: 0 2px 6px;
+  cursor: pointer;
+}
+@media (hover: hover) { .mo-cell:hover { background: rgb(244 245 241 / .14); } }
+.mo-cell:focus-visible {
+  outline: 2px solid var(--ink-light);
+  outline-offset: -2px;
+}
+/* The pale band across the current week's row (one class per cell; no column
+   gap, so the cells' fills read as one continuous highlight). */
+.mo-cell.wk { background: rgb(244 245 241 / .08); }
+/* Today: the to-do boards' own water fall — the palette blue of the boards. */
+.mo-cell.today {
+  background: linear-gradient(180deg, var(--water-top) 0%, var(--water-mid) 46%, var(--water-bot) 100%);
+  border-radius: 3px;
+  font-weight: 600;
+}
+/* Exactly one dot per event-bearing day, regardless of the day's event count. */
+.mo-dot {
+  position: absolute;
+  bottom: 2px; left: 50%;
+  transform: translateX(-50%);
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--accent-page);
+}
+
 /* Desktop/tablet (R3/R6): the calendar docks to the right edge as a real
    column — the board reflows beside it, nothing is covered. The board's own
    container (html.desktop #board-view) narrows via its layout in JS. */
