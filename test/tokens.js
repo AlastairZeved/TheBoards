@@ -665,14 +665,37 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v69 — the #217 identity rename to "Zezed Boards", version bumped (shipped bytes changed)',
-    /const CACHE = 'zeved-boards-v69';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v69, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v69';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v70 — the #218 icon/asset install, version bumped (shipped bytes changed)',
+    /const CACHE = 'zeved-boards-v70';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v70, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v70';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the new name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
     /startsWith\('zeved-boards-v'\) \|\| k\.startsWith\('todo-boards-v'\)/.test(app));
+  // --- Issue #218: the shipped icon family — manifest entries resolve, precache stays in sync ---
+  const shippedIcons = ['icons/favicon-16.png', 'icons/favicon-32.png', 'icons/favicon-48.png',
+                        'icons/icon-192.png', 'icons/icon-192-light.png',
+                        'icons/icon-512.png', 'icons/icon-512-maskable.png'];
+  for (const f of shippedIcons) {
+    ok(`${f} is committed and precached`, fs.existsSync(path.join(ROOT, f)) && sw.includes(`'${f}'`));
+  }
+  const icoSizes = (manifest.icons || []).map((entry) => {
+    let dims = null;
+    try {
+      const buf = fs.readFileSync(path.join(ROOT, entry.src));
+      if (buf.length > 24 && buf.slice(1, 4).toString() === 'PNG') dims = [buf.readUInt32BE(16), buf.readUInt32BE(20)];
+    } catch (e2) { /* asserted below */ }
+    return { src: entry.src, sizes: entry.sizes, dims };
+  });
+  ok('manifest.json icons parse and every entry resolves to a real PNG at its declared size',
+    Array.isArray(manifest.icons) && manifest.icons.length > 0 &&
+    icoSizes.every(({ sizes, dims }) => {
+      if (!dims) return false;
+      const [w, h] = String(sizes).split('x').map(Number);
+      return w === dims[0] && h === dims[1];
+    }),
+    JSON.stringify(icoSizes.map((i) => `${i.src}:${i.sizes}:${i.dims ? i.dims.join('x') : 'MISSING'}`)));
   ok('the identity is the single string "Zezed Boards" (B121): manifest name, <title>, the three runtime document.title templates, PDF Producer',
     manifest.name === 'Zezed Boards' && /<title>Zezed Boards<\/title>/.test(html) &&
     (app.match(/· Zezed Boards/g) || []).length === 3 && /: 'Zezed Boards';/.test(app) &&
