@@ -548,10 +548,10 @@ unchanged — the note already binds `--ink` to `--ink-dark` on its `.on-light`
 surface (§2.3), which holds on amber at 13.27:1. Unlike the ladder, `--highlight`
 does **not** rotate with board type: an emphasis the user places means the same
 thing on a To-Do, a Note, a Learning and an Idea board, so it is one constant value.
-Since B85, `--highlight` also serves as the Highlight tab's **identity fill** on the
-note toolbar (§4.5), alongside a fixed blue sibling `--accent-copy` `#698ebf` for the
-Copy tab — both fixed like this wash, and both chrome that names *which action*, never
-the note's state.
+Since B85, `--highlight` also serves as the Highlight tab's **identity fill** on
+the note toolbar (§4.5) — fixed like this wash, and chrome that names *which
+action*, never the note's state. Its fixed blue sibling `--accent-copy` (B85)
+retired with the Copy tab it filled (B114): the token is out of the suite.
 
 ### §2.6.2 The reminder glow (B109)
 
@@ -1023,8 +1023,9 @@ desktop, and nowhere else.
 
 ### §4.5 The note's action toolbar
 
-*New in v2 (B84, issue #126).* A note's four actions — Complete/Restore ·
-Highlight · Copy · Delete — sit on a row the note wears, in the menu's order
+*New in v2 (B84, issue #126); Copy re-homed to the note's long-press/right-click
+menu in B114 (issue #171).* A note's three actions — Complete/Restore ·
+Highlight · Delete — sit on a row the note wears, in the menu's order
 (§7): the destructive tab last, in `--danger`. It replaces the note long-press
 menu and the desktop right-click note menu; on desktop it also replaces the
 `#selection` overlay's own action buttons, which the overlay no longer carries
@@ -1032,7 +1033,7 @@ menu and the desktop right-click note menu; on desktop it also replaces the
 
 **A minimum note width.** `NOTE_MIN_W` is **132** — a real minimum *rendered*
 width, not only the wrap-cap floor it was at 60. It is the width that seats the
-four tabs, and one number carries three jobs so they cannot drift apart: the CSS
+three tabs, and one number carries three jobs so they cannot drift apart: the CSS
 `min-width` on a non-empty `.note-text`, the wrap-cap floor (`noteMaxW`), and the
 drag/resize width floor. A note can never be *sized* narrower than its own row. An
 empty note is exempt (it keeps no frame, §6.2, and shows no row), so it stays free
@@ -1053,7 +1054,6 @@ Components and Requirements), not pills and not the `.sel-btn` raised control:
 .note-tb-btn svg   { width: 18px; height: 18px; }        /* the mark, grown from 16px (B86) */
 .note-tb-delete    { background: var(--danger); }        /* --danger fill carrying --ink-dark, 8.83:1 (§2.6) */
 .note-tb-highlight { background: var(--highlight); }     /* fixed amber identity fill (B85) */
-.note-tb-copy      { background: var(--accent-copy); }   /* fixed blue identity fill, --accent-copy #698ebf (B85) */
 ```
 
 The marks are `GLYPH`'s own drawn SVG (§13.3), each SVG `aria-hidden` with the
@@ -1063,7 +1063,7 @@ the note and is never wider than it. It sits **flush on the note's top edge**
 (`left: 0`, no `translateX`, B88), flipping to just inside the top edge near the
 sheet top where there is no room above (`reflectToolbarFlip`, whose `TB_ROW_H`
 threshold is now 32 for the gapless row). Each tab keeps a 44px-tall hit target
-expanded upward (§6, B7's decoupled-hit idiom) so a row of four never overlaps a
+expanded upward (§6, B7's decoupled-hit idiom) so a row of three never overlaps a
 neighbour. Focus wears the two-tone ring (§2.7).
 
 **Shown only on select/focus** (the owner's call — not always drawn), by the same
@@ -1075,12 +1075,12 @@ hides while the note is picked up (`.pressed`). The show/hide is the §8 fade �
 kill-switch. **State is never colour alone (§1):** the Complete tab flips its mark
 (check ⇄ undo) and label; the Highlight tab flips its label and shows an inset border
 while the note wears the `--highlight` wash (B71) — the wash is the state, the tab
-only triggers and names it. The Highlight and Copy tabs also carry their own **fixed
-identity fills** (amber and `--accent-copy` blue, B85) the way Delete carries
-`--danger`: the fill says *which action* — chrome, not state — so the four tabs are
-told apart by fill **and** glyph. Unlike Complete's rotating `--frame`, these two do
-not change with board type (on a To-Do board Copy's blue equals the frame, the
-owner's accepted call).
+only triggers and names it. The Highlight tab also carries its own **fixed identity fill** (amber, B85) the
+way Delete carries `--danger`: the fill says *which action* — chrome, not state —
+so the three tabs are told apart by fill **and** glyph. Unlike Complete's rotating
+`--frame`, it does not change with board type. Copy's blue `--accent-copy` filled
+the fourth tab until B114 re-homed Copy to the note menu (§7) and retired the
+token with its tab.
 
 ### §4.6 Note links (B91)
 
@@ -1142,7 +1142,9 @@ The surfacing set is **active** reminder notes: completing the note anywhere
 (completing an echo completes the source, B109) unsurfaces it, as does
 clearing its clock. The echo's long-press/right-click menu carries **Complete**
 and **Go to Board** (the source board, the plain swap route, B9) — Link is
-absent there, because it arms against records this board does not hold.
+absent there, because it arms against records this board does not hold, and
+Copy is absent for the same stranding (B114): an echo has no record of its own
+to copy. The echo rides the same note toolbar as any note, B114's three tabs.
 Completing a reminder note just completes it: nothing recreates anything
 (recurring reminders stay open, B104/B107). Echoes are render-time references
 and do not travel into the PDF export (which draws board records, not echoes).
@@ -1241,7 +1243,7 @@ below.
 | Menu | Items |
 |---|---|
 | Anchor | All boards · Export |
-| Note (B91) | Link |
+| Note (B91, B114) | Copy · Link |
 | Board row / rail card | Export · Delete |
 | Desktop selection | Complete/Restore · Highlight/Remove highlight · Delete |
 
@@ -1249,6 +1251,16 @@ Ordering is **navigation first, then the item's own actions in rising severity**
 (B43, superseding A1). The destructive action is **always last, in `--danger`,
 behind a hairline** — and never distinguished by colour alone (§1): position and
 the divider carry the meaning independently.
+
+**Copy** (B114, issue #171) re-homed here from the note's on-select toolbar
+(§4.5) and is the menu's **first item** — the note's own state act before the
+relational act, the same lead the echo menu takes with Complete. Its semantics
+are the toolbar's copy branch verbatim: a single note copies that note's text;
+on a desktop multi-selection that includes the tapped note, it copies the
+**joined text of the whole selection, primary first, one `\n` between**. The
+item is a real button (`GLYPH.copy`, labelled `Copy`), so keyboard access rides
+the menu. A surfaced echo carries no Copy (§4.7) — its record lives on the
+source board.
 
 **Highlight** (issue #105, B71) is a note-only toggle: it washes the whole note
 in `--highlight` (§2.6.1) and, chosen again, returns it to the board's default
