@@ -3535,6 +3535,8 @@ note near the sheet top still flips its toolbar to just inside the edge. The tab
 their round corners; nothing merges with a rule. Values in UIUX §3.3/§4.5; `CACHE` → v35.
 
 **Source:** issue #133 (owner): “Bring all menu buttons for note cards and parking lot Down so they sit directly on the upper boundary edge Of note card/parking lot” — https://github.com/AlastairZeved/TheBoards/issues/133
+
+**Pointer, 2026-09-16:** B120 — issue #173 — supersedes this ruling's note-toolbar clause only: the row moves to the note's BOTTOM edge, flush as ruled, and the flip re-aims near-sheet-bottom. The board-action row's clause — flush on the lot's top edge — stands.
 ### B88. The note toolbar and board-action row left-anchor, not centred (issue #134; supersedes the centred cluster of B84/UIUX §4.5 and B83/UIUX §3.3)
 
 Resolved against *every pixel earns its place*. Both rows were centred on their object.
@@ -3546,6 +3548,8 @@ fits inside a 132px note (B86) — which is why B86 held the tab size under `NOT
 Values in UIUX §3.3/§4.5; `CACHE` → v35.
 
 **Source:** issue #134 (owner): “Move all buttons to the far left Of note card and parking lot, not centered.” — https://github.com/AlastairZeved/TheBoards/issues/134
+
+**Pointer, 2026-09-16:** B120 — issue #173 — supersedes this ruling's note-toolbar clause only: the row is now CENTRED on the note, anchored at its bottom edge. The board-action row's left-anchor stands.
 ### B89. The board-list category buttons take their board's water field as ground, not `--card` (issue #135; supersedes B74/UIUX §10's "the picker button is the `--card` tray, enlarged" for `.cat-button`; extends B77's per-family re-assertion to `.cat-button`'s `--water-*`)
 
 Resolved against *every pixel earns its place*. The All-Boards picker tiles grounded in
@@ -3621,6 +3625,10 @@ pairs. It persists with the whole record (`idbPut`), so no IndexedDB version bum
 legacy board reads `links` through the B21 default. Deleting a note removes its links,
 and the note's one Undo restores them with it (exact prior state, UIUX §9). A note
 swept as an empty husk (B8/B31) drops its links in `sanitizeBoard`.
+
+**Pointer, 2026-09-16:** B120 — issue #173 — extends this menu's item scope: the note
+menu gains a second state act, "Add Title", arming the note's optional Title. The
+relational Link plane and B114's Copy-first order stand.
 
 **Render & export.** The line lives on one `<svg>` layer in `#board` space, a sibling
 of the notes like `#selection`, so it rides the single render transform and its
@@ -4686,3 +4694,47 @@ consequences, no more:
    tablet clause only.
 4. **Mobile behavior otherwise untouched.** The four-tab row, the grid,
    the drill, the back stack — nothing mobile reads changes.
+
+### B120. Note cards gain an optional single-line Title — a header-style tab peeking from behind the card's top-left corner, armed from the note menu's "Add Title" item — and the note toolbar moves to the note's bottom edge, centred on the card (issue #173, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/173; supersedes ONLY B87's note-toolbar edge clause — the row flush on the note's TOP edge — and B88's note-toolbar anchor clause — the row left-anchored far left; keeps B87's board-action-row clause and B88's board-row left-anchor in full — the lot's row does not move; keeps B84's on-select toolbar and its on-select reveal, B86's tab metrics, B87's gapless-edge principle and `TB_ROW_H` flip grammar, B90's mobile select-then-edit, B91's revived note menu as narrowed by B114 — Copy first, Link after — and §1's state-is-never-colour-alone; the optional title field is a plain board-record field read through the B21 default, the idiom B91's `links` ride; waives nothing)
+
+**Source:** issue #173 (owner): “What is it: A Title that is displayed at the top left of the note card and looks like a note popping up from behind it with header-style title. How does user access feature: Long press/right click note card to access menu, menu item "Add Title". Expected Behavior: Note card appears in the top left of the note card with a cursor and keyboard displays, ready to type the title. Downstream ripples: Currently there is a button row anchored to the top left of note cards. Move this to the bottom of the note card and center the buttons to the note card instead of anchoring them left.” — https://github.com/AlastairZeved/TheBoards/issues/173
+
+**The ruling.** Two moves, and nothing past the issue's own text:
+
+1. **The Title.** A note gains an optional single-line Title, rendered as a
+   header-style tab peeking out from behind the card's top-left corner — a
+   note slid up from behind, its header showing. It is armed from the note's
+   long-press/right-click menu, a new **"Add Title"** item beside Copy and
+   Link: B91's revived menu, as B114 narrowed it, grows a second kind of
+   act, and the menu is no longer Copy + Link alone. Choosing it puts the
+   cursor in the title with the keyboard ready, exactly as the issue's
+   expected behavior writes it. An empty title renders nothing — no tab, no
+   frame, no reserved space. The optional field persists with the record
+   and reads through the B21 default. Everything the issue does not name
+   about the title — its width behaviour against the card, its edit and
+   clear paths, its render in the PDF — is implementation detail for the
+   build card, not law; this record rules only what the issue's text
+   carries.
+
+2. **The toolbar moves.** The note's on-select button row — Complete ·
+   Highlight · Delete (B114's three tabs) — leaves the note's top edge for
+   the **bottom edge, centred on the card**: the toolbar's `bottom: 100%`
+   (B87) and `left: 0` (B88) give way to a bottom-edge, centred anchor, and
+   the row keeps every other property it has — a scaling child of the note
+   (never wider than it), shown on select/focus, hidden on empty notes, the
+   §8 fade, the 44px hit targets, B86's metrics. B87's gapless principle
+   survives the move — the row sits flush ON the note's bottom edge, no gap
+   below — and B88's board-action row is untouched: the lot's row stays
+   flush on the lot's top edge, left-anchored. The flip grammar
+   (`reflectToolbarFlip`, `TB_ROW_H`) re-reads for the new edge: the
+   near-sheet-top case becomes near-sheet-bottom, the same one flip,
+   re-aimed. B120 supersedes the two clauses and nothing else.
+
+**The record.** Docs-only on this card — the styles.css rules that carry
+the superseded citations (`.note-toolbar { left: 0; bottom: 100% }`, with
+the B88/B87 comments), the title render and the menu item, and the `sw.js`
+CACHE bump are the implementation card's work, gated behind this card's
+merge. No CACHE bump here.
+
+**Pointer audit:** dated one-line pointers added at B87, B88, B91's arm
+paragraph, and UIUX §4.5 (twice) and §7.
