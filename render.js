@@ -306,7 +306,6 @@ function makeNoteToolbar(note) {
   const done = note.state === 'complete';
   mk('note-tb-complete', done ? GLYPH.restore : GLYPH.complete, done ? COPY.restore : COPY.complete);
   mk('note-tb-highlight', GLYPH.highlight, note.highlighted ? COPY.unhighlight : COPY.highlight);
-  mk('note-tb-copy', GLYPH.copy, COPY.copy);
   mk('note-tb-delete', GLYPH.delete, COPY.delete);           // destructive, last (UIUX §7)
   return bar;
 }
@@ -334,6 +333,23 @@ export function reflectToolbarFlip(node, note) {
   node.classList.toggle('tb-flip', renderY(note) < TB_ROW_H * effScale(note));
 }
 
+/* Copy one note's text — or, where the desktop multi-selection reaches the menu,
+   the whole selection's, primary first, one \n between (issue #171, B114). One
+   home for the act: the note menu's Copy item routes here (the toolbar branch it
+   moved out of retired with its tab), so the join expression has exactly one
+   definition. note.text is live off every keystroke (the input handler), so Copy
+   needs no blur — it copies the current text and leaves the note engaged. The
+   caller supplies the commit (buildMenu's commitAction drop-guard). */
+export function copyNoteTexts(anchorId) {
+  const inMulti = selected && selected.kind === 'note' &&
+                  multiSel.size > 1 && multiSel.has(anchorId);
+  const ids = inMulti ? selectedNoteIds() : [anchorId];
+  copyText(ids.map(id => {
+    const n = state.current.notes.find(m => m.id === id);
+    return n ? n.text : '';
+  }).join('\n'));
+}
+
 /* One toolbar action, from a pointer tap (handleTap) or the keyboard (below).
    Commits on release through the B81 drop-guard. Acts on the whole multi-
    selection when this note is the desktop primary of one, else on this note
@@ -349,14 +365,7 @@ export function runNoteToolbarAction(btn) {
     const inMulti = selected && selected.kind === 'note' &&
                     multiSel.size > 1 && multiSel.has(note.id);
     const ids = inMulti ? selectedNoteIds() : [note.id];
-    if (btn.classList.contains('note-tb-copy')) {
-      // note.text is live off every keystroke (the input handler), so Copy needs
-      // no blur — it copies the current text and leaves the note engaged.
-      copyText(ids.map(id => {
-        const n = state.current.notes.find(m => m.id === id);
-        return n ? n.text : '';
-      }).join('\n'));
-    } else if (btn.classList.contains('note-tb-delete')) {
+    if (btn.classList.contains('note-tb-delete')) {
       if (editingHere()) document.activeElement.blur();   // no dangling editor in the leaving node
       deleteNotes(ids);                                   // one commit → one Undo
     } else if (btn.classList.contains('note-tb-highlight')) {
@@ -379,8 +388,8 @@ export function runNoteToolbarAction(btn) {
    Space on a focused tab is the ONE activation the recognizer never sees. This
    handles it, and stopPropagation keeps it off the desktop note grammar below —
    without it, Enter on a selected note's tab would ALSO edit the note. The tabs
-   are the keyboard route to Complete/Highlight/Copy the removed note menu used
-   to be (B84). */
+   are the keyboard route to Complete/Highlight the removed note menu used
+   to be (B84); Copy rides the menu's own focusable items since B114. */
 
 export function makeLotEl(item) {
   const node = document.createElement('div');
