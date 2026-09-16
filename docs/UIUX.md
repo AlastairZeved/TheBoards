@@ -802,6 +802,11 @@ the tier's way into the lot-grid picker), **four on mobile** (All · Export ·
 Import · Calendar): the grammar each platform speaks, nothing held in
 reserve.
 
+(2026-09-16: B119 — issue #212 — supersedes the tablet clause: the All tab
+retires on tablet too, its hide widened to `html.wide` — the row is **two
+tabs on tablet** as on desktop, and the left rail is the one All-Boards
+surface on wide. The lot-grid picker stays mobile's entry.)
+
 **Placement.** `#board-actions` is `left: 0; right: 0`, a **left-anchored** flex
 cluster (`gap: 8px`, `justify-content: flex-start`, B88) at `bottom: var(--lot-h)`
 — **flush on the lot's top edge** (B87 removed the 8px gap). Its four tab corners
@@ -888,6 +893,12 @@ final gate: **one width floor, `min-width: 744px`, orientation-blind** —
 unfolded foldables, iPads, and Android tablets take this arrangement in
 PORTRAIT and landscape alike; B96's landscape-only widths and B101's shape
 leg are superseded), its All tab kept.
+
+(2026-09-16: B119 — issue #212 — supersedes the tablet All tab: the
+`#cal-boards` guard widens from `isDesktop` to `isWide`, so the calendar
+panel's All Boards control retires on tablet with the tab, and the panel's
+row is **Back + Export** on wide as on desktop. The rail + panel
+arrangement itself stands on tablet — B118's collapse grammar included.)
 
 **The R1 top row.** `--frame` flat tabs in the row-control species. On
 mobile, three, anchored left / center / right: **Back** (the board-action
@@ -1396,6 +1407,12 @@ the calendar's R1 row is **Back + Export**.
 geometry: on wide the rail ships collapsed as a 40px face, mirroring the
 calendar rail, and expands to the 300px pane on tap. The rest of this
 section's rail grammar stands.)
+
+(2026-09-16: B119 — issue #212 — narrows the picker above to **mobile-only**
+and widens this arrangement's reach: tablet joins desktop as a wide tier
+carrying the rail-only All-Boards surface — B96 put the pane there already —
+and the tab-retirement clauses in this section's "desktop" headings read as
+B96's wide, desktop ∪ tablet.)
 
 **Both surfaces order a section by last touch, newest first** (B69, superseding
 B24's immutable slot): the key is the later of `updatedAt` (written on every

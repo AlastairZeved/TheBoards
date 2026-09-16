@@ -4125,6 +4125,11 @@ into the grid; the owner ruled the rail-and-tab redundancy a desktop-only
 correction); Export KEEPS its place in wide's calendar row (mockup 6 drew
 neither All nor Export; the owner named only All Boards).
 
+**Pointer, 2026-09-16:** B119 — issue #212 — supersedes this paragraph's
+tablet clause: the tablet All tab retires, the hide widens to `html.wide`,
+and only mobile keeps the tab (its way into the lot-grid picker — there is
+no rail below 744px). Export's place stands.
+
 **The record.** `sw.js`'s `CACHE` bumps to **v45**; `test/tokens.js` re-pins
 it. `test/desktop.js` [D21] reads wide's row as **two** tabs (Export ·
 Import) with the All tab asserted `display:none`; its Delete/Enter focus
@@ -4653,3 +4658,31 @@ Fix), the owner's ruling of record.
 ### B118. The board rail is collapsible furniture on wide: it ships COLLAPSED — a 40px face mirroring B99's calendar rail at the viewport's left edge — one tap expands it into B24's 300px pane, and an arrow control collapses it back (issue #211, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/211; supersedes ONLY B24's geometry/presence clause — the pane at "a fixed 300 CSS px", always present; keeps B24's sunken-pane identity (`--pane`, inset shadow — embedded, not floating), its card grammar, its comparator as carried forward by B69, swap-in-place with no history push, its create/delete paths, its 150ms crossfade and setTimeout-sequenced teardown, and keeps B100's rail-is-desktop's-all-boards-surface clause — the rail still names every category with every board, from behind its face until expanded; the collapsed-by-default state is the owner's session ruling of 2026-09-16; wide is B96's tier as retuned by B103 — desktop ∪ tablet; this record rules the collapse grammar and the collapsed-by-default state and nothing further about the collapsed face's contents — no B99 mechanic beyond the expand/collapse grammar issue #211 names is carried to the pane by this entry; waives nothing)
 
 **Source:** issue #211 (owner): “New behavior: 'All Boards' menu on the left side of the viewport functions just like the 'Calendar' rail on the right side of the viewport by being tappable to expand with an arrow button to collapse.” — https://github.com/AlastairZeved/TheBoards/issues/211; collapsed-by-default: owner session ruling, 2026-09-16: “Starts collapsed like the Calendar rail — true mirror: two 40px rails, board fills the viewport, tap the rail to expand.”
+
+### B119. The All tab retires on tablet too: the tab's hide widens from `html.desktop` to `html.wide` — desktop ∪ tablet — the left board rail is the one All-Boards surface on wide, and the calendar panel's All Boards control retires on tablet the same way it retired on desktop; the lot-grid picker survives mobile-only (issue #212, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/212#issuecomment-5703415803; supersedes ONLY B100's tablet clause — "Mobile and tablet keep the tab: it is their only way into the lot-grid picker" — and B100's flag paragraph's tablet-keeps-its-All-tab ruling; keeps B100's desktop retirement exactly as ruled and its rail-is-desktop's-all-boards-surface clause, now read on wide; keeps B74's picker mechanics for mobile — below 744px there is no left rail, so the tab stays mobile's entry into the grid — B82's rising drill, B9's back stack, B96's tiers and B103's floor — and waives nothing)
+
+**Source:** issue #212 (owner), 2026-09-16: "Yes it dies in tablet arrangement too. If there is a left rail already showing the all boards menu then there's no reason for it to exist as an all button in the parking lot too." — https://github.com/AlastairZeved/TheBoards/issues/212#issuecomment-5703415803
+
+**The ruling, applied.** One sentence kills the tablet carve-out. B96 put
+the pane in the tablet arrangement, so on tablet the rail is already
+showing the all-boards menu — the tab is the second door B100 closed on
+desktop, and the correction is the same one, one tier wider. Four
+consequences, no more:
+
+1. **The hide widens.** The All tab's retirement selector moves from
+   `html.desktop` to `html.wide` (B96's tier as retuned by B103: desktop
+   ∪ tablet). The left board rail is the one All-Boards surface on wide —
+   on tablet from behind B118's collapsed face, one tap away, exactly as
+   on desktop. Wide's board row is **two tabs** (Export · Import), mobile
+   keeps its four.
+2. **The calendar's second door closes with it.** The expanded panel's
+   All Boards control (`#cal-boards`, guarded `isDesktop` since B100)
+   retires on tablet the same way — the guard widens to `isWide` — or it
+   would become the second door the ruling just closed. The panel's row
+   stays **Back + Export** on wide.
+3. **The picker is mobile-only.** B74's lot-grid picker survives below
+   744px: mobile has no left rail, so the tab stays mobile's only entry
+   into the grid. B74 stands for mobile; B100's carve-out dies in its
+   tablet clause only.
+4. **Mobile behavior otherwise untouched.** The four-tab row, the grid,
+   the drill, the back stack — nothing mobile reads changes.
