@@ -665,10 +665,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is todo-boards-v63 — the bump that ships the #168 calendar palette',
-    /const CACHE = 'todo-boards-v63';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v63, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v63';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is todo-boards-v64 — the bump that re-arms the rail on a reflip (issue #213)',
+    /const CACHE = 'todo-boards-v64';/.test(sw), (sw.match(/todo-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v64, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v64';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('TABLET_MQ is the B103 one-leg width floor: min-width 744px, orientation-blind',
     /window\.matchMedia\('\(min-width: 744px\)'\)/.test(app),
