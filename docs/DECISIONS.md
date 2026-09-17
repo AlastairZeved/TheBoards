@@ -4915,3 +4915,36 @@ plumbing are the implementation card's work, gated behind this ruling's merge.
 
 **The record.** Docs-only on this card. No CACHE bump: docs-only changes do
 not redeploy (`paths-ignore: '**/*.md'`).
+
+
+### B125. The app's framing is restricted to `https://alastairzeved.com` (plus same-origin embedding) by a JS frame-guard that blanks the page on denial — provisional, accepted as a ceiling pending a host that can send real response headers (Zezed site issue #5, the owner's ruling of record: https://github.com/AlastairZeved/AlastairZeved/issues/5#issuecomment-5720520836; keeps §3.2's no-backend law — the guard is client-side JS, not a proxy or new host; waives nothing)
+
+**Source:** issue #5 comment 5720520836 (owner ruling of record, transcribed verbatim): "fan out fixes for #4 and #5 as well as a one-line frame-ancestors 'self' https://alastairzeved.com on the app side with QA checks behind each update." — https://github.com/AlastairZeved/AlastairZeved/issues/5#issuecomment-5720520836
+
+**The ruling.** The owner's sentence names the policy: the app may be framed
+only by `https://alastairzeved.com` (the exact origin — scheme plus host, no
+path) and by same-origin embedding; the allow-list is exactly that. Denial
+blanks the document — no content rendered, no interaction — it does not
+redirect. The guard runs at boot, before first paint of interactive UI, and is
+inert when not embedded (`window.top === window.self` → no-op).
+
+**Delivery constraint (recorded, part of the ruling).** The app hosts on
+GitHub Pages, which cannot send custom response headers, and `frame-ancestors`
+is ignored inside a `<meta>` CSP — so the owner chose a JS frame-guard
+(`window.location.ancestorOrigins`: allow `https://alastairzeved.com` plus
+same-origin, blank the page otherwise) as the PROVISIONAL mechanism, explicitly
+accepted as a CEILING pending a host with real header support, where the
+one-line `frame-ancestors 'self' https://alastairzeved.com` header replaces it.
+In browsers that cannot expose the embedding origin (Safari, Firefox —
+`ancestorOrigins` is Chromium-only) the guard default-ALLOWS so the site's demo
+embed keeps working; that default-allow is part of the ruling, not a worker
+shortcut.
+
+**Implementation consequences (derivations, not new owner words).** QA checks
+sit behind each update to the guard, per the ruling's own clause. The exact
+blanking mechanism (document body clearing vs. `document.write` of an empty
+document) and guard placement in boot order are the implementation card's work,
+gated behind this ruling's merge.
+
+**The record.** Docs-only on this card. No CACHE bump: docs-only changes do
+not redeploy (`paths-ignore: '**/*.md'`).
