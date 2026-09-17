@@ -67,10 +67,10 @@ jobs:
       - name: Verify the deployed service worker is this commit's
         run: |
           url="${{ steps.deploy.outputs.page_url }}"
-          expected=$(grep -oE "(zeved-boards|todo-boards)-v[0-9]*" sw.js | head -1)
+          expected=$(grep -oE "(zezed-boards|zeved-boards|todo-boards)-v[0-9]*" sw.js | head -1)
           echo "expecting $expected at ${url}sw.js"
           for i in 1 2 3 4 5; do
-            served=$(curl -sf "${url}sw.js" | grep -oE "(zeved-boards|todo-boards)-v[0-9]*" | head -1 || true)
+            served=$(curl -sf "${url}sw.js" | grep -oE "(zezed-boards|zeved-boards|todo-boards)-v[0-9]*" | head -1 || true)
             [ "$served" = "$expected" ] && echo "serving $served" && exit 0
             echo "attempt $i: serving '${served:-<nothing>}', retrying in 15s"
             sleep 15

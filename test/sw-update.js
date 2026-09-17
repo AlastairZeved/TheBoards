@@ -176,7 +176,7 @@ async function launchUntil(page, pred, max = 4) {
     // Read the shipped name rather than restating it, so a bump does not need an
     // edit here — the point is that the cache the app declares is the live one.
     const CACHE = (fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8')
-      .match(/(?:zeved-boards|todo-boards)-v\d+/) || [''])[0];
+      .match(/(?:zezed-boards|zeved-boards|todo-boards)-v\d+/) || [''])[0];
     ok('cache is ' + CACHE, keys.includes(CACHE), JSON.stringify(keys));
     // The old cache may briefly outlive its own activate: the outgoing worker keeps
     // serving the page until the new one claims it, and its runtime-cache path can re-create the
