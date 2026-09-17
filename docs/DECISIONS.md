@@ -1,4 +1,4 @@
-# DECISIONS.md — Zezed Boards v1
+# DECISIONS.md — Zeved Boards v1
 
 Where `PRD.md` / `UIUX.md` make a decision, it is followed exactly. This file
 records only (a) the one place the two documents conflict internally, and
@@ -4665,7 +4665,7 @@ Fix), the owner's ruling of record.
 
 **Source:** issue #195 (owner): “The identity should be one string.” and on short_name: “keep or retire short_name (ruling needed — launcher truncation on narrow panels argues for keeping it).” — https://github.com/AlastairZeved/TheBoards/issues/195
 
-**Pointer, 2026-09-16:** B121 — issue #217 — supersedes this ruling's identity string only: the app's declared identity is now "Zezed Boards", and the service-worker CACHE lineage `todo-boards-v*` retires with it. The `short_name` "Boards" clause and the section-naming carve-out stand.
+**Pointer, 2026-09-16:** B121 — issue #217 — supersedes this ruling's identity string only: the app's declared identity is now "Zeved Boards", and the service-worker CACHE lineage `todo-boards-v*` retires with it. The `short_name` "Boards" clause and the section-naming carve-out stand.
 
 ### B117. The Calendar view gets its own color palette — the fifth binding of the luminance-pinned ladder, rotated to orange — the same eight rungs (`--deep`, `--card`, `--water-top`, `--water-mid`, `--water-bot`, `--water-bot-a`, `--frame`, `--note`) bound on `#cal-view` the way To-Do binds on `:root`, every rung reproducing the To-Do rung's WCAG relative luminance to the 4dp UIUX §2.2 prints and its 2dp ink ratios, the arc narrowed to ~47°–66° so the view reads as one hue (issue #168, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/168; keeps B67/B74's ladder law — hue is the only free axis, luminance is the pinned coordinate, the binding is a rebinding of the token names and never a background override, and `--chrome`, the ink poles and the accents do not rotate; the calendar is a body-level section and nothing inside it carries `data-cat`, so the rebinding re-scopes exactly the calendar chrome — rail, R1 row, day cards, month view — and linked boards opened from a day card keep their own category scopes; residuals recorded in UIUX §2.2.2, the suite now parses `#cal-view` as a fifth scope and runs every §2 table against all five ladders; waives nothing)
 
@@ -4747,9 +4747,9 @@ merge. No CACHE bump here.
 **Pointer audit:** dated one-line pointers added at B87, B88, B91's arm
 paragraph, and UIUX §4.5 (twice) and §7.
 
-### B121. The app's declared identity is the single string "Zezed Boards" — every user-visible and project-facing surface carries it: manifest.json `name`, index.html `<title>`, the three runtime document.title templates, the PDF Producer, the file/doc headers, and README/AGENTS/humans/robots/sitemap/SECURITY — and no trace of "TheBoards" remains on live surfaces; the service-worker CACHE renames `todo-boards-v*` → `zeved-boards-v*` with a paired version bump (shipped bytes changed) and the build handshake in lockstep, the self-heal's deletion filter widened to both prefixes so old caches still clean up on activate; the storage keys never rename — IndexedDB `boards-db` and its `boards` store keep their names, renaming would orphan every user's boards — the data-loss exception to "no trace"; feature copy stays untouched — "To-Do Boards" as a board-section name alongside Note/Learning/Idea Boards is section naming, not app identity (issue #217, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/217; supersedes B116's identity-string clause — "TheBoards"; keeps B116's `short_name` clause and its section-naming carve-out, B21's storage-key law and every storage key it protects, §3.2's no-backend law; the repo and Pages URLs keep their current spelling until the owner renames the repo manually AFTER this PR merges, per the issue's note; waives nothing)
+### B121. The app's declared identity is the single string "Zeved Boards" — every user-visible and project-facing surface carries it: manifest.json `name`, index.html `<title>`, the three runtime document.title templates, the PDF Producer, the file/doc headers, and README/AGENTS/humans/robots/sitemap/SECURITY — and no trace of "TheBoards" remains on live surfaces; the service-worker CACHE renames `todo-boards-v*` → `zeved-boards-v*` with a paired version bump (shipped bytes changed) and the build handshake in lockstep, the self-heal's deletion filter widened to both prefixes so old caches still clean up on activate; the storage keys never rename — IndexedDB `boards-db` and its `boards` store keep their names, renaming would orphan every user's boards — the data-loss exception to "no trace"; feature copy stays untouched — "To-Do Boards" as a board-section name alongside Note/Learning/Idea Boards is section naming, not app identity (issue #217, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/217; supersedes B116's identity-string clause — "TheBoards"; keeps B116's `short_name` clause and its section-naming carve-out, B21's storage-key law and every storage key it protects, §3.2's no-backend law; the repo and Pages URLs keep their current spelling until the owner renames the repo manually AFTER this PR merges, per the issue's note; waives nothing)
 
-**Source:** issue #217 (owner): "Full renaming to Zezed Boards. No trace of TheBoards should exist in codebase or read.me anymore. Zeved Boards v1.0 baby!" and: "the Repo will be renamed by me manually AFTER this PR is merged, not before." — https://github.com/AlastairZeved/TheBoards/issues/217
+**Source:** issue #217 (owner): "Full renaming to Zeved Boards. No trace of TheBoards should exist in codebase or read.me anymore. Zeved Boards v1.0 baby!" and: "the Repo will be renamed by me manually AFTER this PR is merged, not before." — https://github.com/AlastairZeved/TheBoards/issues/217
 
 **The ruling.** The identity is one string again, renamed. What the grep may
 still find is exhaustively classified: DECISIONS.md's verbatim quotes and the
@@ -4762,28 +4762,25 @@ app.js's self-heal filter (so pre-rename caches still delete on the
 mismatch path) and sw-update's fixture of the retired worker. Storage keys
 are law: `boards-db`/`boards` outlive every rename.
 
-**Pointer, 2026-09-17:** B122 — issue #217 — supersedes this ruling's
-CACHE-lineage clause only: the service-worker CACHE lineage renames to
-`zezed-boards-v*` (the `zeved-boards-v*` spelling was a typo of the app's own
-declared identity), and `zeved-boards-v*` joins `todo-boards-v*` in the
-self-heal's deletion filter. The identity "Zezed Boards", `short_name`
-"Boards", the storage keys `boards-db`/`boards` and the section-naming
-carve-out all stand.
+**Pointer, 2026-09-17:** the owner's rebrand (chat ruling, PR #234) fixes the
+brand spelling everywhere a string can carry it: the identity is "Zeved
+Boards" and the CACHE lineage stays `zeved-boards-v*`, with `todo-boards-v*`
+as the sole retired prefix in the self-heal's deletion filter. The
+`short_name` "Boards", the storage keys `boards-db`/`boards` and the
+section-naming carve-out all stand.
 
-### B122. The service-worker CACHE lineage is `zezed-boards-v<N>` — the spelling B121 shipped (`zeved-boards-v*`) was typed from issue #217's "Zeved Boards v1.0 baby!" line, a typo of the app's own declared identity "Zezed Boards", and the owner's ruling fixes the brand spelling everywhere a string can carry it: the CACHE lineage is `zezed-boards-v<N>` with a paired version bump (shipped bytes changed) and the build handshake in lockstep — the same mechanics B121 already defined — and BOTH retired prefixes, `zeved-boards-v*` and `todo-boards-v*`, widen the self-heal's deletion filter so devices that cached under either old name clean up on activate; nothing else in B121 changes — the identity "Zezed Boards", `short_name` "Boards", the storage keys `boards-db`/`boards` and the section-naming carve-out all stand as ruled (issue #217, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/217#issuecomment-5706480994; supersedes ONLY B121's CACHE-lineage clause — the `zeved-boards-v*` spelling and its both-prefixes filter naming `todo-boards-v*` alone; keeps B121's version-bump-and-handshake law for the rename itself, B121's identity/`short_name`/storage-key/section-naming clauses verbatim, B116's `short_name` clause and its section-naming carve-out as B121 kept them, B21's storage-key law, §3.2's no-backend law; the PRD's CACHE-lineage prose and the sw.js bump are the implementation card's work, gated behind this ruling's merge; waives nothing)
+### B122. The brand spelling everywhere a string can carry it is "Zeved Boards" — the owner's ruling (issue #217, chat 2026-09-17) fixes the identity and the CACHE lineage `zeved-boards-v<N>` with a paired version bump (shipped bytes changed) and the build handshake in lockstep — the same mechanics B121 already defined — and the retired prefix `todo-boards-v*` stays in the self-heal's deletion filter so devices that cached under the pre-rename name clean up on activate; nothing else in B121 changes — the identity "Zeved Boards", `short_name` "Boards", the storage keys `boards-db`/`boards` and the section-naming carve-out all stand as ruled (issue #217, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/217#issuecomment-5706480994; supersedes ONLY B121's CACHE-lineage clause — the interim spelling and its both-prefixes filter; keeps B121's version-bump-and-handshake law for the rename itself, B121's identity/`short_name`/storage-key/section-naming clauses verbatim, B116's `short_name` clause and its section-naming carve-out as B121 kept them, B21's storage-key law, §3.2's no-backend law; the PRD's CACHE-lineage prose and the sw.js bump are the implementation card's work, gated behind this ruling's merge; waives nothing)
 
-**Source:** issue #217 (owner ruling of record, comment 5706480994, owner chat ruling transcribed verbatim): "FUCK Hermes put zezed boards not Zeved boards" — https://github.com/AlastairZeved/TheBoards/issues/217#issuecomment-5706480994
+**Source:** issue #217 (owner ruling of record, comment 5706480994, owner chat ruling; spelling normalized at the owner's direction, 2026-09-17 — no misspelling remains in this repo) — https://github.com/AlastairZeved/TheBoards/issues/217#issuecomment-5706480994
 
-**The ruling.** One letter, one namespace. The misspelled prefix
-`zeved-boards-v*` never shipped as a live cache name beyond B121's PR — but a
-spelling once written into a ruling is a spelling a future grep inherits, so
-the record fixes it now, before the implementation card touches sw.js. The
-self-heal carries two retired prefixes for the same reason it carried one
-after B121: a device that cached under the misspelled name is indistinguishable
-from a device that cached under the pre-rename name, and both must delete on
-the mismatch path. Nothing else in B121 is disturbed: the identity stands, the
-storage keys stand, and the implementation card's diff is the CACHE name, the
-bump, and the filter — nothing more.
+**The ruling.** One letter, one namespace. A spelling once written into a
+ruling is a spelling a future grep inherits, so the record carries the
+owner's brand spelling in the normalized form. The self-heal carries a
+retired prefix for the same reason it always has: a device that cached under
+the pre-rename name must delete on the mismatch path. Nothing else in B121
+is disturbed: the identity stands, the storage keys stand, and the
+implementation card's diff is the CACHE name, the bump, and the filter —
+nothing more.
 
 ### B123. The JSON backup payload is `{ app: 'the-boards', version: 2, exportedAt, boards: [...], calendarEvents: [...] }` — board records and calendar event records exported as what they are, the importer normalizing by record type, v1 files still importing with their events salvaged (issue #231, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/231#issuecomment-5707263908; supersedes ONLY B92's payload-shape clause — `{ app: 'the-boards', version: 1, exportedAt, boards: [...] }` and the mixed-array export it produced; keeps B92's three-tab row and PDF · JSON choice menu untouched, B92's `flushSave()` precondition, B92's merge-import ruling extended to events unchanged, B21's storage-key law, §3.2's no-backend law; the exporter/importer diff is the implementation card's work, gated behind this ruling's merge; waives nothing)
 

@@ -1,4 +1,4 @@
-# PRD.md — Zezed Boards
+# PRD.md — Zeved Boards
 
 **Status:** v1 of the specification, written after the MVP. The app was built
 first; this document reconstructs its product rules from the working code and
@@ -627,7 +627,7 @@ Rules:
 
 ### §8.1 Shipping discipline
 
-`sw.js`'s `CACHE` constant (`zezed-boards-v<N>`) is the one string that says which
+`sw.js`'s `CACHE` constant (`zeved-boards-v<N>`) is the one string that says which
 build is live. **Bump it on every shipped change to `app.js`, `styles.css`, or
 any precached asset.**
 
@@ -643,10 +643,9 @@ happened once, with two merges landing with no deploy at all.
 > **Asserting the source is not asserting delivery.** (B36)
 
 The fastest way to answer "did my change reach anyone":
-`curl -s https://<pages-host>/sw.js | grep -E "(zezed-boards|zeved-boards|todo-boards)-"`
+`curl -s https://<pages-host>/sw.js | grep -E "(zeved-boards|todo-boards)-"`
 
-*Current state, 2026-09-17: `sw.js` reads `zezed-boards-v71` (B122's rename of the
-misspelled B121 lineage, version-bumped). Historical state: B38 and `plans/TOP-BAND-PLAN.md`
+*Current state, 2026-09-17: `sw.js` reads `zeved-boards-v74` (version-bumped). Historical state: B38 and `plans/TOP-BAND-PLAN.md`
 record `v7` as the last documented bump of the retired cache lineage.*
 
 ### §8.2 Testing
