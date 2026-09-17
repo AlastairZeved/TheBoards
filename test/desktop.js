@@ -1700,7 +1700,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.waitForTimeout(500);
     const gone = await page.evaluate(() => ({
       allTab: getComputedStyle(document.getElementById('action-boards')).display === 'none',
-      calBoards: getComputedStyle(document.getElementById('cal-boards')).display === 'none',
+      calBoards: !document.getElementById('cal-boards'),
       listView: document.getElementById('list-view').hidden &&
         getComputedStyle(document.getElementById('list-view')).display === 'none',
       lotMenu: document.getElementById('lot-menu').hidden,
@@ -1709,7 +1709,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       pager: (() => { const p = document.querySelector('#pane-cards .board-cat[data-cat="unsorted"] .cat-pages');
                       return p && /^1\//.test(p.textContent); })(),
     }));
-    ok('the board All tab and the calendar All button are both display:none (B100)',
+    ok('the board All tab is display:none and the calendar All button is gone entirely (B100; B124 removed it, issue #237)',
        gone.allTab && gone.calBoards, JSON.stringify([gone.allTab, gone.calBoards]));
     ok('#list-view and the lot-grid are both closed — no All-boards surface, none summoned',
        gone.listView && gone.lotMenu, JSON.stringify([gone.listView, gone.lotMenu]));
@@ -2213,18 +2213,13 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
          return btns.length === 2 && /Export/.test(btns[0].textContent) &&
            /Import/.test(btns[1].textContent);
        }));
-    // The calendar panel's All Boards control is inert on wide: the click
-    // guard returns before any pushState, so no {v:'list'} lands and the
-    // #list-view drill never shows.
-    ok("#cal-boards's click is inert on tablet — the guard widened to isWide (B119)",
-       await page.evaluate(async () => {
-         const before = history.length;
-         document.getElementById('cal-boards').click();
-         await new Promise(r => setTimeout(r, 200));
-         return history.length === before &&
-           document.getElementById('list-view').hidden &&
-           getComputedStyle(document.getElementById('list-view')).display === 'none';
-       }));
+    // The calendar panel's All Boards control is gone entirely (B124, issue
+    // #237): no element, no click, no {v:'list'} push — the drill never shows.
+    ok("the calendar's All Boards control is gone on tablet (B119's rail carve-out stands; B124 removed it, issue #237)",
+       await page.evaluate(() =>
+         !document.getElementById('cal-boards') &&
+         document.getElementById('list-view').hidden &&
+         getComputedStyle(document.getElementById('list-view')).display === 'none'));
     await ctx.close();
 
     // Mobile fixture: below 744px the tab stays — mobile's entry into the

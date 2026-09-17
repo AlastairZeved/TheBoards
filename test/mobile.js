@@ -749,16 +749,16 @@ async function openCat(page, cat) {
         fg.tablet && fg.wide && fg.paneW === 40 && fg.calTabGone && fg.allTabGone && fg.calRailShown,
         JSON.stringify(fg));
       // B119: the picker has no door on tablet — the tab is retired and the
-      // calendar panel's #cal-boards is guarded inert on wide.
-      await fold.page.evaluate(() => document.getElementById('cal-boards').click());
+      // calendar's All-boards control is gone entirely (B124, issue #237).
       await fold.page.waitForTimeout(300);
       const noDoor = await fold.page.evaluate(() => ({
+        boardsGone: !document.getElementById('cal-boards'),
         pickerClosed: document.getElementById('lot-menu').hidden &&
           !document.getElementById('lot').classList.contains('menu-open'),
         listView: document.getElementById('list-view').hidden,
       }));
-      ok(`${w}x${h}: the picker has no door on tablet (B119) — #cal-boards is inert, #list-view stays dark`,
-        noDoor.pickerClosed && noDoor.listView, JSON.stringify(noDoor));
+      ok(`${w}x${h}: the picker has no door on tablet (B119) — the calendar's All-boards control is gone (B124, issue #237), #list-view stays dark`,
+        noDoor.boardsGone && noDoor.pickerClosed && noDoor.listView, JSON.stringify(noDoor));
       ok(`${w}x${h} no page errors`, fold.errors.length === 0, fold.errors.join(' | '));
       await fold.ctx.close();
     }
@@ -811,16 +811,16 @@ async function openCat(page, cat) {
   {
     const doorTab = await page.evaluate(() =>
       getComputedStyle(document.getElementById('action-boards')).display === 'none');
-    await page.evaluate(() => document.getElementById('cal-boards').click());
     await page.waitForTimeout(300);
     const shut = await page.evaluate(() => ({
+      boardsGone: !document.getElementById('cal-boards'),
       pickerClosed: document.getElementById('lot-menu').hidden &&
         !document.getElementById('lot').classList.contains('menu-open'),
       listView: document.getElementById('list-view').hidden,
     }));
     ok('the All tab is display:none on tablet — no door on the board (B119)', doorTab);
-    ok('#cal-boards is inert on tablet — the picker never opens, #list-view stays dark (B119)',
-       shut.pickerClosed && shut.listView, JSON.stringify(shut));
+    ok("the calendar's All-boards control is gone on tablet — the picker never opens, #list-view stays dark (B119; B124 removed it, issue #237)",
+       shut.boardsGone && shut.pickerClosed && shut.listView, JSON.stringify(shut));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
@@ -2451,7 +2451,7 @@ async function openCat(page, cat) {
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(400);
     const geo = await page.evaluate(() => {
-      const ids = ['cal-back', 'cal-boards', 'cal-export'];
+      const ids = ['cal-back'];   // B124 (issue #237): the row is Back alone
       return ids.map((id) => {
         const b = document.getElementById(id);
         const r = b.getBoundingClientRect();

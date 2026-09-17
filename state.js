@@ -152,7 +152,7 @@ export const COPY = {
   // calendar; while the calendar is showing, the day-stack's Back states the
   // return, and the tab is not visible there.
   calBoardTab: 'All', calendar: 'Calendar',
-  calToday: 'Today', calBack: 'Back', calAllBoards: 'All Boards', calExport: 'Export',
+  calToday: 'Today', calBack: 'Back',
   paneCollapse: 'Collapse',   // the expanded All-Boards rail's arrow (issue #211, B118)
   // A day card's header: "Today" then the long date; the future days read
   // weekday + MM/DD (the mockups' own voice).
@@ -435,8 +435,6 @@ export const el = {
   calStack: document.getElementById('cal-stack'),
   calTop: document.getElementById('cal-top'),
   calBack: document.getElementById('cal-back'),
-  calBoards: document.getElementById('cal-boards'),
-  calExport: document.getElementById('cal-export'),
   calMonth: document.getElementById('cal-month'),       // the month view's ground (issue #191)
   actionCalendar: document.getElementById('action-calendar'), // 4th board-action tab (R7.2)
 };

@@ -230,8 +230,6 @@ export function registerMenus() {
   fillBoardAction(el.actionCalendar, GLYPH.calendar, COPY.calendar);
 
   fillBoardAction(el.calBack, GLYPH.calBack, COPY.calBack);
-  fillBoardAction(el.calBoards, GLYPH.boards, COPY.calAllBoards);
-  fillBoardAction(el.calExport, GLYPH.export, COPY.calExport);
   fillBoardAction(el.paneCollapse, GLYPH.paneCollapse, COPY.paneCollapse);  // B118: the expanded pane's arrow
 
   el.actionBoards.addEventListener('click', () => {
