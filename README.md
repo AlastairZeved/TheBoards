@@ -54,7 +54,7 @@ If you find a security issue, please open a
 [GitHub Security Advisory](https://github.com/AlastairZeved/TheBoards/security/advisories/new)
 rather than a public issue, so it can be assessed before details are public.
 Include steps to reproduce and the affected version — the `sw.js` `CACHE`
-string, e.g. `zeved-boards-v69`.
+string, e.g. `zezed-boards-v71`.
 
 ## Background
 
