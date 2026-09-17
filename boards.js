@@ -2,7 +2,7 @@
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { CAT_SEC_GAP, CE, COPY, GLYPH, LEAVE_MS, LIST_CARD_COLS, LIST_CARD_H, LIST_CAT_ROW } from './state.js';
 import { LONGPRESS_MS, MOVE_THRESHOLD, PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP, PANE_ROW_H, SWAP_MS, calBoardOf } from './state.js';
-import { calEventsOf, calKey, calWindow, el, ensureLinkedBoard, newBoardRecord, newCalEvent, state } from './state.js';
+import { calEventsOf, calKey, calWindow, el, ensureLinkedBoard, EMBED, histPush, newBoardRecord, newCalEvent, state } from './state.js';
 import { syncMirror, mirrorEventsOf } from './state.js';
 import { flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, saveTimer, scheduleSave } from './persistence.js';
 import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze, setPaneCollapsed } from './geometry.js';
@@ -545,6 +545,10 @@ async function openBoardById(id) {
 export let popping = false;
 export function returnToBoard() {
   if (popping) return;
+  // B124 embed: nothing was pushed, so there is nothing to pop — land on the
+  // board directly (exactly what the popstate handler would do) instead of
+  // popping the parent page's session history.
+  if (EMBED) { showBoardFromList(); return; }
   popping = true;
   const depth = (history.state && history.state.v === 'cat') ? 2 : 1;
   history.go(-depth);
@@ -703,7 +707,7 @@ export function goToList() {
   // the tab (mobile and tablet — desktop's tab is retired, the rail is its
   // all-boards surface). The grid opens over the lot without occluding the
   // tab, so its focus is not stranded and is kept.
-  history.pushState({ v: 'list' }, '');
+  histPush({ v: 'list' });             // B124 embed: replaceState — no parent-history entries
   showList();
 }
 /* Level 1 — the All-Boards picker (issue #112 / B74; issue #157 / B100): the
@@ -724,7 +728,7 @@ function showList() {
    dismissed as the drill screen takes over; the board's real lot returns when
    the whole stack pops back. */
 export function drillCat(cat) {
-  history.pushState({ v: 'cat', cat }, '');
+  histPush({ v: 'cat', cat });         // B124 embed: replaceState — no parent-history entries
   showCat(cat);
 }
 async function showCat(cat) {
@@ -815,7 +819,10 @@ async function showBoardFromList() {
                                    // screen-grammar branches (popstate's calOpen swallow,
                                    // applyMode's close, hideCal) that a pushed screen owns.
 
-function goCalBack() {
+export function goCalBack() {
+  // B124 embed: nothing was pushed, so there is nothing to pop — close the
+  // calendar directly (the popstate off-{v:'cal'} branch's act).
+  if (EMBED) { hideCal(); return; }
   history.back();                      // pop {v:'cal'} → the board (B9's route, visible)
 }
 

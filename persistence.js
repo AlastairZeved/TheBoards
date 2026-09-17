@@ -1,20 +1,29 @@
 /* --- 2. IndexedDB persistence -------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { HIT_FLOOR, SAVE_DEBOUNCE, state } from './state.js';
+import { HIT_FLOOR, SAVE_DEBOUNCE, EMBED, state } from './state.js';
 import { LEGACY_H, LOGICAL_H, LOGICAL_W } from './geometry.js';
 import { clamp, hideSaveError, showSaveError } from './interactions.js';
 
-const DB_NAME = 'boards-db', STORE = 'boards';
+// B124 embed: a throwaway namespace wiped before every open — the visitor's
+// real `boards-db` is never touched by the embed (separate name, not a rename).
+const DB_NAME = EMBED ? 'boards-db-embed' : 'boards-db', STORE = 'boards';
 
 function openDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' });
+    const open = () => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    if (!EMBED) { open(); return; }
+    // Embed wipe-at-boot: every reload is a clean slate. onblocked still opens —
+    // a stale tab holding the old DB must not wedge the fresh one.
+    const del = indexedDB.deleteDatabase(DB_NAME);
+    del.onsuccess = del.onerror = del.onblocked = open;
   });
 }
 const dbPromise = openDB();

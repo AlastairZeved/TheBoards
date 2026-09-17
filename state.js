@@ -253,6 +253,21 @@ export const TABLET_MQ = window.matchMedia('(min-width: 744px)');
 
 export const DESKTOP_MQ = window.matchMedia(
   '(min-width: 1024px) and (hover: hover) and (pointer: fine)');
+
+/* --- Embed mode (B124, Zezed site #2) -------------------------------------
+   ?embed=1&mode=desktop|mobile iframes a working preview for the site. Forced
+   view: mode=desktop/mobile pins the arrangement tier; unknown or absent mode
+   = natural matchMedia behavior. Every mode read flows through these consts +
+   the applyMode/state-init guards, so no call-site forks. */
+const EMBED_PARAMS = new URLSearchParams(location.search);
+export const EMBED = EMBED_PARAMS.get('embed') === '1';
+export const EMBED_MODE = EMBED &&
+  (EMBED_PARAMS.get('mode') === 'desktop' || EMBED_PARAMS.get('mode') === 'mobile')
+  ? EMBED_PARAMS.get('mode') : null;
+/* Embed never pushes history (B124): the parent page's session must not gain
+   iframe entries, so pushes become replaceState and pops are no-ops (the push
+   sites pair with pops — see boards.js returnToBoard/goCalBack). */
+export function histPush(s) { history[EMBED ? 'replaceState' : 'pushState'](s, ''); }
 // Shared geometry constants (issue #182): BAND_TOP/LINE/GAP drive both the screen's
 // bandRuleY (geometry) and the export's bandRuleYFor (export); LOT_HEAD/ROW/FLOOR/
 // MAX_FRAC drive the lot on screen and in the PDF. Both modules read them, so they
@@ -452,9 +467,10 @@ export const state = {
   // orchestrator) WRITES these and every region READS them — a cross-module
   // write, so they ride the carrier. A module entry cannot write an imported
   // bare `let` (imported bindings are read-only); state members it can.
-  isTablet: TABLET_MQ.matches,    // evaluated at load, like isDesktop below
-  isDesktop: DESKTOP_MQ.matches,
-  isWide: DESKTOP_MQ.matches || TABLET_MQ.matches,  // desktop ∪ tablet — the arrangement tier
+  isTablet: EMBED_MODE ? false : TABLET_MQ.matches,    // forced view in embed (B124); else load, like isDesktop below
+  isDesktop: EMBED_MODE ? EMBED_MODE === 'desktop' : DESKTOP_MQ.matches,
+  isWide: EMBED_MODE ? EMBED_MODE === 'desktop'
+                     : DESKTOP_MQ.matches || TABLET_MQ.matches,  // desktop ∪ tablet — the arrangement tier
   editVVFloor: Infinity,  // smallest visual-viewport height seen this edit (keyboard fully up)
   layoutDeferred: false,
   menuInvoker: null,      // desktop contextmenu: focus returns here on close
