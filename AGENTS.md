@@ -6,7 +6,7 @@ governing records instead.
 
 ## What this is
 
-Zezed Boards — a spatial, offline-first PWA. A fixed, bounded page where any
+Zeved Boards — a spatial, offline-first PWA. A fixed, bounded page where any
 thought becomes a framed, movable, scalable note the instant it is typed;
 structure is asserted *after* capture, by where a note sits and how big it is.
 Vanilla HTML/CSS/JS. **No frameworks, no build step, no package manager, no
@@ -95,7 +95,7 @@ block is that document's table of contents.
 
 ## Shipping discipline (every `app.js`/`styles.css` change)
 
-Bump `sw.js`'s `CACHE` constant (`zezed-boards-v<N>`) — it is the one string
+Bump `sw.js`'s `CACHE` constant (`zeved-boards-v<N>`) — it is the one string
 that says which build is live. `test/sw-update.js` pins it, and
 `.github/workflows/pages.yml` curls the deployed `sw.js` to assert it matches
 the commit: a silent deploy failure is treated as a shipped bug, not a
