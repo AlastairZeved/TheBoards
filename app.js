@@ -11,6 +11,26 @@ import { BOARD_CATS, GRID_ORDER, catOf, catOrder, catPageCap, catView, drillCat,
 import { checkDayRoll, makeCalDay, newBoardIn, openBoardObj, popping, registerBoards, renderCal, renderPane, returnToBoard, showCalRail, startCalLineEdit } from './boards.js';
 import { swapBoard, swapping, syncDateMirror, collapsePane } from './boards.js';
 
+/* --- B125 frame-guard -----------------------------------------------------
+   The app may be framed only by its own origin or https://alastairzeved.com
+   (the site's demo embed). Runs before boot(): on denial the document is
+   blanked and the module body aborts, so no IndexedDB is ever opened.
+   ancestorOrigins is Chromium-only; browsers without it default-ALLOW (B125 —
+   the owner's recorded ruling, not a shortcut). Origin compare is exact
+   scheme+host, never a string prefix. */
+function frameGuard() {
+  if (window.top === window.self) return;                 // not framed: inert
+  const origins = window.location.ancestorOrigins;        // DOMTokenList, Chromium only
+  if (!origins || origins.length === 0) return;           // B125: no API → default-allow
+  const allowed = ['https://alastairzeved.com', window.location.origin];
+  for (let i = 0; i < origins.length; i++) {
+    if (allowed.indexOf(origins[i]) !== -1) return;       // exact origin match
+  }
+  document.documentElement.textContent = '';              // blank, no redirect
+  throw new Error('frame-guard: framing origin not allowed (B125)');
+}
+frameGuard();
+
 // Test-observability bridge (issue #182): the black-box suites drive the page
 // through page.evaluate, which reads page globals. Module scope does not leak
 // to window, so the entry re-imports the observable surface and re-exposes it
@@ -230,7 +250,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v76';
+const OWN_BUILD = 'v77';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {
