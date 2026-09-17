@@ -3748,6 +3748,9 @@ a JSON round-trip (export → wipe storage → import → restored), the bad-fil
 path, and the anchor long-press/right-click asserting nothing opens.
 
 **Source:** issue #140 (owner): “Clicking existing Export button above the parking lot should now open a menu with two options: ‘PDF’ & ‘JSON’. Add an ‘Import’ button to the right of the ‘Export’ button” — https://github.com/AlastairZeved/TheBoards/issues/140
+
+**Pointer, 2026-09-16:** B123 — issue #231 — supersedes ONLY this ruling's JSON payload-shape clause: the backup payload becomes `version: 2` with the calendar event records in their own top-level `calendarEvents` array (`boards` carrying board records only), the importer normalizing by record type and v1 files still importing with their events salvaged. The three-tab row, the PDF · JSON choice menu, the `flushSave()` precondition, the retired anchor menu, and B92's merge-import ruling — extended to events unchanged — all stand.
+
 ### B93. Legacy-frame adoption — a one-time boot migration writes every pre-B32 note onto the single B64 path, retiring B32's two-path rescue (issue #141; waives B32/B21's "stored `y` is never mutated" for this one deliberate write alone — incidental clamps remain as forbidden as ever)
 
 B32's admission — a pre-B32 note's authoring height is device-dependent and
@@ -4781,3 +4784,52 @@ from a device that cached under the pre-rename name, and both must delete on
 the mismatch path. Nothing else in B121 is disturbed: the identity stands, the
 storage keys stand, and the implementation card's diff is the CACHE name, the
 bump, and the filter — nothing more.
+
+### B123. The JSON backup payload is `{ app: 'the-boards', version: 2, exportedAt, boards: [...], calendarEvents: [...] }` — board records and calendar event records exported as what they are, the importer normalizing by record type, v1 files still importing with their events salvaged (issue #231, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/231#issuecomment-5707263908; supersedes ONLY B92's payload-shape clause — `{ app: 'the-boards', version: 1, exportedAt, boards: [...] }` and the mixed-array export it produced; keeps B92's three-tab row and PDF · JSON choice menu untouched, B92's `flushSave()` precondition, B92's merge-import ruling extended to events unchanged, B21's storage-key law, §3.2's no-backend law; the exporter/importer diff is the implementation card's work, gated behind this ruling's merge; waives nothing)
+
+**Source:** issue #231 (owner ruling of record, comment 5707263908, owner chat ruling transcribed verbatim): "Fan it out" — https://github.com/AlastairZeved/TheBoards/issues/231#issuecomment-5707263908
+
+**The ruling.** The IndexedDB store `boards` holds two record types and always
+has — board records and calendar event records (`{id, date, text, state,
+createdAt}`, written into the same store by `addCalEvent`) — and B92's payload
+shape called them one thing. Issue #231's audit priced the lie: `exportAllJson`
+dumps `idbGetAll()` raw into `payload.boards`, so the events ride in an array
+labeled `boards`, and `normalizeImportedBoard` then normalizes each one to
+nothing and drops it — restoring a backup silently amputated the calendar, on
+the one operation whose purpose is not losing data. The record corrects the
+label, not the storage: **the payload names the two record types what they
+are.** `exportAllJson` writes `{ app: 'the-boards', version: 2, exportedAt,
+boards: [...], calendarEvents: [...] }` — board records and event records each
+exported verbatim as stored, no invented fields, and §10.6's full-fidelity
+claim ("nothing is projected, nothing is swept") true of both types for the
+first time. B92's precondition stands unchanged: `flushSave()` first — the
+debounced-save staleness it answers applies to events exactly as to boards.
+
+**The importer normalizes by record type, and v1 files are salvaged.** A v2
+file reads `calendarEvents` directly. A v1 file — every backup already on
+someone's disk, including issue #231's reporter's 2026-09-16 file — carries
+the old mixed array, and `eventsOf` (boards.js, the existing named filter; the
+de-facto `b.title !== undefined` type test given a name, shared by importer
+and exporter as the issue directs) separates the flat event records from the
+boards before normalization. No v1 backup becomes unrestorable; the read-site
+defaulting idiom (PRD §4.1) applied to the store's second record type. Events
+enter storage through the same door boards do: coerced, not trusted — a backup
+has been OUT of the device — ids re-stamped when absent, the B8/B31 husk sweep
+at the door.
+
+**Merge-import semantics extend to events unchanged — B92's ruling, extended,
+not replaced.** An event whose `id` already exists is overwritten by the
+file's copy; new ids are added; every event the file never mentions the device
+keeps. The file is the truth for the ids it carries; the device keeps the
+rest — the same sentence B92 wrote for boards, now true of both record types.
+
+**What is kept.** B92's control chrome stands untouched — the three-tab row,
+Export's PDF · JSON choice menu, the retired anchor menu. B21's storage-key
+law stands: no key or store renames, the fix is a payload shape, not a
+migration. B92's merge-import ruling stands, extended to the new array.
+
+**The record.** Docs-only on this card — the exporter/importer diff (the
+payload version, the `calendarEvents` array, the type-aware normalize, the
+named `eventsOf` predicate shared by exporter and importer) is the
+implementation card's work, gated behind this ruling's merge. No CACHE bump
+here.
