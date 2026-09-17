@@ -1,6 +1,6 @@
 /* Service worker — cache-first app shell, fully offline (PRD §3 / §6.8).
    Version-stamped cache; old caches are cleaned on activate. */
-const CACHE = 'zeved-boards-v69';       // bump on every shipped app.js/styles.css change
+const CACHE = 'zeved-boards-v70';       // bump on every shipped app.js/styles.css change
 const ASSETS = [
   '.',
   'index.html',
@@ -21,6 +21,7 @@ const ASSETS = [
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/icon-512-maskable.png',
+  'icons/icon-192-light.png',
   'favicon.ico',
   'icons/favicon-16.png',
   'icons/favicon-32.png',
