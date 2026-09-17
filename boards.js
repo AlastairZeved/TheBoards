@@ -807,10 +807,10 @@ async function showBoardFromList() {
    The third screen. The 7-day window is computed at render (R4) — today at
    the top, lit; the week receding below it. Each date with events mirrors
    into its linked To-Do board (§1.7). The top row (R1) is the screen's
-   always-visible way off: Back (history.back(), B9's route made visible),
-   All Boards (the picker, calendar shrinking to fit — R1), Export (B92's
-   choice, PDF leaf = the 7-day reference sheet). The stack never scrolls —
-   it is a bounded page like every other surface. */
+ always-visible way off: Back alone (history.back(), B9's route made
+ visible; as amended by B124, issue #237 — Back sits directly above the
+ month view, All Boards via the picker/rail, Export elsewhere). The stack
+ never scrolls — it is a bounded page like every other surface. */
                                    // the rail is furniture, so it must never enter the
                                    // screen-grammar branches (popstate's calOpen swallow,
                                    // applyMode's close, hideCal) that a pushed screen owns.
@@ -1373,21 +1373,6 @@ export function registerBoards() {
     expandPane();
   });
   el.paneCollapse.addEventListener('click', collapsePane);
-  el.calBoards.addEventListener('click', (e) => {
-    if (state.isWide) return;                  // B100 on desktop, widened by B119: no All-Boards on wide — the rail is the all-boards surface
-    const r = e.currentTarget.getBoundingClientRect();
-    history.pushState({ v: 'list' }, '');
-    listOpen = true;
-    showList();
-  });
-  el.calExport.addEventListener('click', (e) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    buildMenu([
-      { label: COPY.exportPdf, glyph: GLYPH.export, action: () => commitAction(() => exportCalPdf()) },
-      { label: COPY.exportJson, glyph: GLYPH.boards, action: () => commitAction(exportAllJson) },
-    ], r.left, r.bottom);
-  });
-
   window.addEventListener('popstate', () => {
     popping = false;                     // the nav returnToBoard began has landed (B83)
     closeMenu();
