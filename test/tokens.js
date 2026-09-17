@@ -100,7 +100,7 @@ const T = {
   inkLight: '#f4f5f1', inkDark: '#031019',
   accentRestore: '#b6dee2', accentPage: '#6d9cb0', danger: '#E2A08C',
   highlight: '#F2D64B',   // the per-note highlight wash (UIUX §2.6.1, B71)
-  reminder: '#52c4e2',    // the per-note reminder glow (UIUX §2.6.2, B109)
+  reminder: '#e6c2c9',    // the Remind tab's pink identity fill + bloom (UIUX §2.6.2, B126)
   carried: '#E1BE26',     // the per-note carried status (UIUX §2.6.3, B110)
 };
 /* B67 (issue #96): the same ladder at two more hues, one per board type. Each
@@ -444,12 +444,12 @@ console.log('\n[5b] The highlight wash — value, dark-ink contrast, note-surfac
     lum(T.highlight) > 0.1788, String(r4(lum(T.highlight))));
 }
 
-console.log('\n[5c] The reminder glow — value, dark-ink contrast, clock placement (UIUX §2.6.2, B109)');
+console.log('\n[5c] The Remind tab pink — value, dark-ink contrast, clock placement (UIUX §2.6.2, B126)');
 {
   ok(`--reminder is ${T.reminder}`, (declared['--reminder'] || '').toLowerCase() === T.reminder.toLowerCase(),
     declared['--reminder']);
-  // It carries the note's dark ink at the published 9.48:1 (UIUX §2.6.2).
-  ok('--reminder with --ink-dark = 9.48', r2(contrast(T.reminder, T.inkDark)) === 9.48,
+  // It carries the note's dark ink at B126's published 11.84:1 (UIUX §2.6.2).
+  ok('--reminder with --ink-dark = 11.84', r2(contrast(T.reminder, T.inkDark)) === 11.84,
     String(r2(contrast(T.reminder, T.inkDark))));
   // A reminder is a NOTE component, not a chrome accent: it fills the active
   // clock on the note (UIUX §2.6.2 — the accent placement rule does not reach it).
@@ -604,12 +604,20 @@ console.log('\n[8b] The note toolbar minimum width — one number, JS and CSS ag
   const cssMin = Number((css.match(/\.note-text:not\(:empty\)\s*{[^}]*min-width:\s*(\d+)px/) || [])[1]);
   ok('NOTE_MIN_W is a real minimum, not the old 60', jsMin >= 120, String(jsMin));
   ok('the CSS .note-text min-width equals NOTE_MIN_W', jsMin === cssMin, `js=${jsMin} css=${cssMin}`);
-  // The row is three flat tabs (Copy re-homed to the note menu, B114), delete
-  // last in --danger as a fill (not accent text).
-  ok('the toolbar draws three tabs, delete in --danger fill',
-     /note-tb-complete/.test(app) && /note-tb-highlight/.test(app) &&
-     /note-tb-delete/.test(app) &&
-     /\.note-tb-delete\s*{[^}]*background:\s*var\(--danger\)/.test(css));
+  // The row is four flat tabs (Remind joined per issue #240), delete
+  // last in --danger as a fill (not accent text). Bite-proof (QA FAIL F2):
+  // read the makeNoteToolbar BODY and assert the ROW MEMBERSHIP — exactly
+  // four mk() tabs in the B126 order, the clock third with its aria-pressed.
+  // Literal-existence checks passed against the base three-tab source too
+  // ('note-clock' was the corner clock there); this cannot.
+  const tbFn = (app.match(/function makeNoteToolbar\([^)]*\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  const tabs = [...tbFn.matchAll(/mk\('([-\w]+)'/g)].map(m => m[1]);
+  ok('makeNoteToolbar draws exactly four tabs: Complete · Highlight · Remind · Delete (B126 order)',
+     JSON.stringify(tabs) === JSON.stringify(['note-tb-complete', 'note-tb-highlight', 'note-clock', 'note-tb-delete']),
+     JSON.stringify(tabs));
+  ok("the Remind tab is the clock: it sets aria-pressed (updateNoteToolbar mirrors it)",
+     /mk\('note-clock'[\s\S]*?aria-pressed/.test(tbFn), tbFn.slice(0, 80));
+  ok('delete keeps its --danger fill (§4.5)', /\.note-tb-delete\s*{[^}]*background:\s*var\(--danger\)/.test(css));
 }
 
 console.log('\n[9] The five colour sync points agree (PRD §9.5.1, B55)');
@@ -665,10 +673,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v77 — version bumped (shipped bytes changed)',
-    /const CACHE = 'zeved-boards-v77';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v77, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v77';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v78 — version bumped (shipped bytes changed)',
+    /const CACHE = 'zeved-boards-v78';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v78, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v78';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&

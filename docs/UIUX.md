@@ -569,20 +569,20 @@ retired with the Copy tab it filled (B114): the token is out of the suite.
 
 | Token | Value | Role | text on it (`--ink-dark`) | vs. the note families (hue) |
 |---|---|---|---|---|
-| `--reminder` | `#52c4e2` | a note the user has toggled a reminder on (the clock's active fill + bloom, §4.7) | 9.48:1 | water's own hue, lifted bright, vs. cool blue/green/violet |
+| `--reminder` | `#e6c2c9` | a note the user has toggled a reminder on (the Remind tab's active fill + bloom, §4.7; the pink identity fill, issue #240/B126) | 11.84:1 | the Learning ladder's `--note` rung — the pink the owner ruled |
 
 A reminder is **not an accent** — it belongs to the same class as the highlight
 wash (§2.6.1): a per-note appearance state the *user* asserts, sitting on the
 board at the user's command, so the accent placement rule does not reach it.
-It is **cool** by law (§2.6 keeps `--danger` the only warm hue; B107 retired
-the red past-due state and B104's yellow carried state is the carried
-indicator's, not this one) — the water's own hue (~197°) lifted bright, a
-saturation the note families' pastels never reach, so the separation is hue and
-chroma where the highlight's was hue and warmth. Like `--highlight` it does
+Since B126 (issue #240) it wears the **pink** the owner ruled for the active
+Remind tab: `#e6c2c9`, the Learning ladder's own `--note` rung (§2.2) — the
+exact luminance match (0.5962, 4dp) of the Note Boards violet `#cec6ed` the
+directive names, chosen like Highlight's fixed amber fill (§2.6.1, B85) so
+fill + glyph say WHICH action, never colour alone. Like `--highlight` it does
 **not** rotate with board type: a reminder means the same thing on every board.
-Luminance 0.4676, above the ink crossover, so the clock's dark glyph is correct
-on it. The glow is the bloom: a `box-shadow` of the token around the filled
-clock — never a second colour.
+Luminance 0.5962, above the ink crossover, so the tab's dark ink is correct on
+it (11.84:1 — B126's published law). The glow is the bloom: a `box-shadow` of
+the token around the filled tab — never a second colour.
 
 ### §2.6.3 The carried glow (B110)
 
@@ -1055,8 +1055,9 @@ desktop, and nowhere else.
 ### §4.5 The note's action toolbar
 
 *New in v2 (B84, issue #126); Copy re-homed to the note's long-press/right-click
-menu in B114 (issue #171).* A note's three actions — Complete/Restore ·
-Highlight · Delete — sit on a row the note wears, in the menu's order
+menu in B114 (issue #171); the Remind tab joined in issue #240 (B126).* A note's
+four actions — Complete/Restore ·
+Highlight · Remind · Delete — sit on a row the note wears, in the menu's order
 (§7): the destructive tab last, in `--danger`. It replaces the note long-press
 menu and the desktop right-click note menu; on desktop it also replaces the
 `#selection` overlay's own action buttons, which the overlay no longer carries
@@ -1064,7 +1065,7 @@ menu and the desktop right-click note menu; on desktop it also replaces the
 
 **A minimum note width.** `NOTE_MIN_W` is **132** — a real minimum *rendered*
 width, not only the wrap-cap floor it was at 60. It is the width that seats the
-three tabs, and one number carries three jobs so they cannot drift apart: the CSS
+row, and one number carries three jobs so they cannot drift apart: the CSS
 `min-width` on a non-empty `.note-text`, the wrap-cap floor (`noteMaxW`), and the
 drag/resize width floor. A note can never be *sized* narrower than its own row. An
 empty note is exempt (it keeps no frame, §6.2, and shows no row), so it stays free
@@ -1088,6 +1089,8 @@ Components and Requirements), not pills and not the `.sel-btn` raised control:
 .note-tb-btn svg   { width: 18px; height: 18px; }        /* the mark, grown from 16px (B86) */
 .note-tb-delete    { background: var(--danger); }        /* --danger fill carrying --ink-dark, 8.83:1 (§2.6) */
 .note-tb-highlight { background: var(--highlight); }     /* fixed amber identity fill (B85) */
+.note-clock        { /* the Remind tab (issue #240): .note-tb-btn metrics + this class; */
+                     /* active: --reminder fill + glow, §4.7 */ }
 ```
 
 The marks are `GLYPH`'s own drawn SVG (§13.3), each SVG `aria-hidden` with the
@@ -1097,7 +1100,7 @@ the note and is never wider than it. It sits **flush on the note's top edge**
 (`left: 0`, no `translateX`, B88), flipping to just inside the top edge near the
 sheet top where there is no room above (`reflectToolbarFlip`, whose `TB_ROW_H`
 threshold is now 32 for the gapless row). Each tab keeps a 44px-tall hit target
-expanded upward (§6, B7's decoupled-hit idiom) so a row of three never overlaps a
+expanded upward (§6, B7's decoupled-hit idiom) so a row of four never overlaps a
 neighbour. Focus wears the two-tone ring (§2.7).
 
 (2026-09-16: B120 — issue #173 — supersedes this paragraph's edge and anchor
@@ -1156,17 +1159,21 @@ because the export palette stays off `:root` (§15).
 **Copy.** `Link` (menu item); `Tap another note to link` / `Click another note to
 link` (the armed hint, mobile / desktop); `Linked` / `Unlinked` (the undo captions).
 
-### §4.7 The reminder clock and the surfaced echo (B109)
+### §4.7 The reminder clock and the surfaced echo (B109; the Remind tab, issue #240/B126)
 
-*New in v2 (issue #169, B104/B109).* The clock is the reminder's whole
-interface: a drawn dial mark (§13.3's discipline, in `GLYPH`) sitting
-bottom-right of **every** note card, resting in the note's own ink. One tap
+*New in v2 (issue #169, B104/B109); moved into the note toolbar per issue #240
+(B126).* The clock is the reminder's whole
+interface: a drawn dial mark (§13.3's discipline, in `GLYPH`) sitting as the
+note toolbar's third tab (§4.5 — Complete · Highlight · Remind · Delete),
+resting in the tab's own `--frame` ground — it is a tab now, not a floating ink
+mark, and reads as a button whether or not the reminder is on. One tap
 sets the reminder, one tap clears it — **no time picker, no dialog, no due
-time stored anywhere in the record** (B104). Active, it takes the `--reminder`
-fill (§2.6.2) with a bloom of the same token — the glow B104 rules — and its
+time stored anywhere in the record** (B104). Active, it takes the pink
+`--reminder` fill (§2.6.2 — `#e6c2c9`, the owner's ruling, issue #240/B126)
+with a bloom of the same token — the glow B104 rules — and its
 `aria-label` states the act the tap will perform (`Remind me` ⇄ `Remove
 reminder`), so the state never rides colour alone. An empty note keeps no
-frame (§6.2) and shows no clock.
+frame (§6.2) and shows no toolbar row — no clock with it.
 
 **The surfacing.** A note whose reminder is set renders an **echo** of itself
 on today's linked To-Do board (B95's species, `board.cal` = the today key) —
@@ -1183,7 +1190,9 @@ clearing its clock. The echo's long-press/right-click menu carries **Complete**
 and **Go to Board** (the source board, the plain swap route, B9) — Link is
 absent there, because it arms against records this board does not hold, and
 Copy is absent for the same stranding (B114): an echo has no record of its own
-to copy. The echo rides the same note toolbar as any note, B114's three tabs.
+to copy. The echo carries the Remind tab on its own one-tab row (issue #240),
+shown always — the echo engages like no other note, and the corner clock it
+replaced was always visible.
 Completing a reminder note just completes it: nothing recreates anything
 (recurring reminders stay open, B104/B107). Echoes are render-time references
 and do not travel into the PDF export (which draws board records, not echoes).

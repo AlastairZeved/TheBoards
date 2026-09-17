@@ -288,11 +288,11 @@ async function openCat(page, cat) {
     });
     ok('the first tap engages the note and shows its toolbar (B90)', tb.engaged && tb.visible, JSON.stringify(tb));
     ok('the first tap does not open the keyboard — no edit yet (B90)', !tb.editing);
-    // B43 order on the row (B84); Copy re-homed to the long-press menu (B114):
-    // Complete · Highlight · Delete.
-    ok('toolbar is Complete · Highlight · Delete', tb.labels.length === 3 &&
+    // B43 order on the row (B84); Copy re-homed to the long-press menu (B114);
+    // Remind joined per issue #240: Complete · Highlight · Remind · Delete.
+    ok('toolbar is Complete · Highlight · Remind · Delete', tb.labels.length === 4 &&
        /Complete/.test(tb.labels[0]) && /Highlight/.test(tb.labels[1]) &&
-       /Delete/.test(tb.labels[2]), JSON.stringify(tb.labels));
+       /Remind/.test(tb.labels[2]) && /Delete/.test(tb.labels[3]), JSON.stringify(tb.labels));
     ok('Delete is last and distinct — the --danger fill, not the frame fill',
        tb.lastIsDelete && tb.deleteBg !== tb.completeBg,
        JSON.stringify({ last: tb.lastIsDelete, del: tb.deleteBg, comp: tb.completeBg }));

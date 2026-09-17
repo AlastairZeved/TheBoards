@@ -119,10 +119,9 @@ export function makeNoteEl(note) {
 
   node.appendChild(text); node.appendChild(scratch);
   renderNoteTitle(node, note);                               // the Title tab (B120) — absent when empty
-  node.appendChild(makeClockBtn(note));                      // the reminder toggle (B109)
-  setReminderUi(node, note);                                 // class + aria follow the record
   setCarriedUi(node, note);                                  // the carried status shadow (B110)
-  node.appendChild(makeNoteToolbar(note));                   // the on-select action row (B84)
+  node.appendChild(makeNoteToolbar(note));                   // the on-select action row (B84) — Remind included (issue #240)
+  setReminderUi(node, note);                                 // class + aria follow the record (needs the row in place)
   applyCompleteA11y(node, note.state === 'complete');
   // Both reads need layout, so they run once the node is in the DOM (the same
   // frame as the caller's appendChild): the hit collar measures, and the flip
@@ -132,19 +131,14 @@ export function makeNoteEl(note) {
   return node;
 }
 
-/* --- 6.4 The reminder clock (issue #169, B104/B109) ----------------------- */
+/* --- 6.4 The reminder toggle (issue #169, B104/B109; the Remind tab, issue #240) --- */
 
-/* The clock toggle, bottom-right of every note card: one tap sets or clears
-   the reminder (B104) — no picker, no dialog, no time. Off the record stays
-   lean: clearing DELETES the key (B21's absence-is-off idiom), so a legacy
-   note and a cleared one are the same shape. */
-function makeClockBtn(note) {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'note-clock';
-  b.innerHTML = GLYPH.clock;                 // SVG is already aria-hidden
-  return b;
-}
+/* The clock toggle is now the toolbar's third tab (issue #240): one tap sets or
+   clears the reminder (B104) — no picker, no dialog, no time. Off the record
+   stays lean: clearing DELETES the key (B21's absence-is-off idiom), so a legacy
+   note and a cleared one are the same shape. makeNoteToolbar draws the tab with
+   the .note-clock class, so the toggle path (interactions.js) and the glow
+   selector (.note.reminder .note-clock) hold unchanged. */
 
 /* The clock's look follows the record (aria carries the state too — never
    colour alone, UIUX §1). Called from the render paths and the toggle. */
@@ -229,10 +223,22 @@ function makeSurfacedEl(note, srcBoard) {
   scratch.setAttribute('aria-hidden', 'true');
 
   node.appendChild(text); node.appendChild(scratch);
-  const clock = makeClockBtn(note);
-  clock.setAttribute('aria-label', COPY.unremind);
-  clock.setAttribute('aria-pressed', 'true');
-  node.appendChild(clock);
+  /* B109's echo carries the Remind tab on its own one-tab row (issue #240):
+     the echo is inert to tap/drag/edit, but the clock's recognizer route writes
+     the SOURCE record through (toggleSurfacedReminder). aria mirrors the source
+     record — an active reminder always reads "Remove reminder". */
+  const bar = document.createElement('div');
+  bar.className = 'note-toolbar';
+  bar.setAttribute('role', 'toolbar');
+  bar.setAttribute('aria-label', 'Note actions');
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'note-tb-btn on-light note-clock';
+  b.innerHTML = GLYPH.clock;
+  b.setAttribute('aria-label', COPY.unremind);
+  b.setAttribute('aria-pressed', 'true');
+  bar.appendChild(b);
+  node.appendChild(bar);
   return node;
 }
 
@@ -282,9 +288,9 @@ async function toggleSurfacedReminder(id) {
   renderBoard();                        // clock-off unsurfaces; nothing to re-add
 }
 
-/* The note's action toolbar (B84, issue #126, UIUX §4.5/§14): four flat tabs on
-   the note's top edge — Complete/Restore · Highlight · Copy · Delete, in the
-   menu's B43 order, Delete last in --danger. It is a CHILD of the note, so it
+/* The note's action toolbar (B84, issue #126; four tabs per issue #240, UIUX §4.5/§14):
+   flat tabs on the note's bottom edge — Complete/Restore · Highlight · Remind ·
+   Delete, Delete last in --danger. It is a CHILD of the note, so it
    scales with it (never wider than the note it belongs to) and rides the board's
    renderScale like every other mark. It is drawn always but shown only on
    select/focus (CSS); routed through the recognizer, not native clicks (B84,
@@ -309,6 +315,8 @@ function makeNoteToolbar(note) {
   const done = note.state === 'complete';
   mk('note-tb-complete', done ? GLYPH.restore : GLYPH.complete, done ? COPY.restore : COPY.complete);
   mk('note-tb-highlight', GLYPH.highlight, note.highlighted ? COPY.unhighlight : COPY.highlight);
+  const clock = mk('note-clock', GLYPH.clock, note.reminder ? COPY.unremind : COPY.remind);
+  clock.setAttribute('aria-pressed', String(!!note.reminder));   // setReminderUi keeps this mirrored
   mk('note-tb-delete', GLYPH.delete, COPY.delete);           // destructive, last (UIUX §7)
   return bar;
 }
