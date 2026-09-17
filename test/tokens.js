@@ -665,14 +665,14 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zezed-boards-v71 — the B122 rename of the misspelled B121 lineage, version bumped (shipped bytes changed)',
-    /const CACHE = 'zezed-boards-v71';/.test(sw), (sw.match(/zezed-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v71, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v71';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v72 — the Zeved rebrand of the B122 lineage, version bumped (shipped bytes changed)',
+    /const CACHE = 'zeved-boards-v72';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v72, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v72';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
-  ok('the self-heal deletes all three cache lineages: the handshake regex reads the new name, the deletion filter keeps both retired prefixes (zeved-boards from B121\'s typo, todo-boards older still)',
-    /match\(\/zezed-boards-v\(\\d\+\)\/\)/.test(app) &&
-    /startsWith\('zezed-boards-v'\) \|\| k\.startsWith\('zeved-boards-v'\) \|\| k\.startsWith\('todo-boards-v'\)/.test(app));
+  ok('the self-heal deletes all three cache lineages: the handshake regex reads the new name, the deletion filter keeps both retired prefixes (zezed-boards from the B122 lineage, todo-boards older still)',
+    /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
+    /startsWith\('zeved-boards-v'\) \|\| k\.startsWith\('zezed-boards-v'\) \|\| k\.startsWith\('todo-boards-v'\)/.test(app));
   // --- Issue #218: the shipped icon family — manifest entries resolve, precache stays in sync ---
   const shippedIcons = ['icons/favicon-16.png', 'icons/favicon-32.png', 'icons/favicon-48.png',
                         'icons/icon-192.png', 'icons/icon-192-light.png',
@@ -696,10 +696,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
       return w === dims[0] && h === dims[1];
     }),
     JSON.stringify(icoSizes.map((i) => `${i.src}:${i.sizes}:${i.dims ? i.dims.join('x') : 'MISSING'}`)));
-  ok('the identity is the single string "Zezed Boards" (B121): manifest name, <title>, the three runtime document.title templates, PDF Producer',
-    manifest.name === 'Zezed Boards' && /<title>Zezed Boards<\/title>/.test(html) &&
-    (app.match(/· Zezed Boards/g) || []).length === 3 && /: 'Zezed Boards';/.test(app) &&
-    /pdfStr\('Zezed Boards'\)/.test(app));
+  ok('the identity is the single string "Zeved Boards" (B121): manifest name, <title>, the three runtime document.title templates, PDF Producer',
+    manifest.name === 'Zeved Boards' && /<title>Zeved Boards<\/title>/.test(html) &&
+    (app.match(/· Zeved Boards/g) || []).length === 3 && /: 'Zeved Boards';/.test(app) &&
+    /pdfStr\('Zeved Boards'\)/.test(app));
   ok('TABLET_MQ is the B103 one-leg width floor: min-width 744px, orientation-blind',
     /window\.matchMedia\('\(min-width: 744px\)'\)/.test(app),
     (app.match(/TABLET_MQ = window\.matchMedia\([^)]*\)/) || [])[0]);

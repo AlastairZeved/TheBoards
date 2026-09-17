@@ -1,4 +1,4 @@
-# Zezed Boards — https://aboveaveragerob.github.io/TheBoards/
+# Zeved Boards — https://aboveaveragerob.github.io/TheBoards/
 # One page, crawled as one page: the board, the picker, and the drilled
 # category are History API states of the same document, not crawlable URLs.
 User-agent: *

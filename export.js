@@ -316,7 +316,7 @@ function pdfAssemble(streams, title) {
   // No dates in /Info: without them the same unchanged board exports to
   // byte-identical files, which is both a nice property and a cheap test.
   const infoNo = objs.length + 1;
-  objs.push('<< /Title ' + pdfStr(title) + ' /Producer ' + pdfStr('Zezed Boards') + ' >>');
+  objs.push('<< /Title ' + pdfStr(title) + ' /Producer ' + pdfStr('Zeved Boards') + ' >>');
 
   let out = '%PDF-1.4\n';
   const offsets = [];

@@ -7,7 +7,7 @@ Site: https://aboveaveragerob.github.io/TheBoards/
 GitHub: https://github.com/aboveaveragerob
 
 /* Site */
-Purpose: Zezed Boards — a spatial, offline-first PWA. A fixed, bounded page
+Purpose: Zeved Boards — a spatial, offline-first PWA. A fixed, bounded page
 where any thought becomes a framed, movable, scalable note the instant it is
 typed; structure is asserted after capture by where things sit and how big
 they are. Built for neurodivergent users and spatial reasoners specifically: 
