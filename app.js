@@ -1,4 +1,4 @@
-import { ACTION_DELAY, DESKTOP_MQ, LONGPRESS_MS, MOVE_THRESHOLD, TABLET_MQ, calKey, el, newBoardRecord, newCalEvent, state } from './state.js';
+import { ACTION_DELAY, DESKTOP_MQ, EMBED, EMBED_MODE, LONGPRESS_MS, MOVE_THRESHOLD, TABLET_MQ, calKey, el, newBoardRecord, newCalEvent, state } from './state.js';
 import { idbDelete, idbGet, idbGetAll, idbPut, migrateLegacyBoards, persist, saveNow } from './persistence.js';
 import { LEGACY_H, LOGICAL_H, LOGICAL_W, applyLayout, calSqueeze, effScale, lotH, onViewportResize, rebaseNote, renderScale } from './geometry.js';
 import { renderX, renderY, setCalSqueeze } from './geometry.js';
@@ -26,9 +26,13 @@ import { swapBoard, swapping, syncDateMirror, collapsePane } from './boards.js';
 // (state is declared at §3, after this block runs).
 
 function applyMode() {
-  state.isDesktop = DESKTOP_MQ.matches;
-  state.isTablet = !state.isDesktop && TABLET_MQ.matches;
-  state.isWide = state.isDesktop || state.isTablet;
+  // B124 embed: a forced view pins the tier — the MQs say nothing. (The change
+  // listeners below are unregistered when EMBED_MODE is set, so this guard is
+  // for boot's initial call only.)
+  state.isDesktop = EMBED_MODE ? EMBED_MODE === 'desktop' : DESKTOP_MQ.matches;
+  state.isTablet = EMBED_MODE ? false : !state.isDesktop && TABLET_MQ.matches;
+  state.isWide = EMBED_MODE ? EMBED_MODE === 'desktop'
+                            : state.isDesktop || state.isTablet;
   document.documentElement.classList.toggle('desktop', state.isDesktop);
   // The wide class is the CSS arrangement gate — every `html.desktop` rule
   // that draws the rail or the picker overlay is a wide rule now (B96).
@@ -56,7 +60,8 @@ function applyMode() {
     el.calView.classList.remove('rail-open', 'panel');
     el.calRail.hidden = true;
     setCalSqueeze(false);
-    if (history.state && history.state.v === 'cal') history.back();
+    // B124 embed: nothing was pushed, so don't pop the parent page's history.
+    if (!EMBED && history.state && history.state.v === 'cal') history.back();
   }
   applyLayout();
   if (state.isWide) {
@@ -76,8 +81,10 @@ function applyMode() {
     el.calRail.hidden = true;
   }
 }
-DESKTOP_MQ.addEventListener('change', applyMode);
-TABLET_MQ.addEventListener('change', applyMode);
+if (!EMBED_MODE) {                    // B124: a forced view never re-applies over the force
+  DESKTOP_MQ.addEventListener('change', applyMode);
+  TABLET_MQ.addEventListener('change', applyMode);
+}
 
 /* The initial html arrangement classes, applied by boot() — NOT at load time.
    The isX flags live on `state`, which is declared at §3; a load-time toggle
@@ -223,7 +230,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v75';
+const OWN_BUILD = 'v76';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

@@ -665,10 +665,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v75 — version bumped (shipped bytes changed)',
-    /const CACHE = 'zeved-boards-v75';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v75, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v75';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v76 — version bumped (shipped bytes changed)',
+    /const CACHE = 'zeved-boards-v76';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v76, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v76';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -729,8 +729,8 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   // --- Issue #145: the rolling temporal calendar (R1–R7) ---
   ok('the board-action row carries the fourth tab (calendar)', /id="action-calendar"/.test(html) &&
     /actionCalendar: document\.getElementById\('action-calendar'\)/.test(app));
-  ok('the tab opens the calendar as a history navigation (B9: pushed, never shadowed)',
-    /actionCalendar\.addEventListener\('click'[\s\S]*?history\.pushState\(\{ v: 'cal' \}, ''\)/.test(app));
+  ok('the tab opens the calendar as a history navigation (B9: pushed, never shadowed; embed swaps in replaceState, B124)',
+    /actionCalendar\.addEventListener\('click'[\s\S]*?histPush\(\{ v: 'cal' \}\)/.test(app));
   ok('the calendar view is a real element whose R1 row is Back alone (as amended by B124, issue #237)',
     /id="cal-view"/.test(html) && /id="cal-back"/.test(html) &&
     !/id="cal-boards"/.test(html) && !/id="cal-export"/.test(html));

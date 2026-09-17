@@ -1,6 +1,6 @@
 /* --- 10. Long-press menu ------------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { COPY, GLYPH, el, state } from './state.js';
+import { COPY, GLYPH, el, histPush, state } from './state.js';
 import { beginLink, completeSurfaced, copyNoteTexts, linkSource, surfacedMap } from './render.js';
 import { commitAction, editNoteTitle, g, isEditing } from './interactions.js';
 import { exportAllJson, exportBoardPdf, importBoardsJson } from './export.js';
@@ -262,7 +262,7 @@ export function registerMenus() {
     // history state { v: 'cal' }: the OS back gesture returns from it (B9,
     // unshadowed), and its OWN Back button is the always-visible route (R1).
     if (state.isWide) { showCal(); return; }
-    history.pushState({ v: 'cal' }, '');
+    histPush({ v: 'cal' });            // B124 embed: replaceState — no parent-history entries
     showCal();
   });
 
