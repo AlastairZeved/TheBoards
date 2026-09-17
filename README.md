@@ -1,10 +1,10 @@
-# Zezed Boards
+# Zeved Boards
 
 [![standard-readme compliant](https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/RichardLitt/standard-readme)
 
 Task tracking, creative ideation.
 
-Zezed Boards is a spatial, offline-first to-do PWA built cognitive-first — for
+Zeved Boards is a spatial, offline-first to-do PWA built cognitive-first — for
 spatial reasoners and neurodivergent minds, and for anyone who thinks by
 putting things where they can see them. It is one fixed, bounded page where
 any thought becomes a framed, movable, scalable note the instant it is typed.
@@ -44,7 +44,7 @@ behavior.
 
 ## Security
 
-Zezed Boards is client-only. There is no backend, no account, no sync, no
+Zeved Boards is client-only. There is no backend, no account, no sync, no
 analytics, and no network call anywhere in the app. Board data lives in the
 browser's IndexedDB and never leaves the device; the only ways data leaves are
 the exports you trigger yourself (a per-board PDF or a whole-library JSON
@@ -54,7 +54,7 @@ If you find a security issue, please open a
 [GitHub Security Advisory](https://github.com/AlastairZeved/TheBoards/security/advisories/new)
 rather than a public issue, so it can be assessed before details are public.
 Include steps to reproduce and the affected version — the `sw.js` `CACHE`
-string, e.g. `zezed-boards-v71`.
+string, e.g. `zeved-boards-v71`.
 
 ## Background
 
@@ -66,7 +66,7 @@ lived on one page together: thoughts stopped rolling around in my head and
 started sitting somewhere I could look at, point at, move, and make bigger or
 smaller. The page held them so my head didn't have to.
 
-Zezed Boards is that sketchbook, kept honest. Tap the canvas and a framed note
+Zeved Boards is that sketchbook, kept honest. Tap the canvas and a framed note
 appears under your fingers — the square draws itself the moment you type.
 Place is structure. Size is priority. Nothing else is required of you.
 
@@ -293,8 +293,8 @@ instead (see [Security](#security)).
 
 [MIT](LICENSE) © AlastairZeved.
 
-Zezed Boards is released under the MIT License — the full text is in
-[`LICENSE`](LICENSE). The name Zezed Boards, the design, and the governing
+Zeved Boards is released under the MIT License — the full text is in
+[`LICENSE`](LICENSE). The name Zeved Boards, the design, and the governing
 records remain the work of their author; if you build on either, an issue
 saying so is always appreciated.
 
