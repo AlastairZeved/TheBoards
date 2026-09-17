@@ -4000,7 +4000,7 @@ commit's discard and the completed event's surviving strike.
 `UIUX §3.4`'s Capture note now covers the existing line's editing contract.
 
 **Source:** issue #152 (owner): “tapping an existing calendar event in calendar view should bring up keyboard to edit and place cursor at the end of the text” — https://github.com/AlastairZeved/TheBoards/issues/152
-### B98. The calendar's R1 top row renders its acts and meets the touch floor: each button is filled — drawn mark + label, the row-control species' whole self — its visual frame clears the 44px floor as drawn, the §6 decoupled collar tops up the width where the row is tight, and hover, press, and keyboard focus are each stated (issue #156; keeps B95/R1's acts and anchors untouched — no new control, no grammar change; keeps §6/B7's collar law, B86's finger-size logic applied to the frame itself, §2.7/§8's closed motion and state set — and waives nothing)
+### B98. The calendar's R1 top row renders its acts and meets the touch floor: each button is filled — drawn mark + label, the row-control species' whole self — its visual frame clears the 44px floor as drawn, the §6 decoupled collar tops up the width where the row is tight, and hover, press, and keyboard focus are each stated (issue #156; keeps B95/R1's acts and anchors as amended by B124 (issue #237) — the row is Back alone — no new control, no grammar change; keeps §6/B7's collar law, B86's finger-size logic applied to the frame itself, §2.7/§8's closed motion and state set — and waives nothing)
 
 **The defect was a row that never got dressed.** `index.html` declared the
 three `#cal-top` buttons empty and the boot step that fills the board-action
@@ -4021,7 +4021,10 @@ the board-action row's trio verbatim: hover brightness 1.1 (hover-capable
 pointers only), active 0.92, §2.7's two-tone ring on `:focus-visible`. The
 marks are the family's own: `GLYPH.calBack` (the page turn, wired at last),
 `GLYPH.boards` and `GLYPH.export` shared with their board-row siblings —
-same act, same mark, so the two rows read as one hand.
+same act, same mark, so the two rows read as one hand. **Amended by B124
+(issue #237): the row is Back alone** — All Boards and Export leave the
+calendar view and Back renders directly above the month view; the
+fill / floor / state machinery above applies to the remaining button.
 
 `test/mobile.js` [26] proves the row through the touch grammar: each button
 carries glyph + label, each clears the floor as drawn, the mark is legible
@@ -4063,8 +4066,9 @@ by the suites, not by reading).
 **The tab retires on wide only.** `html.wide #action-calendar { display:
 none }` — the row is three tabs (All · Export · Import) where the rail stands,
 four on mobile where the tab is the calendar's only door. B97's in-place
-editing and R1's Export live in the expanded panel unchanged; B98's R1 row
-and floor are untouched.
+editing lives in the expanded panel unchanged; B98's R1 row and floor stand
+as amended by B124 (issue #237) — the row is Back alone, above the month
+view — and R1's Export no longer lives in the calendar.
 
 **The record.** `sw.js`'s `CACHE` bumps to **v44**; `test/tokens.js` re-pins
 it and gains the B99 block (rail face in the shipped HTML, boot rendering,
@@ -4828,5 +4832,49 @@ migration. B92's merge-import ruling stands, extended to the new array.
 **The record.** Docs-only on this card — the exporter/importer diff (the
 payload version, the `calendarEvents` array, the type-aware normalize, the
 named `eventsOf` predicate shared by exporter and importer) is the
+implementation card's work, gated behind this ruling's merge. No CACHE bump
+here.### B124. The calendar view's R1 top row is Back alone, and Back renders directly above the month view — All Boards and Export leave the calendar (issue #237, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/237; supersedes ONLY B95/R1's top-row clause — "Back · All Boards · Export, anchored left / center / right" — and the three-button-row passages of B98 and B99 that depend on it; keeps R1's visible-way-off principle — Back alone satisfies it in the calendar view, as the issue's own text states — and B9's back-gesture law, B98's fill / floor / state machinery for the remaining button, B99's rail and panel states, B95's window / data / squeeze / tablet machinery, B119's wide All-Boards carve-out, §3.2's no-backend law; waives nothing)
+
+**Source:** issue #237 (owner, ruling of record), owner statement transcribed
+verbatim: "Calendar view: remove Export and All Boards buttons, move Back
+above the month view" — https://github.com/AlastairZeved/TheBoards/issues/237
+
+**The owner's issue text, verbatim:**
+
+> In the calendar view (mobile, full-screen):
+>
+> **Remove**
+> - The **All Boards** button (grid icon)
+> - The **Export** button (download icon)
+>
+> Both are circled in the attached screenshot. Only **Back** should remain from the R1 top row.
+>
+> **Move**
+> - The **Back** button should sit directly **above the month view** (the September 2026 strip at the bottom of the screenshot), per the arrow in the screenshot — not anchored at the top of the day list.
+>
+> **Touchpoints (from a quick grep, verify before working):**
+> - `boards.js` — top-row wiring: `el.calBack` (~line 1358), `el.calExport` (~line 1383), R1 row described ~line 810
+> - `index.html` — the buttons' markup / labels
+>
+> R1 says every surface has a visible way off — Back alone satisfies that in the calendar view; Export remains reachable elsewhere and All Boards remains reachable via the picker/rail.
+
+**The ruling.** B95/R1 drew the calendar's exit row as three acts anchored
+left / center / right, and B98 dressed all three. The owner now rules the
+row down to one: **Back alone**, and Back moves from the top of the day list
+to sit **directly above the month view**. R1's principle — every surface has
+a visible way off — is untouched; the issue itself states that Back alone
+satisfies it in the calendar view. All Boards and Export leave the calendar
+view, and the issue's own text records where they remain reachable: Export
+elsewhere, All Boards via the picker/rail.
+
+**What is kept.** B95's calendar machinery — the computed window, the linked
+To-Do boards, the squeeze, the tablet path — stands unchanged; only the row's
+membership and Back's position are ruled. B98's fill / floor / state law
+applies to the surviving button. B99's rail and panel states stand; the
+panel's Back is the same collapse act. B119's wide All-Boards carve-out is
+untouched — the left board rail remains the All-Boards surface on wide.
+
+**The record.** Docs-only on this card — the markup, wiring, and layout diff
+(the two buttons' removal, Back's re-anchor above the month view) is the
 implementation card's work, gated behind this ruling's merge. No CACHE bump
 here.
