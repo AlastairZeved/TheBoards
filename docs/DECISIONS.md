@@ -4878,3 +4878,40 @@ untouched — the left board rail remains the All-Boards surface on wide.
 (the two buttons' removal, Back's re-anchor above the month view) is the
 implementation card's work, gated behind this ruling's merge. No CACHE bump
 here.
+
+### B124. The site's fake static to-do board is removed entirely and replaced with a working embed of Zeved Boards — a real instance that allows note creation, resizing, drag, and the calendar, the whole thing — with a two-button toggle centered at the top of the embed space ("desktop" / "mobile") that switches the presentation between desktop and mobile views as a forced VIEW, not device detection; no persistence is required for the embed because, as the owner put it, it is just for visitors to get to try out the boards before going to the PWA; and in the mobile view the caption text "Tap the page. Type. A square draws itself around it." moves to the right side with the mobile board on the left to accommodate the viewport-size difference (Zezed site issue #2, the owner's ruling of record: https://github.com/AlastairZeved/AlastairZeved/issues/2; keeps B21's storage-key law and §3.2's no-backend law — the embed is the deployed app, not a re-implementation; waives nothing)
+
+**Source:** issue #2 (owner ruling of record, owner chat transcribed verbatim): "Currently, there is a large to do board component in the middle of the site but it's not an accurate to do board at all. I need it removed entirely and instead I need a working version of the Zeved Boards embedded in that space. A two button switch toggle should be at the center top of the space with 'desktop' and 'mobile' as the toggles to switch the view between desktop Zeved Boards and mobile Zeved Boards views in the space. It should be a working embed that allows note creations and resizing and the calendar, the whole thing. Does it need to have storage of the notes at all since it's just for visitors to get to try out the boards before going to the PWA. For the mobile view, the description text 'Tap the page. Type....' move it to the right side with the mobile Zeved boards on the left side to accommodate the viewport size difference layouts." — https://github.com/AlastairZeved/AlastairZeved/issues/2
+
+**The ruling.** Three owner words do the work here. (a) "A two button switch
+toggle ... to switch the view between desktop Zeved Boards and mobile Zeved
+Boards views" — the embed's desktop/mobile toggle is a forced presentation
+override: the app's `isDesktop` matchMedia branch (AGENTS.md §2) is rendered
+per the toggle's choice regardless of the visitor's actual viewport, which is
+detection-subversion by explicit instruction, not a new detection path. (b)
+"Does it need to have storage of the notes at all since it's just for visitors
+to get to try out the boards before going to the PWA" — a question whose own
+answer rules it: for a try-before-you-install demo, storage is not needed, so
+the embed runs on throwaway storage wiped on every load and never touches the
+visitor's real `boards-db` (B21's storage-key law keeps the real namespace
+protected; a shared namespace would collide with the PWA's boards and lie
+against the site copy below the embed that promises everything stays on the
+device). (c) "It should be a working embed ... the whole thing" — working
+means the real app, note creation, resizing, drag, and the calendar included;
+the fake static board is removed with no decorative remnant. In the mobile
+view the caption sits to the right of the mobile board, per the owner's
+layout sentence.
+
+**Implementation consequences (derivations, not new owner words).** Clause
+(b) and the app's routing law together forbid history writes in embed mode:
+routing uses pushState/popstate so the OS back gesture works (B9), and an
+iframe's pushState lands in the visitor's joint session history, stealing
+their back gesture — so embed mode must run with history writes suppressed,
+which is a direct consequence of the owner's try-out purpose plus B9, not a
+separate ruling. The embed mechanism itself (iframe at the deployed Pages
+build vs. same files in the space), the throwaway-storage mechanism
+(in-memory vs. a throwaway IndexedDB namespace), and the `isDesktop` override
+plumbing are the implementation card's work, gated behind this ruling's merge.
+
+**The record.** Docs-only on this card. No CACHE bump: docs-only changes do
+not redeploy (`paths-ignore: '**/*.md'`).
