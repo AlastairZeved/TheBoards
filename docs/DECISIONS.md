@@ -4985,3 +4985,35 @@ changed): v76 → v77. Test-tree edits: `test/tokens.js` (8b four-tab assertion,
 v77 pins), `test/reminder.js` (guard assertion inverted; taps engage the note
 first — the row is select-only), `test/desktop.js` (D15 four-tab labels),
 `test/mobile.js` ([8] four-tab labels).
+
+---
+
+### B127. The note toolbar's four tab fills share ONE luminance rung — the note rung 0.5962 (issue #241, the owner's verbatim chat directive of 2026-09-17; supersedes ONLY the tab-fill luminance aspects of UIUX §2.6's identity-fill table rows, §2.6.1's B85 tab sentence and §4.5's CSS snippet — the highlight WASH (§2.6.1) and the reminder note-state glow (§2.6.2) keep their own rungs: this ruling governs the toolbar row's chrome, not the note states; keeps B67's per-type rotation for the Complete tab, B85's fill-names-the-action idiom, B86's tab metrics, B126's Remind placement and pink; waives nothing)
+
+**Source:** https://github.com/AlastairZeved/TheBoards/issues/241 (owner chat directive, 2026-09-17), transcribed verbatim: "Consistency check: - adjust the colors of the other buttons to match luminescence of design palettes with appropriate contrast for viewing the icon outline above it. Out of scope for current issue, log as a separate issue."
+
+**The plain reading (the code-facing contract — quote this sentence, not the
+owner's prose).** All four note-toolbar tab fills — Complete · Highlight ·
+Remind · Delete — share ONE luminance rung: the note rung **0.5962** (4dp), the
+same rung the Remind pink `#e6c2c9` already carries (B126). Each fill keeps its
+own hue family; the icon outline on every fill is `--ink-dark`.
+
+**The knock-on: the fills become their own tokens.** The current fills serve
+double duty and stop: `--frame` is the card border/rules token (B61), the
+Highlight wash `--highlight` is the note's per-note state surface (§2.6.1, rung
+0.675), and `--danger` is the menu text and the `.sel-btn` fill (§2.6) as well
+as the Delete tab. The four tab fills move to dedicated tokens —
+`--tab-complete`, `--tab-highlight`, `--tab-remind`, `--tab-delete` — each held
+to the shared rung:
+
+- `--tab-complete` keeps B67's per-type rotation, now at the shared rung
+  instead of the frame hue.
+- `--tab-highlight` stays in the amber family, dropped from the wash's 0.675
+  to the shared rung; the WASH on the note itself is untouched (§2.6.1).
+- `--tab-remind` is the pink `#e6c2c9` (B126) — the rung's reference value;
+  the note-state `--reminder` token and its glow (§2.6.2) are untouched.
+- `--tab-delete` stays in the warm danger family, moved to the shared rung.
+
+The exact hexes for the three not-yet-derived fills land with the
+implementation PR (which carries the `test/tokens.js` pin and a sw.js bump);
+this entry and UIUX §2.6.4 fix the contract they must satisfy.
