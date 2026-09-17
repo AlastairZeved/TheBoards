@@ -4758,3 +4758,26 @@ CI). The old cache prefix survives in exactly two places, both deliberate:
 app.js's self-heal filter (so pre-rename caches still delete on the
 mismatch path) and sw-update's fixture of the retired worker. Storage keys
 are law: `boards-db`/`boards` outlive every rename.
+
+**Pointer, 2026-09-17:** B122 — issue #217 — supersedes this ruling's
+CACHE-lineage clause only: the service-worker CACHE lineage renames to
+`zezed-boards-v*` (the `zeved-boards-v*` spelling was a typo of the app's own
+declared identity), and `zeved-boards-v*` joins `todo-boards-v*` in the
+self-heal's deletion filter. The identity "Zezed Boards", `short_name`
+"Boards", the storage keys `boards-db`/`boards` and the section-naming
+carve-out all stand.
+
+### B122. The service-worker CACHE lineage is `zezed-boards-v<N>` — the spelling B121 shipped (`zeved-boards-v*`) was typed from issue #217's "Zeved Boards v1.0 baby!" line, a typo of the app's own declared identity "Zezed Boards", and the owner's ruling fixes the brand spelling everywhere a string can carry it: the CACHE lineage is `zezed-boards-v<N>` with a paired version bump (shipped bytes changed) and the build handshake in lockstep — the same mechanics B121 already defined — and BOTH retired prefixes, `zeved-boards-v*` and `todo-boards-v*`, widen the self-heal's deletion filter so devices that cached under either old name clean up on activate; nothing else in B121 changes — the identity "Zezed Boards", `short_name` "Boards", the storage keys `boards-db`/`boards` and the section-naming carve-out all stand as ruled (issue #217, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/217#issuecomment-5706480994; supersedes ONLY B121's CACHE-lineage clause — the `zeved-boards-v*` spelling and its both-prefixes filter naming `todo-boards-v*` alone; keeps B121's version-bump-and-handshake law for the rename itself, B121's identity/`short_name`/storage-key/section-naming clauses verbatim, B116's `short_name` clause and its section-naming carve-out as B121 kept them, B21's storage-key law, §3.2's no-backend law; the PRD's CACHE-lineage prose and the sw.js bump are the implementation card's work, gated behind this ruling's merge; waives nothing)
+
+**Source:** issue #217 (owner ruling of record, comment 5706480994, owner chat ruling transcribed verbatim): "FUCK Hermes put zezed boards not Zeved boards" — https://github.com/AlastairZeved/TheBoards/issues/217#issuecomment-5706480994
+
+**The ruling.** One letter, one namespace. The misspelled prefix
+`zeved-boards-v*` never shipped as a live cache name beyond B121's PR — but a
+spelling once written into a ruling is a spelling a future grep inherits, so
+the record fixes it now, before the implementation card touches sw.js. The
+self-heal carries two retired prefixes for the same reason it carried one
+after B121: a device that cached under the misspelled name is indistinguishable
+from a device that cached under the pre-rename name, and both must delete on
+the mismatch path. Nothing else in B121 is disturbed: the identity stands, the
+storage keys stand, and the implementation card's diff is the CACHE name, the
+bump, and the filter — nothing more.
