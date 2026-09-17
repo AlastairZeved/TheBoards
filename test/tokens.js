@@ -665,10 +665,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v72 — the Zeved rebrand of the B122 lineage, version bumped (shipped bytes changed)',
-    /const CACHE = 'zeved-boards-v72';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v72, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v72';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v73 — the Zeved rebrand of the B122 lineage, version bumped (shipped bytes changed)',
+    /const CACHE = 'zeved-boards-v73';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v73, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v73';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes all three cache lineages: the handshake regex reads the new name, the deletion filter keeps both retired prefixes (zezed-boards from the B122 lineage, todo-boards older still)',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -716,9 +716,9 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('each export leaf commits; the choice itself runs raw (B81)',
     /action: \(\) => commitAction\(\(\) => exportBoardPdf\(state\.current\)\)/.test(app) &&
     /action: \(\) => commitAction\(exportAllJson\)/.test(app));
-  ok('exportAllJson flushes the debounce and backs up every board under the app tag',
-    /async function exportAllJson/.test(app) && /flushSave\(\);\s*\n\s*const boards = await idbGetAll\(\)/.test(app) &&
-    /app: 'the-boards'/.test(app) && /boards-backup-/.test(app));
+  ok('exportAllJson flushes the debounce and backs up every record under the app tag (B123: events in their own calendarEvents array)',
+    /async function exportAllJson/.test(app) && /flushSave\(\);\s*\n\s*const all = await idbGetAll\(\)/.test(app) &&
+    /calendarEvents/.test(app) && /app: 'the-boards'/.test(app) && /boards-backup-/.test(app));
   ok('import is a merge: overwrite by id, add new (the owner\'s ruling)',
     /async function importBoardsJson/.test(app) && /normalizeImportedBoard/.test(app));
   ok('import sweeps husks at the door and rejects files that are not the app\'s shape',

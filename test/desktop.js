@@ -1513,11 +1513,14 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
   }
 
   // ---- D21b. JSON backup: full-fidelity export, merge-import, bad file -----
-  // (issue #140, B92) Export writes every board under the app tag — links ride
-  // along. Import merges: a board whose id exists is overwritten by the file's
-  // copy, new ids are added, boards the file never mentions survive. A file
-  // that is not the app's shape writes nothing and says so.
-  console.log('\n[D21b] JSON backup round-trip (issue #140, B92)');
+  // (issue #140, B92; payload v2 per B123 — issue #231) Export writes every
+  // board under the app tag — links ride along, calendar events ride their own
+  // `calendarEvents` array. Import merges: a board whose id exists is
+  // overwritten by the file's copy, new ids are added, boards and events the
+  // file never mentions survive. A v1 file's events (which v1 swept into
+  // `boards`) are salvaged. A file that is not the app's shape writes nothing
+  // and says so.
+  console.log('\n[D21b] JSON backup round-trip (issue #140, B92; v2 payload, B123)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
     // Fixture: the open board stays as-is; a second board carries a note pair
@@ -1530,6 +1533,9 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       b.notes = [n1, n2];
       b.links = [{ id: 'bl1', a: 'bn1', b: 'bn2' }];
       await idbPut(b);
+      const ev = newCalEvent('2026-09-16', 'BACKUP EVENT');
+      ev.id = 'cev1';
+      await idbPut(ev);
       renderPane();
     });
     await page.waitForTimeout(300);
@@ -1553,9 +1559,17 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     ok('the JSON leaf names a dated backup file',
        /^boards-backup-\d{4}-\d{2}-\d{2}\.json$/.test(dl.suggestedFilename()), dl.suggestedFilename());
     const backup = JSON.parse(fs.readFileSync(await dl.path()).toString('utf8'));
-    ok('the payload is the app\'s shape, version 1', backup.app === 'the-boards' && backup.version === 1);
+    ok("the payload is the app's shape, version 2 (B123)", backup.app === 'the-boards' &&
+       backup.version === 2 && Array.isArray(backup.calendarEvents));
     ok('every board rode along', Array.isArray(backup.boards) &&
        backup.boards.some(b => b.title === 'BACKUPME'), String(backup.boards.length));
+    ok('the calendar event rode along in calendarEvents (B123)',
+       backup.calendarEvents.some(e => e.id === 'cev1' && e.date === '2026-09-16' &&
+         e.text === 'BACKUP EVENT' && e.state === 'active'),
+       JSON.stringify(backup.calendarEvents.find(e => e.id === 'cev1') || {}));
+    ok('boards carries zero event records — the file separates what the store mixes',
+       backup.boards.every(b => b.title !== undefined),
+       String(backup.boards.filter(b => b.title === undefined).length) + ' strays');
     const backedUp = backup.boards.find(b => b.title === 'BACKUPME');
     ok('notes AND links ride along at full fidelity (B91 survives the trip)',
        backedUp && backedUp.notes.length === 2 && backedUp.links.length === 1 &&
@@ -1564,7 +1578,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
 
     // Merge-import: edit the file's copy of BACKUPME (proves overwrite-by-id)
     // and add a third board (proves add-new), then import through the tab.
-    const countBefore = backup.boards.length;
+    const countBefore = backup.boards.length + backup.calendarEvents.length;
     backedUp.title = 'IMPORTED TITLE';
     backup.boards.push({
       id: 'imported-board-c', createdAt: 1, updatedAt: 1, category: 'learning',
@@ -1584,8 +1598,9 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       const all = await idbGetAll();
       return {
         count: all.length,
-        overwritten: all.find(b => b.id === (all.find(x => x.notes.some(n => n.id === 'bn1')) || {}).id),
+        overwritten: all.find(b => b.id === (all.find(x => (x.notes || []).some(n => n.id === 'bn1')) || {}).id),
         fresh: all.find(b => b.id === 'imported-board-c'),
+        ev: all.find(r => r.id === 'cev1'),
       };
     });
     ok('a new board was added', !!after.fresh && after.fresh.title === 'FRESH ARRIVAL' &&
@@ -1596,6 +1611,9 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
        JSON.stringify(after.overwritten && after.overwritten.title));
     ok('the merge is exact: nothing lost, nothing duplicated', after.count === countBefore + 1,
        String(after.count) + ' vs ' + countBefore);
+    ok('the calendar event survived the v2 import round-trip',
+       !!after.ev && after.ev.text === 'BACKUP EVENT' && after.ev.date === '2026-09-16' &&
+       after.ev.state === 'active', JSON.stringify(after.ev || {}));
 
     // A file that is not the app's shape writes nothing and says so.
     const badPath = path.join(os.tmpdir(), 'boards-import-bad.json');
@@ -1616,6 +1634,43 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       const all = await idbGetAll();
       return all.length === expected && !all.some(b => b.id === 'x');
     }, countBefore + 1));
+
+    // B123's v1 salvage: a pre-v2 file whose exporter swept events into
+    // `boards` imports with its events salvaged — the reporter's restore
+    // keeps every event. Coercion is checked field by field.
+    const v1Path = path.join(os.tmpdir(), 'boards-import-v1.json');
+    fs.writeFileSync(v1Path, JSON.stringify({
+      app: 'the-boards', version: 1, exportedAt: '2026-09-16T12:00:00.000Z',
+      boards: [
+        { id: 'v1board', createdAt: 1, updatedAt: 1, category: 'todo', title: 'V1 BOARD',
+          requirements: '', components: '',
+          notes: [{ id: 'v1n1', text: 'v1 note', x: 0, y: 0, rw: 900, rh: 1000, scale: 1, state: 'active', highlighted: false }],
+          parkingLot: [], links: [] },
+        { id: 'v1ev1', date: '2026-10-01', text: 'salvaged one', state: 'active', createdAt: 5 },
+        { id: 'v1ev2', date: 'not-a-date', text: 'bad date', state: 'active', createdAt: 6 },
+        { id: 'v1ev3', date: '2026-10-02', text: '  trimmed  ', state: 'complete', createdAt: 7 },
+      ],
+    }));
+    await page.setInputFiles('#import-file', v1Path);
+    await page.waitForTimeout(500);
+    ok('the v1 salvage import shows its notice', await page.evaluate(() => {
+      const t = document.querySelector('#toast');
+      return t.classList.contains('show') && /Boards imported/.test(t.textContent);
+    }));
+    const salv = await page.evaluate(async () => {
+      const all = await idbGetAll();
+      return { board: all.find(r => r.id === 'v1board'), ev1: all.find(r => r.id === 'v1ev1'),
+               ev2: all.find(r => r.id === 'v1ev2'), ev3: all.find(r => r.id === 'v1ev3') };
+    });
+    ok('v1 salvage: the file\'s board imports as a board', !!salv.board && salv.board.title === 'V1 BOARD',
+       JSON.stringify(salv.board || {}));
+    ok('v1 salvage: the event record swept into boards is restored as an event',
+       !!salv.ev1 && salv.ev1.date === '2026-10-01' && salv.ev1.text === 'salvaged one' &&
+       salv.ev1.state === 'active', JSON.stringify(salv.ev1 || {}));
+    ok('v1 salvage: an event with a non-date `date` is dropped at the door', !salv.ev2);
+    ok('v1 salvage: event fields are coerced (text trimmed, complete state kept)',
+       !!salv.ev3 && salv.ev3.text === 'trimmed' && salv.ev3.state === 'complete',
+       JSON.stringify(salv.ev3 || {}));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();

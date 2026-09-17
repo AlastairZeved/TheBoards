@@ -794,24 +794,31 @@ export async function exportBoardPdf(board) {
   }
 }
 
-/* --- 10.6 JSON backup: export all, import merged (issue #140, B92) -------- */
+/* --- 10.6 JSON backup: export all, import merged (issue #140, B92; payload
+   v2 per B123 — issue #231) ---------------------------------------------- */
 
 /* The whole library leaves as one file. PDF is a sheet ABOUT a board; JSON is
-   the board itself, so this is full fidelity: links (B91) ride along, nothing
-   is projected onto paper, nothing is swept. flushSave() first — saves are
-   debounced by SAVE_DEBOUNCE, so idbGetAll() alone could read the open board
-   some keystrokes stale (the same staleness exportBoardPdf's `current` rule
-   answers, one board wide). The stamp lands only if an edit is pending, so
-   exporting does not reorder the list (B69's law, flushSave's own reading). */
+   the record set itself, so this is full fidelity: links (B91) ride along and
+   calendar events ride in their own top-level `calendarEvents` array (B123 —
+   v1 files swept them into `boards`, where the importer's board normalization
+   silently dropped every one; the FILE now separates what the STORE mixes).
+   `boards` carries board records only — `eventsOf` over it is empty by
+   construction. flushSave() first — saves are debounced by SAVE_DEBOUNCE, so
+   idbGetAll() alone could read the open board some keystrokes stale (the same
+   staleness exportBoardPdf's `current` rule answers, one board wide). The
+   stamp lands only if an edit is pending, so exporting does not reorder the
+   list (B69's law, flushSave's own reading). */
 export async function exportAllJson() {
   try {
     flushSave();
-    const boards = await idbGetAll();
+    const all = await idbGetAll();
+    const calendarEvents = eventsOf(all);
     const payload = {
       app: 'the-boards',
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
-      boards,
+      boards: all.filter(r => !calendarEvents.includes(r)),
+      calendarEvents,
     };
     const d = new Date();
     const pad = (n) => (n < 10 ? '0' : '') + n;
@@ -894,13 +901,33 @@ function normalizeImportedBoard(raw) {
   };
 }
 
+/* One imported calendar event, normalized like a board (B123): coerced, not
+   trusted. ids re-stamped when absent, `date` must be a calKey-form
+   YYYY-MM-DD or the event is dropped, `text` is trimmed, `state` reads as
+   active unless the file says complete (newCalEvent's own default). Returns
+   null for a record that cannot survive as an event. */
+function normalizeImportedEvent(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw.date)) return null;
+  return {
+    id: typeof raw.id === 'string' && raw.id ? raw.id : uuid(),
+    date: raw.date,
+    text: typeof raw.text === 'string' ? raw.text.trim() : '',
+    state: raw.state === 'complete' ? 'complete' : 'active',
+    createdAt: Number.isFinite(raw.createdAt) ? raw.createdAt : Date.now(),
+  };
+}
+
 /* Merge-import (the owner's ruling, issue #140): a board whose id already
    exists is OVERWRITTEN by the file's copy; new ids are ADDED. A backup-
    restore in miniature — the file's board is the truth for that id, the
-   device keeps every board the file never mentions. Everything lands in
-   storage first; only then does the visible surface re-read. If the open
-   board was overwritten, renderBoard draws the file's copy; if it was not
-   touched, current is still authoritative and nothing about it changes. */
+   device keeps every board the file never mentions. B123 extends the same
+   ruling to calendar events, type-aware: a v2 file carries them in the
+   top-level `calendarEvents` array; a v1 file — whose exporter swept events
+   into `boards`, where board normalization dropped every one (issue #231) —
+   is salvaged by filtering the raw `boards` array through `eventsOf` BEFORE
+   board normalization touches it. Events import by the same merge rule:
+   overwrite by id, the device keeps every event the file never mentions. */
 export async function importBoardsJson(file) {
   let payload;
   try {
@@ -914,10 +941,16 @@ export async function importBoardsJson(file) {
     showNotice(COPY.importError, 'import', UNDO_MS);
     return;
   }
+  const rawEvents = Array.isArray(payload.calendarEvents)
+    ? payload.calendarEvents              // v2: events ride their own array
+    : eventsOf(payload.boards);           // v1 salvage: events rode `boards`
   const incoming = payload.boards
     .map(normalizeImportedBoard)
     .filter(Boolean);
-  if (!incoming.length) {
+  const incomingEvents = rawEvents
+    .map(normalizeImportedEvent)
+    .filter(Boolean);
+  if (!incoming.length && !incomingEvents.length) {
     showNotice(COPY.importError, 'import', UNDO_MS);
     return;
   }
@@ -930,6 +963,7 @@ export async function importBoardsJson(file) {
       overwrittenCurrent = true;
     }
   }
+  for (const ev of incomingEvents) await idbPut(ev);
   if (overwrittenCurrent) {
     state.dirty = false;                      // current was replaced wholesale, exactly ensureCurrentValid's reading
     renderBoard();
