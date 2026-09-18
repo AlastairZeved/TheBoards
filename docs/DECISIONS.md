@@ -3864,8 +3864,11 @@ stored rolling array, and the database stays at version 1.
 
 **The data model is the boards', extended at the read site.** R5: each date
 with events links to an ordinary To-Do board — created on the date's first
-event (the trigger), titled MM/DD/YY To Do, category todo, announced by the
-drawn calendar mark on its card and in the All-Boards views. The link is the
+event (the trigger), category todo, announced by the drawn calendar mark on
+its card and in the All-Boards views. (B133 supersedes this clause's original
+title format, `MM/DD/YY To Do`: the linked To-Do board's title is "Today's To
+Do" with the date pinned beneath it. This clause's mirror and `cal` binding
+are untouched.) The link is the
 board's `cal` field; the mirror's line count is `calReq`; both ride B21's
 read-site-default idiom, so no migration. The Requirements mirror has ONE
 writer (`syncMirror`) and a self-recorded span: the span's lines are the
@@ -4295,7 +4298,7 @@ its free-canvas floors re-measured at 60%/50% for the squat shapes).
 
 **Source:** owner bulk ratification, 2026-09-16 — https://github.com/AlastairZeved/TheBoards/pull/209#issuecomment-5700847803 ("all 89 entries ... APPROVED as law", no exceptions)
 
-### B104. Reminders arrive as a CLOCK TOGGLE, not a clock — one tap per note card sets or clears a reminder with no time picker, no pop-up and no due-time stored anywhere in the record; an active clock glows and surfaces its card to that morning's To-Do board, which is the EXISTING B95 per-date linked board (`ensureLinkedBoard`, title "MM/DD/YY To Do") and not a new board species; status is BORDER + GLOW — red past due, yellow carried over — a separate semantic layer that never borrows the highlight layer (issue #169, the owner's v3 Reminders design of 2026-09-02; narrows PRD §2.3's out-of-scope row and amends PRD §1.4; keeps §1.4's no-demands law — the board still asks nothing, the person taps the clock, nothing pings or pushes; keeps B95's To-Do species and B21's defaulted-at-read-site idiom for any future record field; waives nothing, but two triggers are explicitly unresolved — see below)
+### B104. Reminders arrive as a CLOCK TOGGLE, not a clock — one tap per note card sets or clears a reminder with no time picker, no pop-up and no due-time stored anywhere in the record; an active clock glows and surfaces its card to that morning's To-Do board, which is the EXISTING B95 per-date linked board (`ensureLinkedBoard`, title "Today's To Do" with the date pinned beneath it — B133 supersedes the original `MM/DD/YY To Do` format here) and not a new board species; status is BORDER + GLOW — red past due, yellow carried over — a separate semantic layer that never borrows the highlight layer (issue #169, the owner's v3 Reminders design of 2026-09-02; narrows PRD §2.3's out-of-scope row and amends PRD §1.4; keeps §1.4's no-demands law — the board still asks nothing, the person taps the clock, nothing pings or pushes; keeps B95's To-Do species and B21's defaulted-at-read-site idiom for any future record field; waives nothing, but two triggers are explicitly unresolved — see below)
 
 **The rulings.** The reminder is a toggle: tap the clock on any note card and
 it glows; the card then surfaces to the day's To-Do board; tap again and both
@@ -4383,8 +4386,9 @@ or it goes.
 
 **The landing.** #169 already rules Today's To Do is the landing page — the
 first thing the person sees. So each morning's first load auto-creates
-today's linked board (the B95 species, `ensureLinkedBoard`, title "MM/DD/YY
-To Do") even with zero events, and boot lands on it. B105's
+today's linked board (the B95 species, `ensureLinkedBoard`, title "Today's To
+Do" with the date pinned beneath it — B133 supersedes the original `MM/DD/YY To
+Do` format) even with zero events, and boot lands on it. B105's
 events-exist-only landing condition is superseded; B105's mid-session
 day-roll check — keyed once per day at boot() and renderCal(), so it can
 never steal focus mid-interaction — is kept unchanged.
@@ -4395,7 +4399,7 @@ no redeploy (`**/*.md` is already paths-ignored in the deploy workflow).
 **Open, unchanged:** recurring reminders, the month view.
 
 **Source:** owner ruling of record, 2026-09-15, comment on issue #169: “The end-of-day SMS summary is **removed** from the v3 design.” — https://github.com/AlastairZeved/TheBoards/issues/169#issuecomment-5686227320
-### B108. The morning lifecycle: each morning's first load auto-creates today's linked To-Do board (the B95 species, `ensureLinkedBoard`, title "MM/DD/YY To Do") even with zero events, boots onto it, and carries YESTERDAY's incomplete notes forward — a MOVE, not a copy: every note on yesterday's linked board whose state is not 'complete' moves onto today's board at its same logical x/y, and yesterday's board keeps its completed notes; the carried note's absence from yesterday's board is accepted because History is retrospective reference (no links, no navigation between the day boards); each carried note wears `carriedOn` = the carrying day's date key — the transient daily marker the carried indicator (link 4) styles off, self-clearing by date comparison with no cleanup pass, set again to each new today by each later carry, and CLEARED by completing the note; and a MANUALLY ADDED card on a linked To-Do board — `board.cal` set, no `carriedOn`; surfaced cards (the reminder pass, a later link) and carried cards don't get it — HAD the two re-homing options on its long-press/right-click menu ("Add to existing board", "Create new board with this as first card"), REMOVED IN FULL by B115, the owner's ruling on issue #205 — a manual add is not tied to any other board, and it never propagates to other boards (issue #169 §2; implements B107's unconditional landing; supersedes B105's events-exist-only MORNING condition — the boot path — while B105's mid-session day-roll under an open app stays exactly as shipped: the once-per-day keyed check still runs at boot() and renderCal() on today-key change, and the mid-session roll still navigates only when the day carries events and carries nothing forward; keeps B81's commit-on-release for the whole launch consequence chain, B9's History routes, B21's read-site defaulting for `carriedOn` (no schema change — the field is written when the carry writes the note), B95's To-Do species and R5's event-on-first-add, B106's mirror ownership of the Requirements section; waives nothing)
+### B108. The morning lifecycle: each morning's first load auto-creates today's linked To-Do board (the B95 species, `ensureLinkedBoard`, title "Today's To Do" with the date pinned beneath it — B133 supersedes the original `MM/DD/YY To Do` format here) even with zero events, boots onto it, and carries YESTERDAY's incomplete notes forward — a MOVE, not a copy: every note on yesterday's linked board whose state is not 'complete' moves onto today's board at its same logical x/y, and yesterday's board keeps its completed notes; the carried note's absence from yesterday's board is accepted because History is retrospective reference (no links, no navigation between the day boards); each carried note wears `carriedOn` = the carrying day's date key — the transient daily marker the carried indicator (link 4) styles off, self-clearing by date comparison with no cleanup pass, set again to each new today by each later carry, and CLEARED by completing the note; and a MANUALLY ADDED card on a linked To-Do board — `board.cal` set, no `carriedOn`; surfaced cards (the reminder pass, a later link) and carried cards don't get it — HAD the two re-homing options on its long-press/right-click menu ("Add to existing board", "Create new board with this as first card"), REMOVED IN FULL by B115, the owner's ruling on issue #205 — a manual add is not tied to any other board, and it never propagates to other boards (issue #169 §2; implements B107's unconditional landing; supersedes B105's events-exist-only MORNING condition — the boot path — while B105's mid-session day-roll under an open app stays exactly as shipped: the once-per-day keyed check still runs at boot() and renderCal() on today-key change, and the mid-session roll still navigates only when the day carries events and carries nothing forward; keeps B81's commit-on-release for the whole launch consequence chain, B9's History routes, B21's read-site defaulting for `carriedOn` (no schema change — the field is written when the carry writes the note), B95's To-Do species and R5's event-on-first-add, B106's mirror ownership of the Requirements section; waives nothing)
 
 **The morning.** B107 ruled the landing unconditional; this builds it. The
 once-per-day guard (`rollDay` in boards.js) already distinguished "a fresh
@@ -5128,3 +5132,55 @@ card-frame bloom pinned on `.note.reminder .note-text`; `--reminder-glow`
 value, non-rotation, and 7.98:1 contrast pinned), `test/reminder.js` — the
 glow assertion moves from the tab to the card frame and a completed-never-glow
 assertion is added. Both rewrites are declared here per AGENTS.md.
+
+**The echo.** A surfaced **echo** card wears the same frame bloom as its source
+while the reminder is on — it is the same reminder, the same glow; the echo is
+the note card's own anatomy (§4.7), and `render.js:218` already gives it the
+`.reminder` class, so `.note.reminder .note-text`'s border + bloom applies to
+it unchanged. Recorded here so no later agent "fixes" the echo into not
+blooming.
+
+**Source:** https://github.com/AlastairZeved/TheBoards/issues/270#issuecomment-5734213339 (owner clarification, desktop chat 2026-09-18), transcribed verbatim: "Obviously a surfaced card carries the same bloom if the fucking reminder is tapped on."
+
+### B133. The linked To-Do board's title is "Today's To Do", pinned, with the date pinned beneath it — the `MM/DD To Do` format is retired for that species alone (issue #273, the owner's verbatim ruling of record, the resolution comment of 2026-09-18; supersedes ONLY the title clause of B95/R5 — `titled MM/DD/YY To Do` — and only for the linked-To-Do-board species, `board.cal` set: the rest of B95/R5 stands untouched, the per-date mirror, the `cal` binding and the Requirements two-way sync; keeps B95's To-Do board species, B104's clock toggle and border+bloom grammar, B107's unconditional landing, B108's morning lifecycle and carry-forward, B95/B106's one mirror writer, B21's read-site defaulting, B9's History routes, B78's category names; waives nothing)
+
+**Source:** https://github.com/AlastairZeved/TheBoards/issues/273#issuecomment-5734212139 (owner, desktop chat 2026-09-18), transcribed verbatim: "Today's To Do and the date are pinned. Today's To Do ONLY applies to the To Do board generated each day when it loads required section's calendar events that are 2 way synced. This is a to do board, Today's To Do board. Why would the other boards get a fucking to do board? stupid question."
+
+**The ruling.** On the linked To-Do board — `board.cal` set, the daily board
+`ensureLinkedBoard` creates and the Requirements mirror syncs the section's
+two-way-synced calendar events into — the title reads **"Today's To Do"**, and
+the board's date renders as its own line **beneath** it, in the board's
+existing `MM/DD/YY` reading of its date key. Both are **pinned**: generated,
+never user-editable. The date is not the title and not a second title — it is
+the date line under it.
+
+**The species, only.** This is the daily linked To-Do board's alone. A category
+board (To Do · Notes · Learning · Ideas, B78) and every other board keep their
+own title, and none of them gets a pinned `Today's` label or a generated date
+line. The owner's words: "Why would the other boards get a fucking to do
+board?"
+
+**The date key stays the day identity everywhere else.** The board's `cal` date
+key remains what it already is — the day identity the lists, the calendar and
+the rails read (B95/R5, B107, B108, B131). The date line on the board is what
+carries the day *there*; no later card duplicates a date into the rails or the
+lists.
+
+**The record.** Docs-only: no `state.js`/`render.js`/`styles.css` change, no
+`sw.js` CACHE bump, no redeploy (`**/*.md` is already paths-ignored in the
+deploy workflow). `state.js:315`'s `CAL_TITLE_SUFFIX` and `ensureLinkedBoard`
+(`state.js:369-380`) still ship the superseded `MM/DD/YY To Do` format — the
+title + date line are a later implementation card on issue #273.
+
+**Superseded passages, normalized** (record law: the old title claim is
+superseded and named, never left standing as the record):
+
+1. B95/R5's "The data model is the boards', extended at the read site" — the
+   clause `titled MM/DD/YY To Do` now states the new title + date line and
+   names the format it superseded.
+2. B104's heading — the parenthetical `title "MM/DD/YY To Do"` replaced.
+3. B107's "The landing." — the same clause replaced.
+4. B108's heading — the same clause replaced.
+
+No other passage states the linked board's generated title: the sweep of
+`docs/DECISIONS.md`, `docs/UIUX.md` and `docs/PRD.md` found none.
