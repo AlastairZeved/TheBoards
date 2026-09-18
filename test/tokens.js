@@ -100,7 +100,8 @@ const T = {
   inkLight: '#f4f5f1', inkDark: '#031019',
   accentRestore: '#b6dee2', accentPage: '#6d9cb0', danger: '#E2A08C',
   highlight: '#F2D64B',   // the per-note highlight wash (UIUX §2.6.1, B71)
-  reminder: '#e6c2c9',    // the Remind tab's pink identity fill + bloom (UIUX §2.6.2, B126)
+  reminder: '#e6c2c9',    // the Remind tab's pink identity fill, kept for the record (UIUX §2.6.2, B126/B128)
+  reminderGlow: '#c6a400', // the reminder card-frame bloom — the yellow the owner ruled (UIUX §2.6.2, B128)
   carried: '#E1BE26',     // the per-note carried status (UIUX §2.6.3, B110)
   tabComplete: '#becce2', // the Complete tab's fill, To-Do binding — rotates per ladder (UIUX §2.6.4, B127)
   tabHighlight: '#e7ca42',// the Highlight tab's fill, amber family at the shared rung (UIUX §2.6.4, B127)
@@ -161,7 +162,7 @@ console.log('\n[1] The surface ladder — tokens declared, luminances reproduce 
     '--note': T.note, '--water-top': T.waterTop, '--water-mid': T.waterMid,
     '--water-bot': T.waterBot, '--ink-light': T.inkLight, '--ink-dark': T.inkDark,
     '--accent-restore': T.accentRestore, '--accent-page': T.accentPage, '--danger': T.danger,
-    '--reminder': T.reminder, '--carried': T.carried,
+    '--reminder': T.reminder, '--reminder-glow': T.reminderGlow, '--carried': T.carried,
     '--tab-complete': T.tabComplete, '--tab-highlight': T.tabHighlight,
     '--tab-remind': T.tabRemind, '--tab-delete': T.tabDelete,
   };
@@ -511,8 +512,8 @@ console.log('\n[5c] The note toolbar\'s four tab fills — one luminance rung (U
     /\.note-tb-highlight\s*{[^}]*background:\s*var\(--tab-highlight\)/s.test(css));
   ok('.note-tb-delete is --tab-delete filled (B127)',
     /\.note-tb-delete\s*{[^}]*background:\s*var\(--tab-delete\)/s.test(css));
-  ok('the Remind tab\'s active fill is --tab-remind; the glow stays --reminder (B126/B127)',
-    /\.note\.reminder\s+\.note-clock\s*{[^}]*background:\s*var\(--tab-remind\)[^}]*var\(--reminder\)/s.test(css));
+  ok("the Remind tab's active fill is --tab-remind — fill only, NO bloom (B128)",
+    /\.note\.reminder\s+\.note-clock\s*{[^}]*background:\s*var\(--tab-remind\)/s.test(css));
   // The superseded tokens keep their duties: the tab row no longer reads them.
   ok('the tab row borrows no double-duty token (B127)',
     !/\.note-tb(-delete|-highlight)?\s*{[^}]*background:\s*var\(--(frame|highlight|danger)\)/.test(css));
@@ -528,16 +529,39 @@ console.log('\n[5c] The Remind tab pink — value, dark-ink contrast, clock plac
   // A reminder is a NOTE component, not a chrome accent: it fills the active
   // clock on the note (UIUX §2.6.2 — the accent placement rule does not reach it).
   // B127 moved the tab FILL to its own token (--tab-remind, same value);
-  // --reminder keeps the note-state duty: the glow bloom (§2.6.2, B126).
+  // B128 moved the GLOW to the card frame in its own yellow — the tab fills,
+  // never blooms, and no bloom reads --reminder anywhere.
   ok('--tab-remind fills the active clock (.note.reminder .note-clock)',
     /\.note\.reminder \.note-clock\s*{[^}]*background:\s*var\(--tab-remind\)/s.test(css));
-  ok('--reminder still blooms the active clock\'s glow (B126/B127)',
-    /\.note\.reminder \.note-clock\s*{[^}]*box-shadow:[^}]*var\(--reminder\)/s.test(css));
+  ok('the active Remind tab takes NO bloom — no box-shadow on .note-clock (B128)',
+    !/\.note-clock\s*{[^}]*box-shadow/s.test(css));
   ok('--reminder is never an accent text colour', !/color:\s*var\(--reminder\)/.test(css));
   // Cool by law (--danger is the only warm hue, §2.6) and above the crossover,
   // so the dark glyph is correct on it.
   ok('--reminder stays above the ink crossover (takes dark ink)',
     lum(T.reminder) > 0.1788, String(r4(lum(T.reminder))));
+}
+
+console.log('\n[5d2] The reminder card glow — the yellow the owner ruled, on the card frame (UIUX §2.6.2, B128)');
+{
+  ok(`--reminder-glow is ${T.reminderGlow}`,
+    (declared['--reminder-glow'] || '').toLowerCase() === T.reminderGlow.toLowerCase(),
+    declared['--reminder-glow']);
+  // The carried amber's hue held, one more rung down (Y 0.5297 → 0.3847, B128);
+  // above the crossover, so the card's dark ink is correct through the frame.
+  ok('--reminder-glow with --ink-dark = 7.98', r2(contrast(T.reminderGlow, T.inkDark)) === 7.98,
+    String(r2(contrast(T.reminderGlow, T.inkDark))));
+  ok('--reminder-glow stays above the ink crossover', lum(T.reminderGlow) > 0.1788,
+    String(r4(lum(T.reminderGlow))));
+  // The glow is the CARD's: border + bloom on the note frame, the carried
+  // pattern (§4.8), never a second colour.
+  ok('the reminder card frame carries the yellow bloom (.note.reminder .note-text)',
+    /\.note\.reminder \.note-text\s*{[^}]*border-color:\s*var\(--reminder-glow\)[^}]*box-shadow:[^}]*var\(--reminder-glow\)/s.test(css));
+  // App-level like --carried: not rebound per board type.
+  for (const name of LADDER_NAMES.filter(n => n !== 'To-Do')) {
+    const decl = propsIn(LADDER[name].sel);
+    ok(`${name}: --reminder-glow is not rebound per board type`, !('--reminder-glow' in decl));
+  }
 }
 
 console.log('\n[5d] The carried glow — value, dark-ink contrast, frame placement (UIUX §2.6.3, B110)');
@@ -752,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v86 — version bumped (shipped bytes changed)',
-    /const CACHE = 'zeved-boards-v86';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('CACHE is zeved-boards-v87 — version bumped (shipped bytes changed)',
+    /const CACHE = 'zeved-boards-v87';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
   ok('the build handshake ships: OWN_BUILD stamped v86, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v86';/.test(app) && /cache: 'reload'/.test(app) &&
+    /const OWN_BUILD = 'v87';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&

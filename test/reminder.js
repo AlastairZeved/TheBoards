@@ -88,6 +88,18 @@ async function seedBoard(page, title, cat, notes) {
       JSON.stringify(got.keys) === JSON.stringify(['id', 'reminder', 'rh', 'rw', 'scale', 'state', 'text', 'x', 'y'].sort()) &&
       got.rec === true, JSON.stringify(got.keys));
 
+    // B128: the glow is the CARD's, not the button's — yellow bloom on the
+    // frame, and the tab keeps its fill with no box-shadow.
+    const glow = await page.evaluate(() => {
+      const el = [...document.querySelectorAll('.note')].find(n => n.textContent.includes('water the ferns'));
+      const card = getComputedStyle(el.querySelector('.note-text'));
+      const clock = getComputedStyle(el.querySelector('.note-clock'));
+      return { cardShadow: card.boxShadow, cardBorder: card.borderColor, clockShadow: clock.boxShadow, clockFill: clock.backgroundColor };
+    });
+    ok('reminder on: the CARD frame wears the yellow bloom, the tab does not glow (B128)',
+      glow.cardShadow.includes('rgb(198, 164, 0)') && glow.cardBorder.includes('rgb(198, 164, 0)') &&
+      (glow.clockShadow === 'none'), JSON.stringify(glow));
+
     await page.waitForTimeout(300);           // clear the B81 drop-guard before the second tap
     await tap(page, box.x, box.y);            // one tap clears
     await page.waitForTimeout(300);
@@ -98,6 +110,13 @@ async function seedBoard(page, title, cat, notes) {
     });
     ok('one tap clears: the KEY is deleted (B21 absence-is-off), glow gone',
       got.hasKey === false && got.cls === false, JSON.stringify(got));
+    const off = await page.evaluate(() => {
+      const el = [...document.querySelectorAll('.note')].find(n => n.textContent.includes('water the ferns'));
+      const card = getComputedStyle(el.querySelector('.note-text'));
+      return { shadow: card.boxShadow, border: card.borderColor };
+    });
+    ok('reminder off: no glow anywhere — frame back to rest (B128)',
+      off.shadow === 'none' && !off.border.includes('rgb(198, 164, 0)'), JSON.stringify(off));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }

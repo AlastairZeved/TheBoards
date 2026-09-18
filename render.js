@@ -148,9 +148,13 @@ export function makeNoteEl(note) {
    selector (.note.reminder .note-clock) hold unchanged. */
 
 /* The clock's look follows the record (aria carries the state too — never
-   colour alone, UIUX §1). Called from the render paths and the toggle. */
+   colour alone, UIUX §1). Called from the render paths and the toggle. The
+   .reminder CLASS also drives the card-frame glow (B128), so it excludes
+   completed notes — the same guard setCarriedUi applies: a completed note
+   never glows even if a legacy record kept the key (the aria state still
+   reads the record). */
 export function setReminderUi(node, note) {
-  node.classList.toggle('reminder', !!note.reminder);
+  node.classList.toggle('reminder', note.state !== 'complete' && !!note.reminder);
   const b = node.querySelector('.note-clock');
   if (b) {
     b.setAttribute('aria-label', note.reminder ? COPY.unremind : COPY.remind);

@@ -5087,3 +5087,42 @@ first-sync `calReq` (the span is the events it already had) and a one-time boot
 sweep deletes the linked boards the pre-fix build left behind for future dates —
 derived empty state, deleted, their event records surviving untouched in the
 store. Tapping a future day still shows the event editor, not a board.
+
+### B128. The reminder glow moves to the note card — a soft yellow bloom on the card's frame; the Remind tab never blooms (issue #270, the owner's verbatim ruling of record from issue #240 comment 5718587081; supersedes ONLY B126's active-tab glow clause — the pink identity fill "plus a glow bloom of the same hue" — and the same clause in UIUX §2.6.2/§4.7; keeps B126's Remind tab placement and pink fill, B127's tab-fill rung, B104's one-tap clock toggle and border+bloom grammar, B110's carried-status pattern the card glow copies, B21's absence-is-off idiom, §1's state-is-never-colour-alone; waives nothing)
+
+**Source:** https://github.com/AlastairZeved/TheBoards/issues/240#issuecomment-5718587081 (owner comment, 2026-09-17), transcribed verbatim: "One more comment to add about the movement of the reminder button, an unaccounted for ripple: when reminder is tapped and turned on, the note card itself gets a soft yellow glow, not the button. The yellow should match the luminescence of the palette so as to not be distracting, but guides the eye still. Tapping to turn the reminder off removes the glow."
+
+**The record repair.** B126 transcribed the tab-move directive but then
+attributed to the owner a pink **glow** the owner never ruled — the verbatim
+text above says the glow is the card's, in yellow. That attribution was an
+agent invention and is hereby superseded, not edited away: B126 stands for the
+tab's placement and its pink identity fill; the glow carrier (card, not
+button) and the glow hue (yellow, not pink) follow the owner's words above.
+
+**The ruling.** With the reminder active, the note card itself wears a soft
+yellow bloom on its frame — B104's border + bloom grammar, the exact pattern
+the carried status uses (§4.8, B110): `.note.reminder .note-text` takes the
+`--reminder-glow` border and a soft bloom of the same token. The active Remind
+tab keeps its legible pink fill (`--tab-remind`, B127) and its aria state
+(`Remind me` ⇄ `Remove reminder`, aria-pressed) but takes **no bloom** — no
+`box-shadow` on `.note-clock`. Tapping the reminder off deletes the key (B21)
+and the glow goes with it; the `.reminder` class is the record's shadow,
+recomputed at render (`setReminderUi`), and excludes completed notes — a
+completed note never glows, the same guard `setCarriedUi` applies.
+
+**The yellow.** Derived exactly the way `--carried` was derived (§2.6.3): the
+carried amber's hue held (OKLCH h ≈ 94.7°) while the luminance drops a full
+rung, 0.5297 → **0.3847**, giving `#c6a400` — a rung below the carried status,
+so the reminded card guides the eye without shouting, matching the palette's
+luminescence as the ruling asks. Above the ink crossover: 7.98:1 on
+`--ink-dark`. It does not rotate with board type (same law as `--carried`).
+The new token `--reminder-glow` enters styles.css `:root`; the pink `--reminder`
+stays declared for the B126/B127 record but never blooms.
+
+**The record.** Shipped bytes changed (styles.css, render.js): `sw.js` CACHE
+bumps v86 → v87 with app.js `OWN_BUILD` v86 → v87. Test-tree edits: `test/tokens.js` — the
+§[5d]-area reminder assertions rewritten (tab fill pinned with NO box-shadow;
+card-frame bloom pinned on `.note.reminder .note-text`; `--reminder-glow`
+value, non-rotation, and 7.98:1 contrast pinned), `test/reminder.js` — the
+glow assertion moves from the tab to the card frame and a completed-never-glow
+assertion is added. Both rewrites are declared here per AGENTS.md.
