@@ -5017,3 +5017,15 @@ to the shared rung:
 The exact hexes for the three not-yet-derived fills land with the
 implementation PR (which carries the `test/tokens.js` pin and a sw.js bump);
 this entry and UIUX §2.6.4 fix the contract they must satisfy.
+
+### B128. The collapsed calendar rail hides its inner furniture — the month view (issue #191's component) is display:none whenever the rail is collapsed (issue #248, the owner's verbatim chat report of 2026-09-17; supersedes NOTHING — no prior ruling ever placed the month view inside the collapsed face; this record closes the gap B118's collapse grammar left: the collapsed-hide selector `#cal-view.rail-open #cal-top, #cal-view.rail-open #cal-stack` predated issue #191's month view and never grew a `#cal-month` clause when the component landed; keeps B99's rail grammar — the collapsed face is the 40px `#cal-rail` strip alone, expand/collapse in-room (B81), the expanded panel keeps its full face including the month view — B118/B119's wide/tablet tiers (the rule rides `html.wide`, both bands), B124's Back-above-the-month-view order, §3.5's month-view component itself; waives nothing)
+
+**Source:** https://github.com/AlastairZeved/TheBoards/issues/248 (owner chat report, 2026-09-17), transcribed verbatim: "Found a bug in calendar rail when in tablet mode: the month view is creeping into the rail and needs to be fixed. Month view should not be visible when rail is collapsed."
+
+**The ruling.** The collapsed rail's face is the 40px strip and nothing else:
+whatever rides `#cal-view` beside it — the R1 row, the 7-day stack, and now
+issue #191's month view — is `display:none` under `#cal-view.rail-open`. The
+month view returned to the tree after #191 landed inside the section whose
+collapsed-hide selector predated it; the selector simply grows its third
+clause. The expanded panel is untouched: expand the rail and the month view
+renders as §3.5 built it.
