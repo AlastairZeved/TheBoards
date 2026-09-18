@@ -66,9 +66,11 @@
   --highlight:       #F2D64B;
   /* The reminder glow (issue #169, B104/B109): a per-note appearance state the
      USER asserts, like the highlight above — so it does NOT rotate with the
-     ladder either. Cool by law (--danger is the only warm hue, §2.6): the
-     water's own hue lifted bright, carrying --ink-dark at 9.48:1 (UIUX §2.6.2). */
-  --reminder:        #52c4e2;
+     ladder either. The pink identity fill the owner ruled for the active Remind
+     tab (issue #240, B126): #e6c2c9, the Learning ladder's --note rung, the
+     exact luminance match of the Note Boards violet the directive names,
+     carrying --ink-dark at 11.84:1 (UIUX §2.6.2). */
+  --reminder:        #e6c2c9;
   /* The carried glow (issue #169, B104/B110): the ONE status state beyond
      normal/complete (B107 retired the red past-due). A per-note status the
      RECORD asserts, like the highlight — so it does NOT rotate with the ladder
@@ -756,9 +758,9 @@ body {
    floor — a note can never be sized narrower than its own row. */
 .note-text:not(:empty) { min-width: 132px; }   /* = NOTE_MIN_W (UIUX §4.5) */
 
-/* Three flat tabs on the note's bottom edge — Complete/Restore · Highlight ·
-   Delete, the menu's B43 order, Delete last in --danger (Copy left for the note
-   menu, B114). A CHILD of the note, so
+/* Four flat tabs on the note's bottom edge — Complete/Restore · Highlight ·
+   Remind · Delete, Delete last in --danger (Copy left for the note
+   menu, B114; Remind joined per issue #240). A CHILD of the note, so
    it scales with it and is never wider than the note (the min-width above seats
    it). Styled as the band-label tab (§3.1): --frame fill, .on-light ink at
    13px/600, 3px radius — NOT a pill. Drawn always; shown only on select/focus.
@@ -811,7 +813,7 @@ body {
    labels the toggle and flips its aria-label (updateNoteToolbar). */
 .note.highlight .note-tb-highlight { box-shadow: inset 0 0 0 2px var(--ink-dark); }
 /* Decoupled hit area (§6, B7's idiom): the small tab keeps a 44px-tall tap target,
-   expanded UPWARD only so a row of three never overlaps a neighbour or the note. */
+   expanded UPWARD only so a row of four never overlaps a neighbour or the note. */
 .note-tb-btn::before {
   content: "";
   position: absolute;
@@ -837,53 +839,33 @@ html:not(.desktop) .note:focus-within:not(.pressed) .note-toolbar {
 html.desktop .note.selected { z-index: 3; }
 html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so its toolbar clears overlaps, without a write (issue #136, B90) */
 
-/* ---- §4.6 The reminder clock (issue #169, B104/B109) ---------------------
-   Bottom-right of every note card, always visible: one tap sets or clears the
-   reminder (B104) — no picker, no dialog, no time concept anywhere. Resting,
-   it is the note's own ink mark; active, it takes the --reminder fill and a
-   bloom of the same hue (the glow B104 rules), its aria-label stating the act
-   the tap will perform. A note with no frame shows no clock (§6.2's law). */
-.note-clock {
-  position: absolute;
-  right: 3px; bottom: 3px;
-  z-index: 3;
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 4px;
-  border: 0; border-radius: 3px;
-  background: transparent;
-  color: var(--ink);                   /* --ink-dark, rebound by .on-light on the node */
-  cursor: pointer;
-}
-.note-clock svg { width: 16px; height: 16px; }
-/* Decoupled hit area (§6, the tabs' idiom): 24px mark, 44px tap target. The
-   collar grows UP-LEFT ONLY — into the card the clock lives on. Down or right
-   it would reach past the note's edge and swallow the canvas taps that capture
-   the next note (the tb-btn collar's upward-only rule, §4.5, for the same
-   reason). */
-.note-clock::before {
-  content: "";
-  position: absolute;
-  right: 0; bottom: 0;
-  width: 44px; height: 44px;
-}
-.note-clock:focus-visible {            /* the two-tone ring (§2.7), same as the tabs */
-  outline: 2px solid var(--ink-light);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark);
-}
+/* ---- §4.6 The reminder clock (issue #169, B104/B109; the Remind tab, issue #240)
+   The clock is the note toolbar's third tab (Complete · Highlight · Remind ·
+   Delete): one tap sets or clears the reminder (B104) — no picker, no dialog,
+   no time concept anywhere. Resting, it is the tab's normal --frame ground with
+   the clock glyph — it is a tab now, not a floating ink mark, and must be
+   visible as a button whether or not the reminder is on. Active, it takes the
+   pink identity fill (--reminder, #e6c2c9 — the owner's ruling, B126) and a
+   bloom of the same hue, its
+   aria-label stating the act the tap will perform. An empty note shows no frame
+   and no toolbar row (§6.2), which carries the old corner-guard's job. The
+   tab's own metrics come from .note-tb-btn; only the identity states differ.
+   The corner placement, hit collar and sibling guard of the old floating clock
+   are gone with the move (issue #240). */
 .note.reminder .note-clock {
   background: var(--reminder);         /* identity fill, like the tabs (§4.5) */
   color: var(--ink-dark);
   box-shadow: 0 0 6px 1px var(--reminder);   /* the glow (B104) */
 }
-.note-text:empty ~ .note-clock { display: none; }   /* no frame, no clock (§6.2) */
 
 /* The surfaced echo (B109): a reminder-active note's render-time reference on
    today's To Do. It keeps its SOURCE board's note hue — data-src-cat rebinds
    --note for the echo alone, the ladder's own discipline (§2.2.2); a source on
    a To-Do board needs no rule (the default). Tap, drag, pinch and edit find no
    record here and stay inert; the clock and the long-press/right-click menu
-   write the source record through. */
+   write the source record through. The echo engages like no other note, so its
+   one-tab row shows always — the corner clock it replaced was always visible. */
+.note.surfaced .note-toolbar { opacity: 1; visibility: visible; transition: none; }
 .note.surfaced[data-src-cat="idea"]     { --note: #b9d2b2; }
 .note.surfaced[data-src-cat="unsorted"] { --note: #cec6ed; }
 .note.surfaced[data-src-cat="learning"] { --note: #e6c2c9; }

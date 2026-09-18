@@ -4948,3 +4948,40 @@ gated behind this ruling's merge.
 
 **The record.** Docs-only on this card. No CACHE bump: docs-only changes do
 not redeploy (`paths-ignore: '**/*.md'`).
+
+### B126. The reminder clock moves INTO the note's action toolbar as the Remind tab — fourth tab between Highlight and Delete (issue #240, the owner's verbatim chat directive of 2026-09-17; supersedes ONLY B109's corner-placement clause — bottom-right of every note card — and the same clause in UIUX §4.7, plus UIUX §4.5's "three actions" text; keeps B104's clock-toggle ruling verbatim — one tap, no picker, no dialog, no time stored — B109's --reminder fill + glow and echo surfacing, B114's three-tab row it extends, B86's tab metrics, §1's state-is-never-colour-alone; waives nothing)
+
+**Source:** https://github.com/AlastairZeved/TheBoards/issues/240 (owner chat directive, 2026-09-17), transcribed verbatim: "For repo AlastairZeved/TheBoards it looks like the reminder icon overlaps the text of the note card, whether it's turned on and glowing or not, which is not acceptable. Best solution: move the icon to the row of buttons of the note card, between the highlight and delete buttons. — Ripples: adjust the minimum size of note cards to accommodate a fourth button. — make the background of the button pink and match a purple already in palette from the palette used for notes boards."
+
+**The ruling.** The clock tab leaves the card's bottom-right corner and joins the
+on-select row as Complete · Highlight · **Remind** · Delete (Delete stays last in
+`--danger`). The tab keeps the `note-clock` class alongside `note-tb-btn`, so the
+toggle route (interactions.js) and the glow selector `.note.reminder .note-clock`
+hold with zero rewiring. Resting, the tab is its normal `--frame` ground with the
+clock glyph — it is a tab now, not a floating ink mark, and must read as a button
+whether or not the reminder is on. Active, it takes the pink identity fill and a
+glow bloom of the same hue. aria keeps COPY.remind/COPY.unremind and aria-pressed
+(never colour alone, UIUX §1). The `.note-text:empty ~ .note-clock` sibling guard
+dies with the move: an empty note shows no frame and no row (§6.2), which carries
+the guard's job.
+
+**The pink.** `#e6c2c9` — the Learning ladder's `--note` rung (styles.css:156),
+the exact luminance match (0.5962, 4dp) of the Note Boards violet `#cec6ed` the
+directive names, in the same idiom as Highlight's fixed amber fill (B85): fill +
+glyph say WHICH action, never colour alone. Ink-dark on it is 11.84:1.
+
+**NOTE_MIN_W, re-derived.** B86's tab metrics (18px glyph + 2×6px padding) make a
+tab 30px wide; four tabs + three 3px gaps = 129px. B84's 132 was derived for a
+four-tab row (B114's Copy removal never lowered it), so the same derivation
+returns the established floor with 3px slack: **132 stands** — one number, three
+jobs (CSS min-width, wrap-cap floor, drag/resize floor), unchanged.
+
+**The echo (B109).** The surfaced echo carries the Remind tab on its own one-tab
+row, shown always — the echo engages like no other note, and the corner clock it
+replaced was always visible. Tapping it there still writes the SOURCE record.
+
+**The record.** `sw.js` CACHE and `OWN_BUILD` bump together (shipped bytes
+changed): v76 → v77. Test-tree edits: `test/tokens.js` (8b four-tab assertion,
+v77 pins), `test/reminder.js` (guard assertion inverted; taps engage the note
+first — the row is select-only), `test/desktop.js` (D15 four-tab labels),
+`test/mobile.js` ([8] four-tab labels).

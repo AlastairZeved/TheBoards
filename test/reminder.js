@@ -53,9 +53,17 @@ async function seedBoard(page, title, cat, notes) {
     const hasGuard = await page.evaluate(() => [...document.styleSheets].some(s => {
       try { return [...s.cssRules].some(r => r.selectorText === '.note-text:empty ~ .note-clock'); } catch (e) { return false; }
     }));
-    ok('an empty note shows no clock (the §6.2 guard rule ships)',
-      hasGuard === true);
+    ok('the corner-clock sibling guard is gone with the move (issue #240)',
+      hasGuard === false);
 
+    // The clock is the toolbar's third tab now (issue #240): engage the note
+    // first (B90's select tap), then tap the tab from its live coordinates.
+    const nbox = await page.evaluate(() => {
+      const r = [...document.querySelectorAll('.note')].find(n => n.textContent.includes('water the ferns')).getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await tap(page, nbox.x, nbox.y);
+    await page.waitForTimeout(250);
     const box = await page.evaluate(() => {
       const n = [...document.querySelectorAll('.note')].find(n => n.textContent.includes('water the ferns'));
       const c = n.querySelector('.note-clock').getBoundingClientRect();
@@ -178,6 +186,11 @@ async function seedBoard(page, title, cat, notes) {
     ok('Go to Board navigates to the source board', nav.cur === 'Errands' && nav.id === boardId, JSON.stringify(nav));
 
     // The echo's clock toggles the SOURCE record: off here unsurfaces there.
+    // Engage the note first — the Remind tab rides the select-only row (issue #240).
+    await tap(page, box.x, box.y);
+    await page.waitForTimeout(250);
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    await page.waitForTimeout(250);
     let cbox = await page.evaluate(() => {
       const c = [...document.querySelectorAll('.note')].find(n => n.textContent.includes('echo act note'))
         .querySelector('.note-clock').getBoundingClientRect();
@@ -193,10 +206,16 @@ async function seedBoard(page, title, cat, notes) {
     await page.waitForTimeout(1200);
     let echoGone = await page.evaluate(() => !document.querySelector('.note.surfaced'));
     ok('clock-off unsurfaces: today\'s board holds no echo', echoGone === true);
+    await tap(page, 300, 400);                // tap-away on canvas deselects (engaged survives the swap, B90)
+    await page.waitForTimeout(300);
 
     // Toggle back on FROM the source board, and the echo returns.
     await page.evaluate(async (boardId) => swapBoard(boardId), boardId);
     await page.waitForTimeout(1200);
+    await tap(page, box.x, box.y);            // re-engage after the swap (the row is select-only)
+    await page.waitForTimeout(250);
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    await page.waitForTimeout(250);
     cbox = await page.evaluate(() => {
       const c = [...document.querySelectorAll('.note')].find(n => n.textContent.includes('echo act note'))
         .querySelector('.note-clock').getBoundingClientRect();
@@ -248,6 +267,11 @@ async function seedBoard(page, title, cat, notes) {
     await page.keyboard.type('manual reminder');
     await page.evaluate(() => document.activeElement.blur());
     await page.waitForTimeout(250);
+    await page.evaluate(() => {               // engage: the Remind tab rides the select-only row (issue #240)
+      const r = [...document.querySelectorAll('.note')].find(n => n.textContent.includes('manual reminder')).getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    }).then(c => tap(page, c.x, c.y));
+    await page.waitForTimeout(300);
     const cbox = await page.evaluate(() => {
       const c = [...document.querySelectorAll('.note')].find(n => n.textContent.includes('manual reminder'))
         .querySelector('.note-clock').getBoundingClientRect();

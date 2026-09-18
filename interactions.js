@@ -41,11 +41,13 @@ function classifyTarget(target) {
   // never sees them and their own clicks fire.
   // The note's own action toolbar (B84): setPointerCapture retargets the native
   // click, so — exactly like .sel-btn above — the recognizer must claim these
-  // buttons before the press falls through to the note beneath them.
+  // buttons before the press falls through to the note beneath them. The clock
+  // tab (issue #240) wears BOTH classes, so its route is checked first — the
+  // keyboard path in registerRender does the same.
+  const clockBtn = target.closest('.note-clock');   // the reminder toggle (B109): wins over the tabs
+  if (clockBtn) return { type: 'note-clock', node: clockBtn };
   const tbBtn = target.closest('.note-tb-btn');
   if (tbBtn) return { type: 'note-tb-btn', node: tbBtn };
-  const clockBtn = target.closest('.note-clock');   // the reminder toggle (B109): wins over the note
-  if (clockBtn) return { type: 'note-clock', node: clockBtn };
   const note = target.closest('.note');
   if (note) return { type: 'note', node: note };
   const lotItem = target.closest('.lot-item');

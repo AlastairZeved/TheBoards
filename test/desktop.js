@@ -465,7 +465,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await ctx.close();
   }
 
-  console.log('\n[D15] Toolbar: Complete · Highlight · Delete; Copy lives on the note menu (issue #59, B84; B114)');
+  console.log('\n[D15] Toolbar: Complete · Highlight · Remind · Delete; Copy lives on the note menu (issue #59, B84; B114; #240)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
     await ctx.grantPermissions(['clipboard-read', 'clipboard-write']);
@@ -482,8 +482,8 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.waitForTimeout(150);
     const labels = await page.evaluate(() =>
       [...document.querySelectorAll('.note.selected .note-tb-btn')].map(b => b.getAttribute('aria-label')));
-    ok('three tabs in order Complete · Highlight · Delete (B114)',
-       labels.join('|') === 'Complete|Highlight|Delete', JSON.stringify(labels));
+    ok('four tabs in order Complete · Highlight · Remind · Delete (issue #240)',
+       labels.join('|') === 'Complete|Highlight|Remind me|Delete', JSON.stringify(labels));
     // Copy is the note menu's FIRST item now (B114) — right-click opens it over
     // the selection, and the copy still lands at once (B81) with its notice.
     await page.mouse.click(box.x, box.y, { button: 'right' });
