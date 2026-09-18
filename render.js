@@ -69,13 +69,30 @@ export function applyBoardCat() {
    as UIUX §10/§6 draw them. Board view shows the board's own title text (the
    anchor's copy, 'What's up?' when untitled — the same rule renderBoard
    applies to the anchor); the picker and a drilled category name themselves. */
+/* B133 (issue #273): the linked To-Do board's own title seat is the day's, not
+   the reader's. The name is the pinned string and the board's date rides on a
+   line beneath it, both generated HERE at render — never stored, so a linked
+   board already in a store shows them with no migration pass and its stored
+   `title` is simply ignored at this seat. The date reads MM/DD/YY straight off
+   the board's `cal` key (the reading `ensureLinkedBoard`'s retired title used:
+   zero-padded month/day, the year's last pair). Every other board keeps its
+   ordinary editable title. */
+const LINKED_TITLE = "Today's To Do";
+const linkedDate = (calKey) => {
+  const p = calKey.split('-');                       // [YYYY, MM, DD]
+  return p[1] + '/' + p[2] + '/' + p[0].slice(2);
+};
+
 export function syncViewTitle() {
   const s = history.state;
   if (s && s.v === 'cat') document.title = `${COPY['cat' + s.cat[0].toUpperCase() + s.cat.slice(1)] || s.cat} · Zeved Boards`;
   else if (s && s.v === 'list') document.title = `All boards · Zeved Boards`;
   else {
-    const titled = state.current && !!(state.current.title && state.current.title.trim().length);
-    document.title = titled ? `${state.current.title} · Zeved Boards` : 'Zeved Boards';
+    // B133: the tab carries the anchor's copy — on a linked board that copy is
+    // the pinned name, not the superseded stored title.
+    const name = state.current && state.current.cal ? LINKED_TITLE
+      : (state.current && state.current.title && state.current.title.trim()) || null;
+    document.title = name ? `${name} · Zeved Boards` : 'Zeved Boards';
   }
 }
 
@@ -85,10 +102,32 @@ export function renderBoard() {
   if (sanitizeBoard(state.current)) scheduleSave();
   syncViewTitle();
   // Anchors.
+  const linked = !!state.current.cal;
   for (const key of ['title', 'components', 'requirements']) {
     const node = anchorEls[key];
+    // B133: the linked board's title seat is generated (pinned name + date
+    // line), and takes no editor — so it is not a textbox: no role, no
+    // tabindex, no contenteditable. Restored on every other board, because the
+    // same element serves both (a swap re-renders it).
+    if (key === 'title' && linked) {
+      node.textContent = '';
+      const name = document.createElement('span');
+      name.className = 'title-pinned'; name.textContent = LINKED_TITLE;
+      const date = document.createElement('span');
+      date.className = 'title-date'; date.textContent = linkedDate(state.current.cal);
+      node.append(name, date);
+      node.classList.add('filled');                  // no "What's up?" placeholder
+      node.removeAttribute('role'); node.removeAttribute('aria-multiline');
+      node.removeAttribute('tabindex'); node.removeAttribute('contenteditable');
+      continue;
+    }
     node.textContent = state.current[key] || '';
     node.classList.toggle('filled', !!(state.current[key] && state.current[key].length));
+    if (key === 'title') {
+      node.setAttribute('role', 'textbox');
+      node.setAttribute('aria-multiline', 'true');
+      node.setAttribute('tabindex', '0');
+    }
   }
   // Notes (array order = z-order; DOM order mirrors it).
   noteEls.forEach(n => n.remove()); noteEls.clear();

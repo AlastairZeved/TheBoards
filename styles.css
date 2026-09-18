@@ -497,6 +497,20 @@ body {
   font-size: 15px; font-weight: 600; line-height: 1.3;
 }
 
+/* The linked To-Do board's own title seat (B133, issue #273): the generated
+   name, with the board's date on the line beneath it. Both are render-time
+   (render.js) and both are pinned, so this seat never holds a caret. The date
+   rides the app's secondary rung — the ground's own pole, the family the
+   legible secondary stamps wear (§16.2 retired the mid-grey), at a smaller
+   size: it carries the day, the title leads. One short line fits inside the
+   compartment's existing min-height beside a one-line title, so the card's
+   geometry is untouched. */
+#anchor-title .title-pinned { font-size: 15px; font-weight: 600; }
+#anchor-title .title-date {
+  font-size: 10px; font-weight: 400; line-height: 1.2;
+  color: var(--ink);
+}
+
 /* The board-action row (issue #126 / B83, UIUX §3.3 / §14; three tabs since
    issue #140 / B92). The board-level actions declared as flat
    tabs hovering just above the Parking Lot: the mirror, at the sheet's other

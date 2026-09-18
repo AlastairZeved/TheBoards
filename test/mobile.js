@@ -440,6 +440,14 @@ async function openCat(page, cat) {
   console.log('\n[9c] A three-line title grows the card, not the headers');
   {
     const { ctx, page, errors } = await newMobilePage(browser);
+    // B108 lands boot on today's linked board; that board's title is the pinned
+    // species and takes no editor (B133, issue #273) — this growth law is a
+    // plain-board contract, so swap to one first (section 9's precedent).
+    await page.evaluate(async () => {
+      const b = (await idbGetAll()).find(r => r.title !== undefined && !r.cal);
+      if (b && b.id !== state.current.id) swapBoard(b.id);
+    });
+    await page.waitForTimeout(500);
     const p = await page.evaluate(() => {
       const r = document.querySelector('#anchor-title').getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
@@ -2570,6 +2578,84 @@ async function openCat(page, cat) {
     });
     ok('the engaged note toolbar sits flush at the bottom edge, centred (B120)',
        tb && tb.flush && tb.centred, JSON.stringify(tb));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  // ---- 28. the linked To-Do board's title seat is pinned (issue #273, B133) --
+  console.log('\n[28] The linked To-Do board is titled "Today\'s To Do" with the date pinned beneath it (issue #273, B133)');
+  {
+    const { ctx, page, errors } = await newMobilePage(browser);
+    // B108 lands boot on today's linked board — this section's subject IS that
+    // species, so no swap here (sections 9/16 swap away from it deliberately).
+    ok('boot lands on the linked board (B108)', await page.evaluate(() =>
+      !!state.current.cal));
+    const seat = () => page.evaluate(() => {
+      const s = document.querySelector('#anchor-title');
+      const name = s.querySelector('.title-pinned');
+      const date = s.querySelector('.title-date');
+      const p = state.current.cal.split('-');            // [YYYY, MM, DD]
+      return { name: name && name.textContent, date: date && date.textContent,
+               expected: p[1] + '/' + p[2] + '/' + p[0].slice(2),
+               contenteditable: s.hasAttribute('contenteditable'),
+               textbox: s.getAttribute('role') === 'textbox',
+               shown: s.textContent, stored: state.current.title };
+    });
+    const a = await seat();
+    ok('the title anchor reads exactly "Today\'s To Do"', a.name === "Today's To Do", JSON.stringify(a));
+    ok('the date line beneath it reads the cal key as MM/DD/YY', a.date === a.expected, JSON.stringify(a));
+    ok('the pinned seat is not a textbox and takes no editor',
+       !a.textbox && !a.contenteditable, JSON.stringify(a));
+    // A tap on the pinned title opens nothing, and typing at it writes nothing
+    // back — the store's title field is untouched.
+    const t = await page.evaluate(() => {
+      const r = document.querySelector('#anchor-title').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await tap(page, t.x, t.y);
+    await page.waitForTimeout(120);
+    ok('a tap on the pinned title opens no editor', await page.evaluate(() =>
+      !document.querySelector('#anchor-title').hasAttribute('contenteditable')));
+    await page.keyboard.type('HACKED');
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    await page.waitForTimeout(200);
+    const b = await seat();
+    ok('no edit writes back: the seat still reads the pinned name + date',
+       b.name === "Today's To Do" && b.date === b.expected && !b.shown.includes('HACKED'), JSON.stringify(b));
+    ok('a linked board with a stored title of its own still renders the pinned seat — derived, not stored',
+       await page.evaluate(() => {
+         state.current.title = 'Kitchen remodel'; renderBoard();
+         const s = document.querySelector('#anchor-title');
+         return s.querySelector('.title-pinned').textContent === "Today's To Do" &&
+                !!s.querySelector('.title-date') && !s.textContent.includes('Kitchen remodel');
+       }));
+    // Every OTHER board keeps the editable title exactly as it was — and the
+    // pinned name appears nowhere on it (B133's species clause).
+    await page.evaluate(async () => {
+      const p = (await idbGetAll()).find(r => r.title !== undefined && !r.cal);
+      if (p && p.id !== state.current.id) swapBoard(p.id);
+    });
+    await page.waitForTimeout(600);
+    const before = await page.evaluate(() => ({
+      pinned: !!document.querySelector('#anchor-title .title-pinned'),
+      textbox: document.querySelector('#anchor-title').getAttribute('role') === 'textbox',
+    }));
+    ok('a plain board carries no pinned name and no date line (B133)', !before.pinned);
+    ok('a plain board\u2019s title anchor is a textbox again', before.textbox);
+    const pt = await page.evaluate(() => {
+      const r = document.querySelector('#anchor-title').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await tap(page, pt.x, pt.y);
+    await page.waitForTimeout(80);
+    ok('a plain board\u2019s title still opens the editor on a tap', await page.evaluate(() =>
+      document.querySelector('#anchor-title').hasAttribute('contenteditable') &&
+      document.activeElement === document.querySelector('#anchor-title')));
+    await page.keyboard.type('Plain title');
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(250);
+    ok('and the edit writes back to the record, as before', await page.evaluate(() =>
+      state.current.title === 'Plain title'));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
