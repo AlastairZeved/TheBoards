@@ -5044,3 +5044,19 @@ flush against the tray's inset frame, which read as a clipped left edge on all
 four categories. The calendar mark, a third child the column skin would wrap
 onto its own line, anchors to the card's top-right corner. The card stands 76px
 on every surface and `catPageCap` budgets each against it.
+
+### B130. The All-Boards rail adopts the Calendar rail's grammar in full — border line, centered title text, the dot beside the title — and recolors to the current board category's ladder (issue #249, the owner's verbatim chat directive of 2026-09-17; extends B99's rail grammar from the calendar seat to the boards seat — the two rails are one component in two seats, mirrored sides, not two styles; supersedes NOTHING — no prior ruling ever dressed the collapsed pane face differently than B118's plain vertical name; keeps B118/B119's collapse machinery on wide (desktop ∪ tablet, both bands) with the DRESS independent of collapse state — checked collapsed and expanded; keeps B67/§2.2.2's ladder rotation bound by re-binding token names, never by overriding a background, and B55's law that --chrome does not rotate: the collapsed face reads var(--card)/var(--frame), so it takes the ladder's hue with the board it stands on; waives nothing)
+
+**Source:** issue #249, the owner's directive (chat 2026-09-17), transcribed verbatim: "The left rail doesn't match the formatting or layout of the right rail. The color is fine, but it needs a border line like the right rail, text centered and a little dot next to the title like the right rail. They should look like their the same rail, but the 'All Boards' rail should be a recolor to the palette of whatever board category is currently being viewed (blue for to do boards, purple for note boards, etc.) ... This fix applies to both desktop and tablet mode though."
+
+**The ruling.** The collapsed All-Boards face takes B99's dress on the mirrored
+side: a 2px border line against the sheet, the name reading vertically between
+the same dot-above-title rhythm (`--cal-rail`'s 10px gap), centered on both
+axes as the face already is. The face is one instance of the rail, so its
+paper and its border are the same rungs the calendar seat reads — `--card`
+and `--frame` — and the ladder rotates under `#pane[data-cat=...]` by
+re-binding the token names (UIUX §2.2.2's law: `applyBoardCat` mirrors the
+board's own attribute onto `#pane`; a child's `data-cat` — the tray's
+`.cat-button`s — never re-scopes the pane, the binding is by direct
+id+attribute). No new hex anywhere: the token suite's ladder tables are
+untouched, the selectors simply gained the pane scope.
