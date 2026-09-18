@@ -804,6 +804,17 @@ side, so only three are drawn. It is the one deliberate exception to "no empty
 frames" (§4) — that rule protects the free canvas; the compartment is permanent
 furniture and is always drawn.
 
+**On the linked To-Do board the compartment's title is generated, not the
+reader's** (B133, issue #273): it reads **"Today's To Do"** at the compartment's
+own `15px/600`, and the board's `MM/DD/YY` date — read off its `cal` key,
+zero-padded month and day, two-digit year — rides **beneath it** in the
+secondary rung the legible stamps wear: the ground's own pole (`var(--ink)`,
+§16.2 retired the mid-grey) at **10px**, `line-height: 1.2`. Both are drawn at
+render and neither is a control: the seat is not a textbox (no `role`, no
+`tabindex`, no caret) and no edit reaches it. Every other board's compartment is
+the ordinary editable title, unchanged — the placeholder, the ink and the
+`15px/600` set above all stand.
+
 ### §3.2 The Parking Lot is a section, not a box
 
 **Full-bleed**: `left: 0; right: 0; bottom: 0`, with its *content* still on the

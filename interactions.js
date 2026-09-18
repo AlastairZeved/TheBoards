@@ -407,17 +407,24 @@ function tapAnchor(target, x, y) {
    from an edited one. */
 let reqBefore = null;
 function enableEditing(textNode) {
+  // B133 (issue #273): the linked To-Do board's title is generated, not the
+  // reader's — the seat takes no editor, so no capture and no write-back. The
+  // single guard at the one funnel every edit entry passes (tap and focusin
+  // alike) covers the whole species; every other board is untouched.
+  if (textNode.dataset && textNode.dataset.anchor === 'title' &&
+      state.current && state.current.cal) return false;
   if (textNode.classList && textNode.classList.contains('anchor') &&
       textNode.dataset.anchor === 'requirements') {
     reqBefore = state.current.requirements || '';
   }
   textNode.setAttribute('contenteditable', CE);
+  return true;
 }
 function disableEditing(textNode) {
   textNode.removeAttribute('contenteditable');
 }
 function editText(textNode, clientX, clientY) {
-  enableEditing(textNode);
+  if (!enableEditing(textNode)) return;   // a pinned title takes no editor (B133)
   textNode.focus();
   if (clientX != null) placeCaretAtPoint(textNode, clientX, clientY);
   else caretToEnd(textNode);

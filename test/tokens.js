@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v88 — version bumped (shipped bytes changed)',
-    /const CACHE = 'zeved-boards-v88';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v86, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v88';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v89 — version bumped (shipped bytes changed, B133 title seat)',
+    /const CACHE = 'zeved-boards-v89';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v89, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v89';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -914,8 +914,11 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /function calWindow[\s\S]*?new Date\(now\.getFullYear\(\), now\.getMonth\(\), now\.getDate\(\) \+ i\)/.test(app));
   ok('the mirror has one writer and a self-recorded span (R5\'s line identity)',
     /function syncMirror\(board, events\)/.test(app) && /board\.calReq = mirrored\.length/.test(app));
-  ok('a linked board is ensured on the first event and titled MM/DD/YY To Do (R5)',
-    /function ensureLinkedBoard/.test(app) && /CAL_TITLE_SUFFIX/.test(app));
+  ok('the linked board\u2019s title seat is derived at render, pinned: "Today\u2019s To Do" + the date line off the cal key (B133, issue #273)',
+    /function ensureLinkedBoard/.test(app) &&
+    /const LINKED_TITLE = "Today's To Do"/.test(app) &&
+    /className = 'title-date'/.test(app) && /anchor === 'title'[\s\S]{0,80}state\.current\.cal/.test(app) &&
+    /#anchor-title \.title-date \{/.test(css));
   ok('import coercion carries the calendar link (cal strict key, calReq finite)',
     /\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$/.test(app) && /calReq: Number\.isFinite/.test(app));
   ok('the squeeze is render-time state: true frame kept, nothing stored (R6)',
