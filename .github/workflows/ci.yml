@@ -60,6 +60,9 @@ jobs:
       - name: mobile.js
         run: node test/mobile.js
 
+      - name: overflow.js
+        run: node test/overflow.js
+
       - name: desktop.js
         run: node test/desktop.js
 

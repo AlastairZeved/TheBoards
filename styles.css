@@ -523,6 +523,13 @@ body {
   gap: 6px;                            /* four tabs since issue #145: 8px read 400px on a 390 phone — the trim is the fit (R7.2) */
   pointer-events: none;
 }
+/* Mobile only (issue #266): at narrow embed widths (the owner's site frame runs
+   ~260px) the four-tab row overflows the viewport and clips mid-button. The
+   row wraps instead — same buttons, labels, order; desktop keeps one line. */
+html:not(.wide) #board-actions {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
 .board-action {
   position: relative;                  /* the §6 hit collar hangs off this */
   pointer-events: auto;
