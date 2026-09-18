@@ -17,6 +17,11 @@
   <!-- Social/AEO metadata (issue #244, audit #247 P2): description transcribed
        verbatim from manifest.json / docs/PRD.md §2.2. og:image is absolute —
        scrapers resolve relative URLs against the page, not always reliably. -->
+  <!-- CSP derived from shipped code (audit #246 finding 1, owner-approved):
+       index.html ships zero inline scripts, styles, or on*= handlers (grep
+       2026-09-17); styles.css loads same-origin fonts and data: SVG noise
+       backgrounds, hence img-src data:. JS CSSOM styling is not CSP-gated. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'">
   <meta name="description" content="A bounded page where a thought becomes a framed, movable, scalable note the instant it is typed.">
   <meta property="og:title" content="Zeved Boards">
   <meta property="og:description" content="A bounded page where a thought becomes a framed, movable, scalable note the instant it is typed.">
