@@ -2,28 +2,14 @@
 
 [![standard-readme compliant](https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/RichardLitt/standard-readme)
 
-Task tracking, creative ideation.
+[Task tracking, creative ideation.
 
-Zeved Boards is a spatial, offline-first to-do PWA built cognitive-first — for
-spatial reasoners and neurodivergent minds, and for anyone who thinks by
-putting things where they can see them. It is one fixed, bounded page where
-any thought becomes a framed, movable, scalable note the instant it is typed.
-There are no folders, no tags, no forms, no settings, and no modes: structure
-is asserted *after* capture, by where a note sits and how big it is — and only
-the person who put it there decided that.
+Zeved Boards is a spatial, offline-first to-do app that works like a digital sketchbook. It's designed for people who think by placing ideas in physical space, spatial reasoners, neurodivergent minds, or anyone else who needs to see their thoughts laid out and reorganizable visually. Where bullet lists fails, bring a board.
 
 It is also deliberately small. The app is five files of vanilla
 HTML/CSS/JavaScript with no frameworks, no build step, no package manager, and
-no backend. All data lives on-device in IndexedDB; nothing is sent anywhere,
-ever. This is not an accident of scope — it is the product's stated hard law
-(see [Design Philosophy](#design-philosophy)).
-
-Because the interface is opinionated to an unusual degree, this repository is
-governed the way a small product is, not the way a library is: three documents
-under `docs/` outrank code comments and define what the app is, what it
-renders, and every interaction ruling ever made. A new contributor should read
-[The Governing Records](#the-governing-records) before proposing a change to
-behavior.
+no backend. All data lives on-device in browser cache storage; nothing is sent anywhere,
+ever.
 
 ## Table of Contents
 
@@ -46,41 +32,17 @@ behavior.
 
 Zeved Boards is client-only. There is no backend, no account, no sync, no
 analytics, and no network call anywhere in the app. Board data lives in the
-browser's IndexedDB and never leaves the device; the only ways data leaves are
-the exports you trigger yourself (a per-board PDF or a whole-library JSON
+browser's storage itself and never leaves the device; the only ways data leaves are
+the exports you download yourself (a per-board PDF or a whole-library JSON
 backup under **Export**).
-
-If you find a security issue, please open a
-[GitHub Security Advisory](https://github.com/AlastairZeved/TheBoards/security/advisories/new)
-rather than a public issue, so it can be assessed before details are public.
-Include steps to reproduce and the affected version — the `sw.js` `CACHE`
-string, e.g. `zeved-boards-v71`.
 
 ## Background
 
-This app started in a sketchbook. When a thought arrived, it got written down
-and a square was drawn around it — not to decorate it, but to isolate it. A
-boxed thought is a thought you can *see*, separate from every other thought
-making noise for attention. The real shift came when all of those squares
-lived on one page together: thoughts stopped rolling around in my head and
-started sitting somewhere I could look at, point at, move, and make bigger or
-smaller. The page held them so my head didn't have to.
-
-Zeved Boards is that sketchbook, kept honest. Tap the canvas and a framed note
-appears under your fingers — the square draws itself the moment you type.
-Place is structure. Size is priority. Nothing else is required of you.
-
-The product exists for one person on their own device. There is no second
-user, no team, no sharing model, and no plan to add one. It deliberately does
-not decide what kind of tool it is: task tracking, creative ideation,
-note-taking, problem-solving — one surface, no modes. A board is whatever the
-person puts on it.
+This app started in a sketchbook, at a time when I wasn't physically able to use any screens. I still needed my to do list, my thoughts, my ideas; but a notepad just wasn't cutting it. Instead I just drew two lines and a title, then drew a box around the title. Then I'd write something on it, anywhere, and just draw a box around it to isolate it, to give the thought its own visual space. When I wasn't paying attention, it became my daily driver. The spatial-first organization is wonderful, but so is the simplicity. From thought to 'paper', I just open the app and it's already on the board waiting for me to tap anywhere on it and start typing. No pre-organizing, labeling, tagging, navigating to the right folder - just open, tap, type.
 
 The design draws on gestalt principles (Prägnanz in particular) and on
 Miller's working-memory research — a bounded page you can see all of, rather
-than an infinite canvas you have to navigate. The project's thinking sits in
-the same current as the malleable-software community; see the
-[Malleable Systems Collective](https://malleable.systems/).
+than an infinite canvas you have to navigate. For other tools like this, the wonderful community sits over at the Malleable Systems Collective.
 
 ## Install
 
@@ -106,11 +68,11 @@ native ES modules (`app.js` imports `state.js`, `persistence.js`,
 `file://` (browsers block module imports on the file protocol).
 
 Data is per-device by design. The JSON export under **Export** is your backup
-and your way to move a library between devices; **Import** restores it.
+and your way to move a library between devices; **Import** it when needed.
 
 ### Dependencies
 
-The shipped app has none — no frameworks, no bundler, no package manager, no
+None. No frameworks, no bundler, no package manager, no
 runtime dependencies. Fonts (Montserrat Alternates) are self-hosted in
 `fonts/`, and the PDF exporter is hand-rolled in `export.js` rather than pulled
 from a library.
@@ -122,12 +84,7 @@ scrolls: the board is one bounded sheet, and if it's full, it's full — that
 boundary is the point.
 
 Every board has the same four permanent regions: **Title**, **Components**,
-**Requirements**, and the **Parking Lot**. The Parking Lot holds plain stacked
-lines for the small thoughts that don't need a frame yet — tap the lot, type,
-done. The free canvas above the lot is where notes live.
-
-A 68-second product showcase lives at [`product_showcase`](product_showcase)
-in this repository.
+**Requirements**, and the **Parking Lot**. The Parking Lot is where I park a question - something blocking progress on the board. Requirements are calendar events for that day if there are any and 2-way syncs to the calendar view for the daily to-do boards, otherwise use Components/Requirements as you wish. 
 
 ### On touch
 
@@ -193,71 +150,11 @@ And the governing design law, which the design system implements:
 > **If you have to think about the interface, it failed. Every pixel earns its
 > place.**
 
-The emotional register is **Peaceful Fondness** — calm water at depth and at
-dusk, a dark, quiet page rather than a bright productivity surface. It should
-feel like a place you are glad to return to, not a tool you owe something to.
-
 Equally binding is what the app refuses to build: accounts, sync, sharing,
 tags, folders, search, filters, rich text, images, snapping, reminders, due
 dates, streaks, an infinite canvas, settings, and a theme switch. Each refusal
 is argued in the PRD's out-of-scope table — boundedness is the feature, and a
 framework or a backend would change what the product is.
-
-## Project Structure
-
-| File | Role |
-|---|---|
-| `index.html` | App shell: board view, list view, board-action tabs, menu, toast |
-| `styles.css` | Design tokens (dark-only), board geometry, note component; sectioned to match `docs/UIUX.md` |
-| `app.js` | Persistence, layout/scale-to-fit, gesture recognizer, editing/drag/pinch, undo, PDF export, board list + routing, boot — 12 numbered sections, mapped in the header comment |
-| `manifest.json` · `sw.js` | PWA manifest + stale-while-revalidate offline service worker |
-| `icons/` | App icons and the favicon set, generated by `icons/make-icons.js` |
-| `fonts/` | Montserrat Alternates 400/600/800, self-hosted woff2 |
-| `docs/` | The governing records: `PRD.md`, `UIUX.md`, `DECISIONS.md`, plus mockups, proofs, and point-in-time plans |
-| `test/` | Four regression scripts (dev-only; see [`test/README.md`](test/README.md)) |
-| `.github/workflows/` | CI, plus the Pages deploy that asserts the deployed `sw.js` is this commit's |
-
-Three architectural facts explain most of the code:
-
-- **One logical page, one render scale.** The whole board is a fixed logical
-  coordinate space rendered via a single `transform: scale()`. Note positions
-  are stored in that space; viewport changes are a frame, never a write.
-- **A single custom gesture recognizer** drives tap-to-capture, drag-to-move,
-  pinch-to-scale, and the desktop grammar alike — there is no separate desktop
-  code path; a live `matchMedia` switch branches inline.
-- **IndexedDB is the only persistence**, written through a debounced save
-  queue. There is no server round-trip anywhere in the app.
-
-## The Governing Records
-
-The product, design, and decision records under `docs/` are the real
-specification. Code comments cite them; where a code comment and a record
-disagree, the record wins.
-
-| File | Answers | Wins on | Cited as |
-|---|---|---|---|
-| [`docs/PRD.md`](docs/PRD.md) | what the app is, who it is for, why | product intent | `PRD §x` |
-| [`docs/UIUX.md`](docs/UIUX.md) | what it renders, and in what values | **rendering** | `UIUX §x` |
-| [`docs/DECISIONS.md`](docs/DECISIONS.md) | every UI/interaction ruling, in order, with its reason | the later ruling always wins | `B<n>` |
-
-`UIUX.md` is the rendering authority: every hex, contrast ratio, size, radius,
-duration, threshold, and ARIA contract lives there and nowhere else.
-`DECISIONS.md` is the binding, cumulative record of every ruling — numbered
-`B1` through the current build, each tied to an issue and resolved against the
-five principles above; later entries explicitly supersede earlier ones. (The
-band geometry alone has been ruled on five times.) The HTML mockups under
-`docs/mockups/` are a fourth record: drawn specs, not decoration.
-
-If you want to change behavior, the expectations are simple:
-
-- **Grep `DECISIONS.md` first.** A prior ruling has very likely already
-  addressed the area you're about to change — often to forbid exactly that.
-- **Cite with the document prefix** (`UIUX §3.3`, not bare `§3.3`) — the
-  numbering spaces overlap between records.
-- **A behavior change ships with its ruling**: a new `B<n>` entry in
-  `DECISIONS.md`, plus the UIUX/PRD section edits it names, in the same PR.
-- **Bump the `sw.js` `CACHE` version** on every shipped change — it is the one
-  string that says which build is live, and the test suite pins it.
 
 ## Maintainers
 
@@ -273,8 +170,7 @@ describes itself in the issue thread and lands in `DECISIONS.md`.
 
 Pull requests are accepted. Requirements:ghjb
 
-- **Behavior changes resolve against the governing records.** Read
-  [The Governing Records](#the-governing-records) first; a PR that changes
+- **Behavior changes resolve against the governing records.** A PR that changes
   gesture, layout, band/lot, menu, or routing behavior without a `B<n>` entry
   will be asked to add one.
 - **All four test suites must pass**, and a change that pins what a suite
@@ -285,17 +181,12 @@ Pull requests are accepted. Requirements:ghjb
 - The service worker's `CACHE` string is bumped on every shipped change to
   `app.js` or `styles.css`.
 
-Security issues do not go through public issues or PRs — please open a
-[GitHub Security Advisory](https://github.com/AlastairZeved/TheBoards/security/advisories/new)
-instead (see [Security](#security)).
-
 ## License
 
 [MIT](LICENSE) © AlastairZeved.
 
 Zeved Boards is released under the MIT License — the full text is in
 [`LICENSE`](LICENSE). The name Zeved Boards, the design, and the governing
-records remain the work of their author; if you build on either, an issue
-saying so is always appreciated.
+records remain the work of their author.
 
 [Back to top](#theboards)
