@@ -129,7 +129,7 @@
    everywhere — catOf()'s read-site default, B21's idiom — so it files under
    Note Boards in the list AND renders violet. The two agree, which is the
    whole point of the card preview further down. */
-#board[data-cat="idea"] {
+#board[data-cat="idea"], #pane[data-cat="idea"] {
   --deep:        #000a06;
   --card:        #001a0e;
   --water-top:   #486b49;
@@ -141,7 +141,7 @@
   --note:        #b9d2b2;
 }
 /* Storage key 'unsorted', label "Note Boards" — B63 renamed the label only. */
-#board[data-cat="unsorted"] {
+#board[data-cat="unsorted"], #pane[data-cat="unsorted"] {
   --deep:        #0c0512;
   --card:        #1e0f28;
   --water-top:   #6d5b83;
@@ -160,7 +160,7 @@
    — where the gamut leaves them almost no chroma, invisibly, since they are
    near-black; the light rungs are chosen for paleness within their ratio window
    (UIUX §2.2.2 records the residuals). */
-#board[data-cat="learning"] {
+#board[data-cat="learning"], #pane[data-cat="learning"] {
   --deep:        #11040b;
   --card:        #260e12;
   --water-top:   #855562;
@@ -1473,6 +1473,7 @@ html.wide #pane.rail-open {
   align-items: stretch;
   justify-content: center;
   background: var(--card);             /* the collapsed face's own paper (B99's idiom) */
+  border-right: 2px solid var(--frame); /* B99's border line, mirrored side — recolors with the board's ladder (issue #249) */
   box-shadow: none;
 }
 html.wide #pane.rail-open #pane-cards,
@@ -1482,6 +1483,7 @@ html.wide #pane.rail-open #pane-collapse { display: none; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 10px;                           /* the calendar rail's dot→title rhythm (B99, issue #249) */
   width: 100%;
   height: 100%;
   border: none;
@@ -2041,12 +2043,12 @@ html.wide #cal-export { margin-left: auto; }
   text-transform: uppercase;
   color: var(--ink-light);
 }
-#cal-rail .cdot {
+#cal-rail .cdot, #pane-rail .cdot {
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--highlight);        /* the aperture: today is lit in the rail too */
   opacity: .35;                        /* dim by default; lit when today has events */
 }
-#cal-rail .cdot.lit { opacity: 1; }
+#cal-rail .cdot.lit, #pane-rail .cdot.lit { opacity: 1; }
 #cal-rail .cdate {
   writing-mode: vertical-rl;
   font-size: 9px; font-weight: 600;

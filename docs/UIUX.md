@@ -205,7 +205,11 @@ boards a deep violet, Learning boards a pale rose — and each is *the same
 ladder*, rotated in hue and in nothing else. The Calendar view (§3.4) wears a
 fifth binding of the same ladder, rotated to orange and bound on `#cal-view`
 the way To-Do binds on `:root` — it is a body-level section, so the rebinding
-re-scopes exactly the calendar chrome and nothing else.
+re-scopes exactly the calendar chrome and nothing else. (B130, issue #249:
+the All-Boards rail wears the current board's ladder the same way — the
+collapsed face reads `--card`/`--frame`, so `applyBoardCat` mirrors the
+board's `data-cat` onto `#pane` and the same rungs rebind under
+`#pane[data-cat=...]`; `--chrome` still does not rotate.)
 
 | Rung | To-Do | Idea | Note | Learning | Calendar | Rel. luminance |
 |---|---|---|---|---|---|---|

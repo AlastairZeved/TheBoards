@@ -55,6 +55,13 @@ function sanitizeBoard(board) {
    depends on. Both call sites have already established `current`. */
 export function applyBoardCat() {
   el.board.dataset.cat = catOf(state.current);
+  /* B130 (issue #249): the All-Boards rail wears the same ladder as the board
+     it stands on. #pane sits outside #board's scope, so it carries its own
+     data-cat — styles.css rebinds the same rungs under #pane[data-cat=...].
+     The rail's own children (.cat-button/.board-cat) carry data-cat too, but
+     the ladder binds by direct id+attribute, so a child's attribute never
+     re-scopes the pane. */
+  el.pane.dataset.cat = catOf(state.current);
 }
 
 /* The tab/OS-window title follows the view (issue #148 item 2). Chrome only —
