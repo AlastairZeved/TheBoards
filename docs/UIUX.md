@@ -572,24 +572,32 @@ keeps its 0.675 rung and its role as the note's state surface. Its fixed blue
 sibling `--accent-copy` (B85)
 retired with the Copy tab it filled (B114): the token is out of the suite.
 
-### §2.6.2 The reminder glow (B109)
+### §2.6.2 The reminder glow (B109; the card-frame bloom, issue #240/B128)
 
 | Token | Value | Role | text on it (`--ink-dark`) | vs. the note families (hue) |
 |---|---|---|---|---|
-| `--reminder` | `#e6c2c9` | a note the user has toggled a reminder on (the note's state surface + glow bloom, §4.7; the pink the owner ruled, issue #240/B126 — since B127 the Remind tab's fill is its own token `--tab-remind`, same value, §2.6.4) | 11.84:1 | the Learning ladder's `--note` rung — the pink the owner ruled |
+| `--reminder-glow` | `#c6a400` | a note the user has toggled a reminder on (the card frame's border + soft bloom, §4.7) — the yellow the owner ruled, issue #240/B128 | 7.98:1 | the carried amber's hue held, one more rung down (B128) |
+| `--reminder` | `#e6c2c9` | the Remind tab's active fill value (kept for the B126/B127 record; the tab's live token is `--tab-remind`, same value, §2.6.4) — never a glow | 11.84:1 | the Learning ladder's `--note` rung |
 
 A reminder is **not an accent** — it belongs to the same class as the highlight
 wash (§2.6.1): a per-note appearance state the *user* asserts, sitting on the
 board at the user's command, so the accent placement rule does not reach it.
-Since B126 (issue #240) it wears the **pink** the owner ruled for the active
-Remind tab: `#e6c2c9`, the Learning ladder's own `--note` rung (§2.2) — the
-exact luminance match (0.5962, 4dp) of the Note Boards violet `#cec6ed` the
-directive names, chosen like Highlight's fixed amber fill (§2.6.1, B85) so
-fill + glyph say WHICH action, never colour alone. Like `--highlight` it does
-**not** rotate with board type: a reminder means the same thing on every board.
-Luminance 0.5962, above the ink crossover, so the tab's dark ink is correct on
-it (11.84:1 — B126's published law). The glow is the bloom: a `box-shadow` of
-the token around the filled tab — never a second colour.
+The owner ruled (issue #240, B128) that the glow is the **card's**, not the
+button's: with the reminder active the note card itself wears a soft yellow
+bloom on its frame — the same border + bloom grammar as the carried status
+(§2.6.3/§4.8) — and the active Remind tab keeps only its legible pink fill
+(§2.6.4), never a bloom. The yellow is the palette's own amber dropped a
+further rung, derived exactly the way `--carried` was derived (§2.6.3): the
+carried amber's hue held (OKLCH h ≈ 94.7°) while the luminance drops from
+0.5297 to **0.3847** — a full rung below the carried status, so a reminded
+note guides the eye without shouting, matching the palette's luminescence as
+the owner's ruling asks. Above the ink crossover, so the card's dark ink is
+correct through the frame's edge (**7.98:1** on `--ink-dark`). Like `--carried`
+it does **not** rotate with board type: a reminder means the same thing on
+every board. The glow is the bloom: one `box-shadow` of the token around the
+card's 2px frame — never a second colour, never the wash, never on the tab.
+The class is the record's shadow, recomputed at render (`setReminderUi`);
+a completed note never wears it.
 
 ### §2.6.3 The carried glow (B110)
 
@@ -1130,8 +1138,7 @@ Components and Requirements), not pills and not the `.sel-btn` raised control:
 .note-tb-btn svg   { width: 18px; height: 18px; }        /* the mark, grown from 16px (B86) */
 .note-tb-delete    { background: var(--tab-delete); }    /* warm danger family at the shared rung (§2.6.4, B127) */
 .note-tb-highlight { background: var(--tab-highlight); } /* amber family at the shared rung (§2.6.4, B127) */
-.note-clock        { /* the Remind tab (issue #240): .note-tb-btn metrics + this class; */
-                     /* active: --reminder fill + glow, §4.7 */ }
+.note-clock        { /* the Remind tab (issue #240): .note-tb-btn metrics + this class; active: fill only, no glow (B128) */ }
 ```
 
 The marks are `GLYPH`'s own drawn SVG (§13.3), each SVG `aria-hidden` with the
@@ -1214,8 +1221,14 @@ resting in the tab's own `--frame` ground — it is a tab now, not a floating in
 mark, and reads as a button whether or not the reminder is on. One tap
 sets the reminder, one tap clears it — **no time picker, no dialog, no due
 time stored anywhere in the record** (B104). Active, it takes the pink
-`--reminder` fill (§2.6.2 — `#e6c2c9`, the owner's ruling, issue #240/B126)
-with a bloom of the same token — the glow B104 rules — and its
+`--tab-remind` fill (§2.6.4 — `#e6c2c9`, B126/B127) — a legible active state
+and **no bloom**: the glow is the card's, not the button's (issue #240, B128).
+The card itself wears the glow: with the reminder on, its frame takes the
+yellow `--reminder-glow` border + soft bloom (§2.6.2 — `#c6a400`, the carried
+amber dropped a rung), the same border + bloom grammar as the carried status
+(§4.8), recomputed at render from the record (`setReminderUi`) — nothing
+stored, and a completed note never wears it. Tapping the reminder off deletes
+the key (B104/B21) and the glow goes with it. The tab's
 `aria-label` states the act the tap will perform (`Remind me` ⇄ `Remove
 reminder`), so the state never rides colour alone. An empty note keeps no
 frame (§6.2) and shows no toolbar row — no clock with it.
