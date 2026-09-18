@@ -1995,7 +1995,8 @@ html.wide #cal-export { margin-left: auto; }
 #cal-view.rail-open.panel { width: auto; }   /* expanded wins over the collapsed width */
 #cal-view.rail-open #cal-top { order: -1; }   /* B124 moved the row below the stack in DOM (above the month view); wide's expanded face keeps Back on top */
 #cal-view.rail-open #cal-top,
-#cal-view.rail-open #cal-stack { display: none; }   /* collapsed shows only the rail face */
+#cal-view.rail-open #cal-stack,
+#cal-view.rail-open #cal-month { display: none; }   /* collapsed shows only the rail face (issue #248: the month view rode along) */
 #cal-rail {
   display: flex;
   flex-direction: column;

@@ -2179,6 +2179,18 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     });
     ok('the calendar rail still expands and collapses (B99 untouched)', calOpen && calClosed,
        JSON.stringify({ calOpen, calClosed }));
+    // Issue #248: the collapsed rail must not leak its inner furniture — the
+    // month view rides #cal-view and previously stayed visible in the 40px face.
+    const monthHidden = await page.evaluate(() => {
+      const m = document.getElementById('cal-month');
+      const r = m.getBoundingClientRect();
+      return getComputedStyle(m).display === 'none' && r.width === 0 && r.height === 0;
+    });
+    ok('the collapsed rail hides the month view (issue #248)', monthHidden);
+    await page.click('#cal-rail');
+    await page.waitForTimeout(300);
+    ok('the expanded panel still shows the month view (issue #248 does not touch the expanded face)',
+       await page.evaluate(() => getComputedStyle(document.getElementById('cal-month')).display === 'flex'));
     ok('and the pane did not follow the calendar', await page.evaluate(() =>
       document.getElementById('pane').classList.contains('rail-open')));
     ok('no page errors', errors.length === 0, errors.join(' | '));
@@ -2220,6 +2232,19 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
          !document.getElementById('cal-boards') &&
          document.getElementById('list-view').hidden &&
          getComputedStyle(document.getElementById('list-view')).display === 'none'));
+    // Issue #248 on the tablet band: collapse the rail and the month view goes
+    // with it — the creep reproduced at 800px (wide tier, desktop MQ unset).
+    await page.click('#cal-rail');
+    await page.waitForTimeout(300);
+    await page.click('#cal-back');
+    await page.waitForTimeout(300);
+    const tabletMonth = await page.evaluate(() => {
+      const m = document.getElementById('cal-month');
+      const r = m.getBoundingClientRect();
+      return document.getElementById('cal-view').classList.contains('rail-open') &&
+        getComputedStyle(m).display === 'none' && r.width === 0 && r.height === 0;
+    });
+    ok('the collapsed rail hides the month view on tablet (issue #248)', tabletMonth);
     await ctx.close();
 
     // Mobile fixture: below 744px the tab stays — mobile's entry into the

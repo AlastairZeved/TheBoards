@@ -1279,7 +1279,9 @@ desktop code path.
 | Boards | full-screen list | always-visible rail |
 
 (2026-09-16: the desktop rail's always-visible geometry reads subject to B118
-— issue #211 — which makes it collapsible on wide, collapsed by default.)
+— issue #211 — which makes it collapsible on wide, collapsed by default.
+2026-09-17: the collapsed face is the 40px strip alone (B128, issue #248) —
+the month view renders only on the expanded panel.)
 
 `MOVE_THRESHOLD = 16px` of slop before a drag begins or a long-press cancels
 (B29). `LONGPRESS_MS = 500`; any release before that with movement under
