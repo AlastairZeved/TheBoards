@@ -149,7 +149,7 @@ export function makeNoteEl(note) {
 
 /* The clock's look follows the record (aria carries the state too — never
    colour alone, UIUX §1). Called from the render paths and the toggle. The
-   .reminder CLASS also drives the card-frame glow (B128), so it excludes
+   .reminder CLASS also drives the card-frame glow (B132), so it excludes
    completed notes — the same guard setCarriedUi applies: a completed note
    never glows even if a legacy record kept the key (the aria state still
    reads the record). */

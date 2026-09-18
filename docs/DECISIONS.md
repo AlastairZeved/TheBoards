@@ -5088,7 +5088,9 @@ sweep deletes the linked boards the pre-fix build left behind for future dates �
 derived empty state, deleted, their event records surviving untouched in the
 store. Tapping a future day still shows the event editor, not a board.
 
-### B128. The reminder glow moves to the note card — a soft yellow bloom on the card's frame; the Remind tab never blooms (issue #270, the owner's verbatim ruling of record from issue #240 comment 5718587081; supersedes ONLY B126's active-tab glow clause — the pink identity fill "plus a glow bloom of the same hue" — and the same clause in UIUX §2.6.2/§4.7; keeps B126's Remind tab placement and pink fill, B127's tab-fill rung, B104's one-tap clock toggle and border+bloom grammar, B110's carried-status pattern the card glow copies, B21's absence-is-off idiom, §1's state-is-never-colour-alone; waives nothing)
+### B132. The reminder glow moves to the note card — a soft yellow bloom on the card's frame; the Remind tab never blooms (issue #270, the owner's verbatim ruling of record from issue #240 comment 5718587081; supersedes ONLY B126's active-tab glow clause — the pink identity fill "plus a glow bloom of the same hue" — and the same clause in UIUX §2.6.2/§4.7; keeps B126's Remind tab placement and pink fill, B127's tab-fill rung, B104's one-tap clock toggle and border+bloom grammar, B110's carried-status pattern the card glow copies, B21's absence-is-off idiom, §1's state-is-never-colour-alone; waives nothing)
+
+*(Landed as B128 in PR #271; renumbered B132 — B128 was already taken by the calendar-rail ruling, issue #248. Content and Source line unchanged.)*
 
 **Source:** https://github.com/AlastairZeved/TheBoards/issues/240#issuecomment-5718587081 (owner comment, 2026-09-17), transcribed verbatim: "One more comment to add about the movement of the reminder button, an unaccounted for ripple: when reminder is tapped and turned on, the note card itself gets a soft yellow glow, not the button. The yellow should match the luminescence of the palette so as to not be distracting, but guides the eye still. Tapping to turn the reminder off removes the glow."
 

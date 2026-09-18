@@ -88,7 +88,7 @@ async function seedBoard(page, title, cat, notes) {
       JSON.stringify(got.keys) === JSON.stringify(['id', 'reminder', 'rh', 'rw', 'scale', 'state', 'text', 'x', 'y'].sort()) &&
       got.rec === true, JSON.stringify(got.keys));
 
-    // B128: the glow is the CARD's, not the button's — yellow bloom on the
+    // B132: the glow is the CARD's, not the button's — yellow bloom on the
     // frame, and the tab keeps its fill with no box-shadow.
     const glow = await page.evaluate(() => {
       const el = [...document.querySelectorAll('.note')].find(n => n.textContent.includes('water the ferns'));
@@ -96,7 +96,7 @@ async function seedBoard(page, title, cat, notes) {
       const clock = getComputedStyle(el.querySelector('.note-clock'));
       return { cardShadow: card.boxShadow, cardBorder: card.borderColor, clockShadow: clock.boxShadow, clockFill: clock.backgroundColor };
     });
-    ok('reminder on: the CARD frame wears the yellow bloom, the tab does not glow (B128)',
+    ok('reminder on: the CARD frame wears the yellow bloom, the tab does not glow (B132)',
       glow.cardShadow.includes('rgb(198, 164, 0)') && glow.cardBorder.includes('rgb(198, 164, 0)') &&
       (glow.clockShadow === 'none'), JSON.stringify(glow));
 
@@ -115,7 +115,7 @@ async function seedBoard(page, title, cat, notes) {
       const card = getComputedStyle(el.querySelector('.note-text'));
       return { shadow: card.boxShadow, border: card.borderColor };
     });
-    ok('reminder off: no glow anywhere — frame back to rest (B128)',
+    ok('reminder off: no glow anywhere — frame back to rest (B132)',
       off.shadow === 'none' && !off.border.includes('rgb(198, 164, 0)'), JSON.stringify(off));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
