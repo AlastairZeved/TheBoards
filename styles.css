@@ -88,7 +88,7 @@
      either. The highlight's own amber dropped a rung — status below attention,
      the issue's priority order — carrying --ink-dark at 10.62:1 (UIUX §2.6.3). */
   --carried:         #E1BE26;
-  --reminder-glow:   #c6a400;   /* the reminder card-frame bloom (B128): the carried amber's hue held, one more rung down (Y 0.5297 → 0.3847) */
+  --reminder-glow:   #c6a400;   /* the reminder card-frame bloom (B132): the carried amber's hue held, one more rung down (Y 0.5297 → 0.3847) */
   --elevation:       0 2px 8px rgb(0 0 0 / 0.45);
   --elevation-inset: inset -3px 0 8px rgb(0 0 0 / 0.16), inset 0 2px 4px rgb(0 0 0 / 0.10);
 }
@@ -869,7 +869,7 @@ html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so 
    the clock glyph — it is a tab now, not a floating ink mark, and must be
    visible as a button whether or not the reminder is on. Active, it takes the
    pink identity fill (--tab-remind, #e6c2c9, B127) — a legible active state,
-   NO bloom: the owner ruled the glow is the card's, not the button's (B128).
+   NO bloom: the owner ruled the glow is the card's, not the button's (B132).
    The card frame carries the bloom below. Its
    aria-label stating the act the tap will perform. An empty note shows no frame
    and no toolbar row (§6.2), which carries the old corner-guard's job. The
@@ -881,7 +881,7 @@ html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so 
   color: var(--ink-dark);
 }
 
-/* The card glow (B128, issue #240): with the reminder active, the note card
+/* The card glow (B132, issue #240): with the reminder active, the note card
    itself wears a soft yellow bloom on its frame — the same border + bloom
    grammar as the carried status (§4.8), in the reminder's own quieter rung
    --reminder-glow (#c6a400, the carried amber dropped a rung). The class is

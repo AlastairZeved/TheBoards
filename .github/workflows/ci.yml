@@ -55,6 +55,12 @@ jobs:
       - name: tokens.js
         run: node test/tokens.js
 
+      # records.js is the second browserless suite: it guards DECISIONS.md's
+      # `### B<n>` citation space (no duplicate, ascending, the glow ruling is
+      # B132) — issue #272. Also first, for the same reason.
+      - name: records.js
+        run: node test/records.js
+
       # sw-update.js serves its own throwaway copy on SW_TEST_PORT; it doesn't
       # use the server above.
       - name: mobile.js
