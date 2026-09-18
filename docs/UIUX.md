@@ -497,7 +497,7 @@ and therefore not earning its place at that weight.
 | Token | Value | Role | on `--chrome` | on `--card` (the lightest near-black ground) | label when filled |
 |---|---|---|---|---|---|
 | `--accent-restore` | `#b6dee2` | Complete / Restore / Undo | 13.90:1 | 12.60:1 | 13.31:1 |
-| `--danger` | `#E2A08C` | Delete | 9.22:1 | 8.35:1 | 8.83:1 |
+| `--danger` | `#E2A08C` | Delete (menu text and the `.sel-btn` fill; since B127 the Delete TAB's fill is `--tab-delete`, §2.6.4) | 9.22:1 | 8.35:1 | 8.83:1 |
 | `--accent-page` | `#6d9cb0` | the primary (B59), rail pager, drop target | 6.72:1 | 6.09:1 | 6.44:1 |
 
 > **An accent is text only on a near-black ground — `--chrome`, `--deep` or
@@ -560,16 +560,19 @@ unchanged — the note already binds `--ink` to `--ink-dark` on its `.on-light`
 surface (§2.3), which holds on amber at 13.27:1. Unlike the ladder, `--highlight`
 does **not** rotate with board type: an emphasis the user places means the same
 thing on a To-Do, a Note, a Learning and an Idea board, so it is one constant value.
-Since B85, `--highlight` also serves as the Highlight tab's **identity fill** on
+Since B85, `--highlight` also served as the Highlight tab's **identity fill** on
 the note toolbar (§4.5) — fixed like this wash, and chrome that names *which
-action*, never the note's state. Its fixed blue sibling `--accent-copy` (B85)
+action*, never the note's state. Since B127 the tab's fill is its own token
+`--tab-highlight` (§2.6.4) at the shared note rung 0.5962 — the wash itself
+keeps its 0.675 rung and its role as the note's state surface. Its fixed blue
+sibling `--accent-copy` (B85)
 retired with the Copy tab it filled (B114): the token is out of the suite.
 
 ### §2.6.2 The reminder glow (B109)
 
 | Token | Value | Role | text on it (`--ink-dark`) | vs. the note families (hue) |
 |---|---|---|---|---|
-| `--reminder` | `#e6c2c9` | a note the user has toggled a reminder on (the Remind tab's active fill + bloom, §4.7; the pink identity fill, issue #240/B126) | 11.84:1 | the Learning ladder's `--note` rung — the pink the owner ruled |
+| `--reminder` | `#e6c2c9` | a note the user has toggled a reminder on (the note's state surface + glow bloom, §4.7; the pink the owner ruled, issue #240/B126 — since B127 the Remind tab's fill is its own token `--tab-remind`, same value, §2.6.4) | 11.84:1 | the Learning ladder's `--note` rung — the pink the owner ruled |
 
 A reminder is **not an accent** — it belongs to the same class as the highlight
 wash (§2.6.1): a per-note appearance state the *user* asserts, sitting on the
@@ -600,6 +603,40 @@ user's fill) outranks status (the record's frame), the issue's own priority
 order — and above the ink crossover, so the card's dark ink is correct through
 the frame's edge. The glow is the bloom: one `box-shadow` of the token around
 the card's 2px frame — never a second colour, never the wash.
+
+### §2.6.4 The note toolbar's tab fills (B127)
+
+| Token | Value | Role | on it (`--ink-dark`) | rung |
+|---|---|---|---|---|
+| `--tab-complete` | To-Do `#becce2` · Idea `#b3d2c3` · Note `#d3c6e0` · Learning `#dfc4ce` · Calendar `#dbc8b3` | the Complete tab's fill (§4.5) | the icon outline, on every fill | 0.5962 |
+| `--tab-highlight` | `#e7ca42` | the Highlight tab's identity fill (§4.5) | the icon outline | 0.5962 |
+| `--tab-remind` | `#e6c2c9` | the Remind tab's fill (B126) | the icon outline | 0.5962 |
+| `--tab-delete` | `#ebc2b6` | the Delete tab's fill (§4.5) | the icon outline | 0.5962 |
+
+The derived fills (implementation PR, B127): `--tab-complete` carries the
+ladder's own frame-family hue lifted to the shared rung, keeping B67's rotation;
+`--tab-highlight` is the amber family dropped from the wash's 0.675; `--tab-delete`
+is the warm danger family moved up from 0.43. Each carries `--ink-dark` at
+**11.84:1** — except the Idea and Note ladders' `--tab-complete`, where 8-bit
+quantisation of the derived hex leaves **11.83:1** (the rung itself is exact at
+4dp on all five). Live-measured in Chromium on one note per board type (rung
+0.5962 at 4dp, per-type Complete) at PR merge; `test/tokens.js` §[5c] pins all
+of it from the shipped hexes.
+
+Since B127 (issue #241) all four note-toolbar tab fills — Complete · Highlight ·
+Remind · Delete — share ONE luminance rung: the note rung **0.5962** (4dp), the
+same rung the Remind pink `#e6c2c9` already carries (B126). Each fill keeps its
+own hue family; the icon outline on every fill is `--ink-dark`. This supersedes
+ONLY the tab-fill luminance aspects of the earlier declarations — §2.6's
+identity-fill table rows, §2.6.1's B85 tab sentence, §4.5's CSS snippet — which
+had the tabs borrowing double-duty tokens (`--frame` is the card border/rules
+token B61, `--highlight` is the wash, `--danger` is menu text and the
+`.sel-btn` fill). The highlight WASH (§2.6.1 — the note's per-note state
+surface) and the reminder note-state glow (§2.6.2) keep their own rungs: this
+ruling governs the toolbar row's chrome, not the note states. `--tab-complete`
+keeps B67's per-type rotation, now at the shared rung. The exact hexes landed
+with the implementation PR (which carries the `test/tokens.js` pin and the sw.js
+bump — table above); `--tab-remind`'s `#e6c2c9` is the rung's reference value. Source: issue #241, B127.
 
 ### §2.7 Focus
 
@@ -1082,13 +1119,13 @@ Components and Requirements), not pills and not the `.sel-btn` raised control:
 .note-tb-btn {
   padding: 7px 6px;                    /* the band-label tab (§3.1), finger-size (B86) */
   border-radius: 3px;                  /* tracks the note's own (§4) */
-  background: var(--frame);            /* Complete's ground: the board's frame hue, rotates per type (B67) */
-  color: var(--ink);                   /* .on-light → --ink-dark, 5.70:1 (B76) */
+  background: var(--tab-complete);     /* the shared note rung 0.5962, rotates per type (B67, B127) */
+  color: var(--ink);                   /* .on-light → --ink-dark, the icon outline on every fill (B127) */
   font-size: 13px; font-weight: 600;
 }
 .note-tb-btn svg   { width: 18px; height: 18px; }        /* the mark, grown from 16px (B86) */
-.note-tb-delete    { background: var(--danger); }        /* --danger fill carrying --ink-dark, 8.83:1 (§2.6) */
-.note-tb-highlight { background: var(--highlight); }     /* fixed amber identity fill (B85) */
+.note-tb-delete    { background: var(--tab-delete); }    /* warm danger family at the shared rung (§2.6.4, B127) */
+.note-tb-highlight { background: var(--tab-highlight); } /* amber family at the shared rung (§2.6.4, B127) */
 .note-clock        { /* the Remind tab (issue #240): .note-tb-btn metrics + this class; */
                      /* active: --reminder fill + glow, §4.7 */ }
 ```
@@ -1117,10 +1154,14 @@ hides while the note is picked up (`.pressed`). The show/hide is the §8 fade �
 kill-switch. **State is never colour alone (§1):** the Complete tab flips its mark
 (check ⇄ undo) and label; the Highlight tab flips its label and shows an inset border
 while the note wears the `--highlight` wash (B71) — the wash is the state, the tab
-only triggers and names it. The Highlight tab also carries its own **fixed identity fill** (amber, B85) the
-way Delete carries `--danger`: the fill says *which action* — chrome, not state —
-so the three tabs are told apart by fill **and** glyph. Unlike Complete's rotating
-`--frame`, it does not change with board type. Copy's blue `--accent-copy` filled
+only triggers and names it. The Highlight tab also carries its own **fixed identity fill** the way Delete
+carries its fill: the fill says *which action* — chrome, not state — so the tabs
+are told apart by fill **and** glyph. Since B127 all four fills are dedicated
+tokens at the shared note rung 0.5962 (§2.6.4) — `--tab-highlight` (amber family,
+dropped from the wash's 0.675) and `--tab-delete` (warm danger family) here,
+`--tab-complete` with B67's per-type rotation, `--tab-remind` the B126 pink.
+Unlike `--tab-complete`, `--tab-highlight` does not change with board type.
+Copy's blue `--accent-copy` filled
 the fourth tab until B114 re-homed Copy to the note menu (§7) and retired the
 token with its tab.
 

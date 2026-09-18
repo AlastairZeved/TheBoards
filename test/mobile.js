@@ -299,7 +299,9 @@ async function openCat(page, cat) {
     // Identity fill (B85): Highlight is a fixed amber — it does not rotate with
     // the board type the way Complete's --frame does. (Copy's fixed blue retired
     // with its tab — B114.)
-    ok('Highlight wears the fixed amber fill (B85)', tb.highlightBg === 'rgb(242, 214, 75)', tb.highlightBg);
+    // B127 moved the fixed identity fill to its own token: --tab-highlight,
+    // the amber family at the shared note rung 0.5962 (was #F2D64B, B85).
+    ok('Highlight wears the fixed --tab-highlight fill (B85/B127)', tb.highlightBg === 'rgb(231, 202, 66)', tb.highlightBg);
     const rot = await page.evaluate(() => {
       const board = document.getElementById('board');
       const prev = board.dataset.cat;
@@ -309,8 +311,8 @@ async function openCat(page, cat) {
       board.dataset.cat = prev;
       return out;
     });
-    ok('the identity fill stays fixed while Complete follows the board (B85)',
-       rot.hi === 'rgb(242, 214, 75)' && rot.comp !== 'rgb(105, 142, 191)',
+    ok('the identity fill stays fixed while Complete follows the board (B85/B127)',
+       rot.hi === 'rgb(231, 202, 66)' && rot.comp === 'rgb(179, 210, 195)',
        JSON.stringify(rot));
     // Notes carry no Export (that is board-level, on the anchor menu).
     ok('the note toolbar has no Export', !tb.labels.some(l => /Export/i.test(l)), JSON.stringify(tb.labels));
