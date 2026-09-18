@@ -1006,10 +1006,13 @@ export function makeCalDay(day, events, board) {
 }
 
 /* Add an event to a date (R5's whole chain, one consequence):
-   1. the date's linked board is ensured (created on the first event),
+   1. the date's linked board is ensured (created on the first event) —
+      UNLESS the date is in the future (B131): the event record is the only
+      stored thing; the board materializes on its date via the morning
+      lifecycle, which gives it the same first-sync calReq (launchTodayBoard),
    2. the event record is written to the store,
-   3. the board's Requirements mirror is synced,
-   4. both records persist, and the line appears in the day zone at once.
+   3. the board's Requirements mirror is synced (same-day only, per 1),
+   4. the records persist, and the line appears in the day zone at once.
    Creating + writing are consequences (records change), so the whole step
    runs under commitAction's drop-guard (B81) — a double-tap adds one event.
    The line's editor opens on arrival: capture precedes structure, §1.1. */
@@ -1020,15 +1023,23 @@ async function addCalEvent(dateKey, zone) {
 
     flushSave();
     const all = await idbGetAll();
-    const boards = all.filter(b => b.title !== undefined);
-    const { board } = ensureLinkedBoard(boards, dateKey);
     const ev = newCalEvent(dateKey, '');
-    if (board.calReq === undefined) {
-      // First sync for this board: the span is the events it already had.
-      board.calReq = calEventsOf(eventsOf(all), dateKey).length;
+    if (dateKey <= calKey(new Date())) {  // B131 (issue #250): a FUTURE-dated
+                                          // event stores the event record
+                                          // alone — its linked board is derived
+                                          // state that materializes on its date
+                                          // via the morning lifecycle, so
+                                          // nothing future-dated ever enters
+                                          // the boards store.
+      const boards = all.filter(b => b.title !== undefined);
+      const { board } = ensureLinkedBoard(boards, dateKey);
+      if (board.calReq === undefined) {
+        // First sync for this board: the span is the events it already had.
+        board.calReq = calEventsOf(eventsOf(all), dateKey).length;
+      }
+      await idbPut(board);
     }
     await idbPut(ev);
-    await idbPut(board);
     const line = document.createElement('div');
     line.className = 'cal-line';
     line.setAttribute('role', 'listitem');
@@ -1164,12 +1175,37 @@ async function launchTodayBoard(today, morning) {
   commitAction(async () => {            // creating the board is a consequence
                                         // (ensureLinkedBoard's contract, B81) —
                                         // same wrap as addCalEvent's R5 chain
+    // B131: the boot pick can BE a ghost (the most-recent record is often a
+    // future board the pre-fix build created). Detach it BEFORE flushSave —
+    // persist() early-returns on no current, so the ghost's snapshot never
+    // lands behind the sweep's delete and resurrects it.
+    if (state.current && state.current.cal > today &&
+        !(state.current.notes || []).length) state.current = null;
     flushSave();
     const all = await idbGetAll();
     if (!morning && !calEventsOf(eventsOf(all), today).length) return;
     const boards = all.filter(b => b.title !== undefined);
     const { board } = ensureLinkedBoard(boards, today);
-    if (morning) await carryForward(boards, board, today);
+    if (morning) {
+      if (board.calReq === undefined) {
+        // B131 (issue #250): the first sync addCalEvent no longer does for a
+        // future-dated event's board — the span is the events it already had.
+        board.calReq = calEventsOf(eventsOf(all), today).length;
+      }
+      // B131 migration sweep: linked boards already created for future dates
+      // by the pre-fix build are derived empty state — delete them once (the
+      // event records survive; they live in the store separately).
+      for (const b of boards.slice()) {
+        // No current-board guard: at the morning boot the sweep runs before
+        // the landing swaps current to today's board, and the most-recent
+        // pick could BE a ghost — skipping it would defeat the sweep.
+        if (b !== board && b.cal > today && !(b.notes || []).length) {
+          boards.splice(boards.indexOf(b), 1);
+          await idbDelete(b.id);
+        }
+      }
+      await carryForward(boards, board, today);
+    }
     if (state.current && state.current.id === board.id) persist();
     else await idbPut(board);
     await syncDateMirror(today);
