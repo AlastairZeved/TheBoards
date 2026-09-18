@@ -184,10 +184,77 @@ boot();
 
 /* Publish the observable surface to window for the black-box suites.
    Getters, not snapshots: a mutable let is read at test time, exactly like the
-   classic-script global it replaces. Runs after boot() so the app is live. */
-for (const n of ['ACTION_DELAY', 'BOARD_CATS', 'EXPORT_GEO', 'EXPORT_W', 'GRID_ORDER', 'exportBoardPdf', 'exportCalPdf', 'LEGACY_H', 'LOGICAL_H', 'LOGICAL_W', 'LONGPRESS_MS', 'MOVE_THRESHOLD', 'buildBoardPdf', 'calKey', 'calSqueeze', 'catOf', 'catOrder', 'catPageCap', 'catView', 'clamp', 'commitAction', 'deleteNote', 'drillCat', 'effScale', 'el', 'engaged', 'exportNoteBox', 'exportX', 'fillBoardAction', 'g', 'goToList', 'hideToast', 'idbDelete', 'idbGet', 'idbGetAll', 'idbPut', 'leave', 'linkSource', 'listOpen', 'lotH', 'lotMenuOpen', 'makeCalDay', 'newBoardIn', 'newBoardRecord', 'newCalEvent', 'noteEls', 'pdfTextW', 'persist', 'popping', 'rebaseNote', 'renderBoard', 'renderCal', 'renderPane', 'renderScale', 'renderX', 'renderY', 'returnToBoard', 'saveNow', 'selected', 'startCalLineEdit', 'state', 'swapBoard', 'swapping', 'syncDateMirror', 'updateLinks']) {
-  Object.defineProperty(window, n, { get: () => eval(n), configurable: true });
-}
+   classic-script global it replaces. Runs after boot() so the app is live.
+   Static getters, not eval(): CSP forbids eval (audit #246 finding 1), and an
+   eval-based surface is itself an XSS sink. */
+const SURFACE = {
+  get ACTION_DELAY() { return ACTION_DELAY; },
+  get BOARD_CATS() { return BOARD_CATS; },
+  get EXPORT_GEO() { return EXPORT_GEO; },
+  get EXPORT_W() { return EXPORT_W; },
+  get GRID_ORDER() { return GRID_ORDER; },
+  get exportBoardPdf() { return exportBoardPdf; },
+  get exportCalPdf() { return exportCalPdf; },
+  get LEGACY_H() { return LEGACY_H; },
+  get LOGICAL_H() { return LOGICAL_H; },
+  get LOGICAL_W() { return LOGICAL_W; },
+  get LONGPRESS_MS() { return LONGPRESS_MS; },
+  get MOVE_THRESHOLD() { return MOVE_THRESHOLD; },
+  get buildBoardPdf() { return buildBoardPdf; },
+  get calKey() { return calKey; },
+  get calSqueeze() { return calSqueeze; },
+  get catOf() { return catOf; },
+  get catOrder() { return catOrder; },
+  get catPageCap() { return catPageCap; },
+  get catView() { return catView; },
+  get clamp() { return clamp; },
+  get commitAction() { return commitAction; },
+  get deleteNote() { return deleteNote; },
+  get drillCat() { return drillCat; },
+  get effScale() { return effScale; },
+  get el() { return el; },
+  get engaged() { return engaged; },
+  get exportNoteBox() { return exportNoteBox; },
+  get exportX() { return exportX; },
+  get fillBoardAction() { return fillBoardAction; },
+  get g() { return g; },
+  get goToList() { return goToList; },
+  get hideToast() { return hideToast; },
+  get idbDelete() { return idbDelete; },
+  get idbGet() { return idbGet; },
+  get idbGetAll() { return idbGetAll; },
+  get idbPut() { return idbPut; },
+  get leave() { return leave; },
+  get linkSource() { return linkSource; },
+  get listOpen() { return listOpen; },
+  get lotH() { return lotH; },
+  get lotMenuOpen() { return lotMenuOpen; },
+  get makeCalDay() { return makeCalDay; },
+  get newBoardIn() { return newBoardIn; },
+  get newBoardRecord() { return newBoardRecord; },
+  get newCalEvent() { return newCalEvent; },
+  get noteEls() { return noteEls; },
+  get pdfTextW() { return pdfTextW; },
+  get persist() { return persist; },
+  get popping() { return popping; },
+  get rebaseNote() { return rebaseNote; },
+  get renderBoard() { return renderBoard; },
+  get renderCal() { return renderCal; },
+  get renderPane() { return renderPane; },
+  get renderScale() { return renderScale; },
+  get renderX() { return renderX; },
+  get renderY() { return renderY; },
+  get returnToBoard() { return returnToBoard; },
+  get saveNow() { return saveNow; },
+  get selected() { return selected; },
+  get startCalLineEdit() { return startCalLineEdit; },
+  get state() { return state; },
+  get swapBoard() { return swapBoard; },
+  get swapping() { return swapping; },
+  get syncDateMirror() { return syncDateMirror; },
+  get updateLinks() { return updateLinks; }
+};
+Object.defineProperties(window, Object.getOwnPropertyDescriptors(SURFACE));
 
 
 // Register the service worker at top level (not inside async boot, whose IDB
@@ -250,7 +317,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v84';
+const OWN_BUILD = 'v85';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {
