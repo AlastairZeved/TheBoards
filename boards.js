@@ -1,7 +1,7 @@
 /* --- 11. Board list + routing -------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { CAT_SEC_GAP, CE, COPY, GLYPH, LEAVE_MS, LIST_CARD_COLS, LIST_CARD_H, LIST_CAT_ROW } from './state.js';
-import { LONGPRESS_MS, MOVE_THRESHOLD, PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP, PANE_ROW_H, SWAP_MS, calBoardOf } from './state.js';
+import { LONGPRESS_MS, MOVE_THRESHOLD, PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP, SWAP_MS, calBoardOf } from './state.js';
 import { calEventsOf, calKey, calWindow, el, ensureLinkedBoard, EMBED, histPush, newBoardRecord, newCalEvent, state } from './state.js';
 import { syncMirror, mirrorEventsOf } from './state.js';
 import { flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, saveTimer, scheduleSave } from './persistence.js';
@@ -147,9 +147,10 @@ export function catPageCap(filled, drawn) {
   // hides it, so the budget cannot flap between one- and many-page states.
   // Rows are what the height buys; columns are what a row holds. Capacity is
   // their product, so the pager still counts cards and B42's law is untouched.
-  // The mobile list card is taller than the rail's (B82: two title lines + the
-  // Last Updated line), so each surface budgets against its own row height.
-  const rowH = state.isDesktop ? PANE_ROW_H : LIST_CARD_H;
+  // The mobile list card is taller than the §6 floor (B82: two title lines +
+  // the Last Updated line), and since issue #254 the rail card wears the same
+  // B82 shape — so both surfaces budget against the one 76px row height.
+  const rowH = LIST_CARD_H;
   const rows = Math.max(1, Math.floor((avail / n - head - pager) / (rowH + PANE_ROW_GAP)));
   return rows * (state.isDesktop ? 1 : LIST_CARD_COLS);
 }

@@ -5029,3 +5029,18 @@ month view returned to the tree after #191 landed inside the section whose
 collapsed-hide selector predated it; the selector simply grows its third
 clause. The expanded panel is untouched: expand the rail and the month view
 renders as §3.5 built it.
+
+### B129. The All-Boards rail card restacks: the title leads and the Last Updated stamp drops to a mini bottom-right line, with left padding before the title text and the section header cleared off the tray's frame (issue #254; extends B82's card shape from the mobile drilled list to the rail — supersedes the single-line-inline clause of B82's rail carve-out only; keeps B82's stamp content, B69's updatedAt source, B72's tray frame, §6's floors elsewhere; waives nothing)
+
+**Source:** https://github.com/AlastairZeved/TheBoards/issues/254 ("Desktop & Tablet Modes: header text in the "All Boards" menu is too tight and losing legibility on the left side."), transcribed verbatim: "Increase the padding on the left side of the component before the title text begins. Additionally, reduce the size of the "Last updated" text to a mini size, anchored to the bottom right of the board's title card.This should make room for the title of each board's card to display. Currently only the "Last updated" text appears and no titles of any boards are legible."
+
+**The ruling.** On the rail the board card gives up B82's single-line skin:
+inline at the card's right, the `Last Updated` stamp starved the title to
+ellipsis — the screenshot shows cards reading as a date alone. The rail card
+takes the drilled-list card's shape: the title first (two lines, then `…`), the
+stamp mini at the card's bottom-right, and room on the left before the title
+text begins. The section header gets the same room: its label no longer sits
+flush against the tray's inset frame, which read as a clipped left edge on all
+four categories. The calendar mark, a third child the column skin would wrap
+onto its own line, anchors to the card's top-right corner. The card stands 76px
+on every surface and `catPageCap` budgets each against it.
