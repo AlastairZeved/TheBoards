@@ -4,37 +4,21 @@
 
 [Task tracking, creative ideation.
 
-Zeved Boards is a spatial, offline-first to-do app that works like a digital sketchbook. It's designed for people who think by placing ideas in physical space, spatial reasoners, neurodivergent minds, or anyone else who needs to see their thoughts laid out and reorganizable visually. Where bullet lists fails, bring a board.
+A personal, offline, installable web app for notes and tasks that works like a sketchbook page. You tap anywhere on a bounded canvas, a note box appears, and you type. You can drag notes around, resize them, and connect them. The position and size of a note are the organization; no folders, tags, search, filters, or settings. 
+
+Storage is local only through browser storage. Export/import of JSON for backups. Export to PDF (both spatially and list form) for sharing.  
+
+Each board has four fixed areas: Title, Components, Requirements, and Parking Lot. Boards are grouped into To Do, Ideas, Notes, and Learning. On wide screens there’s also a calendar rail. For To Do Boards, Requirements is the only section with rules since it functions as a 2-way sync with the Calendar for any events on that day. 
 
 It is also deliberately small. The app is five files of vanilla
 HTML/CSS/JavaScript with no frameworks, no build step, no package manager, and
 no backend. All data lives on-device in browser cache storage; nothing is sent anywhere,
 ever.
 
-## Table of Contents
+## Why it exists:
+Because most task apps force you to decide where something belongs before you’ve even written it down. This flips that: capture first, structure later by moving things around. It’s an external working memory. The page holds the thoughts so your head doesn’t have to. Whether you're in a hurry, just need to 'jot it down quick', or an outright fellow scatterbrain - capture first, organize second is the point. 
 
-- [Security](#security)
-- [Background](#background)
-- [Install](#install)
-  - [Dependencies](#dependencies)
-- [Usage](#usage)
-  - [On touch](#on-touch)
-  - [With a mouse and keyboard](#with-a-mouse-and-keyboard)
-  - [Boards, categories, and the calendar](#boards-categories-and-the-calendar)
-- [Design Philosophy](#design-philosophy)
-- [Project Structure](#project-structure)
-- [The Governing Records](#the-governing-records)
-- [Maintainers](#maintainers)
-- [Contributing](#contributing)
-- [License](#license)
-
-## Security
-
-Zeved Boards is client-only. There is no backend, no account, no sync, no
-analytics, and no network call anywhere in the app. Board data lives in the
-browser's storage itself and never leaves the device; the only ways data leaves are
-the exports you download yourself (a per-board PDF or a whole-library JSON
-backup under **Export**).
+This is not for teams, shared projects, cross-device sync, heavy task management, or anyone who needs search across a large archive.
 
 ## Background
 
@@ -44,31 +28,16 @@ The design draws on gestalt principles (Prägnanz in particular) and on
 Miller's working-memory research — a bounded page you can see all of, rather
 than an infinite canvas you have to navigate. For other tools like this, the wonderful community sits over at the Malleable Systems Collective.
 
-## Install
+#How to use it:
 
-**Use it directly** — the app is deployed on GitHub Pages:
-<https://alastairzeved.github.io/TheBoards/>
-
-Open it in a browser, or install it as an app (browser menu → *Install app* /
-*Add to Home Screen*) for the standalone, fully offline experience.
-
-**Run it yourself** — clone or download this repository and serve the folder;
-there is nothing to build:
-
-```sh
-git clone https://github.com/AlastairZeved/TheBoards.git
-cd TheBoards
-python3 -m http.server 8000   # then visit http://localhost:8000
-```
-
-Any static file server works; the app is served as-is. The app is split into
-native ES modules (`app.js` imports `state.js`, `persistence.js`,
-`geometry.js`, `render.js`, `interactions.js`, `menus.js`, `export.js`,
-`boards.js`) — so it must be served over HTTP(S), not opened as a local
-`file://` (browsers block module imports on the file protocol).
-
-Data is per-device by design. The JSON export under **Export** is your backup
-and your way to move a library between devices; **Import** it when needed.
+pen the GitHub Pages URL (https://alastairzeved.github.io/TheBoards/) and/or install it as a PWA from the website. 
+Tap the empty canvas to create a note. 
+Type. Drag to move, pinch to resize. 
+Tap once to select, tap again to edit. 
+Long-press or right-click for the note menu. Link notes by choosing Link and then tapping another note. 
+Completing a note scratches it out instead of deleting it, and you get a 5-second undo. 
+Export/import JSON is your backup and transfer method. 
+On desktop, use the left rail to switch boards; on phone, the calendar becomes a full-screen view.
 
 ### Dependencies
 
@@ -77,52 +46,32 @@ runtime dependencies. Fonts (Montserrat Alternates) are self-hosted in
 `fonts/`, and the PDF exporter is hand-rolled in `export.js` rather than pulled
 from a library.
 
-## Usage
+## Security
+
+Zeved Boards is client-only. There is no backend, no account, no sync, no
+analytics, and no network call anywhere in the app. Board data lives in the
+browser's storage itself and never leaves the device; the only ways data leaves are
+the exports you download yourself (a per-board PDF or a whole-library JSON
+backup under **Export**).
+
+## How to Use
 
 Everything happens on the one canvas; there is nothing behind it. Nothing
-scrolls: the board is one bounded sheet, and if it's full, it's full — that
+scrolls: the board is one bounded sheet, and if it's full, it's full - that
 boundary is the point.
 
 Every board has the same four permanent regions: **Title**, **Components**,
 **Requirements**, and the **Parking Lot**. The Parking Lot is where I park a question - something blocking progress on the board. Requirements are calendar events for that day if there are any and 2-way syncs to the calendar view for the daily to-do boards, otherwise use Components/Requirements as you wish. 
 
-### On touch
+### Desktop, Tablet, Mobile
 
-- **Tap** empty canvas → a note appears in edit mode with the caret placed.
-  The frame draws itself on the first character; no empty frame ever exists.
-- **Drag** to move a note (free overlap, no snapping). **Pinch** to scale it.
-- **Tap a note once** to select it — its own small toolbar appears on the
-  frame (Complete · Copy · Link · Delete). **Tap again to edit.**
-- **Long-press** for the note menu, including **Link** (then tap another note
-  to connect the two) and **Highlight**.
-- **Delete is undoable for 5 seconds** — an undo toast appears; a completed
-  note is scratched out, not removed. The scratch-out stays: it is the record
-  that the work happened.
-- The **board-action tabs** hover above the Parking Lot: **All boards**
-  (the 2×2 board picker — the OS back gesture returns you), **Export**
-  (PDF of this board · JSON backup of every board), **Import** (restore a
-  backup), and **All** (opens the calendar).
+Three different modes to use with three different views - all spatial first, meaning everything you need is visually available to you in the field of vision at all times. Long tap/right click menu and the note card button row are the only menus without a visual access point, but hopefully they feel as intuitive to you as they do to me. 
 
-### With a mouse and keyboard
+Tablet mode is my favorite (tailored to work on foldables as tablets). 
 
-When a fine pointer is present and the window is ≥ 1024 px, the same board
-speaks mouse-and-keyboard: **click** to select (the toolbar appears under the
-note), **drag the frame edge** to resize, **double-click** to edit, **Esc** to
-deselect, **Delete** to remove, **shift-click** to select several notes at
-once, and **right-click** for the note menu. A **board rail** on the left
-holds every category with every board, so there is no "all boards" step — the
-boards are already visible. Capability, not width, decides: tablets keep the
-touch grammar; a device is classified by width (≥ 744 px takes the tablet
-arrangement), never by orientation.
+### For Everything Else
 
-### Boards, categories, and the calendar
-
-Boards live in four categories — To Do, Ideas, Notes, Learning — created with
-**New board** from the rail or the board picker. On wide screens a standing
-**calendar rail** on the right edge expands into a Calendar Board: day cards
-whose lines are edited in place, linked to their boards. On phones the
-calendar is a full-screen view from the action row, with the back gesture
-returning you.
+Play around, discover it. Have fun taking notes.
 
 ## Design Philosophy
 
