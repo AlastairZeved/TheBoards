@@ -27,9 +27,14 @@ node test/tokens.js                # no server, no browser
 node test/mobile.js
 node test/desktop.js
 node test/sw-update.js             # serves its own throwaway copy; no server needed
+node test/morning.js               # B108 morning lifecycle (needs the server)
+node test/future-event.js          # B131 future-dated events (needs the server)
 ```
 
-All four exit non-zero on failure.
+All suites exit non-zero on failure. The four CI suites (tokens, mobile,
+desktop, sw-update) run in CI (`.github/workflows/ci.yml`); the behavioral
+suites — boot-order, carried, day-roll, embed, frame-guard, month, morning,
+reminder, future-event — run locally/QA against the server.
 
 - `BOARDS_URL` overrides the served URL (default `http://localhost:8000/index.html`).
 - `CHROMIUM_PATH` points at a specific Chromium binary; otherwise Playwright's own

@@ -5060,3 +5060,30 @@ board's own attribute onto `#pane`; a child's `data-cat` — the tray's
 `.cat-button`s — never re-scopes the pane, the binding is by direct
 id+attribute). No new hex anywhere: the token suite's ladder tables are
 untouched, the selectors simply gained the pane scope.
+
+### B131. A future-dated calendar event creates NO board — the event record is the only stored thing; the linked board is derived state that materializes on its date via the morning lifecycle (issue #250, the owner's verbatim chat report of 2026-09-17; supersedes NOTHING — no prior ruling ever addressed when a linked board comes into existence relative to its date; keeps B108's morning lifecycle — first load of a day ensures today's linked board and carries forward — as the sole materialization mechanism, B107's unconditional landing, R5's mirror and B106's span law unchanged for same-day events, §1's state-is-never-style and B21's absence-is-off idiom; waives nothing)
+
+**Source:** issue #250, the owner's report (chat 2026-09-17), transcribed verbatim: "Currently, if I record an event in the calendar for a date in the future, that board is created immediately and viewable from the menu. Boards for future dates should not be visible or accessible until the date of the board. Not sure how to fix properly, either create the board upon event creation and store it hidden until the appropriate date is 'today' OR don't create the board upon event creation and instead create it when the date is 'today' so there are never any future dated boards. Or maybe a third option, we're looking to keep this simplified though and storage of hidden boards seems against design philosophy."; and issue #250, the recommendation comment, transcribed verbatim: "## Recommendation: Option 2 — never create the board; the event record is the only stored thing
+
+**Why.** The calendar event is already the source of truth for "a board is wanted on date X". The linked board is derived state — exactly the relationship B109's echo machinery already rules: compute at render/boot time from one source of truth, never store a copy. Option 1 (create + hidden flag) stores a copy AND adds a second field (`hidden: true`) whose only job is to mask a premature creation — new state that can drift: the event moves to another date and the hidden board is orphaned; the event is deleted and the hidden board is an empty ghost; "hidden until" needs a reveal check in the menu, the picker, the rail, and the PDF export, four guards for one mistake. Option 2's whole diff is one comparison. Storage of hidden boards is exactly what you smelled — against §1's state-is-never-style and B21's absence-is-off idiom: a board that does not exist yet is a board you never have to hide.
+
+**The fix (small):**
+
+1. In `addCalEvent`, skip `ensureLinkedBoard` when `dateKey > calKey(new Date())` — store the event record only. ~2 lines.
+2. In `launchTodayBoard`'s morning path, after `ensureLinkedBoard(boards, today)`, sync `calReq` from the events that exist for today (the same first-sync `addCalEvent` does for same-day events). The morning lifecycle already exists (B108) — the board materializes on its date with no new mechanism.
+3. **Migration for the future boards already created:** a one-time boot sweep deletes linked boards with `cal > today` and zero notes. They are derived empty state, nothing to preserve — deleting is the migration.
+
+**What does NOT change:** the calendar itself still renders future events (they live in the events store, untouched); tapping a future day in the calendar shows the event editor, not a board; `carriedOn`, `calReq`, and the morning landing are untouched.
+
+**Edge to state in the ruling:** an event recorded for TODAY during the day works exactly as now (`dateKey == today` is not future). And a future date that never gets opened still materializes the morning the date arrives — `launchTodayBoard` runs on first load of every day, B108's unconditional landing.
+
+One comparison, one morning sync, one delete sweep. Nothing hidden, nothing stored early."
+
+**The ruling.** `addCalEvent` stores the event record alone when the date is in
+the future — one comparison, no board record, nothing for the menu to hide. The
+board materializes the morning its date arrives, where B108's machinery already
+lives: `launchTodayBoard`'s morning path gives the materialized board the same
+first-sync `calReq` (the span is the events it already had) and a one-time boot
+sweep deletes the linked boards the pre-fix build left behind for future dates —
+derived empty state, deleted, their event records surviving untouched in the
+store. Tapping a future day still shows the event editor, not a board.
