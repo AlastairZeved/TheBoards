@@ -102,6 +102,17 @@ const T = {
   highlight: '#F2D64B',   // the per-note highlight wash (UIUX §2.6.1, B71)
   reminder: '#e6c2c9',    // the Remind tab's pink identity fill + bloom (UIUX §2.6.2, B126)
   carried: '#E1BE26',     // the per-note carried status (UIUX §2.6.3, B110)
+  tabComplete: '#becce2', // the Complete tab's fill, To-Do binding — rotates per ladder (UIUX §2.6.4, B127)
+  tabHighlight: '#e7ca42',// the Highlight tab's fill, amber family at the shared rung (UIUX §2.6.4, B127)
+  tabRemind: '#e6c2c9',   // the Remind tab's fill — B126's pink, the rung's reference value (§2.6.4, B127)
+  tabDelete: '#ebc2b6',   // the Delete tab's fill, warm danger family at the shared rung (§2.6.4, B127)
+};
+/* B127 (issue #241): the four tab fills share the note rung 0.5962. --tab-complete
+   keeps B67's per-type rotation (one derived value per ladder, in the ladder's
+   frame-family hue); the other three are fixed, like the tokens they superseded. */
+const TAB_COMPLETE = {
+  'To-Do': '#becce2', 'Idea': '#b3d2c3', 'Note': '#d3c6e0',
+  'Learning': '#dfc4ce', 'Calendar': '#dbc8b3',
 };
 /* B67 (issue #96): the same ladder at two more hues, one per board type. Each
    rung reproduces the To-Do rung's WCAG relative luminance to the 4dp UIUX §2.2
@@ -151,6 +162,8 @@ console.log('\n[1] The surface ladder — tokens declared, luminances reproduce 
     '--water-bot': T.waterBot, '--ink-light': T.inkLight, '--ink-dark': T.inkDark,
     '--accent-restore': T.accentRestore, '--accent-page': T.accentPage, '--danger': T.danger,
     '--reminder': T.reminder, '--carried': T.carried,
+    '--tab-complete': T.tabComplete, '--tab-highlight': T.tabHighlight,
+    '--tab-remind': T.tabRemind, '--tab-delete': T.tabDelete,
   };
   for (const [name, hex] of Object.entries(need)) {
     ok(`${name} is ${hex}`, (declared[name] || '').toLowerCase() === hex.toLowerCase(),
@@ -444,6 +457,67 @@ console.log('\n[5b] The highlight wash — value, dark-ink contrast, note-surfac
     lum(T.highlight) > 0.1788, String(r4(lum(T.highlight))));
 }
 
+console.log('\n[5c] The note toolbar\'s four tab fills — one luminance rung (UIUX §2.6.4, B127)');
+{
+  // B127: Complete · Highlight · Remind · Delete share the note rung 0.5962 —
+  // the rung B126's pink already carries. Each fill keeps its own hue family;
+  // the icon outline on every fill is --ink-dark. --tab-complete keeps B67's
+  // per-type rotation (a derived value per ladder, in the ladder's frame-family
+  // hue); the other three are fixed. The tokens they superseded keep their own
+  // duties and their own published ratios: --frame the card border/rules (B61,
+  // 5.70 board-action), --highlight the wash (13.27, §2.6.1), --danger menu
+  // text and the .sel-btn fill (§2.6).
+  const need = {
+    '--tab-complete': T.tabComplete, '--tab-highlight': T.tabHighlight,
+    '--tab-remind': T.tabRemind, '--tab-delete': T.tabDelete,
+  };
+  for (const [name, hex] of Object.entries(need)) {
+    ok(`${name} is ${hex}`, (declared[name] || '').toLowerCase() === hex.toLowerCase(),
+      `declared ${declared[name]}`);
+    ok(`${name} sits on the shared rung 0.5962`, r4(lum(hex)) === 0.5962, String(r4(lum(hex))));
+  }
+  // The rotation (B67/B127): one --tab-complete binding per ladder scope, each
+  // in that ladder's frame-family hue, each on the shared rung.
+  for (const name of LADDER_NAMES) {
+    const lad = LADDER[name];
+    const decl = propsIn(lad.sel);
+    const hex = TAB_COMPLETE[name];
+    ok(`${name}: --tab-complete is ${hex} (the frame-family hue at the shared rung)`,
+      (decl['--tab-complete'] || '').toLowerCase() === hex.toLowerCase(), `declared ${decl['--tab-complete']}`);
+    ok(`${name}: --tab-complete luminance is the shared rung 0.5962`,
+      r4(lum(hex)) === 0.5962, String(r4(lum(hex))));
+  }
+  // The icon outline on every fill is --ink-dark; the ratios UIUX §2.6.4
+  // publishes — 11.84 everywhere except the Idea and Note ladders' Complete
+  // tab, where 8-bit quantisation of the derived hex leaves 11.83.
+  const rows = [
+    ['To-Do --tab-complete', T.tabComplete, 11.84],
+    ['Idea --tab-complete', TAB_COMPLETE['Idea'], 11.83],
+    ['Note --tab-complete', TAB_COMPLETE['Note'], 11.83],
+    ['Learning --tab-complete', TAB_COMPLETE['Learning'], 11.84],
+    ['Calendar --tab-complete', TAB_COMPLETE['Calendar'], 11.84],
+    ['--tab-highlight', T.tabHighlight, 11.84],
+    ['--tab-remind', T.tabRemind, 11.84],
+    ['--tab-delete', T.tabDelete, 11.84],
+  ];
+  for (const [name, hex, want] of rows) {
+    ok(`${name} carries --ink-dark = ${want}`, r2(contrast(hex, T.inkDark)) === want,
+      String(r2(contrast(hex, T.inkDark))));
+  }
+  // The tab row's chrome reads the dedicated tokens, not the double-duty ones.
+  ok('.note-tb-btn is --tab-complete filled (B127)',
+    /\.note-tb-btn\s*{[^}]*background:\s*var\(--tab-complete\)/s.test(css));
+  ok('.note-tb-highlight is --tab-highlight filled (B127)',
+    /\.note-tb-highlight\s*{[^}]*background:\s*var\(--tab-highlight\)/s.test(css));
+  ok('.note-tb-delete is --tab-delete filled (B127)',
+    /\.note-tb-delete\s*{[^}]*background:\s*var\(--tab-delete\)/s.test(css));
+  ok('the Remind tab\'s active fill is --tab-remind; the glow stays --reminder (B126/B127)',
+    /\.note\.reminder\s+\.note-clock\s*{[^}]*background:\s*var\(--tab-remind\)[^}]*var\(--reminder\)/s.test(css));
+  // The superseded tokens keep their duties: the tab row no longer reads them.
+  ok('the tab row borrows no double-duty token (B127)',
+    !/\.note-tb(-delete|-highlight)?\s*{[^}]*background:\s*var\(--(frame|highlight|danger)\)/.test(css));
+}
+
 console.log('\n[5c] The Remind tab pink — value, dark-ink contrast, clock placement (UIUX §2.6.2, B126)');
 {
   ok(`--reminder is ${T.reminder}`, (declared['--reminder'] || '').toLowerCase() === T.reminder.toLowerCase(),
@@ -453,8 +527,12 @@ console.log('\n[5c] The Remind tab pink — value, dark-ink contrast, clock plac
     String(r2(contrast(T.reminder, T.inkDark))));
   // A reminder is a NOTE component, not a chrome accent: it fills the active
   // clock on the note (UIUX §2.6.2 — the accent placement rule does not reach it).
-  ok('--reminder fills the active clock (.note.reminder .note-clock)',
-    /\.note\.reminder \.note-clock\s*{[^}]*background:\s*var\(--reminder\)/s.test(css));
+  // B127 moved the tab FILL to its own token (--tab-remind, same value);
+  // --reminder keeps the note-state duty: the glow bloom (§2.6.2, B126).
+  ok('--tab-remind fills the active clock (.note.reminder .note-clock)',
+    /\.note\.reminder \.note-clock\s*{[^}]*background:\s*var\(--tab-remind\)/s.test(css));
+  ok('--reminder still blooms the active clock\'s glow (B126/B127)',
+    /\.note\.reminder \.note-clock\s*{[^}]*box-shadow:[^}]*var\(--reminder\)/s.test(css));
   ok('--reminder is never an accent text colour', !/color:\s*var\(--reminder\)/.test(css));
   // Cool by law (--danger is the only warm hue, §2.6) and above the crossover,
   // so the dark glyph is correct on it.
@@ -617,7 +695,8 @@ console.log('\n[8b] The note toolbar minimum width — one number, JS and CSS ag
      JSON.stringify(tabs));
   ok("the Remind tab is the clock: it sets aria-pressed (updateNoteToolbar mirrors it)",
      /mk\('note-clock'[\s\S]*?aria-pressed/.test(tbFn), tbFn.slice(0, 80));
-  ok('delete keeps its --danger fill (§4.5)', /\.note-tb-delete\s*{[^}]*background:\s*var\(--danger\)/.test(css));
+  ok('delete wears its own --tab-delete fill at the shared rung (§2.6.4, B127)',
+     /\.note-tb-delete\s*{[^}]*background:\s*var\(--tab-delete\)/.test(css));
 }
 
 console.log('\n[9] The five colour sync points agree (PRD §9.5.1, B55)');
@@ -673,10 +752,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v78 — version bumped (shipped bytes changed)',
-    /const CACHE = 'zeved-boards-v78';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v78, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v78';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v79 — version bumped (shipped bytes changed)',
+    /const CACHE = 'zeved-boards-v79';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v79, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v79';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&

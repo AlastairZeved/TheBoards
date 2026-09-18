@@ -608,10 +608,20 @@ the card's 2px frame — never a second colour, never the wash.
 
 | Token | Value | Role | on it (`--ink-dark`) | rung |
 |---|---|---|---|---|
-| `--tab-complete` | *per type* | the Complete tab's fill (§4.5) | the icon outline, on every fill | 0.5962 |
-| `--tab-highlight` | *amber family* | the Highlight tab's identity fill (§4.5) | the icon outline | 0.5962 |
+| `--tab-complete` | To-Do `#becce2` · Idea `#b3d2c3` · Note `#d3c6e0` · Learning `#dfc4ce` · Calendar `#dbc8b3` | the Complete tab's fill (§4.5) | the icon outline, on every fill | 0.5962 |
+| `--tab-highlight` | `#e7ca42` | the Highlight tab's identity fill (§4.5) | the icon outline | 0.5962 |
 | `--tab-remind` | `#e6c2c9` | the Remind tab's fill (B126) | the icon outline | 0.5962 |
-| `--tab-delete` | *warm danger family* | the Delete tab's fill (§4.5) | the icon outline | 0.5962 |
+| `--tab-delete` | `#ebc2b6` | the Delete tab's fill (§4.5) | the icon outline | 0.5962 |
+
+The derived fills (implementation PR, B127): `--tab-complete` carries the
+ladder's own frame-family hue lifted to the shared rung, keeping B67's rotation;
+`--tab-highlight` is the amber family dropped from the wash's 0.675; `--tab-delete`
+is the warm danger family moved up from 0.43. Each carries `--ink-dark` at
+**11.84:1** — except the Idea and Note ladders' `--tab-complete`, where 8-bit
+quantisation of the derived hex leaves **11.83:1** (the rung itself is exact at
+4dp on all five). Live-measured in Chromium on one note per board type (rung
+0.5962 at 4dp, per-type Complete) at PR merge; `test/tokens.js` §[5c] pins all
+of it from the shipped hexes.
 
 Since B127 (issue #241) all four note-toolbar tab fills — Complete · Highlight ·
 Remind · Delete — share ONE luminance rung: the note rung **0.5962** (4dp), the
@@ -624,10 +634,9 @@ token B61, `--highlight` is the wash, `--danger` is menu text and the
 `.sel-btn` fill). The highlight WASH (§2.6.1 — the note's per-note state
 surface) and the reminder note-state glow (§2.6.2) keep their own rungs: this
 ruling governs the toolbar row's chrome, not the note states. `--tab-complete`
-keeps B67's per-type rotation, now at the shared rung. The exact hexes for the
-three not-yet-derived fills land with the implementation PR (which carries the
-`test/tokens.js` pin and the sw.js bump); `--tab-remind`'s `#e6c2c9` is the
-rung's reference value. Source: issue #241, B127.
+keeps B67's per-type rotation, now at the shared rung. The exact hexes landed
+with the implementation PR (which carries the `test/tokens.js` pin and the sw.js
+bump — table above); `--tab-remind`'s `#e6c2c9` is the rung's reference value. Source: issue #241, B127.
 
 ### §2.7 Focus
 
