@@ -1290,6 +1290,9 @@ html:not(.desktop) .board-row .row-date {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  padding-inline-start: 16px;          /* clears the tray's inset frame; aligns the
+                                          label with the card titles' left edge
+                                          (issue #254) */
   min-height: 44px;                    /* one box with the control beside it (B63) */
   font-size: 21px;                     /* the display step (UIUX §13.1, B63; re-tuned
                                           down by B74 so the longest name — "Learning
@@ -1543,13 +1546,20 @@ html.wide .pager-btn + .pager-btn { margin-left: 0; }
    own upper fall as its fill — 3.32:1 against chrome — behind the chrome's
    0.40 hairline edge; the active board holds the full-ink border. */
 .pane-card {
+  position: relative;                  /* anchors the calendar mark (below) */
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  min-height: 44px;                    /* = PANE_ROW_H — same height as list rows */
-  padding: 8px 12px;
+  flex-direction: column;              /* the B82 card skin (issue #254): title
+                                          leads, the Last Updated stamp drops to
+                                          a mini bottom-right line — inline, the
+                                          date starved the title to ellipsis */
+  align-items: stretch;
+  gap: 2px;
+  height: 76px;                        /* = LIST_CARD_H in state.js; catPageCap()
+                                          budgets the rail against it too */
+  padding: 6px 12px 6px 16px;          /* the issue's ask: room on the left
+                                          before the title text begins */
   background: linear-gradient(180deg, var(--water-top), var(--water-mid));
   border: 1px solid var(--hairline);
   border-radius: 3px;
@@ -1564,17 +1574,29 @@ html.wide .pager-btn + .pager-btn { margin-left: 0; }
   box-shadow: inset 0 0 0 4px var(--ink-dark);
 }
 /* Structural active mark: ink weight, not color alone; padding compensates. */
-.pane-card.active { border: 2px solid var(--ink); padding: 7px 11px; cursor: default; }
+.pane-card.active { border: 2px solid var(--ink); padding: 5px 11px 5px 15px; cursor: default; }
+/* The rail card takes the drilled-list card's two-line title + bottom-right
+   stamp (issue #254, the B82 shape). Truncation always indicated (§10). */
 .pane-card .row-title {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
   font-size: 15px;
-  white-space: nowrap;
+  line-height: 1.25;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;               /* two lines, then "…" */
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;             /* truncation always indicated (§10) */
 }
 .pane-card .row-title.untitled { color: var(--ink); }
-.pane-card .row-date { flex: 0 0 auto; font-size: 12px; color: var(--ink); }
+.pane-card .row-date {
+  margin-top: auto;                    /* pushed to the card's bottom edge */
+  align-self: flex-end;                /* bottom-RIGHT (issue #254, B82's anchor) */
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: right;
+  color: var(--ink);
+}
 /* Deletion path (a): permanent on the active card only — A1's menu grammar
    compressed to the card's right edge. A sibling, never nested. Bare on
    chrome with --danger for its mark: an accent as text on a near-black
@@ -2051,6 +2073,10 @@ html.wide #board.swapping { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0
 .row-cal-mark { display: flex; }
 .row-cal-mark svg { width: 14px; height: 14px; display: block; }
 html.wide .pane-card .row-cal-mark svg { width: 12px; height: 12px; }
+/* On the rail card the mark is a third flex child the column skin would wrap
+   onto its own line — anchored to the card's top-right corner instead, out of
+   the bottom-right stamp's way (issue #254). */
+.pane-card > .row-cal-mark { position: absolute; top: 8px; right: 12px; }
 
 /* Mandatory global kill-switch (UIUX §8). */
 @media (prefers-reduced-motion: reduce) {

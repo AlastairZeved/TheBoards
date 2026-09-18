@@ -1524,21 +1524,23 @@ and **opens the new board at once**.
 `§6`'s touch floor and stops there: a card is a tap target, and what makes it
 read as a discrete object with its own edge is the hairline and the water
 fill, never the height. **4px** separates card from card inside a section;
-**8px** separates section from section. This is the height on the **rail and the
-desktop drill**; the **mobile drilled-list card** stands taller — **76px** — for
-the two extra things B82 puts on it (below).
+**8px** separates section from section. The card stands **76px** on every
+surface — the rail's included (B129, below) — for the two things B82 puts on
+it (below).
 
-**The mobile drilled-list card carries a two-line title and a Last Updated
-stamp** (B82, issue #125). In the third-height slide-up panel the card gives up
-the sheet's width — **three to a row** (below) — so the title **clamps to two
-lines** and then indicates truncation with `…`, and a **`Last Updated:
-MM/DD/YY`** line sits **bottom-right** of every card (zero-padded month and day,
-two-digit year). The stamp is the record's own `updatedAt` — already written on
-every committing action (B69) — so nothing new persists. The rail and the
-desktop drill keep the single-line 44px card, with the same `Last Updated` line
-laid **inline** at the card's right; only the phone's panel restacks it under a
-two-line title. The card is `76px` (`LIST_CARD_H`) and `catPageCap` budgets the
-panel against it, the rail against its own 44px.
+**Every board card — the rail's included — carries a two-line title and a
+Last Updated stamp** (B82, issue #125; the rail card joined it by B129, issue
+#254). In the third-height slide-up panel the card gives up the sheet's width —
+**three to a row** (below) — so the title **clamps to two lines** and then
+indicates truncation with `…`, and a **`Last Updated: MM/DD/YY`** line sits
+**bottom-right** of every card (zero-padded month and day, two-digit year).
+B129 gives the rail card the same shape: inline at the card's right, the stamp
+starved long titles to ellipsis on the 300px rail, and with the header text
+sitting flush against the tray's inset frame every section label lost its left
+edge — so the rail card restacks (title over a mini bottom-right stamp), takes
+**16px** of left padding before the title text, and the calendar mark moves to
+the card's top-right corner. The card is **76px** (`LIST_CARD_H`) on both
+surfaces and `catPageCap` budgets each against it.
 
 **Each section is a framed, tinted tray in its own family** (B72, issue #107).
 The 8px gap alone left the categories reading as one run of buttons, so a
@@ -1589,9 +1591,8 @@ height and reclaiming a collapsed section's rows for the ones with boards. Where
 the measurement falls short of what is asked for, the pager states it — a number
 that clipped off the bottom of a short phone would be a lie about the height.
 
-**Truncation is always indicated** — `text-overflow: ellipsis` on the single-line
-card, a **two-line `-webkit-line-clamp`** on the mobile drilled card (B82), never
-a hard cut.
+**Truncation is always indicated** — a **two-line `-webkit-line-clamp`** on
+every board card (B82; the rail card joined it in B129), never a hard cut.
 
 A rail board swap is a 260ms crossfade (§8) with **no history push** — B9 is
 bypassed, not touched.

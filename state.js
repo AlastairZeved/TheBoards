@@ -44,7 +44,7 @@ export const PANE_PAGER_H = 32;             // .cat-pager row, desktop (issue #5
 // card issue #97 asks for is bought out of exactly this furniture. The
 // constant covers the whole row, so catPageCap()'s budget stays exact.
 export const LIST_CAT_ROW = 44;             // .board-cat head/pager rows, mobile (issues #74, #88, #97)
-export const PANE_ROW_H = 44;               // .pane-card / .board-row min-height — §6's floor, not below it
+export const PANE_ROW_H = 44;               // the §6 floor rung — the single-line list row keeps it (the rail card rose to LIST_CARD_H, issue #254)
 // Two gaps, because they say two things (B68): card to card inside a section,
 // and section to section. The first tightens to buy the fourth card; the
 // second is what keeps three categories reading as three, and it holds at 8.
@@ -55,11 +55,11 @@ export const PANE_ROW_GAP = 4;              // .cat-cards grid gap
 // gives up. The rail stays at one — PANE_W is 300, two would be narrower than
 // the titles they name.
 export const LIST_CARD_COLS = 3;            // = .cat-cards grid-template-columns (mobile; the rail is one)
-// The mobile drilled-list card carries a two-line title and a "Last Updated"
-// line (B82, issue #125), so it stands taller than the §6 touch floor the rail
-// card holds to: catPageCap() budgets the drilled list against this, the rail
-// against PANE_ROW_H.
-export const LIST_CARD_H = 76;              // = html:not(.desktop) .board-row height in styles.css
+// Both board cards carry the two-line title and the "Last Updated" stamp
+// (B82, issue #125; the rail card joined them in issue #254), so both stand
+// taller than the §6 touch floor: catPageCap() budgets BOTH surfaces against
+// this height.
+export const LIST_CARD_H = 76;              // = .pane-card height and html:not(.desktop) .board-row height in styles.css
 // The drilled list rises to a third of the viewport, the board still behind it
 // (B82, UIUX §10). Measured from window.innerHeight in JS — the stable measure
 // while the soft keyboard is up (B28) — so no `vh` enters the CSS (B32).
