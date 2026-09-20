@@ -811,11 +811,13 @@ async function showBoardFromList() {
 /* --- 11.6 The rolling temporal calendar (issue #145) ----------------------
    The third screen. The 7-day window is computed at render (R4) — today at
    the top, lit; the week receding below it. Each date with events mirrors
-   into its linked To-Do board (§1.7). The top row (R1) is the screen's
- always-visible way off: Back alone (history.back(), B9's route made
- visible; as amended by B124, issue #237 — Back sits directly above the
- month view, All Boards via the picker/rail, Export elsewhere). The stack
- never scrolls — it is a bounded page like every other surface. */
+   into its linked To-Do board (§1.7). The exit row (R1) is the screen's
+   always-visible way off: Collapse alone (renamed and reseated by B134,
+   issue #259 — it renders LAST, at the view's bottom below the month view,
+   reading `Collapse ▶`; it runs history.back(), B9's route made visible;
+   B124 keeps the row to one control: All Boards via the picker/rail, Export
+   elsewhere). The stack never scrolls — it is a bounded page like every
+   other surface. */
                                    // the rail is furniture, so it must never enter the
                                    // screen-grammar branches (popstate's calOpen swallow,
                                    // applyMode's close, hideCal) that a pushed screen owns.
@@ -832,9 +834,10 @@ export function goCalBack() {
    boot (and on every flip to wide), reading "Calendar Board" vertically with
    today's date and a lit dot when today carries events (the mockup's
    aperture). Tapping it expands the panel — the R6 squeeze, entered from the
-   rail — and the panel's own Back (R1's first act, reused as the collapse
-   arrow) returns the rail. The rail commits nothing (B81: navigation runs
-   raw); no history is pushed on wide, the rail is never "off". */
+   rail — and the panel's own Collapse control (R1's exit act, reused as the
+   collapse arrow; B134, issue #259) returns the rail. The rail commits
+   nothing (B81: navigation runs raw); no history is pushed on wide, the rail
+   is never "off". */
 export function renderCalRail() {
   if (!state.isWide) return;
   el.calView.hidden = false;          // the rail is standing furniture: never hidden on wide
@@ -888,12 +891,13 @@ function collapseCalRail() {
    The left rail mirrors B99's calendar-rail grammar: on wide it boots
    COLLAPSED to the 40px face (#pane-rail, the pane's own name reading
    vertically), one tap expands it to the 300px pane — renderPane's cards,
-   unchanged — and the expanded pane's arrow (#pane-collapse) folds it back.
-   The arrow is the collapse affordance, the pane's Back-double (the pane has
-   no Back of its own). Raw navigation both ways (B81/B24): no history is
-   pushed, nothing is committed. The board reflows through the frame: the
-   collapsed face frees the sheet, the expanded pane reserves it (R6's
-   discipline, mirrored in setPaneCollapsed). */
+   unchanged — and the expanded pane's arrow (#pane-collapse) folds it back,
+   seated at the pane's bottom-right corner since B134 (issue #259), arrow
+   right. The arrow is the collapse affordance, the pane's Collapse-double
+   (the pane has none of its own). Raw navigation both ways (B81/B24): no
+   history is pushed, nothing is committed. The board reflows through the
+   frame: the collapsed face frees the sheet, the expanded pane reserves it
+   (R6's discipline, mirrored in setPaneCollapsed). */
 export function expandPane() {
   el.pane.classList.remove('rail-open');
   el.paneRail.hidden = true;
@@ -1244,9 +1248,11 @@ export function renderCal() {
   checkDayRoll();                // the day-roll launch (B105): once per day key
   el.calView.hidden = false;
   el.calStack.textContent = '';
-  // §6/B7's collar on the R1 top row (issue #156, B98): the row's tabs draw
-  // at the floor as visible frames now, and the collar tops up the width
-  // where geometry is tight. The calendar is an unscaled surface, so the
+  // §6/B7's collar on the exit row (issue #156, B98; retargeted by B134,
+  // issue #259): the row's tab draws at the floor as a visible frame now, and
+  // the collar tops up the width where geometry is tight — spent
+  // edge-ward/downward since the row reseated at the view's bottom, never up
+  // into the month view above it. The calendar is an unscaled surface, so the
   // draw scale k is 1 — the same arithmetic, one caller shape fewer than the
   // board row (no renderScale term). isDesktop inside hitInset picks the
   // 44px touch floor vs the 24px pointer floor, so B96's tablet tier
@@ -1365,7 +1371,8 @@ function renderCalMonth(evDays) {
   el.calMonth.appendChild(grid);
 }
 
-/* The top row's three acts (R1). Back pops the pushed state. All Boards opens
+/* The exit row's acts (R1; one control since B124, renamed Collapse by B134,
+   issue #259). Collapse pops the pushed state. All Boards opens
    the picker; the calendar shrinks to fit it rather than being overlaid (the
    B74 grid draws over the lot at its current height — same reading here, the
    calendar's stack compresses, nothing is covered). Export opens the B92
@@ -1378,7 +1385,7 @@ function renderCalMonth(evDays) {
    mode uses — the mobile grid or the desktop screen. The calendar's own branch
    comes FIRST: it can sit beneath a list state (All Boards from the calendar),
    so the state alone decides, not calOpen — landing on a non-cal state while
-   the calendar is open hides it (Back from the calendar, or the picker's
+   the calendar is open hides it (Collapse from the calendar, or the picker's
    return re-entering the board).
    drilled category, {v:'list'} the picker, no state the board. Popping from a
    drill to the picker re-opens it on the surface the mode uses — the mobile
@@ -1400,9 +1407,10 @@ export function registerBoards() {
     }
   });
   el.calBack.addEventListener('click', () => {
-    // On wide, Back IS the collapse arrow (B99): the panel returns to the rail,
-    // the squeeze lifts — no history to pop (the rail pushed none). On mobile,
-    // Back pops the pushed {v:'cal'} state (B9's route, visible — R1).
+    // On wide, Collapse IS the collapse arrow (B99, renamed by B134): the
+    // panel returns to the rail, the squeeze lifts — no history to pop (the
+    // rail pushed none). On mobile, Collapse pops the pushed {v:'cal'} state
+    // (B9's route, visible — R1).
     if (state.isWide && state.calExpanded) { collapseCalRail(); return; }
     goCalBack();
   });

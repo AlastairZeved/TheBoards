@@ -2267,7 +2267,14 @@ async function openCat(page, cat) {
       (await page.evaluate(() =>
         [...document.querySelectorAll('.cal-line')].some(l => l.textContent === 'existing event line'))));
 
-    const calBlur = async () => tap(page, 200, 700);  // clear of today's card (flex 1.6, y 36..195)
+    // Blur by tapping the exit row's inert right half (issue #259): it is
+    // clear of the day stack AND of the month grid, so a blur never swaps the
+    // week out from under the assertion (the old 200,700 point landed on a
+    // month cell once B134 moved the exit row below the grid).
+    const calBlur = async () => tap(page, 300, (await page.evaluate(() => {
+      const r = document.getElementById('cal-top').getBoundingClientRect();
+      return Math.round(r.top + r.height / 2);
+    })));
     const tapLine = async (text) => {
       const p = await page.evaluate((t) => {
         const l = [...document.querySelectorAll('.cal-line')].find(l => l.textContent === t);
@@ -2449,19 +2456,19 @@ async function openCat(page, cat) {
     await ctx.close();
   }
 
-  // ---- 26. the calendar's R1 top row is filled and meets the floor (issue #156, B98) ----
+  // ---- 26. the calendar's exit row is filled and meets the floor (issue #156, B98; renamed/reseated by B134, issue #259) ----
   // The bug: the three #cal-top buttons shipped as EMPTY elements — fillBoardAction
   // was never run for them, so they rendered as 12x16 blank squares (the issue's
   // "untappable / icons invisible"). The fix fills them (glyph + label, the board
   // row's idiom), grows the visual frame to clear §6's 44px floor AS DRAWN, and
   // adds the §6 decoupled collar for width where the row is tight.
-  console.log('\n[26] Calendar top row: filled, floor-clearing controls (issue #156, B98)');
+  console.log('\n[26] Calendar exit row: filled, floor-clearing controls (issue #156, B98)');
   {
     const { ctx, page, errors } = await newMobilePage(browser);
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(400);
     const geo = await page.evaluate(() => {
-      const ids = ['cal-back'];   // B124 (issue #237): the row is Back alone
+      const ids = ['cal-back'];   // B124 (issue #237): the row is ONE control; B134 renamed it Collapse (issue #259)
       return ids.map((id) => {
         const b = document.getElementById(id);
         const r = b.getBoundingClientRect();
@@ -2478,22 +2485,35 @@ async function openCat(page, cat) {
         g.h >= 44 && g.w >= 44, `${g.w}x${g.h}`);
       ok(`${g.id}'s mark is legible at rest (22px glyph)`, g.glyphW >= 20, String(g.glyphW));
     }
-    // The collar: --hit set on #cal-top; a tap ABOVE the visual box (inside the
-    // collar, clear of the stack) still fires Back.
+    // The collar: --hit set on #cal-top; a tap BELOW the visual box (inside the
+    // collar, which spends edge-ward now the row sits at the view's bottom —
+    // B134, issue #259) still fires Collapse.
     const hit = await page.evaluate(() =>
       parseFloat(getComputedStyle(document.getElementById('cal-top')).getPropertyValue('--hit')) || 0);
-    ok('the R1 row carries its §6 hit collar (--hit set)', hit > 0, String(hit));
+    ok('the exit row carries its §6 hit collar (--hit set)', hit > 0, String(hit));
     const fired = await page.evaluate(() => {
       let n = 0;
       document.getElementById('cal-back').addEventListener('click', () => n++);
       const b = document.getElementById('cal-back');
       const r = b.getBoundingClientRect();
       const e = new MouseEvent('click', { bubbles: true,
-        clientX: r.x + r.width / 2, clientY: r.y - 10 });   // 10px above the frame — collar territory
+        clientX: r.x + r.width / 2, clientY: r.bottom + 10 });   // 10px below the frame — collar territory
       b.dispatchEvent(e);
       return n;
     });
-    ok('a tap in the collar above the visual frame fires Back', fired === 1, String(fired));
+    ok('a tap in the collar below the visual frame fires Collapse', fired === 1, String(fired));
+    // B134 (issue #259): the row renders LAST — the month view precedes it in
+    // the DOM — and the control reads `Collapse ▶`: the label's box sits left
+    // of the mark's, though the markup appends the mark first.
+    ok('the exit row renders below the month view, and reads label-then-arrow (issue #259, B134)',
+      await page.evaluate(() => {
+        const top = document.getElementById('cal-top'), month = document.getElementById('cal-month');
+        const precedes = month.compareDocumentPosition(top) & Node.DOCUMENT_POSITION_FOLLOWING;
+        const b = document.getElementById('cal-back');
+        const l = b.querySelector('.label').getBoundingClientRect();
+        const gl = b.querySelector('.glyph').getBoundingClientRect();
+        return !!precedes && l.right <= gl.left + 1 && getComputedStyle(b).flexDirection === 'row-reverse';
+      }));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }

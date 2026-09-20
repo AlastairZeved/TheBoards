@@ -1539,7 +1539,9 @@ html.wide #pane.rail-open #pane-collapse { display: none; }
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--ink-dark);
 }
-#pane-collapse { align-self: flex-start; }
+/* B134 (issue #259): the pane's collapse control sits at the pane's
+   BOTTOM-RIGHT corner (it renders last in #pane, after #pane-cards). */
+#pane-collapse { align-self: flex-end; }
 
 /* ---- Rail categories: the desktop skin of the shared §10.5 grid. Same four
    children, same areas — only the row heights and the control's size step
@@ -1819,11 +1821,12 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 10px;
+  margin-top: 10px;                    /* B134 (issue #259): the row renders LAST — its breathing room is above it now */
 }
 .cal-act {
   position: relative;                  /* the §6 hit collar hangs off this (B98) */
   display: inline-flex;
+  flex-direction: row-reverse;         /* B134 (issue #259): label FIRST, mark after it for BOTH collapse controls — `Collapse ▶`. Only control wearing .cal-act, so no other row flips (fillBoardAction's glyph-then-label markup is untouched, B98) */
   align-items: center;
   gap: 8px;
   padding: 14px 16px;                  /* the visual frame meets the floor as drawn (issue #156, B98): ~48px tall on touch, B86's finger-size logic applied to the frame itself */
@@ -1841,14 +1844,16 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
 .cal-act .glyph svg { display: block; width: 22px; height: 22px; }  /* B98: legible at rest, not a guess — mark + label state the act */
 /* Decoupled hit area (UIUX §6, B7), species law: --hit is set on #cal-top in
    renderCal — the collar tops up the WIDTH where the row is tight on a 390px
-   phone (the height already clears the floor as drawn). Spent upward, into
-   the row's chrome margin, because downward is the day stack's furniture. */
+   phone (the height already clears the floor as drawn). B134 (issue #259)
+   reseated the row at the view's very bottom, so the collar now spends
+   DOWNWARD, into the view's own bottom padding — never upward into the month
+   view it sits below. */
 .cal-act::before {
   content: "";
   position: absolute;
   left: 0; right: 0;
-  bottom: 0;
-  top: calc(-2 * var(--hit, 0px));
+  top: 0;
+  bottom: calc(-2 * var(--hit, 0px));
 }
 /* Interactive states, board-row-exact (issue #156, B98): visible without the
    tactile shadow; §2.7's two-tone ring on focus — state is never colour. */
@@ -1861,7 +1866,7 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--ink-dark);
 }
-#cal-back  { margin-right: auto; }     /* anchored left (R1) */
+#cal-back  { margin-right: auto; }     /* anchored left (R1) — the view's bottom-left corner since B134 (issue #259) */
 #cal-boards{ margin-left: auto; margin-right: auto; }  /* centred */
 #cal-export{ margin-left: 0; }         /* anchored right */
 /* B100 (issue #157) as widened by B119 (issue #212): wide's calendar row is
@@ -2051,7 +2056,10 @@ html.wide #cal-export { margin-left: auto; }
   box-shadow: none;
 }
 #cal-view.rail-open.panel { width: auto; }   /* expanded wins over the collapsed width */
-#cal-view.rail-open #cal-top { order: -1; }   /* B124 moved the row below the stack in DOM (above the month view); wide's expanded face keeps Back on top */
+/* B134 (issue #259): the row renders LAST in the DOM now, so the wide
+   expanded face keeps the owner's order for free — stack → month view →
+   Collapse at the bottom. B124's `order: -1` row-on-top rule retires with the
+   reseat (the row's own membership ruling stands). */
 #cal-view.rail-open #cal-top,
 #cal-view.rail-open #cal-stack,
 #cal-view.rail-open #cal-month { display: none; }   /* collapsed shows only the rail face (issue #248: the month view rode along) */
