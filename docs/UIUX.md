@@ -919,13 +919,13 @@ two-tone ring on focus. State is never colour (§1) — the **All boards ⇄ Thi
 board** toggle states its act in its label (B43/B71's grammar), so no
 `aria-pressed` rides alongside.
 
-### §3.4 The calendar view (B95, issue #145; tier shipped by B96, issue #155; events editable by B97, issue #152; standing rail by B99, issue #158)
+### §3.4 The calendar view (B95, issue #145; tier shipped by B96, issue #155; events editable by B97, issue #152; standing rail by B99, issue #158; exit control renamed and reseated by B134, issue #259)
 
 The calendar wears the app's **fifth ladder** (issue #168): the same eight
 rungs at an orange arc (~47°–66°), bound on `#cal-view` the way To-Do binds
-on `:root` — a rebinding, never an override, so the rail, the R1 row, the day
-cards' water fall and date compartments, and the month view's today cell all
-carry the hue through `var()` (§2.2.2). Linked boards opened from a day card
+on `:root` — a rebinding, never an override, so the rail, the exit control,
+the day cards' water fall and date compartments, and the month view's today
+cell all carry the hue through `var()` (§2.2.2). Linked boards opened from a day card
 keep their own category scopes — nothing inside `#cal-view` carries
 `data-cat`.
 
@@ -939,15 +939,18 @@ reserves its 40px from the frame at all times (`CAL_RAIL_W`; the room is
 three columns: boards, board, calendar). One tap expands the rail
 leftward into the panel docked at the right edge (320 unscaled px,
 `--frame` border) and the board reflows beside it — the R6 squeeze,
-entered from the rail; the panel's **Back** is the collapse arrow, and on
-collapse the board renders exactly where it was. The rail commits
+entered from the rail; the panel's **Collapse** control is the collapse arrow
+— the panel's bottom-left, below the month view, reading `Collapse ▶` (B134) —
+and on collapse the board renders exactly where it was. The rail commits
 nothing and pushes no history (B81: navigation runs raw). The Calendar
 tab retires on wide (`html.wide #action-calendar { display: none }`) —
 mobile keeps the four-tab row and the tab-driven full-screen view, unchanged.
 B100 retires desktop's **All Boards** R1 button too (`html.desktop #cal-boards
 { display: none }`, with the handler guarding): the rail names every board,
-and the panel's row is **Back + Export**, Export taking the right anchor
-(`margin-left: auto`) — which is what mockup 6 drew. The tablet tier renders
+and the panel's exit control is **Collapse** alone, anchored bottom-left below
+the month view (B124's one-control row, renamed and reseated by B134 — mockup
+6's **Back + Export** row, its Export right-anchor and its `margin-left: auto`
+retire with it). The tablet tier renders
 this same rail + panel arrangement under the touch grammar (B96; B103's
 final gate: **one width floor, `min-width: 744px`, orientation-blind** —
 unfolded foldables, iPads, and Android tablets take this arrangement in
@@ -956,22 +959,28 @@ leg are superseded), its All tab kept.
 
 (2026-09-16: B119 — issue #212 — supersedes the tablet All tab: the
 `#cal-boards` guard widens from `isDesktop` to `isWide`, so the calendar
-panel's All Boards control retires on tablet with the tab, and the panel's
-row is **Back + Export** on wide as on desktop. The rail + panel
+panel's All Boards control retires on tablet with the tab; the panel's exit
+control is **Collapse** alone on wide as on mobile — B124's one-control row,
+renamed and reseated by B134. The rail + panel
 arrangement itself stands on tablet — B118's collapse grammar included.)
 
-**The R1 top row.** `--frame` flat tabs in the row-control species. On
-mobile, three, anchored left / center / right: **Back** (the board-action
-glyph mirrored — a page turn back), **All Boards**, **Export**. On desktop,
-two: **Back + Export** (B100). Back pops the view's pushed History state; it
-is the always-visible exit, with the OS gesture as the second route, never
-the only one. Each tab renders its act — drawn mark
+**The calendar's exit control.** One `--frame` flat tab in the row-control
+species: **Collapse**, anchored **left at the very bottom of the calendar
+view, below the month view** — the month view renders above it and the control
+renders last, in every mode (B134: the wide-only `order: -1` row-on-top rule
+retires). It reads **`Collapse ▶`** — label first, the mark after it, pointing
+right — and it pops the view's pushed History state (`goCalBack`); it is the
+always-visible exit, with the OS gesture as the second route, never
+the only one. All Boards and Export are not in this row: they left the
+calendar view in B124. The tab renders its act — drawn mark
 (22px) beside its label (`15px/600`) — in a frame that clears §6's touch
 floor **as drawn** (B98: `padding: 14px 16px`, ≈ 48px tall on touch), with
-the §6 decoupled collar (`--hit` on `#cal-top`, set at render) topping up
-the width where the row is tight; the collar is spent upward, into the
-row's chrome margin. Hover, press, and keyboard focus state themselves
-(brightness 1.1 / 0.92, §2.7's two-tone ring) — state is never colour.
+the §6 decoupled collar (`--hit` on the row, set at render) topping up
+the width where the control is tight; at the bottom of the view the collar is
+spent **edge-ward and downward, never upward** — the month view sits directly
+above the control and an upward collar would steal the month grid's taps
+(B134, superseding B98's upward spend). Hover, press, and keyboard focus state
+themselves (brightness 1.1 / 0.92, §2.7's two-tone ring) — state is never colour.
 
 **The 7-day stack.** `#cal-stack` is a column of seven `#cal-day` cards,
 today first — computed at render (R4), never stored. A day card is a
@@ -1463,8 +1472,9 @@ screen**, reached by choosing its button. Routing is two levels of History API
 state (`{v:'list'}` the picker, `{v:'cat',cat}` a drill, `{v:'cal'}` the calendar
 (B95)) specifically so the OS back gesture returns through every level
 (drill → picker → board; calendar → board). Back is never intercepted,
-shadowed or disabled — and B95's top row makes the calendar's route
-visible, so the gesture is a second way, never the only way. **The picker is
+shadowed or disabled — and the calendar's **Collapse** control makes the
+calendar's route visible (B95's exit row, renamed and reseated by B134), so
+the gesture is a second way, never the only way. **The picker is
 the Parking Lot turned into the 2×2 grid wherever it exists** (B100, issue
 #157): on mobile and tablet, the two surfaces that carry the All-boards tab.
 
@@ -1490,16 +1500,22 @@ sitting outside `#board` so the recognizer never sees its events, listing all
 four categories at once. Cards are the water's upper fall on `--chrome`, compact.
 **The rail IS desktop's all-boards surface** (B100, issue #157): the All-boards
 tab is retired there — `display:none` on both the board-action row and the
-calendar's R1 row, the rail already naming every category with every board —
+calendar's exit row, the rail already naming every category with every board —
 so `#list-view` has no entry path on desktop and never shows. The drill's
 B82 split survives as code (rising panel under `html:not(.desktop)`), simply
 unreachable on desktop; wide's board row is **two tabs** (Export · Import) and
-the calendar's R1 row is **Back + Export**.
+the calendar's exit control is **Collapse** alone, anchored bottom-left below
+the month view (B124's one-control row, renamed and reseated by B134).
 
 (2026-09-16: B118 — issue #211 — supersedes the rail's always-visible 300px
 geometry: on wide the rail ships collapsed as a 40px face, mirroring the
 calendar rail, and expands to the 300px pane on tap. The rest of this
-section's rail grammar stands.)
+section's rail grammar stands. 2026-09-19: B134 — issue #259 — moves the
+expanded pane's **Collapse** control to the pane's bottom-right corner and
+redraws its arrow to match the calendar's: label first, the mark after it,
+pointing right (`Collapse ▶`). The shipped top-left seat
+(`#pane-collapse { align-self: flex-start; }`) and its left chevron retire;
+B118's collapse grammar and collapsed-by-default state are untouched.)
 
 (2026-09-16: B119 — issue #212 — narrows the picker above to **mobile-only**
 and widens this arrangement's reach: tablet joins desktop as a wide tier
