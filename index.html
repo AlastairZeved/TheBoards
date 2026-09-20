@@ -58,9 +58,12 @@
         <span class="cdot" aria-hidden="true"></span>
         <span class="vlabel" aria-hidden="true">All Boards</span>
       </button>
+      <!-- B134 (issue #259): the pane's collapse control sits at the pane's
+           BOTTOM-RIGHT corner — the same grammar as the calendar's exit
+           control (label first, arrow right, pointing right). -->
+      <div id="pane-cards"></div>
       <button type="button" id="pane-collapse" class="cal-act on-light" aria-label="Collapse the boards rail"
               hidden></button>
-      <div id="pane-cards"></div>
     </aside>
 
     <!-- The one logical 900x1000 page. transform:scale() applied in JS.
@@ -153,10 +156,11 @@
   </section>
 
   <!-- Calendar view (issue #145): the 7-day rolling stack, the third screen.
-       The owner's top row (R1, as amended by B124, issue #237) is its visible
-       way off — Back alone, rendered directly above the month view; Export
-       remains reachable elsewhere and All Boards via the picker/rail. The
-       stack renders one day card per
+       The owner's exit control (R1, renamed and reseated by B134, issue #259)
+       is its visible way off — Collapse alone, rendered at the very BOTTOM of
+       the view, below the month view, anchored left, reading `Collapse ▶`;
+       Export remains reachable elsewhere and All Boards via the picker/rail.
+       The stack renders one day card per
        rolling date, today first (R4 computes the window; nothing stored).
        Wide (issue #158, B99): the calendar is the mockup-6 standing RAIL —
        always visible at the viewport's right edge, its label reading
@@ -173,10 +177,12 @@
       <span class="cdate" aria-hidden="true"></span>
     </button>
     <div id="cal-stack"></div>
+    <div id="cal-month" role="group" aria-label="Month view"></div>
+    <!-- B134 (issue #259): the exit control renders LAST — at the view's very
+         bottom, below the month view, anchored left. Reads `Collapse ▶`. -->
     <div id="cal-top" role="group" aria-label="Calendar actions">
       <button type="button" class="cal-act on-light" id="cal-back"></button>
     </div>
-    <div id="cal-month" role="group" aria-label="Month view"></div>
   </section>
 
   <!-- Transient surfaces (elevation = "temporary, above the page", UIUX §2.4). -->

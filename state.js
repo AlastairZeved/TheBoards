@@ -149,11 +149,14 @@ export const COPY = {
   // The calendar (issue #145). The re-grammared tab label (R7.2 — "All", the
   // short form, is what lets four tabs fit a phone: measured 346px of 390/360).
   // The tab's toggle face mirrors B83's grammar: on the board it offers the
-  // calendar; while the calendar is showing, the day-stack's Back states the
-  // return, and the tab is not visible there.
+  // calendar; while the calendar is showing, the day-stack's exit control
+  // states the return, and the tab is not visible there.
   calBoardTab: 'All', calendar: 'Calendar',
-  calToday: 'Today', calBack: 'Back',
-  paneCollapse: 'Collapse',   // the expanded All-Boards rail's arrow (issue #211, B118)
+  // The calendar's exit control (B134, issue #259): the owner's rename of the
+  // old "Back" — it collapses the view, and it reads `Collapse ▶`. The KEY and
+  // the element id keep their old names (a value change, not a rename).
+  calToday: 'Today', calBack: 'Collapse',
+  paneCollapse: 'Collapse',   // the expanded All-Boards rail's arrow (issue #211, B118; B134 reseats it bottom-right)
   // A day card's header: "Today" then the long date; the future days read
   // weekday + MM/DD (the mockups' own voice).
   calTitle: 'Calendar Board',
@@ -201,19 +204,21 @@ export const GLYPH = {
   pageNext:  MARK(14, '<path d="M6 2.5L11.5 8 6 13.5"/>'),
   pageLast:  MARK(14, '<path d="M3.5 2.5L9 8l-5.5 5.5"/><path d="M8 2.5L13.5 8 8 13.5"/>'),
   // The calendar (issue #145): the mockup's own mark — a framed page with a
-  // hanging rail — drawn in the app's hand. Back reads as the mirrored page
-  // pair (a page turn back), the same "page" semantics as the pager's marks.
+  // hanging rail — drawn in the app's hand. B134 (issue #259) flips the exit
+  // control's arrow to the right: the same path data, mirrored about x — a
+  // plain right arrow, the page-turn underline retired with the rename.
   calendar:  MARK(16, '<rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5.5 1.5V4M10.5 1.5V4"/>'),
   // The reminder clock (issue #169, B104/B109): a dial and its hands, drawn in
   // the app's own hand like every mark — one tap sets or clears (B104), no
   // time concept anywhere in it: the hands read ten past ten because a clock
   // glyph must, not because anything is scheduled.
   clock:     MARK(16, '<circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/>'),
-  calBack:   MARK(16, '<path d="M9.5 3.5L5 8l4.5 4.5"/><path d="M5 8h6.5"/>'),
+  calBack:   MARK(16, '<path d="M6.5 3.5L11 8l-4.5 4.5"/><path d="M11 8h-6.5"/>'),
   // The pane's collapse arrow (issue #211, B118): the chevron alone — it does
   // not "go back" anywhere, it folds the rail, so it borrows nothing from the
-  // page-turn pair.
-  paneCollapse: MARK(16, '<path d="M9.5 3.5L5 8l4.5 4.5"/>'),
+  // page-turn pair. B134 (issue #259) mirrors it right, matching the
+  // calendar's exit control (arrow on the right, pointing right).
+  paneCollapse: MARK(16, '<path d="M6.5 3.5L11 8l-4.5 4.5"/>'),
 };
 
 // contenteditable mode: prefer plaintext-only (Chromium/Samsung Internet — the

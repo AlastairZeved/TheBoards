@@ -317,7 +317,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v89';
+const OWN_BUILD = 'v90';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

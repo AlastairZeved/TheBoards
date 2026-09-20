@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v89 — version bumped (shipped bytes changed, B133 title seat)',
-    /const CACHE = 'zeved-boards-v89';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v89, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v89';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v90 — version bumped (shipped bytes changed, B134 collapse seat, issue #259)',
+    /const CACHE = 'zeved-boards-v90';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v90, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v90';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -842,7 +842,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /actionCalendar: document\.getElementById\('action-calendar'\)/.test(app));
   ok('the tab opens the calendar as a history navigation (B9: pushed, never shadowed; embed swaps in replaceState, B124)',
     /actionCalendar\.addEventListener\('click'[\s\S]*?histPush\(\{ v: 'cal' \}\)/.test(app));
-  ok('the calendar view is a real element whose R1 row is Back alone (as amended by B124, issue #237)',
+  ok('the calendar view is a real element whose exit row is Collapse alone (B124 row membership; renamed by B134, issue #259)',
     /id="cal-view"/.test(html) && /id="cal-back"/.test(html) &&
     !/id="cal-boards"/.test(html) && !/id="cal-export"/.test(html));
   // --- Issue #158 / B99: the standing calendar rail (wide) ---
@@ -889,16 +889,28 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('rail-up is not "open": the screen grammar rides calExpanded, not the furniture',
     /calExpanded: false,/.test(app) &&
     /if \(state\.isWide && state\.calExpanded\) \{ collapseCalRail\(\); return; \}/.test(app));
-  // --- Issue #156 / B98: the R1 top row is filled and meets the touch floor ---
-  ok('the R1 row is Back alone, filled at boot with glyph + label (issue #156, B98; as amended by B124 — All Boards and Export left the calendar, issue #237)',
+  // --- Issue #259 / B134: the exit control's name, seat and arrow ---
+  ok('the exit control is Collapse, filled at boot with label-then-arrow (issue #259, B134; B124 retired All Boards and Export from the calendar)',
     /fillBoardAction\(el\.calBack, GLYPH\.calBack, COPY\.calBack\)/.test(app) &&
+    /calToday: 'Today', calBack: 'Collapse',/.test(app) &&
     !/fillBoardAction\(el\.calBoards/.test(app) && !/fillBoardAction\(el\.calExport/.test(app) &&
-    !/getElementById\('cal-boards'\)/.test(app) && !/getElementById\('cal-export'\)/.test(app) &&
-    /<div id="cal-stack"><\/div>\s*<div id="cal-top"/.test(html));
+    !/getElementById\('cal-boards'\)/.test(app) && !/getElementById\('cal-export'\)/.test(app));
+  ok('the exit row renders LAST — after the month view, at the view\'s bottom (issue #259, B134 superseded B124\'s above-the-month seat)',
+    /<div id="cal-stack"><\/div>\s*<div id="cal-month"[^>]*><\/div>\s*<!--[^]*?-->\s*<div id="cal-top"/.test(html) &&
+    !/#cal-view\.rail-open #cal-top \{ order: -1; \}/.test(css));
+  ok('both collapse controls read `Collapse ▶` — label first, mark after, in the app\'s own hand (issue #259, B134)',
+    /\.cal-act \{[^}]*flex-direction: row-reverse;/.test(css));
+  ok('the two collapse marks are mirrored right — same path data, flipped about x (issue #259, B134)',
+    /calBack:   MARK\(16, '<path d="M6\.5 3\.5L11 8l-4\.5 4\.5"\/><path d="M11 8h-6\.5"\/>'\)/.test(app) &&
+    /paneCollapse: MARK\(16, '<path d="M6\.5 3\.5L11 8l-4\.5 4\.5"\/>'\)/.test(app) &&
+    !/M9\.5 3\.5L5 8l4\.5 4\.5/.test(app));
+  ok('the pane\'s collapse control anchors bottom-right (issue #259, B134)',
+    /#pane-collapse \{ align-self: flex-end; \}/.test(css) &&
+    /<div id="pane-cards"><\/div>\s*<button type="button" id="pane-collapse"/.test(html));
   ok('the R1 row\'s visual frame clears the touch floor as drawn (§6/B86 via B98)',
     /padding:\s*14px 16px/.test(css) && /\.cal-act \.glyph svg \{ display: block; width: 22px; height: 22px; \}/.test(css));
-  ok('the R1 row carries the §6 decoupled collar, spent upward',
-    /\.cal-act::before/.test(css) && /top: calc\(-2 \* var\(--hit, 0px\)\)/.test(css) &&
+  ok('the exit row keeps the §6 decoupled collar, now spent edge-ward/downward (issue #259, B134)',
+    /\.cal-act::before \{[^}]*top: 0;[^}]*bottom: calc\(-2 \* var\(--hit, 0px\)\);/.test(css) &&
     /el\.calTop\.style\.setProperty\('--hit', \(hitInset\(el\.calTop, 1\) \+ 0\.5\) \+ 'px'\)/.test(app));
   ok('the R1 row states hover, press, and focus (state never colour-only, §2.7/§8)',
     /@media \(hover: hover\) \{\s*\n\s*\.cal-act:hover \{ filter: brightness\(1\.1\); \}/.test(css) &&

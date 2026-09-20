@@ -68,12 +68,14 @@ export function fillBoardAction(btn, glyph, label) {
   const l = document.createElement('span'); l.className = 'label'; l.textContent = label;
   btn.append(g, l);
 }
-/* The calendar's R1 top row (issue #156, B98): the same fill, the same family.
-   Back wears its own page-turn mark (GLYPH.calBack — drawn for B95's R1 and
-   wired here for the first time); All Boards and Export wear the same marks
-   as their board-row siblings, because they are the same acts. Filling at
-   boot is what makes the row controls at all — the issue's "untappable /
-   invisible" report was three empty <button>s rendering as blank squares. */
+/* The calendar's exit row (issue #156, B98; reseated and renamed by B134,
+   issue #259): the same fill, the same family, rendered `Collapse ▶` — the
+   label first, the mark after it (`.cal-act`'s row-reverse), so the fill
+   order here stays board-row-exact. Collapse wears GLYPH.calBack (drawn for
+   B95's R1, mirrored right by B134); the row is that one control (B124).
+   Filling at boot is what makes the row controls at all — the issue's
+   "untappable / invisible" report was empty <button>s rendering as blank
+   squares. */
 
 /* The toggle wears the act it will perform (B43/B71's grammar, not a fixed
    noun): on the board it offers All boards; while the All-Boards surface is up
@@ -112,7 +114,8 @@ export function syncBoardActions() {
    boards — it commits nothing a stray tap could duplicate (B81), so it runs
    raw. The calendar view is a third screen, so it pushes its own history
    state { v: 'cal' }: the OS back gesture returns from it (B9, unshadowed),
-   and its OWN Back button is the always-visible route (R1). */
+   and its OWN Collapse control is the always-visible route (R1; renamed by
+   B134, issue #259). */
 /* The tabs are focusable things inside #board, and the desktop keyboard grammar
    (Enter edits the selection, Delete destroys it) listens on document and keys
    off `selected` alone, not focus — so a tab focused over a selected note would
