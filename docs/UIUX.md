@@ -1515,7 +1515,16 @@ expanded pane's **Collapse** control to the pane's bottom-right corner and
 redraws its arrow to match the calendar's: label first, the mark after it,
 pointing right (`Collapse ▶`). The shipped top-left seat
 (`#pane-collapse { align-self: flex-start; }`) and its left chevron retire;
-B118's collapse grammar and collapsed-by-default state are untouched.)
+B118's collapse grammar and collapsed-by-default state are untouched. That
+arrow grammar — label first, the mark after it, pointing right — is
+superseded by B135, below.
+
+2026-09-21: B135 — issue #279 — the expanded pane's **Collapse** control reads
+**`◀ Collapse`**: a left-pointing chevron **before** the label, the exact
+mirror of the calendar's `Collapse ▶` — the rail sits on the sheet's left edge
+and collapses left, so the mark leads and points left. The pane's bottom-right
+seat (B134), the label text and the `aria-label` stand; the calendar's exit
+control is untouched.)
 
 (2026-09-16: B119 — issue #212 — narrows the picker above to **mobile-only**
 and widens this arrangement's reach: tablet joins desktop as a wide tier
