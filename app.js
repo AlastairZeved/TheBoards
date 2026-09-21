@@ -1,6 +1,6 @@
 import { ACTION_DELAY, DESKTOP_MQ, EMBED, EMBED_MODE, LONGPRESS_MS, MOVE_THRESHOLD, TABLET_MQ, calKey, el, newBoardRecord, newCalEvent, state } from './state.js';
 import { idbDelete, idbGet, idbGetAll, idbPut, migrateLegacyBoards, persist, saveNow } from './persistence.js';
-import { LEGACY_H, LOGICAL_H, LOGICAL_W, applyLayout, calSqueeze, effScale, lotH, onViewportResize, rebaseNote, renderScale } from './geometry.js';
+import { LEGACY_H, LOGICAL_H, LOGICAL_W, applyLayout, calSqueeze, deferLayoutIfEditing, effScale, lotH, onViewportResize, rebaseNote, renderScale } from './geometry.js';
 import { renderX, renderY, setCalSqueeze } from './geometry.js';
 import { linkSource, noteEls, registerRender, renderBoard, updateLinks } from './render.js';
 import { cancelGesture, clamp, clearSelection, commitAction, deleteNote, engaged, g, hideToast, leave, pointers } from './interactions.js';
@@ -83,7 +83,11 @@ function applyMode() {
     // B124 embed: nothing was pushed, so don't pop the parent page's history.
     if (!EMBED && history.state && history.state.v === 'cal') history.back();
   }
-  applyLayout();
+  // Issue #281 item 2: the mode path defers exactly as the resize path does. A
+  // fold flips the tier under a focused editor; applying here would move the
+  // board out from under the caret (measured: note left 60px → 75.3px mid-edit).
+  // The held frame lands on focusout (interactions.js:onFocusOut).
+  if (!deferLayoutIfEditing()) applyLayout();
   if (state.isWide) {
     collapsePane();                  // B118: every return to wide re-enters through the collapsed face
     renderPane();
@@ -317,7 +321,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v91';
+const OWN_BUILD = 'v92';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

@@ -1278,6 +1278,8 @@ function onFocusOut(e) {
   else if (t.classList.contains('lot-text')) commitLot(t.closest('.lot-item'));
   else if (t.classList.contains('anchor')) commitAnchor(t);
   state.editVVFloor = Infinity;   // next edit measures its own keyboard-up floor (B80)
+  state.editVVWidth = 0;          // ...and its own widths (issue #281): never inherit the last edit's
+  state.editVVH = 0;
   // A viewport change held back during the edit lands now that nothing is at
   // stake — the keyboard's own retraction resize would repeat it, but a
   // rotation or fold has no such second chance.
