@@ -37,9 +37,13 @@ export function onFrameReflow(fn) { frameUi.frameReflow = fn; }
    expanded (calSqueeze) CAL_PANEL_W takes the rail's place — the panel
    expands FROM the rail, it doesn't add to it. */
 const CAL_RAIL_W = 40;               // the collapsed rail (mockup 6: 40px, right edge)
-export function applyLayout() {
+export function applyLayout(vw, vh) {
   if (deferLayoutIfEditing()) return;    // issue #281 item 2: never move the board under a focused editor
-  computeFrame(window.innerWidth, window.innerHeight);
+  // Issue #281 item 3: the environment pass hands in the viewport IT read, so
+  // this frame and the tier the pass applied come from one read of the room. A
+  // bare applyLayout() (boot, the font swap's re-measure, the deferred frame
+  // landing on focusout) still reads the live viewport.
+  computeFrame(vw ?? window.innerWidth, vh ?? window.innerHeight);
   applyFrame();
 }
 
@@ -155,14 +159,22 @@ function applyFrame() {
    inside the board holds focus a layout change is REMEMBERED, never applied —
    the held frame lands on focusout (interactions.js:onFocusOut). Every layout
    path routes through applyLayout, so the guard lives there rather than in
-   each caller: the mode path (applyMode), a flip's squeeze/collapse
-   (setCalSqueeze/setPaneCollapsed) and the resize path all get it. Desktop
-   geometry (B20) has no soft keyboard and is left unguarded, as B28 had it. */
+   each caller: the environment pass (a fold, a resize), a flip's
+   squeeze/collapse (setCalSqueeze/setPaneCollapsed). Desktop geometry (B20) has
+   no soft keyboard and is left unguarded, as B28 had it. */
 export function deferLayoutIfEditing() {
   if (state.isDesktop || !editingInBoard()) return false;
   state.layoutDeferred = true;
   return true;
 }
+
+/* Issue #281 item 3: while a consolidated environment pass is in flight the
+   squeeze/collapse setters must not lay out on their own — the pass applies ONE
+   frame once the new tier and the rail width the flip changes are both in
+   place. Standalone calls (the pane's collapse control, the calendar rail) still
+   lay out. */
+let envPass = false;
+export function inEnvironmentPass(on) { envPass = on; }
 
 function editingInBoard() {
   const a = document.activeElement;
@@ -199,6 +211,10 @@ function keyboardStillUp() {
   return !!(vk && vk.boundingRect && vk.boundingRect.height > 0);
 }
 
+/* The resize TRIGGER (issue #281 item 3): this owns the keyboard laws above and
+   reports whether it CONSUMED the resize — a consumed resize holds the frame
+   itself (layoutDeferred) or blurs, and never schedules a pass; anything else
+   (desktop, or no editor in the board) is handed to the environment pass. */
 export function onViewportResize() {
   const vv = window.visualViewport;
   const h = vv ? vv.height : window.innerHeight;
@@ -208,17 +224,17 @@ export function onViewportResize() {
     // same size arriving twice is one change told twice — never a retraction.
     // Measured on the fold: (846×846) then (846×846); without this the second
     // read the fold as a keyboard leaving and blurred the editor.
-    if (w === state.editVVWidth && h === state.editVVH) return;
+    if (w === state.editVVWidth && h === state.editVVH) return true;
     const widthMoved = w !== state.editVVWidth;   // a width change is a fold, never a keyboard
     state.editVVWidth = w;
     state.editVVH = h;
-    if (h <= state.editVVFloor) { state.editVVFloor = h; state.layoutDeferred = true; return; }
+    if (h <= state.editVVFloor) { state.editVVFloor = h; state.layoutDeferred = true; return true; }
     if (h > state.editVVFloor + KB_HIDE_SLOP && !widthMoved && !keyboardStillUp()) {
-      document.activeElement.blur(); return;
+      document.activeElement.blur(); return true;
     }
-    state.layoutDeferred = true; return;   // sub-threshold jitter, or a fold: keep holding
+    state.layoutDeferred = true; return true;   // sub-threshold jitter, or a fold: keep holding
   }
-  applyLayout();
+  return false;
 }
 
 /* --- 5. Coordinate + caret helpers --------------------------------------- */
@@ -254,7 +270,7 @@ const CAL_PANEL_W = 320;             // unscaled CSS px the panel takes (mockup 
 export function setCalSqueeze(on) {
   if (calSqueeze === on) return;
   calSqueeze = on;
-  if (state.current) applyLayout();
+  if (state.current && !envPass) applyLayout();
 }
 
 /* B118 (issue #211): the pane's collapse is the same mechanism pointed the
@@ -265,7 +281,7 @@ export function setCalSqueeze(on) {
 export function setPaneCollapsed(collapsed) {
   if (paneCollapsed === collapsed) return;
   paneCollapsed = collapsed;
-  if (state.current) applyLayout();
+  if (state.current && !envPass) applyLayout();
 }
 
 /* The similarity transform (issues #65/#75, B64; supersedes B40's anisotropic

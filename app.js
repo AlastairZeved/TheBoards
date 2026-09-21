@@ -1,6 +1,6 @@
 import { ACTION_DELAY, DESKTOP_MQ, EMBED, EMBED_MODE, LONGPRESS_MS, MOVE_THRESHOLD, TABLET_MQ, calKey, el, newBoardRecord, newCalEvent, state } from './state.js';
 import { idbDelete, idbGet, idbGetAll, idbPut, migrateLegacyBoards, persist, saveNow } from './persistence.js';
-import { LEGACY_H, LOGICAL_H, LOGICAL_W, applyLayout, calSqueeze, deferLayoutIfEditing, effScale, lotH, onViewportResize, rebaseNote, renderScale } from './geometry.js';
+import { LEGACY_H, LOGICAL_H, LOGICAL_W, applyLayout, calSqueeze, effScale, inEnvironmentPass, lotH, onViewportResize, rebaseNote, renderScale } from './geometry.js';
 import { renderX, renderY, setCalSqueeze } from './geometry.js';
 import { linkSource, noteEls, registerRender, renderBoard, updateLinks } from './render.js';
 import { cancelGesture, clamp, clearSelection, commitAction, deleteNote, engaged, g, hideToast, leave, pointers } from './interactions.js';
@@ -39,20 +39,60 @@ frameGuard();
 
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 
-// The isTablet/isDesktop/isWide flags live on `state` (§3): applyMode writes
-// them, every region reads them (issue #182, B' cross-module write).
-// The initial html classes are applied by boot() via applyInitialMode — the
-// flags live on `state`, so a load-time toggle here would hit the const's TDZ
-// (state is declared at §3, after this block runs).
+/* The isTablet/isDesktop/isWide flags live on `state` (§3): the environment
+   pass writes them, every region reads them (issue #182, B' cross-module write).
+   The initial html classes are applied by boot() via applyInitialMode — the
+   flags live on `state`, so a load-time toggle here would hit the const's TDZ
+   (state is declared at §3, after this block runs). */
 
-function applyMode() {
+/* Issue #281 item 3: ONE environment pass. The two resize listeners and the
+   two media-query changes are TRIGGERS ONLY — each schedules this pass, and
+   the three a fold fires all coalesce onto one animation frame. The pass reads
+   the environment ONCE and derives the tier and the frame from that one read,
+   so the frame can never be computed against a tier that describes the room
+   before the flip: the engines fire window.resize, visualViewport.resize and
+   the MQ change in no fixed order (Gecko flushes MQ on layout, bugzilla
+   1451717), and every order now lands on the same single application. A pass
+   that finds neither the tier nor the viewport changed does nothing at all.
+   B103 stands: width stays the classifier — the foldable APIs are not read. */
+let envRaf = 0;
+let lastEnv = null;                     // the environment the last pass applied
+function scheduleEnvironment() {
+  if (envRaf) return;                   // three triggers, one pass
+  envRaf = requestAnimationFrame(() => { envRaf = 0; applyEnvironment(); });
+}
+function applyEnvironment() {
+  const vw = window.innerWidth, vh = window.innerHeight;
   // B124 embed: a forced view pins the tier — the MQs say nothing. (The change
   // listeners below are unregistered when EMBED_MODE is set, so this guard is
-  // for boot's initial call only.)
-  state.isDesktop = EMBED_MODE ? EMBED_MODE === 'desktop' : DESKTOP_MQ.matches;
-  state.isTablet = EMBED_MODE ? false : !state.isDesktop && TABLET_MQ.matches;
-  state.isWide = EMBED_MODE ? EMBED_MODE === 'desktop'
-                            : state.isDesktop || state.isTablet;
+  // for the resize path only.)
+  const desktop = EMBED_MODE ? EMBED_MODE === 'desktop' : DESKTOP_MQ.matches;
+  const tablet = EMBED_MODE ? false : !desktop && TABLET_MQ.matches;
+  const wide = EMBED_MODE ? EMBED_MODE === 'desktop' : desktop || tablet;
+  const tierChanged = wide !== state.isWide;
+  const changed = !lastEnv || tierChanged || vw !== lastEnv.vw || vh !== lastEnv.vh;
+  lastEnv = { vw, vh, wide };
+  if (!changed) return;
+  inEnvironmentPass(true);
+  try {
+    if (tierChanged) applyTier(desktop, tablet);
+    applyLayout(vw, vh);                // the ONE frame this pass owes
+  } finally {
+    inEnvironmentPass(false);
+  }
+}
+
+/* The tier half of a pass (issue #281 item 3; the mode path's old applyMode):
+   the flags, the html arrangement classes, and the teardown a flip owes. It
+   applies the tier the pass read — the same read the frame is computed from —
+   and never lays out itself: the pass applies one frame after it returns, so a
+   flip whose collapsePane changes the frame's rail width still costs exactly
+   one application (inEnvironmentPass keeps the rail setters from laying out
+   underneath it). */
+function applyTier(desktop, tablet) {
+  state.isDesktop = desktop;
+  state.isTablet = tablet;
+  state.isWide = desktop || tablet;
   document.documentElement.classList.toggle('desktop', state.isDesktop);
   // The wide class is the CSS arrangement gate — every `html.desktop` rule
   // that draws the rail or the picker overlay is a wide rule now (B96).
@@ -86,8 +126,9 @@ function applyMode() {
   // Issue #281 item 2: the mode path defers exactly as the resize path does. A
   // fold flips the tier under a focused editor; applying here would move the
   // board out from under the caret (measured: note left 60px → 75.3px mid-edit).
-  // The held frame lands on focusout (interactions.js:onFocusOut).
-  if (!deferLayoutIfEditing()) applyLayout();
+  // The held frame lands on focusout (interactions.js:onFocusOut) — and the
+  // deferral still wins over this pass's frame: applyLayout is the gatekeeper
+  // (geometry.js:deferLayoutIfEditing), so the tier flips with the frame held.
   if (state.isWide) {
     collapsePane();                  // B118: every return to wide re-enters through the collapsed face
     renderPane();
@@ -106,8 +147,8 @@ function applyMode() {
   }
 }
 if (!EMBED_MODE) {                    // B124: a forced view never re-applies over the force
-  DESKTOP_MQ.addEventListener('change', applyMode);
-  TABLET_MQ.addEventListener('change', applyMode);
+  DESKTOP_MQ.addEventListener('change', scheduleEnvironment);
+  TABLET_MQ.addEventListener('change', scheduleEnvironment);
 }
 
 /* The initial html arrangement classes, applied by boot() — NOT at load time.
@@ -121,8 +162,15 @@ function applyInitialMode() {
 }
 
 /* --- 12. Boot + service worker ------------------------------------------- */
-window.addEventListener('resize', onViewportResize);
-if (window.visualViewport) window.visualViewport.addEventListener('resize', onViewportResize);
+// The resize triggers (issue #281 item 3). onViewportResize owns the keyboard
+// laws (B28/B80, item 1's fold guard) and reports the event CONSUMED when it
+// handles it; anything it hands back schedules the one environment pass.
+function onResize() {
+  if (onViewportResize()) return;
+  scheduleEnvironment();
+}
+window.addEventListener('resize', onResize);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
 
 /* Both sections are sized by the type they hold (B37/B47), and the type arrives
    late: the faces are font-display: swap (B50), so boot measures the fallback
@@ -131,7 +179,7 @@ if (window.visualViewport) window.visualViewport.addEventListener('resize', onVi
    pinned to the compartment's measured bottom edge, and a title that re-wraps
    on the swap would leave a control floating off the corner it belongs to. One
    re-measure when the faces land; a browser without the API keeps boot's. */
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(applyLayout);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => applyLayout());
 
 async function boot() {
   // Boot-order characterization guard (issue #182): one marker per step, emitted
@@ -321,7 +369,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v92';
+const OWN_BUILD = 'v93';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

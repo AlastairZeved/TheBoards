@@ -86,6 +86,29 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
 const activeIsNoteText = page => page.evaluate(() =>
   !!document.activeElement && document.activeElement.classList.contains('note-text'));
 
+// Issue #281: count EFFECTIVE LAYOUT APPLICATIONS. Every application ends in
+// #board.style.setProperty('--logical-w'), so the write itself is the counter —
+// a MutationObserver cannot serve here: three applications inside one rendering
+// update collapse into a single attribute record, which is exactly how the
+// stale-tier frame still went unseen. Each record carries the tier the pass had
+// when it wrote, so a frame computed against the room the user just left is
+// visible as `wide: false` on a 846px-wide write.
+const countPasses = page => page.evaluate(() => {
+  const board = document.querySelector('#board');
+  window.__passes = [];
+  const orig = board.style.setProperty.bind(board.style);
+  board.style.setProperty = (p, v) => {
+    if (p === '--logical-w') {
+      window.__passes.push({ w: String(v), wide: state.isWide, vw: innerWidth, vh: innerHeight });
+    }
+    return orig(p, v);
+  };
+});
+const clearPasses = page => page.evaluate(() => { window.__passes.length = 0; });
+const passes = page => page.evaluate(() => window.__passes.slice());
+const logicalW = page => page.evaluate(() =>
+  getComputedStyle(document.querySelector('#board')).getPropertyValue('--logical-w').trim());
+
 // Since issue #112 / B74 the mobile All-Boards menu is the Parking Lot turned
 // into a 2x2 category grid (the picker), and each category's boards live on
 // their own drilled screen (#list-view). openCat opens a category's screen the
@@ -1144,7 +1167,149 @@ async function openCat(page, cat) {
     await ctx.close();
   }
 
-  // ---- 13. pre-B32 notes stay reachable; B93 adopts them onto the single path
+  // ---- 12d. ONE environment pass per flip, from ONE read (issue #281 items 3, 5) --
+  // The room changed size, the board is still the board. A flip is ONE layout
+  // application, computed from a tier and a viewport read in the SAME pass —
+  // never from the tier of the room the user just left, whatever order the
+  // engine fires window.resize, visualViewport.resize and the media-query
+  // change in. Measured before the consolidation: four applications on the
+  // unfold (two of them judging the NEW 846px viewport against the STALE mobile
+  // tier, writing the raw viewport width as the sheet), three on the fold back.
+  // Characterizes the law, so a regression here fails on the count and on the
+  // tier the first applied frame was computed from.
+  console.log('\n[12d] One environment pass per flip, tier and viewport read together (issue #281)');
+  {
+    const { ctx, page, errors } = await newMobilePage(browser);
+    const flip = async (w, h) => {
+      await clearPasses(page);
+      await page.setViewportSize({ width: w, height: h });
+      await page.waitForTimeout(400);
+      return passes(page);
+    };
+    await countPasses(page);
+
+    // Unfold: the 384-wide cover screen becomes the 846-wide span (B103: width
+    // alone classifies; tablet, so the wide arrangement follows).
+    const unfold = await flip(846, 904);
+    ok('unfold applies the layout EXACTLY once', unfold.length === 1, JSON.stringify(unfold));
+    ok('...and that one pass already read the NEW tier (wide, not the room it left) — the stale-tier frame cannot be written',
+      unfold.length === 1 && unfold[0].wide === true && unfold[0].w !== unfold[0].vw + 'px',
+      JSON.stringify(unfold));
+    const wideFrame = unfold.length === 1 ? unfold[0].w : null;
+
+    const fold = await flip(384, 846);
+    ok('fold back applies the layout exactly once', fold.length === 1, JSON.stringify(fold));
+    ok('...already on the mobile tier: the sheet IS the viewport again (B32)',
+      fold.length === 1 && fold[0].wide === false && fold[0].w === fold[0].vw + 'px',
+      JSON.stringify(fold));
+
+    const resize = await flip(384, 700);
+    ok('a same-tier resize is one pass too, mobile frame', resize.length === 1 && resize[0].w === '384px',
+      JSON.stringify(resize));
+
+    // Furniture as it ships today — scope item 4's parked law. The flip to wide
+    // re-enters through the COLLAPSED pane (B118) and keeps the calendar rail
+    // (B99); the frame the single pass wrote is the settled frame. This is the
+    // bite-tested baseline the owner's ruling will be measured against.
+    await flip(846, 904);
+    const wide = await page.evaluate(() => ({
+      collapsed: document.getElementById('pane').classList.contains('rail-open'),
+      railShown: !document.getElementById('pane-rail').hidden,
+      collapseCtlHidden: document.getElementById('pane-collapse').hidden,
+      calRailGate: document.documentElement.classList.contains('has-cal-rail'),
+      calRailShown: !document.getElementById('cal-rail').hidden,
+      frame: getComputedStyle(document.getElementById('board')).getPropertyValue('--logical-w').trim(),
+    }));
+    ok('a flip to wide collapses the pane (B118) and keeps the calendar rail (B99) — today\'s law, item 4 parked',
+      wide.collapsed && wide.railShown && wide.collapseCtlHidden && wide.calRailGate && wide.calRailShown,
+      JSON.stringify(wide));
+    ok('the settled wide frame is the one the single pass wrote (no correction pass)',
+      wide.frame === wideFrame, wideFrame + ' -> ' + wide.frame);
+
+    // ...and the reverse leaves no furniture behind (issue #219, B99).
+    await flip(384, 846);
+    const mobile = await page.evaluate(() => ({
+      calRailGate: document.documentElement.classList.contains('has-cal-rail'),
+      calRailHidden: document.getElementById('cal-rail').hidden,
+      calViewHidden: document.getElementById('cal-view').hidden,
+    }));
+    ok('the flip back to narrow tears the rail down: no gate, no rail face, the view hidden (B99, issue #219)',
+      !mobile.calRailGate && mobile.calRailHidden && mobile.calViewHidden, JSON.stringify(mobile));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  // ---- 12e. a flip mid-edit holds the frame; the keyboard law still bites (issue #281) --
+  // The item-1 fold guard is the gatekeeper the single pass runs behind: a fold
+  // changes the width and is never a keyboard retraction, so the tier flips with
+  // the frame HELD (zero applications), and the held frame lands as ONE
+  // application on focusout. The keyboard's own two cases keep working, because
+  // the consolidation changed only which path applies the frame — not when an
+  // edit owns it: shrink holds (B28), grow-back-with-no-width-move blurs (B80).
+  console.log('\n[12e] A flip mid-edit holds the frame and lands it once on blur; the keyboard cases are unchanged (issue #281)');
+  {
+    const { ctx, page, errors } = await newMobilePage(browser);
+    await tap(page, 200, 400);                       // instant capture + focus (B27)
+    await page.keyboard.type('fold survive');
+    await countPasses(page);
+    const before = await logicalW(page);
+
+    await page.setViewportSize({ width: 846, height: 904 });   // unfold mid-edit
+    await page.waitForTimeout(400);
+    const held = await page.evaluate(() => ({
+      passes: window.__passes.length,
+      wide: state.isWide,
+      deferred: state.layoutDeferred,
+      frame: getComputedStyle(document.getElementById('board')).getPropertyValue('--logical-w').trim(),
+      notes: document.querySelectorAll('.note').length,
+    }));
+    ok('the tier flips while the frame is HELD: zero applications mid-edit (items 1 and 3)',
+      held.passes === 0 && held.wide === true && held.deferred === true, JSON.stringify(held));
+    ok('a fold is not a keyboard retraction: the editor keeps focus and its note (item 1)',
+      await activeIsNoteText(page) && held.notes === 1, JSON.stringify(held));
+    ok('the held frame is still the pre-flip frame', held.frame === before, before + ' -> ' + held.frame);
+
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(300);
+    const landed = await page.evaluate(() => ({
+      passes: window.__passes.slice(),
+      frame: getComputedStyle(document.getElementById('board')).getPropertyValue('--logical-w').trim(),
+      text: (state.current.notes[0] || {}).text,
+      rendered: (document.querySelector('.note-text') || {}).textContent,
+    }));
+    ok('the deferred flip lands as ONE application (B28\'s deferral, item 3)',
+      landed.passes.length === 1 && landed.passes[0].wide === true, JSON.stringify(landed.passes));
+    ok('...at the wide frame the flip computed, not the held one',
+      landed.frame !== before && landed.frame === landed.passes[0].w, before + ' -> ' + landed.frame);
+    ok('the typed text survived the fold (no empty-frame discard)',
+      landed.text === 'fold survive' && landed.rendered === 'fold survive', JSON.stringify(landed));
+
+    // Back to the cover screen, then the keyboard pair on the same sheet: the
+    // shrink holds the frame (B28), the grow-back with no width move is the
+    // keyboard leaving and puts the note away (B80).
+    clearPasses(page);
+    await page.setViewportSize({ width: 384, height: 846 });
+    await page.waitForTimeout(400);
+    ok('the fold back is one application, mobile frame again',
+      (await passes(page)).length === 1 && (await passes(page))[0].w === '384px', JSON.stringify(await passes(page)));
+
+    await tap(page, 250, 620);
+    await page.keyboard.type('kb');
+    ok('a second note is editing before the keyboard case', await activeIsNoteText(page));
+    await clearPasses(page);
+    await page.setViewportSize({ width: 384, height: 450 });   // keyboard up
+    await page.waitForTimeout(300);
+    ok('the keyboard\'s shrink still holds the frame: zero applications, focus kept (B28)',
+      (await passes(page)).length === 0 && await activeIsNoteText(page), JSON.stringify(await passes(page)));
+    await page.setViewportSize({ width: 384, height: 846 });   // keyboard away, width unchanged
+    await page.waitForTimeout(300);
+    ok('growing back with no width move is still the keyboard leaving: the note is put away (B80)',
+      !(await activeIsNoteText(page)));
+    ok('...and the held frame lands as one application',
+      (await passes(page)).length === 1, JSON.stringify(await passes(page)));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
   console.log('\n[13] Legacy note (no rh) is adopted onto the single path (B93, issue #141)');
   {
     const { ctx, page, errors } = await newMobilePage(browser);

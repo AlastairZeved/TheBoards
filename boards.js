@@ -105,7 +105,7 @@ export const catOrder = (a, b) => (touchedAt(b) - touchedAt(a)) || boardOrder(a,
 /* Pagination (issue #58): overflow turns pages, never scrolls. Page state is
    per-category and module-level so a re-render keeps the reader's place, and
    it is shared by the rail and the list because the two are never on screen at
-   once (applyMode pops the list state on the flip to desktop) — each renderer
+   once (a flip's tier teardown pops the list state on the way to desktop) — each renderer
    clamps every render, so a differing capacity heals itself. boardUi.catCap is the
    budget the last render used, and boardUi.catFilled the fill state it measured
    against — applyLayout compares both. */
@@ -820,7 +820,7 @@ async function showBoardFromList() {
    other surface. */
                                    // the rail is furniture, so it must never enter the
                                    // screen-grammar branches (popstate's calOpen swallow,
-                                   // applyMode's close, hideCal) that a pushed screen owns.
+                                   // the tier flip's close, hideCal) that a pushed screen owns.
 
 export function goCalBack() {
   // B124 embed: nothing was pushed, so there is nothing to pop — close the
