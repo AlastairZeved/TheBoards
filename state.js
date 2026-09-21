@@ -477,6 +477,9 @@ export const state = {
   isWide: EMBED_MODE ? EMBED_MODE === 'desktop'
                      : DESKTOP_MQ.matches || TABLET_MQ.matches,  // desktop ∪ tablet — the arrangement tier
   editVVFloor: Infinity,  // smallest visual-viewport height seen this edit (keyboard fully up)
+  editVVWidth: 0,         // the width of the PREVIOUS resize of this edit (issue #281): a fold
+                          // changes width, the keyboard never does — the blur's second gate
+  editVVH: 0,             // ...and its height, so a size told twice by both listeners is inert
   layoutDeferred: false,
   menuInvoker: null,      // desktop contextmenu: focus returns here on close
   swallowTap: false,      // the pointerdown that dismissed a menu is inert (B30)

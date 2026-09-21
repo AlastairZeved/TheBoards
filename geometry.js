@@ -38,6 +38,7 @@ export function onFrameReflow(fn) { frameUi.frameReflow = fn; }
    expands FROM the rail, it doesn't add to it. */
 const CAL_RAIL_W = 40;               // the collapsed rail (mockup 6: 40px, right edge)
 export function applyLayout() {
+  if (deferLayoutIfEditing()) return;    // issue #281 item 2: never move the board under a focused editor
   computeFrame(window.innerWidth, window.innerHeight);
   applyFrame();
 }
@@ -150,6 +151,19 @@ function applyFrame() {
    only thing standing between the soft keyboard and all of that. Do not
    weaken it. */
 
+/* B28's deferral, as one shared decision (issue #281 item 2): while an editor
+   inside the board holds focus a layout change is REMEMBERED, never applied —
+   the held frame lands on focusout (interactions.js:onFocusOut). Every layout
+   path routes through applyLayout, so the guard lives there rather than in
+   each caller: the mode path (applyMode), a flip's squeeze/collapse
+   (setCalSqueeze/setPaneCollapsed) and the resize path all get it. Desktop
+   geometry (B20) has no soft keyboard and is left unguarded, as B28 had it. */
+export function deferLayoutIfEditing() {
+  if (state.isDesktop || !editingInBoard()) return false;
+  state.layoutDeferred = true;
+  return true;
+}
+
 function editingInBoard() {
   const a = document.activeElement;
   return !!(a && a.hasAttribute && a.hasAttribute('contenteditable') && el.board.contains(a));
@@ -163,13 +177,46 @@ function editingInBoard() {
    holds focus, and blur() runs the commit-on-blur path (focusout) that commits,
    deselects, and lands the deferred layout. editVVFloor only ever drops within
    an edit (reset to Infinity on focusout), so retraction measured against it
-   crosses the threshold even when the browser animates the return in steps. */
+   crosses the threshold even when the browser animates the return in steps.
+
+   Issue #281 item 1: a FOLD grows the visual viewport exactly as the
+   keyboard's retraction does — the measured case read 420 → 700 on the Z Fold
+   and the height delta alone ended the edit and discarded an empty frame. A
+   fold is not a keyboard retraction, so the height heuristic is no longer
+   sufficient on its own and the blur is gated on the retraction being real:
+   the viewport's WIDTH is unchanged by this resize (a fold always changes
+   width — that is what a fold is; the keyboard never does) and, where the
+   engine reports it (Chromium/Android: navigator.virtualKeyboard), the
+   virtual keyboard is not still up. Either leg failing means "not a
+   retraction": defer, never blur. The comparison is against the width of the
+   PREVIOUS resize of this edit, not against the floor's — folding back lands
+   on the cover width the keyboard was up at, so a floor-relative compare
+   would read the fold-back as a retraction (measured). editVVWidth is
+   cleared with the floor on focusout so an edit never inherits the last one's
+   width. */
+function keyboardStillUp() {
+  const vk = navigator.virtualKeyboard;
+  return !!(vk && vk.boundingRect && vk.boundingRect.height > 0);
+}
+
 export function onViewportResize() {
-  const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  const vv = window.visualViewport;
+  const h = vv ? vv.height : window.innerHeight;
   if (!state.isDesktop && editingInBoard()) {
+    const w = vv ? vv.width : window.innerWidth;
+    // Two listeners (window + visualViewport) carry ONE viewport change, so the
+    // same size arriving twice is one change told twice — never a retraction.
+    // Measured on the fold: (846×846) then (846×846); without this the second
+    // read the fold as a keyboard leaving and blurred the editor.
+    if (w === state.editVVWidth && h === state.editVVH) return;
+    const widthMoved = w !== state.editVVWidth;   // a width change is a fold, never a keyboard
+    state.editVVWidth = w;
+    state.editVVH = h;
     if (h <= state.editVVFloor) { state.editVVFloor = h; state.layoutDeferred = true; return; }
-    if (h > state.editVVFloor + KB_HIDE_SLOP) { document.activeElement.blur(); return; }
-    state.layoutDeferred = true; return;   // sub-threshold jitter: keep holding
+    if (h > state.editVVFloor + KB_HIDE_SLOP && !widthMoved && !keyboardStillUp()) {
+      document.activeElement.blur(); return;
+    }
+    state.layoutDeferred = true; return;   // sub-threshold jitter, or a fold: keep holding
   }
   applyLayout();
 }
