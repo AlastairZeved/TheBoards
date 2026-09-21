@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v90 — version bumped (shipped bytes changed, B134 collapse seat, issue #259)',
-    /const CACHE = 'zeved-boards-v90';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v90, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v90';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v91 — version bumped (shipped bytes changed, B135 pane collapse mirror, issue #279)',
+    /const CACHE = 'zeved-boards-v91';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v91, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v91';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -898,14 +898,15 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('the exit row renders LAST — after the month view, at the view\'s bottom (issue #259, B134 superseded B124\'s above-the-month seat)',
     /<div id="cal-stack"><\/div>\s*<div id="cal-month"[^>]*><\/div>\s*<!--[^]*?-->\s*<div id="cal-top"/.test(html) &&
     !/#cal-view\.rail-open #cal-top \{ order: -1; \}/.test(css));
-  ok('both collapse controls read `Collapse ▶` — label first, mark after, in the app\'s own hand (issue #259, B134)',
-    /\.cal-act \{[^}]*flex-direction: row-reverse;/.test(css));
-  ok('the two collapse marks are mirrored right — same path data, flipped about x (issue #259, B134)',
+  ok('the pane\'s collapse control mirrors the calendar\'s — .cal-act keeps the calendar\'s label-first row-reverse, #pane-collapse\'s own id rule drops it to mark-first (issue #279, B135 supersedes B134\'s pane-collapse grammar clause alone)',
+    /\.cal-act \{[^}]*flex-direction: row-reverse;/.test(css) &&
+    /#pane-collapse \{[^}]*flex-direction: row;/.test(css));
+  ok('the two collapse marks point opposite ways — the calendar\'s right chevron, the pane\'s new left chevron, mirrored about x (issue #279, B135)',
     /calBack:   MARK\(16, '<path d="M6\.5 3\.5L11 8l-4\.5 4\.5"\/><path d="M11 8h-6\.5"\/>'\)/.test(app) &&
-    /paneCollapse: MARK\(16, '<path d="M6\.5 3\.5L11 8l-4\.5 4\.5"\/>'\)/.test(app) &&
-    !/M9\.5 3\.5L5 8l4\.5 4\.5/.test(app));
-  ok('the pane\'s collapse control anchors bottom-right (issue #259, B134)',
-    /#pane-collapse \{ align-self: flex-end; \}/.test(css) &&
+    /paneCollapse: MARK\(16, '<path d="M9\.5 3\.5L5 8l4\.5 4\.5"\/>'\)/.test(app) &&
+    !/paneCollapse: MARK\(16, '<path d="M6\.5 3\.5L11 8l-4\.5 4\.5"\/>'\)/.test(app));
+  ok('the pane\'s collapse control anchors bottom-right (issue #259, B134; seat stands under B135)',
+    /#pane-collapse \{[^}]*align-self: flex-end;/.test(css) &&
     /<div id="pane-cards"><\/div>\s*<button type="button" id="pane-collapse"/.test(html));
   ok('the R1 row\'s visual frame clears the touch floor as drawn (§6/B86 via B98)',
     /padding:\s*14px 16px/.test(css) && /\.cal-act \.glyph svg \{ display: block; width: 22px; height: 22px; \}/.test(css));

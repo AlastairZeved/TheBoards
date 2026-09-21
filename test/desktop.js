@@ -2153,10 +2153,11 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       const offx = parseFloat(getComputedStyle(document.getElementById('board')).getPropertyValue('--offx'));
       return Math.abs(offx - 300) < 0.5 && Math.abs(window.LOGICAL_W - (1440 - 300 - 40) / 0.9) < 1;
     }));
-    // B134 (issue #259): the pane's collapse control sits at the pane's
-    // BOTTOM-RIGHT corner and reads `Collapse ▶` — same grammar as the
-    // calendar's exit control (label first, mark after it, pointing right).
-    ok('the pane\'s collapse control sits at the pane\'s bottom-right corner, reading label-then-arrow (issue #259, B134)',
+    // B135 (issue #279): the pane's collapse control sits at the pane's
+    // BOTTOM-RIGHT corner (B134's seat stands) and reads `◀ Collapse` — the
+    // mark FIRST, pointing LEFT: the calendar's `Collapse ▶` mirrored,
+    // because this rail collapses left. Supersedes B134's grammar clause only.
+    ok('the pane\'s collapse control sits at the pane\'s bottom-right corner, reading arrow-then-label — the mark first and pointing left (issue #279, B135)',
       await page.evaluate(() => {
         const p = document.getElementById('pane'), b = document.getElementById('pane-collapse');
         const pr = p.getBoundingClientRect(), br = b.getBoundingClientRect();
@@ -2164,8 +2165,9 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
         const gl = b.querySelector('.glyph').getBoundingClientRect();
         const rightAnchored = Math.abs(pr.right - br.right) <= 20;      // the pane's own right padding
         const bottomAnchored = Math.abs(pr.bottom - br.bottom) <= 20;   // the pane's own bottom padding
-        const order = l.right <= gl.left + 1 && getComputedStyle(b).flexDirection === 'row-reverse';
-        return rightAnchored && bottomAnchored && order;
+        const order = gl.right <= l.left + 1 && getComputedStyle(b).flexDirection === 'row';
+        const leftChevron = b.querySelector('.glyph path').getAttribute('d') === 'M9.5 3.5L5 8l4.5 4.5';
+        return rightAnchored && bottomAnchored && order && leftChevron;
       }));
     // (c) the arrow is the collapse affordance.
     await page.click('#pane-collapse');

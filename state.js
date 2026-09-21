@@ -218,7 +218,7 @@ export const GLYPH = {
   // not "go back" anywhere, it folds the rail, so it borrows nothing from the
   // page-turn pair. B134 (issue #259) mirrors it right, matching the
   // calendar's exit control (arrow on the right, pointing right).
-  paneCollapse: MARK(16, '<path d="M6.5 3.5L11 8l-4.5 4.5"/>'),
+  paneCollapse: MARK(16, '<path d="M9.5 3.5L5 8l4.5 4.5"/>'),  // B135 (issue #279): left chevron — the calendar's mark mirrored, this rail collapses left
 };
 
 // contenteditable mode: prefer plaintext-only (Chromium/Samsung Internet — the

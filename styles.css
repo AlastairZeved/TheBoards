@@ -1540,8 +1540,12 @@ html.wide #pane.rail-open #pane-collapse { display: none; }
   box-shadow: 0 0 0 4px var(--ink-dark);
 }
 /* B134 (issue #259): the pane's collapse control sits at the pane's
-   BOTTOM-RIGHT corner (it renders last in #pane, after #pane-cards). */
-#pane-collapse { align-self: flex-end; }
+   BOTTOM-RIGHT corner (it renders last in #pane, after #pane-cards).
+   B135 (issue #279): it reads `◀ Collapse` — the mark FIRST, pointing left,
+   the calendar's control mirrored. Markup stays glyph-then-label (B98); this
+   id rule drops .cal-act's row-reverse for THIS control alone, so #cal-back
+   keeps `Collapse ▶`. Id beats class — no new modifier class needed. */
+#pane-collapse { align-self: flex-end; flex-direction: row; }
 
 /* ---- Rail categories: the desktop skin of the shared §10.5 grid. Same four
    children, same areas — only the row heights and the control's size step
