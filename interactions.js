@@ -946,7 +946,7 @@ function selectLot(id) {
 export function clearSelection() {
   if (linkSource !== null) clearLink();   // a board swap / new selection ends link mode (B91)
   // Rings first: the whole set goes when the selection goes (issue #55) —
-  // applyMode's teardown and renderBoard's rebuild both land here.
+  // the tier teardown and renderBoard's rebuild both land here.
   if (multiSel.size) {
     for (const id of multiSel) {
       const node = noteEls.get(id);
@@ -1283,7 +1283,7 @@ function onFocusOut(e) {
   // A viewport change held back during the edit lands now that nothing is at
   // stake — the keyboard's own retraction resize would repeat it, but a
   // rotation or fold has no such second chance.
-  if (state.layoutDeferred) { state.layoutDeferred = false; requestAnimationFrame(applyLayout); }
+  if (state.layoutDeferred) { state.layoutDeferred = false; requestAnimationFrame(() => applyLayout()); }
 }
 
 function onFocusIn(e) {

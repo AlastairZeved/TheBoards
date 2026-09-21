@@ -263,7 +263,7 @@ export const DESKTOP_MQ = window.matchMedia(
    ?embed=1&mode=desktop|mobile iframes a working preview for the site. Forced
    view: mode=desktop/mobile pins the arrangement tier; unknown or absent mode
    = natural matchMedia behavior. Every mode read flows through these consts +
-   the applyMode/state-init guards, so no call-site forks. */
+   the environment pass / state-init guards, so no call-site forks. */
 const EMBED_PARAMS = new URLSearchParams(location.search);
 export const EMBED = EMBED_PARAMS.get('embed') === '1';
 export const EMBED_MODE = EMBED &&
@@ -468,9 +468,9 @@ export const anchorEls = {
 export const state = {
   current: null,          // the open board record (in memory)
   dirty: false,           // `current` holds an edit the debounce hasn't written
-  // Arrangement tier (issue #182, B'): applyMode (the entry's media-query
-  // orchestrator) WRITES these and every region READS them — a cross-module
-  // write, so they ride the carrier. A module entry cannot write an imported
+  // Arrangement tier (issue #182, B'): the environment pass (the entry's
+  // media-query orchestrator) WRITES these and every region READS them — a
+  // cross-module write, so they ride the carrier. A module entry cannot write a
   // bare `let` (imported bindings are read-only); state members it can.
   isTablet: EMBED_MODE ? false : TABLET_MQ.matches,    // forced view in embed (B124); else load, like isDesktop below
   isDesktop: EMBED_MODE ? EMBED_MODE === 'desktop' : DESKTOP_MQ.matches,
