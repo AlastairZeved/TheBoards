@@ -113,6 +113,7 @@ const boardUi = {
   catPage: { todo: 0, idea: 0, unsorted: 0, learning: 0 },
   catCap: 0,                           // 0 = never rendered; the capacity check waits
   catFilled: 0,                        // populated sections the last render measured
+  catOpen: null,                       // B137: the tablet accordion's one expanded category (session state, not persisted)
 };
 const dragUi = {
   dragCancel: null,                    // the live card-drag's teardown, if one is mid-flight
@@ -127,11 +128,18 @@ const dragUi = {
    #112 / B74): the drill shows one category alone, so it must not subtract the
    furniture of three sections that are not there. */
 export function catPageCap(filled, drawn) {
-  const host = state.isDesktop ? el.paneCards : el.listRows;
+  // Branch on the surface ACTUALLY SHOWING (#286 defect fix, #281's one-read-
+  // per-surface discipline): wide renders the 300px pane — on tablet too
+  // (B96) — so wide measures #pane-cards; only a non-wide surface shows
+  // #list-rows. The old `state.isDesktop` grammar axis measured the retired
+  // hidden #list-rows on tablet (clientHeight 0), clamping the rail to the
+  // mobile drill's 3-column count. A hidden host is never a measuring surface.
+  const wide = state.isWide;
+  const host = wide ? el.paneCards : el.listRows;
   if (!host) return 1;
   const total = drawn || BOARD_CATS.length;
-  const head = state.isDesktop ? PANE_CAT_HEAD : LIST_CAT_ROW;
-  const pager = state.isDesktop ? PANE_PAGER_H : LIST_CAT_ROW;
+  const head = wide ? PANE_CAT_HEAD : LIST_CAT_ROW;
+  const pager = wide ? PANE_PAGER_H : LIST_CAT_ROW;
   const n = Math.max(1, Math.min(total, filled | 0));
   // The content box, not clientHeight: the list's own bottom padding sits
   // inside clientHeight and outside the flex line, and at B68's row heights
@@ -152,7 +160,7 @@ export function catPageCap(filled, drawn) {
   // B82 shape — so both surfaces budget against the one 76px row height.
   const rowH = LIST_CARD_H;
   const rows = Math.max(1, Math.floor((avail / n - head - pager) / (rowH + PANE_ROW_GAP)));
-  return rows * (state.isDesktop ? 1 : LIST_CARD_COLS);
+  return rows * (wide ? 1 : LIST_CARD_COLS);
 }
 
 /* One section, both surfaces: head, add, cards, pager — the same four children
@@ -171,6 +179,12 @@ function makeCatSection(cat, boards, cap, makeCard) {
   // rect the drop hit-test finds — and only the cards and pager slots go back
   // to the populated sections.
   if (!boards.length) sec.classList.add('empty');
+  // B137: on tablet the rail is a one-open accordion — every section but the
+  // open one folds to its head row (the same reclaim B68's empty collapse
+  // makes, so .folded rides that machinery), all folded on load. The mobile
+  // drill never runs on wide, so this branch is the tablet pane alone.
+  const folded = state.isWide && !state.isDesktop && boardUi.catOpen !== cat;
+  if (folded) sec.classList.add('folded');
   sec.setAttribute('role', 'group');
   // Page state rides the group label — the visual indicator is aria-hidden and
   // a rebuilt node can't announce, so this is where AT hears the page.
@@ -186,6 +200,28 @@ function makeCatSection(cat, boards, cap, makeCard) {
   label.textContent = name;
   head.appendChild(label);
   sec.appendChild(head);
+
+  // B137: the tablet accordion's toggle IS the head row — one tap expands
+  // (collapsing the open one), tapping the open head folds it. Raw
+  // navigation, no commit (B81). On desktop/mobile the head stays inert.
+  if (state.isWide && !state.isDesktop) {
+    head.removeAttribute('aria-hidden');       // it is a real toggle here, AT hears it
+    head.setAttribute('role', 'button');
+    head.setAttribute('tabindex', '0');
+    head.setAttribute('aria-expanded', String(!folded));
+    head.classList.add('cat-fold');
+    const toggle = async () => {
+      boardUi.catOpen = boardUi.catOpen === cat ? null : cat;
+      boardUi.catPage[cat] = 0;
+      await renderPane();
+      const again = el.paneCards.querySelector('.board-cat[data-cat="' + cat + '"] .cat-fold');
+      if (again) again.focus();                // goCatPage's stance: re-render ≠ lost focus
+    };
+    head.addEventListener('click', toggle);
+    head.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    });
+  }
 
   // The category's own create control (issue #88 / B63): a grid sibling of
   // the head, never a child — .cat-head is aria-hidden, and a button inside
@@ -633,7 +669,11 @@ export async function renderPane() {
     buckets[catOf(rec)].push(rec);
   }
   boardUi.catFilled = BOARD_CATS.filter(c => buckets[c].length).length;
-  boardUi.catCap = catPageCap(boardUi.catFilled);
+  // B137: the tablet rail is a one-open accordion — only the expanded section
+  // shows cards, so its budget is one populated section's share of the pane
+  // (the three folded heads reclaim theirs). Desktop keeps all four expanded.
+  const accordion = state.isWide && !state.isDesktop;
+  boardUi.catCap = catPageCap(accordion ? 1 : boardUi.catFilled);
   const focusCat = focusedCatAdd();
   el.paneCards.textContent = '';
   for (const cat of BOARD_CATS)
@@ -1401,7 +1441,10 @@ export function registerBoards() {
   // Registered here (boards owns the surface state); geometry fires the
   // hook from applyLayout without importing boards (cycle-break).
   onFrameReflow(() => {
-    if (boardUi.catCap && catPageCap(boardUi.catFilled, catView ? 1 : undefined) !== boardUi.catCap) {
+    // B137: the tablet accordion budgets one expanded section, the same call
+    // renderPane makes — the re-paginate hook must not measure a stale fill.
+    const accordion = state.isWide && !state.isDesktop;
+    if (boardUi.catCap && catPageCap(accordion ? 1 : boardUi.catFilled, catView ? 1 : undefined) !== boardUi.catCap) {
       if (listOpen) renderListSurface();
       else if (state.isWide && el.paneCards) renderPane();
     }
