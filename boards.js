@@ -244,7 +244,7 @@ function makeCatSection(cat, boards, cap, makeCard) {
   // page then says nothing (§10's law) through the pager's own `hidden`,
   // rather than through a second guard that has to agree with it.
   const pager = document.createElement('div');
-  pager.className = 'cat-pager'; pager.hidden = pages === 1;
+  pager.className = 'cat-pager'; pager.hidden = pages === 1 || folded;
   pager.appendChild(makePagerBtn('pageFirst', page === 0, () => goCatPage(cat, 0, 'pageFirst')));
   pager.appendChild(makePagerBtn('pagePrev', page === 0, () => goCatPage(cat, page - 1, 'pagePrev')));
   const ind = document.createElement('span');

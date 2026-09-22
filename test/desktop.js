@@ -2419,6 +2419,12 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
          return secs.length === 4 && secs.every(s => s.classList.contains('folded')) &&
            secs.every(s => s.querySelector('.cat-cards').clientHeight === 0);
        }));
+    // #291: a folded section's pager must hide with its section — a zero-height
+    // grid track does not clip, so the live pager painted over the next head.
+    ok('B137 (#291): every folded sections pager is hidden on load',
+       await page.evaluate(() =>
+         [...document.querySelectorAll('#pane-cards .board-cat.folded')]
+           .every(s => s.querySelector('.cat-pager').hidden === true)));
     ok('B137: each section head is the toggle (role=button + aria-expanded=false)',
        await page.evaluate(() =>
          [...document.querySelectorAll('#pane-cards .cat-head')]
