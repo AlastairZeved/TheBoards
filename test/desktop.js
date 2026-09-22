@@ -2370,6 +2370,136 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await ctx.close();
   }
 
+  // ---- D29. B137 (issue #286): the tablet rail is a one-open accordion, and
+  // catPageCap measures the surface showing --------------------------------
+  // Two halves, one branch. (1) The defect: catPageCap branched on
+  // state.isDesktop, so on tablet it measured the retired hidden #list-rows
+  // (clientHeight 0) and clamped the 300px rail to the mobile drill's
+  // 3-column count. It must measure #pane-cards whenever wide renders it.
+  // (2) Ruling C: on tablet all four sections boot folded, exactly one
+  // expands at a time, the expanded section shows its boards before a pager
+  // turn. Desktop's rail and the mobile drill are untouched.
+  console.log('\n[D29] B137 (issue #286): tablet accordion + capacity measures #pane-cards');
+  {
+    // Issue #286's seed: 10 To-Do / 4 Notes / 2 Learning / 12 Ideas.
+    const seed286 = async (page) => {
+      await page.goto(URL);
+      await page.waitForTimeout(500);
+      await page.evaluate(async () => {
+        const seed = async (cat, n, tag) => {
+          for (let i = 0; i < n; i++) {
+            const r = newBoardRecord();
+            r.title = tag + ' ' + i;
+            r.category = cat;
+            r.catStamp = r.createdAt = r.updatedAt = Date.now() - (i + 1) * 100000;
+            await idbPut(r);
+          }
+        };
+        await seed('todo', 10, 'Todo');
+        await seed('unsorted', 4, 'Note');
+        await seed('learning', 2, 'Learn');
+        await seed('idea', 12, 'Idea');
+      });
+      await page.reload();
+      await page.waitForTimeout(600);
+    };
+
+    // (a) The 904x846 fold: all sections collapsed on load; one open at a
+    // time; the expanded section shows >=5 boards before the pager.
+    const ctx = await browser.newContext({ viewport: { width: 904, height: 846 } });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(String(e)));
+    await seed286(page);
+    await page.click('#pane-rail');          // B118: the rail boots collapsed; expand it
+    await page.waitForTimeout(400);
+    ok('B137: all four sections fold on load — zero card rows on the tablet rail',
+       await page.evaluate(() => {
+         const secs = [...document.querySelectorAll('#pane-cards .board-cat')];
+         return secs.length === 4 && secs.every(s => s.classList.contains('folded')) &&
+           secs.every(s => s.querySelector('.cat-cards').clientHeight === 0);
+       }));
+    ok('B137: each section head is the toggle (role=button + aria-expanded=false)',
+       await page.evaluate(() =>
+         [...document.querySelectorAll('#pane-cards .cat-head')]
+           .every(h => h.getAttribute('role') === 'button' &&
+             h.getAttribute('aria-expanded') === 'false')));
+    await page.click('.board-cat[data-cat="todo"] .cat-head');
+    await page.waitForTimeout(400);
+    ok('B137: expanding To-Do unfolds it alone and shows >=5 boards before the pager',
+       await page.evaluate(() => {
+         const todo = document.querySelector('.board-cat[data-cat="todo"]');
+         return !todo.classList.contains('folded') &&
+           todo.querySelector('.cat-head').getAttribute('aria-expanded') === 'true' &&
+           todo.querySelectorAll('.pane-card').length >= 5 &&
+           [...document.querySelectorAll('#pane-cards .board-cat')]
+             .filter(s => s !== todo).every(s => s.classList.contains('folded'));
+       }));
+    await page.click('.board-cat[data-cat="idea"] .cat-head');
+    await page.waitForTimeout(400);
+    ok('B137: expanding a second section collapses the first (one open at a time)',
+       await page.evaluate(() =>
+         !document.querySelector('.board-cat[data-cat="idea"]').classList.contains('folded') &&
+         document.querySelector('.board-cat[data-cat="todo"]').classList.contains('folded')));
+    await page.click('.board-cat[data-cat="idea"] .cat-head');
+    await page.waitForTimeout(400);
+    ok('B137: tapping the open head folds it — all four collapsed again',
+       await page.evaluate(() =>
+         [...document.querySelectorAll('#pane-cards .board-cat')]
+           .every(s => s.classList.contains('folded'))));
+    ok('no page errors (tablet accordion)', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+
+    // (b) Capacity derives from #pane-cards' height on tablet: at a fixed
+    // 904px width, 2000px of height MUST buy more boards than 846px (the
+    // #286 table's probe — the old hidden-#list-rows measurement never moved).
+    const capAt = async (w, h) => {
+      const c = await browser.newContext({ viewport: { width: w, height: h } });
+      const p = await c.newPage();
+      await seed286(p);
+      await p.click('#pane-rail');
+      await p.waitForTimeout(400);
+      await p.click('.board-cat[data-cat="todo"] .cat-head');
+      await p.waitForTimeout(400);
+      const cap = await p.evaluate(() => catPageCap(1));   // one populated section: the accordion's budget
+      await c.close();
+      return cap;
+    };
+    const capFold = await capAt(904, 846);
+    const capTall = await capAt(904, 2000);
+    ok('B137 capacity measures #pane-cards: 904x2000 buys more boards than 904x846',
+       capTall > capFold, '846h=' + capFold + ' 2000h=' + capTall);
+
+    // (c) Desktop 1440x900 unchanged: no accordion, all four sections expanded.
+    const dctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const dpage = await dctx.newPage();
+    await seed286(dpage);
+    await dpage.click('#pane-rail');
+    await dpage.waitForTimeout(400);
+    ok('desktop 1440x900 untouched: no toggle heads, no folded sections',
+       await dpage.evaluate(() =>
+         !document.querySelector('#pane-cards .cat-fold') &&
+         ![...document.querySelectorAll('#pane-cards .board-cat')]
+           .some(s => s.classList.contains('folded'))));
+    await dctx.close();
+
+    // Mobile drill unchanged: 3 columns, inert head, one section drawn.
+    const mctx = await browser.newContext({ viewport: { width: 500, height: 900 } });
+    const mpage = await mctx.newPage();
+    await seed286(mpage);
+    // enter the drill the way a tap through the picker would (mobile.js's idiom)
+    await mpage.evaluate(() => { if (!listOpen) goToList(); drillCat('todo'); });
+    await mpage.waitForTimeout(400);
+    ok('mobile 3-col drill unchanged: 3-column grid, inert head, no toggle',
+       await mpage.evaluate(() => {
+         const cards = document.querySelector('#list-rows .cat-cards');
+         return getComputedStyle(cards).gridTemplateColumns.split(' ').length === 3 &&
+           !document.querySelector('#list-rows .cat-fold') &&
+           !document.querySelector('#list-rows .board-cat').classList.contains('folded');
+       }));
+    await mctx.close();
+  }
+
   await browser.close();
   console.log('\n=== desktop: ' + pass + ' passed, ' + fail + ' failed ===');
   process.exit(fail ? 1 : 0);

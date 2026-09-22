@@ -1313,6 +1313,15 @@ html:not(.desktop) .board-row .row-date {
   flex: 0 0 auto;
   grid-template-rows: 44px 0 0;        /* = LIST_CAT_ROW; the head row alone */
 }
+/* B137 (issue #286): the tablet rail's one-open accordion folds a section to
+   its head row — the exact reclaim B68's empty collapse makes, so .folded
+   rides the same two rules on both skins. The head row itself is the toggle
+   (.cat-fold); on desktop and mobile no section ever wears it. */
+.board-cat.folded {
+  flex: 0 0 auto;
+  grid-template-rows: 44px 0 0;        /* = LIST_CAT_ROW; the head row alone */
+}
+.cat-fold { cursor: pointer; }
 /* Mid-drag landing frame: the section under the pointer is where the board
    will move on release. Drawn just inside the section — the surface clips (it
    must: pagination, not scroll), so an outset outline loses its side edges and
@@ -1559,6 +1568,9 @@ html.wide .board-cat {
 }
 html.wide .board-cat.empty {
   grid-template-rows: 32px 0 0;        /* = PANE_CAT_HEAD; the head row alone */
+}
+html.wide .board-cat.folded {
+  grid-template-rows: 32px 0 0;        /* = PANE_CAT_HEAD; B137's folded section */
 }
 /* The header steps back to the scale's own top step on the rail (B63): at
    24px the longest name sets 215px, and the rail's 276px cannot hold that
