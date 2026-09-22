@@ -1,10 +1,12 @@
-// Embed-mode regression (B124, Zezed site #2).
+// Embed-mode regression (B124 as amended by B136, Zezed site #2).
 //
 // ?embed=1&mode=desktop|mobile iframes a working preview: forced view (the
-// arrangement tier ignores the media queries), throwaway storage wiped at
-// boot, and NO history pushes — the parent page's session must never gain
-// iframe entries. This suite pins all three, at the URL level (embed logic
-// keys off query params, so the page runs standalone with them).
+// arrangement tier ignores the media queries), persistent storage under its
+// own namespace (B136 — the wipe-at-boot is retired; the embed persists
+// exactly like the plain app), and NO history pushes — the parent page's
+// session must never gain iframe entries. This suite pins all three, at the
+// URL level (embed logic keys off query params, so the page runs standalone
+// with them).
 //
 // Run: NODE_PATH=<playwright> node test/embed.js  (serve the repo root on 8000)
 
@@ -52,7 +54,8 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++
     await ctx.close();
   }
 
-  // 4. Throwaway namespace: boards-db-embed, not boards-db, wiped on reload.
+  // 4. Own namespace: boards-db-embed, not boards-db, and it PERSISTS across
+  //    reloads (B136 — the boot wipe is gone).
   {
     const ctx = await browser.newContext({ viewport: { width: 600, height: 800 } });
     const page = await ctx.newPage();
@@ -61,14 +64,13 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++
     const names = await page.evaluate(() => indexedDB.databases().then((dbs) => dbs.map((d) => d.name).sort()));
     ok('embed opens boards-db-embed', names.includes('boards-db-embed'), JSON.stringify(names));
     ok('embed never opens boards-db', !names.includes('boards-db'));
-    // Seed the embed DB, reload, expect it emptied by the boot wipe.
+    // Seed the embed DB, reload, expect the seed to survive (B136).
     await page.evaluate(() => import('/persistence.js').then((m) => m.idbPut({ id: 'seed-1' })));
     await page.reload();
     await page.waitForTimeout(600);
     const after = await page.evaluate(() => import('/persistence.js').then((m) => m.idbGetAll()));
-    // The app re-seeds its default board at boot — what matters is the seed is gone.
-    ok('embed DB is wiped at boot (seed record gone after reload)',
-      !after.some((r) => r.id === 'seed-1'), JSON.stringify(after.map((r) => r.id)));
+    ok('embed DB persists across reload (seed record still present)',
+      after.some((r) => r.id === 'seed-1'), JSON.stringify(after.map((r) => r.id)));
     await ctx.close();
   }
 

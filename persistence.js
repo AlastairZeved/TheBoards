@@ -6,24 +6,19 @@ import { clamp, hideSaveError, showSaveError } from './interactions.js';
 
 // B124 embed: a throwaway namespace wiped before every open — the visitor's
 // real `boards-db` is never touched by the embed (separate name, not a rename).
+// B136 (issue #280) retires the wipe-at-boot clause: the embed's namespace
+// persists exactly like the plain app. The separate name itself survives.
 const DB_NAME = EMBED ? 'boards-db-embed' : 'boards-db', STORE = 'boards';
 
 function openDB() {
   return new Promise((resolve, reject) => {
-    const open = () => {
-      const req = indexedDB.open(DB_NAME, 1);
-      req.onupgradeneeded = () => {
-        const db = req.result;
-        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' });
-      };
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' });
     };
-    if (!EMBED) { open(); return; }
-    // Embed wipe-at-boot: every reload is a clean slate. onblocked still opens —
-    // a stale tab holding the old DB must not wedge the fresh one.
-    const del = indexedDB.deleteDatabase(DB_NAME);
-    del.onsuccess = del.onerror = del.onblocked = open;
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
   });
 }
 const dbPromise = openDB();
