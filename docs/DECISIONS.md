@@ -5224,3 +5224,28 @@ No other passage states the linked board's generated title: the sweep of
 **The calendar's control is untouched.** `#cal-back` keeps **`Collapse ▶`** — label first, the mark after it, pointing right, anchored left at the very bottom of the calendar view below the month view. The shared `.cal-act` grammar is not flipped for both controls; `#pane-collapse` is the one that changes, and its bottom-right seat, its label text and its aria-label stay exactly as B134 left them.
 
 **The record.** Docs-only on this card: `state.js`'s `GLYPH.paneCollapse` (the right chevron `M6.5 3.5L11 8l-4.5 4.5`) and the fill order that renders label-then-mark still ship the superseded grammar — the mirrored glyph (the left chevron `M9.5 3.5L5 8l4.5 4.5`) and the arrow-first rendering scoped to `#pane-collapse` alone are a later implementation card's work on issue #279, gated behind this ruling's merge. No CACHE bump (docs-only: `**/*.md` is paths-ignored in the deploy workflow, so nothing redeploys).
+
+### B136. The embed's database is never wiped at boot — B124's "throwaway namespace wiped before every open" clause is retired, and the embed persists exactly like the plain app (issue #280, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/280#issuecomment-5777418703; supersedes ONLY B124's wipe-at-boot clause — the `persistence.js` boot-time `indexedDB.deleteDatabase("boards-db-embed")` before anything loads; keeps B124's embed keying — the `?embed=1` URL parameter and the separate `boards-db-embed` namespace — B21's storage-key law, §3.2's no-backend law; the persistence.js diff is the implementation card's work, gated behind this ruling's merge; waives nothing)
+
+**Source:** issue #280 (owner, ruling of record, comment 5777418703), the owner's chat ruling of 2026-09-22 transcribed verbatim: "**B — remove the wipe entirely; embeds persist like the real app.**" — with the comment's plain reading quoted in full below — https://github.com/AlastairZeved/TheBoards/issues/280#issuecomment-5777418703
+
+**The owner's ruling of record, verbatim (issue #280 comment 5777418703):**
+
+> ## Owner ruling of record (2026-09-22, chat)
+>
+> > **B — remove the wipe entirely; embeds persist like the real app.**
+>
+> Plain reading (the law the code must satisfy):
+>
+> - `openDB()` never calls `indexedDB.deleteDatabase()` — the wipe-at-boot block is deleted outright.
+> - Embed mode keeps its own namespace (`boards-db-embed`) but persists across reloads like `boards-db`. There is no throwaway behavior left anywhere.
+> - **B124 is superseded in the clause that mandates the wipe.** B124's "throwaway namespace wiped before every open" is retired as written; this comment is the ruling of record and the docs amendment cites it. The embed-keying mechanism itself (URL param, separate DB name) survives.
+> - Knock-on, accepted by the owner: a visitor who opens an embed URL now accumulates persistent demo data on that URL, exactly like the plain app. No protection is added — that is the point of B.
+>
+> Fan-out: docs amendment (B124 supersede) → impl → QA → Cleaner, serial.
+
+**The ruling.** B124 asked whether the embed needed storage at all, and the `EMBED` branch of `persistence.js`'s `openDB()` answered by deleting `boards-db-embed` at every page open — the throwaway namespace wiped before every open, the clause this ruling retires. The owner's ruling is B: **`openDB()` never calls `indexedDB.deleteDatabase()`** — the wipe-at-boot block is deleted outright — and embed mode keeps its own namespace (`boards-db-embed`) but **persists across reloads like `boards-db`**. There is no throwaway behavior left anywhere: any `?embed=1` URL survives reloads exactly as the plain PWA does.
+
+**What is kept.** Only the wipe is superseded. The embed-keying mechanism itself survives — the `?embed=1` URL parameter and the separate `boards-db-embed` database name — so embed mode remains a distinct surface; it simply persists now. B21's storage-key law stands: no key or store renames, the `boards-db-embed` name is kept by design. §3.2's no-backend law stands: the fix is client-side IndexedDB behavior, nothing server-shaped. The knock-on the owner accepted explicitly in the ruling: a visitor who opens an embed URL now accumulates persistent demo data on that URL, exactly like the plain app — no protection is added, that is the point of B.
+
+**The record.** Docs-only on this card — the `persistence.js` diff that deletes the boot-time `deleteDatabase` block and the throwaway behavior it guaranteed is the implementation card's work on issue #280, gated behind this ruling's merge. No CACHE bump (docs-only: `**/*.md` is paths-ignored in the deploy workflow, so nothing redeploys).
