@@ -1898,11 +1898,12 @@ html.wide #cal-export { margin-left: auto; }
   gap: 7px;
   min-height: 0;
 }
+html:not(.wide) #cal-stack { justify-content: flex-end; }   /* issue #293: the days list bottom-anchors to the month view's top — the leftover slack renders ABOVE the list as intended whitespace (mobile tier only; the wide panel keeps its own packing) */
 .cal-day {
   position: relative;
   border-radius: 4px;
   overflow: hidden;
-  flex: 0 0 auto;                      /* issue #170: the card is its content's size, not the viewport's — the freed height falls out the bottom, unstubbed (the month view's ground, #191) */
+  flex: 0 0 auto;                      /* issue #170: the card is its content's size, not the viewport's — with the stack bottom-anchored (issue #293), the freed height falls out the TOP as intended whitespace above the day list */
   min-height: 44px;
   display: grid;
   grid-template-columns: 84px 1fr;     /* date card left-anchored, one timeline zone (v2 refinement) */
@@ -1953,7 +1954,7 @@ html.wide #cal-export { margin-left: auto; }
 /* Attention recedes with distance from now (the mockups' law): today lit,
    the rest receded — scale and luminance, never icons. */
 .cal-day.today { flex: 1.6 1 0; max-height: calc(21.05% - 9px); outline: 2px solid var(--ink-light); outline-offset: 1px;
-  box-shadow: 0 0 0 3px var(--ink-dark); }   /* #170: the cap is today's old flex share — 1.6/7.6 of the stack minus the gaps — so today's size survives the shrink verbatim; the leftovers it no longer absorbs sit at the bottom, empty */
+  box-shadow: 0 0 0 3px var(--ink-dark); }   /* #170: the cap is today's old flex share — 1.6/7.6 of the stack minus the gaps — so today's size survives the shrink verbatim; the leftovers it no longer absorbs render above the day list as intended whitespace (issue #293) */
 .cal-day.today .cal-d1 { font-size: 14px; }
 .cal-day.near { opacity: .88; }
 .cal-day.near::before { filter: brightness(.8); }
