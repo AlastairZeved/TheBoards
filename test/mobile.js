@@ -2574,12 +2574,14 @@ async function openCat(page, cat) {
     await ctx.close();
   }
 
-  // ---- 25b. Non-today cards shrink to their text; the ground carries the month view (issue #170 + #191)
+  // ---- 25b. Non-today cards shrink to their text; the stack bottom-anchors to the month view (issue #170 + #191 + #293)
   // The law: a non-today day card is sized by its content — two lines of event
   // text read comfortably, nothing clipped — today keeps the stack's dominant
   // share (the 1.6 grow, its cap now against the shorter stack the month view
-  // shares the ground with, issue #191).
-  console.log('\n[25b] Calendar: non-today cards shrink; the ground carries the month view (issue #170 + #191)');
+  // shares the ground with, issue #191). Issue #293 re-seats the freed ground:
+  // the stack bottom-anchors to the month view's top and the slack renders
+  // ABOVE the day list as intended whitespace.
+  console.log('\n[25b] Calendar: non-today cards shrink; the stack bottom-anchors to the month view (issue #170 + #191 + #293)');
   {
     const { ctx, page, errors } = await newMobilePage(browser);
     await page.evaluate(async () => {
@@ -2602,6 +2604,7 @@ async function openCat(page, cat) {
         others: days.slice(1).map(d => +d.getBoundingClientRect().height.toFixed(1)),
         lineHeight: +line.getBoundingClientRect().height.toFixed(1),
         bottomGap: +(stack.bottom - days[6].getBoundingClientRect().bottom).toFixed(1),
+        topSlack: +(days[0].getBoundingClientRect().top - stack.top).toFixed(1),
         month: (() => { const r = document.getElementById('cal-month').getBoundingClientRect();
                         return { top: +r.top.toFixed(1), bottom: +r.bottom.toFixed(1), h: +r.height.toFixed(1) }; })(),
         stackBottom: +stack.bottom.toFixed(1),
@@ -2614,8 +2617,8 @@ async function openCat(page, cat) {
       g.lineHeight >= 30 && g.lineHeight <= 38, String(g.lineHeight));
     ok('non-today cards shrink to their content (two lines + capture row)',
       g.others.every(h => h > 40 && h < 80), JSON.stringify(g.others));
-    ok('the freed ground below the stack now carries the month view (issue #191)',
-      g.bottomGap > 0 && g.month.h > 100 && g.month.top >= g.stackBottom - 1 && g.month.bottom <= g.vh,
+    ok('the stack bottom-anchors to the month view: last card flush at the stack\'s bottom, the freed ground renders above the list (issue #293)',
+      g.bottomGap >= -1 && g.bottomGap <= 1 && g.topSlack > 0 && g.month.h > 100 && g.month.top >= g.stackBottom - 1 && g.month.bottom <= g.vh,
       JSON.stringify(g));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
