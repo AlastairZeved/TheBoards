@@ -177,6 +177,10 @@
       <span class="vlabel" aria-hidden="true">Calendar Board</span>
       <span class="cdate" aria-hidden="true"></span>
     </button>
+    <!-- Issue #295 (B138): the recurring-reminders strip rides the slack
+         issue #293 freed above the day list — mobile tier only (the wide
+         panel keeps its own top-packing). Filled by renderCalReminders(). -->
+    <div id="cal-reminders" role="group" aria-label="Recurring reminders"></div>
     <div id="cal-stack"></div>
     <div id="cal-month" role="group" aria-label="Month view"></div>
     <!-- B134 (issue #259): the exit control renders LAST — at the view's very
