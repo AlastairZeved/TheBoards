@@ -1308,7 +1308,96 @@ export function renderCal() {
       el.calStack.appendChild(makeCalDay(day, dayEvents, board));
     }
     renderCalMonth(new Set(events.map((e) => e.date)));
+    renderCalReminders(all);
   });
+}
+
+/* --- The recurring-reminders strip (issue #295, B138) ----------------------
+   Fills the slack issue #293 freed above the day list, mobile tier only.
+   Chips read "title — weekday" of the record's stored next-occurrence date
+   (B138 narrows B104's no-time law for THIS component only; firing and
+   notification are out of scope). Records ride the boards store like events
+   (one store, no schema bump): the ones carrying a `rem` string. The plus
+   block — the calendar's own orange, --frame — adds one via an inline
+   editing chip: commit on Enter/blur, Escape or an empty edit discards.
+   Overflow pages via .mo-nav buttons (the month view's grammar): a page
+   turn is an instant scrollLeft jump, never a slide; no swipe. */
+function renderCalReminders(all) {
+  const box = el.calReminders;
+  if (box.querySelector('input')) return;   // an edit is open — rebuilding would throw away the user's typing
+  box.textContent = '';
+  if (document.documentElement.classList.contains('wide')) return;  // the wide panel keeps its own top-packing
+  const track = document.createElement('div');
+  track.className = 'rem-track';
+  for (const r of all.filter((x) => typeof x.rem === 'string')) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'rem-chip';
+    // The next occurrence is stored as a calKey date; the chip reads only
+    // its weekday. Tap is a placeholder — edit/delete land later (#295).
+    chip.textContent = r.rem + ' — ' +
+      new Date(r.next + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short' });
+    track.appendChild(chip);
+  }
+  const plus = document.createElement('button');
+  plus.type = 'button';
+  plus.className = 'rem-plus';
+  plus.setAttribute('aria-label', 'Add a recurring reminder');
+  plus.textContent = '+';
+  plus.addEventListener('click', () => {
+    const chip = document.createElement('div');
+    chip.className = 'rem-chip';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 40;
+    input.placeholder = 'Title';
+    input.setAttribute('aria-label', 'Reminder title');
+    chip.appendChild(input);
+    track.appendChild(chip);
+    track.scrollLeft = track.scrollWidth;      // the new chip is where the typing is
+    let done = false;                          // blur fires after a key commit — once only
+    const commit = async () => {
+      if (done) return;
+      done = true;
+      const title = input.value.trim();
+      chip.remove();
+      if (!title) return;                      // an empty edit discards itself
+      await idbPut({ id: 'rem-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                     rem: title, next: calKey(new Date()) });
+      renderCalReminders(await idbGetAll());
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { done = true; chip.remove(); }
+      else if (e.key === 'Enter') commit();
+    });
+    input.addEventListener('blur', commit);
+    input.focus();
+  });
+  box.append(track, plus);
+  // The pager, in the month view's .mo-nav grammar — visible only when the
+  // chips overflow the track; a turn jumps one track-width, instantly.
+  const nav = (dir, label) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'mo-nav rem-nav';
+    b.setAttribute('aria-label', label);
+    b.textContent = dir < 0 ? '‹' : '›';
+    b.addEventListener('click', () => { track.scrollLeft += dir * track.clientWidth; });
+    return b;
+  };
+  const back = nav(-1, 'Previous reminders');
+  const fwd = nav(1, 'Next reminders');
+  const navUpd = () => {
+    const over = track.scrollWidth > track.clientWidth;
+    back.hidden = !over;
+    fwd.hidden = !over;
+    back.disabled = track.scrollLeft <= 0;
+    fwd.disabled = track.scrollLeft >= track.scrollWidth - track.clientWidth - 1;
+  };
+  back.hidden = fwd.hidden = true;
+  box.append(back, track, fwd, plus);          // ‹ chips › +, the orange block rightmost
+  track.addEventListener('scroll', navUpd, { passive: true });
+  requestAnimationFrame(navUpd);               // the measure needs a laid-out track
 }
 
 /* --- The month view (issue #191) ------------------------------------------

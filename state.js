@@ -452,6 +452,7 @@ export const el = {
   importFile: document.getElementById('import-file'),       // the import tab's file dialog
   calView: document.getElementById('cal-view'),             // calendar screen (issue #145)
   calRail: document.getElementById('cal-rail'),             // the standing rail face (issue #158, B99)
+  calReminders: document.getElementById('cal-reminders'), // the recurring-reminders strip (issue #295)
   calStack: document.getElementById('cal-stack'),
   calTop: document.getElementById('cal-top'),
   calBack: document.getElementById('cal-back'),
