@@ -5277,3 +5277,49 @@ No other passage states the linked board's generated title: the sweep of
 **What is kept.** This is B118's tablet interaction amended, nothing else. The collapse grammar survives whole on tablet — the 40px face, collapsed-by-default, one tap to expand, the arrow control to collapse back, the 300px pane at PANE_W 300, the mirror-of-B99 identity — and B118's desktop rail is untouched: this ruling is **tablet-scoped**. B42's rows×cols capacity law is untouched (the accordion reuses the section-collapse the rail already budgets, per B42/B44/B68), B96's tablet tier and B100/B119's rail-is-the-All-Boards-surface-on-wide clause stand (tablet reads its All-Boards surface from behind the collapsed face, as B119 ruled), and B74's four-category taxonomy is the accordion's four sections. The mechanical `catPageCap` defect — it measures the retired `#list-rows` host on tablet and clamps to the mobile drill's 3-column count — rides in the same change as a **defect fix** under #281's one-read-per-surface discipline (a hidden host is never a measuring surface); it needs no new ruling and is recorded here only so the impl card knows the record does not forbid it.
 
 **The record.** Docs-only on this card — the accordion (collapsed-by-default start, one-open radio behavior, tap-to-collapse) and the `catPageCap` surface-branch fix are a later implementation card's work on issue #286, gated behind this ruling's merge. No CACHE bump (docs-only: `**/*.md` is paths-ignored in the deploy workflow, so nothing redeploys).
+
+### B138. The Recurring Reminders strip component of issue #295 is IN SCOPE — a strip in the top space reserved by #293, chips reading title + next occurrence, an orange plus add control, page-left / page-right paging, and persistence of the reminder records; the firing/notification mechanics stay OUT of scope (issue #295, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/295#issuecomment-5826290712; supersedes ONLY B113's recurring-reminders clause — by number, not edited in place — and only for this component's scope: strip + chips + add control + pager + persistence of the reminder records; everything else B113 rides on stands: the clock-toggle reminder of B108/B109 remains the complete reminder mechanism — nothing reschedules it, nothing recreates it, re-tapping the clock is the only return path; B104's no-time-stored law is narrowed only to the extent this component persists reminder schedule data — chips read "title + next occurrence" — B104's clock-toggle mechanism untouched; B113's month-view deferral clause is moot — the month view shipped as #191; the firing/notification mechanics and edit/delete tap behavior on chips are pending a further ruling; waives nothing)
+
+**Source:** issue #295 (owner, ruling of record, comment 5826290712), the owner's chat ruling of 2026-09-24, the comment transcribed verbatim in full below — https://github.com/AlastairZeved/TheBoards/issues/295#issuecomment-5826290712
+
+**The owner's ruling of record, verbatim (issue #295 comment 5826290712):**
+
+> ## Owner ruling of record (2026-09-24): B113 superseded for the Recurring Reminders component
+>
+> **Ruling (from Rob, chat ruling confirmed 2026-09-24):** the Recurring Reminders strip component as specified in this issue is IN SCOPE. B113's recurring-reminders clause is superseded by this ruling, cited by URL here. The strip is a separate, explicit component with its own persistence — the firing/notification mechanics stay OUT of scope (the issue says so verbatim).
+>
+> **Knock-on consequences encoded per the orchestration law:**
+> - B113's recurring-reminders ban is superseded **only** for this component's scope: stripe + chips + add control + pager + persistence of the reminder records. Everything else B113 rides on stands: the clock-toggle reminder (B108/B109) remains the complete reminder mechanism — nothing reschedules it, nothing recreates it, re-tapping the clock is the only return path.
+> - B104's no-time-stored law is narrowed only to the extent this component persists reminder schedule data (chips read 'title + next occurrence'). B104's clock-toggle mechanism remains untouched.
+> - The month-view deferral clause of B113 is moot — the month view shipped as #191.
+> - Pending a further ruling: firing mechanics, edit/delete tap behavior on chips (explicitly out of scope here).
+>
+> Docs-first chain follows: PRD + DECISIONS amendment (verbatim transcription of this ruling with Source: this comment) → impl → QA → Cleaner. No code before the amendment ships.
+
+**The ruling.** The Recurring Reminders strip is in. Issue #295 specifies it:
+the component lives in the empty space at the top of the calendar view — the
+whitespace reserved by #293 — reads left to right as one horizontal strip,
+chips carry title + next occurrence and nothing else, an orange plus block
+adds a reminder, overflow pages by page-left / page-right buttons rather than
+scrolling or swiping, and the reminder records persist. B113 recorded
+recurring reminders as out; the owner's 2026-09-24 chat ruling, transcribed
+above, reopens that question for exactly this component and nothing else.
+
+**What is kept.** B113 is amended, not deleted — its recurring-reminders
+clause is superseded by number for this component's scope, and everything
+else it ruled stands. The clock-toggle reminder (B108/B109) remains the
+complete reminder mechanism: nothing reschedules it, nothing recreates it,
+re-tapping the clock is the only return path. B104's no-time-stored law is
+narrowed only to the extent this component persists reminder schedule data
+(chips read "title + next occurrence"); B104's clock-toggle mechanism is
+untouched. B113's month-view deferral clause is moot — the month view shipped
+as #191. AGENTS.md's never-do "reminders" line is untouched; this record
+follows B104's clock-toggle precedent — the bounded exception lives in the
+PRD's out-of-scope table row and this ruling, not in an edit to that line.
+Firing mechanics and edit/delete tap behavior on chips are pending a further
+ruling.
+
+**The record.** Docs-only on this card — the component (strip + chips + add
+control + pager + persistence) is a later implementation card's work on issue
+#295, gated behind this ruling's merge. No CACHE bump (docs-only: `**/*.md`
+is paths-ignored in the deploy workflow, so nothing redeploys).
