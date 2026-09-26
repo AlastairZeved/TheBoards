@@ -327,6 +327,7 @@ export const noteKFor = (n, frameW, frameH) =>
   Math.min(frameW / (n.rw || 900), frameH / n.rh);
 
 const noteK = (note) => noteKFor(note, LOGICAL_W, LOGICAL_H);
+export { noteK };
 export const renderX  = (note) => note.x * noteK(note);
 export const effScale = (note) => (note.scale || 1) * noteK(note);
 export const renderY  = (note) => note.y * noteK(note);

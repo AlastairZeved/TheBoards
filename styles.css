@@ -814,9 +814,10 @@ html:not(.wide) #board-actions {
   opacity: 0; visibility: hidden;      /* shown by the select/focus rule below */
   transition: opacity 200ms cubic-bezier(0.22, 0.61, 0.36, 1), visibility 0s 200ms;
 }
-/* No room below near the sheet bottom: the row flips to sit just inside the
-   bottom edge instead (reflectToolbarFlip toggles .tb-flip — B120's re-aim). */
-.note.tb-flip .note-toolbar { top: auto; bottom: 0; }
+/* The row NEVER sits inside the card (issue #298 ruling): the flip re-aim was
+   removed; when there is no room below, reflectToolbarSeat raises the note
+   itself so the flush-below seat fits — the row may never paint over the
+   note's own text. */
 /* An empty note shows no row (it has no frame either, §6.2). The row follows the
    text in DOM, so the general-sibling selector reaches it without :has(). */
 .note-text:empty ~ .note-toolbar { display: none; }

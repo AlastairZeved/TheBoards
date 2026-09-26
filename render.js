@@ -2,7 +2,7 @@
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { COPY, GLYPH, anchorEls, calKey, el, state, uuid } from './state.js';
 import { idbGet, idbGetAll, idbPut, saveNow, scheduleSave } from './persistence.js';
-import { applyLayout, applyNoteWidth, effScale, LOGICAL_H, renderX, renderY, setHitInset } from './geometry.js';
+import { applyLayout, applyNoteWidth, effScale, LOGICAL_H, noteK, renderX, renderY, setHitInset } from './geometry.js';
 import { clearSelection, commitAction, completeNote, copyText, deleteNotes, hideToast, isEditing, multiSel } from './interactions.js';
 import { restoreNote, selected, selectedNoteIds, setSelectedNotesHighlight, setSelectedNotesState, showNotice, showUndo, toggleHighlight } from './interactions.js';
 import { syncBoardActions } from './menus.js';
@@ -172,7 +172,7 @@ export function makeNoteEl(note) {
   // Both reads need layout, so they run once the node is in the DOM (the same
   // frame as the caller's appendChild): the hit collar measures, and the flip
   // measures the note's bottom for the row's near-sheet-bottom flip (B120).
-  requestAnimationFrame(() => { setHitInset(node, note); reflectToolbarFlip(node, note); });
+  requestAnimationFrame(() => { setHitInset(node, note); reflectToolbarSeat(node, note); });
   noteEls.set(note.id, node);
   return node;
 }
@@ -387,13 +387,41 @@ export function updateNoteToolbar(node, note) {
 
 /* The row hangs BELOW the note's bottom edge, centred (issue #173, B120); a note
    near the sheet bottom has no room there, so it flips to sit just inside the
-   bottom edge instead (the same one flip, re-aimed). The row is a note child,
+   bottom edge instead (B120's re-aim). The row is a note child,
    so its board-logical height scales with the note (effScale) — the threshold
-   does too. renderY is stable across fold/renderScale. */
+   does too. renderY is stable across fold/renderScale.
+
+   The owner's ruling on issue #298 overrules B120's re-aim: the row may never
+   paint over the note's own text, so the flip is gone. When the card's bottom
+   plus the row would exit the sheet, the NOTE itself is raised within the
+   sheet (reflectToolbarSeat) so the flush-below seat always fits — row top on
+   the card's bottom edge, centred, at every viewport and every note
+   position. */
 const TB_ROW_H = 32;                  // ~the row's own height at scale 1, no gap — flush on-edge (issue #133, B87; edge re-aimed by B120)
-export function reflectToolbarFlip(node, note) {
-  node.classList.toggle('tb-flip',
-    renderY(note) + node.offsetHeight + TB_ROW_H * effScale(note) > LOGICAL_H);
+/* Returns true when the note was raised (so callers can batch their save). */
+export function reflectToolbarSeat(node, note, save = true) {
+  const need = node.offsetHeight + TB_ROW_H * effScale(note); // card + row, logical
+  const maxY = Math.max(0, LOGICAL_H - need);
+  if (renderY(note) > maxY) {
+    note.y = maxY / noteK(note);      // stored in board units so renderY(note) ≡ maxY
+    node.style.top = maxY + 'px';
+    if (save) saveNow();              // the raise is committed state, not a visual lie
+    return true;
+  }
+  return false;
+}
+
+/* Issue #298: a frame change (viewport, fold, URL-bar show/hide) re-seats every
+   note — the seat is a law of the current frame, never a stale verdict. Fired
+   from boards' frameReflow hook (geometry cannot import render — cycle). */
+export function seatAllNotes() {
+  if (!state.current) return;
+  let raised = false;
+  noteEls.forEach((node, id) => {
+    const note = state.current.notes.find(n => n.id === id);
+    if (note && reflectToolbarSeat(node, note, false)) raised = true;
+  });
+  if (raised) saveNow();              // one save for the whole pass, not one per note
 }
 
 /* The note's optional Title (issue #173, B120): a header-style tab peeking from

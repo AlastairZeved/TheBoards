@@ -7,7 +7,7 @@ import { LOGICAL_H, LOGICAL_W, applyLayout, applyNoteWidth, caretToEnd, effScale
 import { rebaseNote, renderX, renderY, setHitInset, toLogical, updateBoardGeometry } from './geometry.js';
 import { applyCompleteA11y, boardLinks, clearLink, linkSource, lotEls, makeLotEl, makeNoteEl, noteEls } from './render.js';
 import { runClockAction } from './render.js';
-import { reflectToolbarFlip, removeLinksForNote, runNoteToolbarAction, setCarriedUi, syncViewTitle, toggleLink, updateLinks, updateNoteToolbar, ensureNoteTitleEl } from './render.js';
+import { reflectToolbarSeat, removeLinksForNote, runNoteToolbarAction, setCarriedUi, syncViewTitle, toggleLink, updateLinks, updateNoteToolbar, ensureNoteTitleEl } from './render.js';
 import { menuOpen, menuReturnFocus, openMenuFor } from './menus.js';
 import { renderPane, updateActiveCardTitle, writeThroughRequirements } from './boards.js';
 
@@ -707,7 +707,7 @@ function endDrag() {
   setHitInset(node, note);           // the drag can have rewrapped the note (issue #53)
   node.classList.remove('pressed');
   saveNow();
-  reflectToolbarFlip(node, note);    // a drop near the sheet top flips the row (B84)
+  reflectToolbarSeat(node, note);    // a drop near the sheet bottom raises the note so the row fits below (issue #298)
   if (state.isDesktop) updateSelectionUI();  // reposition + unhide at the drop point
 }
 
@@ -981,6 +981,10 @@ export function updateSelectionUI() {
     const node = noteEls.get(selected.id);
     if (!note || !node || !selUi.selEl) return;
     const w = node.offsetWidth * effScale(note), h = node.offsetHeight * effScale(note);
+    // Seat FIRST (issue #298): the note can be raised to make room for its row
+    // below — the selection box must wrap the raised card, not the stored one.
+    updateNoteToolbar(node, note);
+    reflectToolbarSeat(node, note);
     selUi.selEl.style.left = renderX(note) + 'px';
     const top = renderY(note);
     selUi.selEl.style.top = top + 'px';
@@ -989,8 +993,6 @@ export function updateSelectionUI() {
     // The note's own toolbar carries the labels now (B84): re-derive its
     // Complete/Highlight marks and its above/below flip for the current geometry
     // (a drag or resize can have moved the note toward the sheet top).
-    updateNoteToolbar(node, note);
-    reflectToolbarFlip(node, note);
     // Two or more selected: the overlay drops its resize grip (edges +
     // handles, hidden in CSS) — resize is single-selection only (issue #55).
     selUi.selEl.classList.toggle('multi', multiSel.size > 1);

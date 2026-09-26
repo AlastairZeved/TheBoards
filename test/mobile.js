@@ -2766,6 +2766,48 @@ async function openCat(page, cat) {
     });
     ok('the engaged note toolbar sits flush at the bottom edge, centred (B120)',
        tb && tb.flush && tb.centred, JSON.stringify(tb));
+    // Issue #298: the engaged row NEVER paints over the note's own text, even
+    // at the sheet bottom — the note itself is raised so the flush-below seat
+    // fits, and a later frame change re-seats it (no stale verdict).
+    const nearBottom = await page.evaluate(async () => {
+      const n = state.current.notes[0];
+      n.y = LOGICAL_H - 30;
+      renderBoard();
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const el = document.querySelector('.note');
+      const r = el.getBoundingClientRect(), t = el.querySelector('.note-toolbar').getBoundingClientRect();
+      const txt = el.querySelector('.note-text').getBoundingClientRect();
+      const sheet = document.getElementById('board').getBoundingClientRect();
+      const overlaps = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+      return { raised: n.y < LOGICAL_H - 30,
+               flush: t.top >= r.bottom - 2,
+               centred: Math.abs((t.left + t.width / 2) - (r.left + r.width / 2)) < 3,
+               noTextOverlap: !overlaps(t, txt),
+               withinSheet: t.bottom <= sheet.bottom + 1 };
+    });
+    ok('near the sheet bottom the note is raised so the row sits flush below, never over the text (issue #298)',
+       nearBottom.flush && nearBottom.centred && nearBottom.noTextOverlap && nearBottom.raised && nearBottom.withinSheet,
+       JSON.stringify(nearBottom));
+    // Stale-class coverage (issue #298): the frame changes AFTER the row is
+    // shown (a mobile URL-bar show/hide moves LOGICAL_H with no re-render) —
+    // the seat must be re-derived from the new frame.
+    await page.setViewportSize({ width: 360, height: 560 });
+    await page.waitForTimeout(500);      // environment pass + frame reflow
+    const reSeat = await page.evaluate(() => {
+      const el = document.querySelector('.note');
+      const r = el.getBoundingClientRect(), t = el.querySelector('.note-toolbar').getBoundingClientRect();
+      const txt = el.querySelector('.note-text').getBoundingClientRect();
+      const sheet = document.getElementById('board').getBoundingClientRect();
+      const overlaps = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+      return { flip: el.classList.contains('tb-flip'),
+               flush: t.top >= r.bottom - 2,
+               noTextOverlap: !overlaps(t, txt),
+               withinSheet: t.bottom <= sheet.bottom + 1 };
+    });
+    ok('a viewport change after the row is shown re-seats the note (no stale flip, no text overlap) (issue #298)',
+       reSeat.flush && reSeat.noTextOverlap && reSeat.withinSheet && !reSeat.flip, JSON.stringify(reSeat));
+    await page.setViewportSize({ width: 384, height: 846 });
+    await page.waitForTimeout(400);
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }

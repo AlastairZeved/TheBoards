@@ -6,7 +6,7 @@ import { calEventsOf, calKey, calWindow, el, ensureLinkedBoard, EMBED, histPush,
 import { syncMirror, mirrorEventsOf } from './state.js';
 import { flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, saveTimer, scheduleSave } from './persistence.js';
 import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze, setPaneCollapsed } from './geometry.js';
-import { applyBoardCat, renderBoard, syncViewTitle } from './render.js';
+import { applyBoardCat, renderBoard, seatAllNotes, syncViewTitle } from './render.js';
 import { commitAction, g, hideToast, leave, showUndo, undoTimer } from './interactions.js';
 import { buildMenu, closeMenu, syncBoardActions } from './menus.js';
 import { exportAllJson, exportBoardPdf, exportCalPdf } from './export.js';
@@ -1530,6 +1530,7 @@ export function registerBoards() {
   // Registered here (boards owns the surface state); geometry fires the
   // hook from applyLayout without importing boards (cycle-break).
   onFrameReflow(() => {
+    seatAllNotes();              // issue #298: every frame change re-seats all notes
     // B137: the tablet accordion budgets one expanded section, the same call
     // renderPane makes — the re-paginate hook must not measure a stale fill.
     const accordion = state.isWide && !state.isDesktop;
