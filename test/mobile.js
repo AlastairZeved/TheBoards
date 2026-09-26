@@ -2890,6 +2890,71 @@ async function openCat(page, cat) {
     await ctx.close();
   }
 
+  // ---- 29. the row's hit collar never reaches above the card's bottom edge (issue #301, B86/B139)
+  // The collar is a ::before pseudo-element, invisible to getBoundingClientRect —
+  // its box is computed here from the button's rect + the pseudo's own offsets.
+  console.log('\n[29] The note row collar never overlaps the note text (issue #301)');
+  {
+    const { ctx, page, errors } = await newMobilePage(browser, { width: 360, height: 790 });
+    await tap(page, 180, 400);                       // create a note
+    await page.waitForTimeout(80);
+    await page.keyboard.type('last line under test');
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(200);
+    const mid = await page.evaluate(() => {
+      const r = document.querySelector('.note').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await tap(page, mid.x, mid.y);                   // first tap: engage, row shown
+    await page.waitForTimeout(250);
+
+    // (a) Collar-box geometry at every viewport: the tap target must be a full
+    // 44px (B86) AND must not reach above the note card's bottom edge — the
+    // row sits flush below (B120/#298), so upward growth is over the text.
+    const VIEWPORTS = [[360, 790], [1080, 2370], [820, 1180], [1280, 900]];
+    for (const [w, h] of VIEWPORTS) {
+      await page.setViewportSize({ width: w, height: h });
+      await page.waitForTimeout(450);                // frame reflow + re-seat
+      const g = await page.evaluate(() => {
+        const note = document.querySelector('.note');
+        const card = note.getBoundingClientRect();
+        const btns = [...note.querySelectorAll('.note-tb-btn')];
+        return btns.map(b => {
+          const r = b.getBoundingClientRect();
+          const cs = getComputedStyle(b, '::before');
+          // offsets are relative to the button's padding box
+          const t = parseFloat(cs.top), bo = parseFloat(cs.bottom);
+          const top = cs.top === 'auto' ? r.top : r.top + t;
+          const bottom = cs.bottom === 'auto' ? r.bottom : r.bottom - bo;
+          return { top, bottom, h: bottom - top, cardBottom: card.bottom };
+        });
+      });
+      const minTap = Math.min(...g.map(x => x.h));
+      const maxReach = Math.max(...g.map(x => x.cardBottom - x.top));
+      console.log(`  viewport ${w}x${h}: tap-target height ${minTap.toFixed(1)}px, collar reach above card bottom ${maxReach.toFixed(1)}px`);
+      ok(`[${w}x${h}] collar keeps the 44px tap target (B86)`, minTap >= 44, minTap.toFixed(1));
+      ok(`[${w}x${h}] collar never reaches above the card's bottom edge (issue #301)`,
+         maxReach <= 0.5, maxReach.toFixed(1) + 'px into the card');
+    }
+
+    // (b) The destructive tap itself: a tap aimed at the note's own last text
+    // line (6px above the card bottom, on Delete's span) must NOT delete.
+    const aim = await page.evaluate(() => {
+      const note = document.querySelector('.note');
+      const card = note.getBoundingClientRect();
+      const del = note.querySelector('.note-tb-delete').getBoundingClientRect();
+      return { x: del.x + del.width / 2, y: card.bottom - 6 };
+    });
+    const before = await noteCount(page);
+    await tap(page, aim.x, aim.y);
+    await page.waitForTimeout(250);
+    const after = await noteCount(page);
+    ok('a tap on the note\'s last text line does not fire Delete (issue #301)', after === before,
+       `count ${before} -> ${after}`);
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   await browser.close();
   console.log('\n=== mobile: ' + pass + ' passed, ' + fail + ' failed ===');
   process.exit(fail ? 1 : 0);
