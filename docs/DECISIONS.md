@@ -5323,3 +5323,25 @@ ruling.
 control + pager + persistence) is a later implementation card's work on issue
 #295, gated behind this ruling's merge. No CACHE bump (docs-only: `**/*.md`
 is paths-ignored in the deploy workflow, so nothing redeploys).
+
+### B139. The note action row sits below the note card, horizontally centred, the tops of the buttons anchored to the card's bottom edge — and it never paints over the note's own text, in any state, at any viewport (issue #298, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/298#issuecomment-5843023803; supersedes ONLY B120's near-sheet-bottom re-aim destination clause — the closing clause of issue #173's ruling whose recorded re-aim destination is the row sitting INSIDE the card, over the note's own text; keeps B120's bottom-edge + centred placement in full, B120's standing supersession of B88's left-anchor clause, B87's gapless-edge principle, B86's tab metrics, B84's on-select toolbar and its on-select reveal, B90's mobile select-then-edit; waives nothing)
+
+**Source:** issue #298 (owner, ruling of record, comment 5843023803), the owner's words transcribed verbatim from the reporter's screenshot: "Why are the buttons in front of notes now? Proper placement is below the note, centered, tops of buttons anchored to the bottom of the note card." — with the comment's plain reading quoted in full below — https://github.com/AlastairZeved/TheBoards/issues/298#issuecomment-5843023803
+
+**The owner's ruling of record, verbatim (issue #298 comment 5843023803):**
+
+> ## Ruling of record — the owner's words (transcribed from the reporter's screenshot, issue #298)
+>
+> > "Why are the buttons in front of notes now? Proper placement is below the note, centered, tops of buttons anchored to the bottom of the note card."
+>
+> Plain reading, encoded by the orchestrator (not invented by a worker):
+>
+> - The action row belongs **below** the note card. Never on top of the note's own text — in any state, at any viewport.
+> - The row is **horizontally centred** on the card.
+> - The **tops of the buttons are anchored to the card's bottom edge** — flush, no gap, no overlap.
+
+**The ruling.** The owner saw the buttons in front of a note and ruled the placement in one sentence: the action row sits **below** the note card, **horizontally centred** on the card, the **tops of the buttons anchored to the card's bottom edge** — flush, no gap, no overlap — and it **never paints over the note's own text, in any state, at any viewport**. The mechanical record behind it: `styles.css` §4.5 `.note-toolbar` (`top: 100%; left: 50%; transform: translateX(-50%)`) is correct for the normal state — flush below, centred — and the **only** rule on main that paints the row over the note's own text is the `.tb-flip` re-aim, `.note.tb-flip .note-toolbar { top: auto; bottom: 0; }`, set by `reflectToolbarFlip()` (render.js:394). That re-aim is B120's closing clause: the flip grammar re-read for the bottom edge, the near-sheet-bottom case whose recorded destination is the row sitting *inside* the card. That destination clause, and only that clause, is superseded: inside the card is never a lawful destination, near the sheet bottom or anywhere else. How the near-sheet-bottom constraint is then satisfied is the implementation card's work, not this record's — the owner ruled the placement, not the mechanism.
+
+**What is kept.** Everything else B120 ruled stands. The row's bottom-edge, centred placement stands — this ruling reaffirms it in the owner's own words, it does not move the row again. B120's standing supersession of B88's left-anchor clause stands — the row is not re-anchored left. B87's gapless-edge principle stands — tops of the buttons anchored to the card's bottom edge, no gap, is the same flush law read on the owner's sentence. B86's tab metrics, B84's on-select toolbar and its on-select reveal, and B90's mobile select-then-edit all stand untouched. B120 is amended in one clause, not re-opened; B87, B88, B84, B86, B90 are not touched at all.
+
+**The record.** Docs-only on this card — the `styles.css` / `render.js` change that removes the inside-the-card destination is the implementation card's work on issue #298, gated behind this ruling's merge. The comment of record also leaves an open root-cause question for that card: in the reporter's screenshot the note is NOT near the sheet bottom — another note sits below it on the same canvas — so a genuine "no room below" flip should not have engaged; the impl card must instrument and determine what put the row inside that card and fix the shared site, not the one note. No CACHE bump, no OWN_BUILD bump (docs-only: `**/*.md` is paths-ignored in the deploy workflow, so nothing redeploys).
