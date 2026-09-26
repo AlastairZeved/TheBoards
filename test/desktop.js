@@ -2342,17 +2342,53 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     });
     ok('the toolbar sits flush at the bottom edge, centred, a scaling child (B120)',
        tb && tb.flush && tb.centred && tb.child && tb.within, JSON.stringify(tb));
-    // The flip re-aims: near the sheet bottom the row flips inside the edge.
-    const flipped = await page.evaluate(async () => {
+    // Issue #298 ruling: the row NEVER sits inside the card. Near the sheet
+    // bottom the note itself is raised so the flush-below seat fits — zero
+    // overlap with the note's text rect, still centred.
+    const seat = await page.evaluate(async () => {
       state.current.notes[0].y = LOGICAL_H - 30;
       renderBoard();
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       const el = document.querySelector('.note');
       const r = el.getBoundingClientRect(), t = el.querySelector('.note-toolbar').getBoundingClientRect();
-      return { flip: el.classList.contains('tb-flip'), inside: t.bottom <= r.bottom + 2 };
+      const txt = el.querySelector('.note-text').getBoundingClientRect();
+      const sheet = document.getElementById('board').getBoundingClientRect();
+      const overlaps = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+      return { raised: state.current.notes[0].y < LOGICAL_H - 30,
+               flush: t.top >= r.bottom - 2,
+               centred: Math.abs((t.left + t.width / 2) - (r.left + r.width / 2)) < 3,
+               noTextOverlap: !overlaps(t, txt),
+               withinSheet: t.bottom <= sheet.bottom + 1 };
     });
-    ok('near the sheet bottom the row flips inside the bottom edge (B120)',
-       flipped.flip && flipped.inside, JSON.stringify(flipped));
+    ok('near the sheet bottom the note is raised so the row sits flush below, never over the text (issue #298)',
+       seat.flush && seat.centred && seat.noTextOverlap && seat.raised && seat.withinSheet, JSON.stringify(seat));
+    // Stale-class coverage (issue #298): the frame changes AFTER the row is
+    // shown — the seat must be re-derived from the new frame, never kept from
+    // the old one. Shrink, then re-assert the geometry.
+    const stale = await page.evaluate(async () => {
+      const n0 = state.current.notes[0];
+      n0.y = LOGICAL_H - 30;             // re-plant near the bottom of the new frame
+      renderBoard();
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      return { y: n0.y, h: LOGICAL_H };
+    });
+    await page.setViewportSize({ width: 1280, height: 620 });
+    await page.waitForTimeout(450);      // environment pass + frame reflow
+    const after = await page.evaluate(() => {
+      const el = document.querySelector('.note');
+      const r = el.getBoundingClientRect(), t = el.querySelector('.note-toolbar').getBoundingClientRect();
+      const txt = el.querySelector('.note-text').getBoundingClientRect();
+      const sheet = document.getElementById('board').getBoundingClientRect();
+      const overlaps = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+      return { flip: el.classList.contains('tb-flip'),
+               flush: t.top >= r.bottom - 2,
+               noTextOverlap: !overlaps(t, txt),
+               withinSheet: t.bottom <= sheet.bottom + 1 };
+    });
+    ok('a viewport change after the row is shown re-seats the note (no stale flip, no text overlap) (issue #298)',
+       after.flush && after.noTextOverlap && after.withinSheet && !after.flip, JSON.stringify({ stale, after }));
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.waitForTimeout(450);
     // Clearing: an emptied title deletes the field (B21) and the tab with it.
     box = await center();
     await page.mouse.click(box.x, box.y, { button: 'right' });
