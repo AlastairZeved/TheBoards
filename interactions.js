@@ -29,7 +29,7 @@ export let g = null;                        // active gesture context
    you like on empty paper and the release still captures a note; B5). */
 const HAS_MENU = new Set(['note']);   // anchors lost theirs to B92 (issue #140)
 
-function classifyTarget(target) {
+function classifyTarget(target, press) {
   // Selection chrome first: action buttons (notes and lot rows share .sel-btn),
   // then the resize frame — both must win over the elements beneath them.
   const selBtn = target.closest('.sel-btn');
@@ -45,9 +45,25 @@ function classifyTarget(target) {
   // tab (issue #240) wears BOTH classes, so its route is checked first — the
   // keyboard path in registerRender does the same.
   const clockBtn = target.closest('.note-clock');   // the reminder toggle (B109): wins over the tabs
-  if (clockBtn) return { type: 'note-clock', node: clockBtn };
   const tbBtn = target.closest('.note-tb-btn');
-  if (tbBtn) return { type: 'note-tb-btn', node: tbBtn };
+  if (clockBtn || tbBtn) {
+    // issue #301: Chrome's touch-target adjustment retargets a press aimed at
+    // the note's own last text line onto the NEAREST row tab (its tap slop
+    // reaches a few px past any CSS collar). The collar law is therefore held
+    // here, where the press's real coordinates are known: a press above the
+    // tab's collar top is a press on the note beneath it — it engages/edits,
+    // never acts (B139; the CSS collar itself was re-aimed downward by #301).
+    const btn = clockBtn || tbBtn;
+    const r = btn.getBoundingClientRect();
+    const cs = getComputedStyle(btn, '::before');
+    const collarTop = r.top + (cs.top === 'auto' ? 0 : parseFloat(cs.top) || 0);
+    if (press && press.clientY < collarTop - 0.5) {
+      const note = btn.closest('.note');
+      if (note) return { type: 'note', node: note };
+    }
+    if (clockBtn) return { type: 'note-clock', node: clockBtn };
+    return { type: 'note-tb-btn', node: tbBtn };
+  }
   const note = target.closest('.note');
   if (note) return { type: 'note', node: note };
   const lotItem = target.closest('.lot-item');
@@ -108,7 +124,7 @@ function onPointerDown(e) {
   }
   if (pointers.size > 1) return;                   // ignore extra pointers otherwise
 
-  const target = classifyTarget(e.target);
+  const target = classifyTarget(e.target, e);
   g = {
     target, pointerId: e.pointerId,
     startX: e.clientX, startY: e.clientY,

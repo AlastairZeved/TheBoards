@@ -397,7 +397,7 @@ export function updateNoteToolbar(node, note) {
    sheet (reflectToolbarSeat) so the flush-below seat always fits — row top on
    the card's bottom edge, centred, at every viewport and every note
    position. */
-const TB_ROW_H = 32;                  // ~the row's own height at scale 1, no gap — flush on-edge (issue #133, B87; edge re-aimed by B120)
+const TB_ROW_H = 44;                  // the row's painted height (32) + the downward hit collar (12) the seat must clear (issue #132, B86; collar re-aimed by #301)
 /* Returns true when the note was raised (so callers can batch their save). */
 export function reflectToolbarSeat(node, note, save = true) {
   const need = node.offsetHeight + TB_ROW_H * effScale(note); // card + row, logical

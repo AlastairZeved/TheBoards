@@ -850,12 +850,16 @@ html:not(.wide) #board-actions {
    while the note wears the amber wash. The wash is the real signal; this only
    labels the toggle and flips its aria-label (updateNoteToolbar). */
 .note.highlight .note-tb-highlight { box-shadow: inset 0 0 0 2px var(--ink-dark); }
-/* Decoupled hit area (§6, B7's idiom): the small tab keeps a 44px-tall tap target,
-   expanded UPWARD only so a row of four never overlaps a neighbour or the note. */
+/* Decoupled hit area (§6, B7's idiom): the small tab keeps a 44px-tall tap target.
+   The collar grows DOWNWARD (issue #301): since B120/#298 the row sits flush
+   BELOW the card, so the old upward reach (`top: -12px`) extended 12px INTO the
+   card — over the note's own last text line, where a tap fired Delete. Downward
+   keeps B86's 44px over bare canvas, never over the note's text (B139); the
+   seat law (TB_ROW_H = 44) reserves the collar inside the sheet. */
 .note-tb-btn::before {
   content: "";
   position: absolute;
-  left: 0; right: 0; top: -12px; bottom: 0;   /* 44px tap target over the taller tab (issue #132, B86) */
+  left: 0; right: 0; top: 0; bottom: -12px;   /* 44px tap target under the taller tab (issue #132, B86; re-aimed by #301) */
 }
 .note-tb-btn:focus-visible {           /* the two-tone ring (§2.7), same as the note */
   outline: 2px solid var(--ink-light);
