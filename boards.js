@@ -42,18 +42,30 @@ function fillRowContent(node, b) {
   node.textContent = '';
   const titled = !!(b.title && b.title.trim().length);
   const title = document.createElement('span'); title.className = 'row-title';
-  // Issue #303: the card is a second seat of B133's ruling. The linked
-  // board's stored `title` is retired — display the pinned name + the
-  // board's own cal date, colon-joined, one line in .row-title (the
-  // board seat's stacked layout is deliberately NOT copied here). The
-  // pinned pair is read from render.js's single authority, so no second
-  // name string or date formatter exists. Non-linked boards untouched.
-  if (b.cal) title.textContent = LINKED_TITLE + ': ' + linkedDate(b.cal);
+  // Issue #303, owner ruling (Option 2): the title is the pinned NAME only —
+  // the colon-joined pair clipped at ≤360px (two-line clamp), so the date
+  // rides the existing .row-date line instead of a taller card (LIST_CARD_H
+  // stays 76). Desktop keeps the colon-joined pair on one line via the
+  // .row-title-date span (hidden on mobile by the skin's CSS).
+  if (b.cal) {
+    title.textContent = LINKED_TITLE;
+    const td = document.createElement('span'); td.className = 'row-title-date';
+    td.textContent = ': ' + linkedDate(b.cal);
+    title.appendChild(td);
+  }
   else if (titled) title.textContent = b.title;
   else { title.textContent = COPY.untitled; title.classList.add('untitled'); }
   node.appendChild(title);
   const date = document.createElement('span'); date.className = 'row-date';
-  date.textContent = COPY.lastUpdated + formatMDY(b.updatedAt || b.createdAt);
+  // Mobile skin: the board's cal date leads the line (the card's identity),
+  // then the standing Last Updated stamp — middot ' · ' separated. They are
+  // different facts and are kept BOTH even when they read the same day.
+  if (b.cal) {
+    const bd = document.createElement('span'); bd.className = 'row-board-date';
+    bd.textContent = linkedDate(b.cal) + ' · ';
+    date.appendChild(bd);
+  }
+  date.appendChild(document.createTextNode(COPY.lastUpdated + formatMDY(b.updatedAt || b.createdAt)));
   node.appendChild(date);
   // The calendar mark (issue #145, R5): a linked board announces its link
   // where its name is read — far right on the card, on both surfaces the

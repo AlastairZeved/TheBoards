@@ -1268,6 +1268,15 @@ html:not(.desktop) .board-row .row-date {
   line-height: 1.2;
   text-align: right;
 }
+/* Issue #303 (owner ruling, Option 2): on mobile the linked board's cal
+   date leaves the clamped .row-title (it was truncating to "Today's To Do…"
+   at ≤360px) and rides this existing line — no card height spent. The date
+   leads, the standing Last Updated stamp (B82, issue #125) follows, joined
+   by a middot. On desktop both spans are invisible: the title carries the
+   colon-joined pair on one line, exactly as it did before this fix. */
+html:not(.desktop) .board-row .row-title-date { display: none; }
+.row-board-date { display: none; }
+html:not(.desktop) .board-row .row-board-date { display: inline; }
 
 /* ---- §10.5 Categories (issue #58 / B42, issue #74 / B44, issue #88 / B63,
    issue #97 / B68) -- Three sections — To-Do, Idea, Note — on both the mobile
