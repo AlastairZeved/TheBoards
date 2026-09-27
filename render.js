@@ -77,8 +77,10 @@ export function applyBoardCat() {
    the board's `cal` key (the reading `ensureLinkedBoard`'s retired title used:
    zero-padded month/day, the year's last pair). Every other board keeps its
    ordinary editable title. */
-const LINKED_TITLE = "Today's To Do";
-const linkedDate = (calKey) => {
+// Exported for boards.js (issue #303): the card's title seat reads the same
+// pinned name + date pair — one authority, no second string or formatter.
+export const LINKED_TITLE = "Today's To Do";
+export const linkedDate = (calKey) => {
   const p = calKey.split('-');                       // [YYYY, MM, DD]
   return p[1] + '/' + p[2] + '/' + p[0].slice(2);
 };

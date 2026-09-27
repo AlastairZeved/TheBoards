@@ -6,7 +6,7 @@ import { calEventsOf, calKey, calWindow, el, ensureLinkedBoard, EMBED, histPush,
 import { syncMirror, mirrorEventsOf } from './state.js';
 import { flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, saveTimer, scheduleSave } from './persistence.js';
 import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze, setPaneCollapsed } from './geometry.js';
-import { applyBoardCat, renderBoard, seatAllNotes, syncViewTitle } from './render.js';
+import { applyBoardCat, linkedDate, LINKED_TITLE, renderBoard, seatAllNotes, syncViewTitle } from './render.js';
 import { commitAction, g, hideToast, leave, showUndo, undoTimer } from './interactions.js';
 import { buildMenu, closeMenu, syncBoardActions } from './menus.js';
 import { exportAllJson, exportBoardPdf, exportCalPdf } from './export.js';
@@ -42,8 +42,15 @@ function fillRowContent(node, b) {
   node.textContent = '';
   const titled = !!(b.title && b.title.trim().length);
   const title = document.createElement('span'); title.className = 'row-title';
-  title.textContent = titled ? b.title : COPY.untitled;
-  if (!titled) title.classList.add('untitled');
+  // Issue #303: the card is a second seat of B133's ruling. The linked
+  // board's stored `title` is retired — display the pinned name + the
+  // board's own cal date, colon-joined, one line in .row-title (the
+  // board seat's stacked layout is deliberately NOT copied here). The
+  // pinned pair is read from render.js's single authority, so no second
+  // name string or date formatter exists. Non-linked boards untouched.
+  if (b.cal) title.textContent = LINKED_TITLE + ': ' + linkedDate(b.cal);
+  else if (titled) title.textContent = b.title;
+  else { title.textContent = COPY.untitled; title.classList.add('untitled'); }
   node.appendChild(title);
   const date = document.createElement('span'); date.className = 'row-date';
   date.textContent = COPY.lastUpdated + formatMDY(b.updatedAt || b.createdAt);

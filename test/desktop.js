@@ -2542,6 +2542,68 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await mctx.close();
   }
 
+  // ---- D30. The All Boards card + rail card read the pinned linked-board
+  // pair, not the superseded stored title (issue #303) ---------------------
+  // B133 pinned the linked board's title at the board seat only; the card
+  // seats (desktop rail, drilled list) still showed the stored
+  // 'MM/DD/YY To Do' string or nothing. The fix lives in fillRowContent —
+  // one branch, every card surface. Expected text is derived from the
+  // record's own cal key (never a hard-coded date), so this survives
+  // midnight.
+  console.log('\n[D30] Card seats read the pinned linked-board pair (issue #303)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    const seeded = await page.evaluate(async () => {
+      const key = calKey(new Date());
+      const linked = newBoardRecord();
+      linked.title = '09/02/26 To Do'; linked.cal = key;   // the retired stored title
+      const plain = newBoardRecord();
+      plain.title = 'Plain Board A';
+      const blank = newBoardRecord();                       // untitled placeholder
+      blank.title = '';
+      await idbPut(linked); await idbPut(plain); await idbPut(blank);
+      return { linked: linked.id, plain: plain.id, blank: blank.id, cal: key };
+    });
+    await page.reload();
+    await page.waitForTimeout(700);
+    await page.click('#pane-rail');          // B118: expand the collapsed rail
+    await page.waitForTimeout(400);
+    // The card's expected grammar, built from the seeded record's real cal key.
+    const expected = await page.evaluate((cal) => {
+      const p = cal.split('-');              // [YYYY, MM, DD] — render.js's own reading
+      return "Today's To Do: " + p[1] + '/' + p[2] + '/' + p[0].slice(2);
+    }, seeded.cal);
+    // (a) Desktop rail card (makePaneRow → fillRowContent).
+    ok('D30: the desktop rail card reads the pinned pair, not the stored title',
+      await page.evaluate((args) => {
+        const card = document.querySelector('#pane-cards .pane-card[data-id="' + args.id + '"]');
+        return !!card && card.querySelector('.row-title').textContent === args.expected;
+      }, { id: seeded.linked, expected }), 'expected: ' + expected);
+    // (b) The drilled All-Boards list card (makeListRow → fillRowContent).
+    await page.evaluate(() => { if (!listOpen) goToList(); drillCat('todo'); });
+    await page.waitForTimeout(500);
+    ok('D30: the All Boards drilled card reads the pinned pair, not the stored title',
+      await page.evaluate((args) => {
+        const card = document.querySelector('#list-rows .board-row[data-id="' + args.id + '"]');
+        return !!card && card.querySelector('.row-title').textContent === args.expected;
+      }, { id: seeded.linked, expected }));
+    // (c) A plain board's card still reads its own stored title.
+    ok('D30: a plain board card still reads its own title',
+      await page.evaluate((id) => {
+        const card = document.querySelector('#list-rows .board-row[data-id="' + id + '"]');
+        return !!card && card.querySelector('.row-title').textContent === 'Plain Board A';
+      }, seeded.plain));
+    // (d) The untitled placeholder is untouched.
+    ok('D30: the untitled placeholder is untouched',
+      await page.evaluate((id) => {
+        const t = document.querySelector('#list-rows .board-row[data-id="' + id + '"] .row-title');
+        return !!t && t.classList.contains('untitled') && t.textContent.length > 0 &&
+          t.textContent !== "Today's To Do";
+      }, seeded.blank));
+    ok('no page errors (D28)', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   await browser.close();
   console.log('\n=== desktop: ' + pass + ' passed, ' + fail + ' failed ===');
   process.exit(fail ? 1 : 0);
