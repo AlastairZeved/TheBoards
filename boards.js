@@ -60,11 +60,13 @@ function fillRowContent(node, b) {
   // Mobile skin: the board's cal date carries the line alone (issue #307,
   // owner ruling: "Kill the Last Updated stamp for mobile only. B82 survives
   // for desktop."). The B82 stamp rides in its own span so the mobile skin
-  // can hide it — a bare text node cannot be hidden — and the middot
-  // separator lives inside the hidden span on mobile, so no dangling
-  // ' · ' is painted after the cal date. The desktop date line renders
-  // 'Last Updated: …' exactly as before (the .row-board-date span is
-  // display:none there).
+  // can hide it — a bare text node cannot be hidden. The middot is dropped
+  // rather than relocated: with the stamp hidden on mobile a separator would
+  // be a dangling orphan, and desktop renders .row-board-date as
+  // display:none, so no surface needs it. The stamp had to go because
+  // 'Last Updated: 09/28/26' alone is ~187px of 10px text in a 72–85px
+  // column — no string carries both dates there. The desktop date line
+  // renders 'Last Updated: …' exactly as before.
   if (b.cal) {
     const bd = document.createElement('span'); bd.className = 'row-board-date';
     bd.textContent = linkedDate(b.cal);
