@@ -6,7 +6,7 @@ import { calEventsOf, calKey, calWindow, el, ensureLinkedBoard, EMBED, histPush,
 import { syncMirror, mirrorEventsOf } from './state.js';
 import { flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, saveTimer, scheduleSave } from './persistence.js';
 import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze, setPaneCollapsed } from './geometry.js';
-import { applyBoardCat, renderBoard, seatAllNotes, syncViewTitle } from './render.js';
+import { applyBoardCat, linkedDate, LINKED_TITLE, renderBoard, seatAllNotes, syncViewTitle } from './render.js';
 import { commitAction, g, hideToast, leave, showUndo, undoTimer } from './interactions.js';
 import { buildMenu, closeMenu, syncBoardActions } from './menus.js';
 import { exportAllJson, exportBoardPdf, exportCalPdf } from './export.js';
@@ -42,11 +42,30 @@ function fillRowContent(node, b) {
   node.textContent = '';
   const titled = !!(b.title && b.title.trim().length);
   const title = document.createElement('span'); title.className = 'row-title';
-  title.textContent = titled ? b.title : COPY.untitled;
-  if (!titled) title.classList.add('untitled');
+  // Issue #303, owner ruling (Option 2): the title is the pinned NAME only —
+  // the colon-joined pair clipped at ≤360px (two-line clamp), so the date
+  // rides the existing .row-date line instead of a taller card (LIST_CARD_H
+  // stays 76). Desktop keeps the colon-joined pair on one line via the
+  // .row-title-date span (hidden on mobile by the skin's CSS).
+  if (b.cal) {
+    title.textContent = LINKED_TITLE;
+    const td = document.createElement('span'); td.className = 'row-title-date';
+    td.textContent = ': ' + linkedDate(b.cal);
+    title.appendChild(td);
+  }
+  else if (titled) title.textContent = b.title;
+  else { title.textContent = COPY.untitled; title.classList.add('untitled'); }
   node.appendChild(title);
   const date = document.createElement('span'); date.className = 'row-date';
-  date.textContent = COPY.lastUpdated + formatMDY(b.updatedAt || b.createdAt);
+  // Mobile skin: the board's cal date leads the line (the card's identity),
+  // then the standing Last Updated stamp — middot ' · ' separated. They are
+  // different facts and are kept BOTH even when they read the same day.
+  if (b.cal) {
+    const bd = document.createElement('span'); bd.className = 'row-board-date';
+    bd.textContent = linkedDate(b.cal) + ' · ';
+    date.appendChild(bd);
+  }
+  date.appendChild(document.createTextNode(COPY.lastUpdated + formatMDY(b.updatedAt || b.createdAt)));
   node.appendChild(date);
   // The calendar mark (issue #145, R5): a linked board announces its link
   // where its name is read — far right on the card, on both surfaces the

@@ -2542,6 +2542,182 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await mctx.close();
   }
 
+  // ---- D30. The All Boards card + rail card read the pinned linked-board
+  // pair, not the superseded stored title (issue #303) ---------------------
+  // B133 pinned the linked board's title at the board seat only; the card
+  // seats (desktop rail, drilled list) still showed the stored
+  // 'MM/DD/YY To Do' string or nothing. The fix lives in fillRowContent —
+  // one branch, every card surface. Expected text is derived from the
+  // record's own cal key (never a hard-coded date), so this survives
+  // midnight.
+  console.log('\n[D30] Card seats read the pinned linked-board pair (issue #303)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    const seeded = await page.evaluate(async () => {
+      const key = calKey(new Date());
+      const linked = newBoardRecord();
+      linked.title = '09/02/26 To Do'; linked.cal = key;   // the retired stored title
+      const plain = newBoardRecord();
+      plain.title = 'Plain Board A';
+      const blank = newBoardRecord();                       // untitled placeholder
+      blank.title = '';
+      await idbPut(linked); await idbPut(plain); await idbPut(blank);
+      return { linked: linked.id, plain: plain.id, blank: blank.id, cal: key };
+    });
+    await page.reload();
+    await page.waitForTimeout(700);
+    await page.click('#pane-rail');          // B118: expand the collapsed rail
+    await page.waitForTimeout(400);
+    // The card's expected grammar, built from the seeded record's real cal key.
+    const expected = await page.evaluate((cal) => {
+      const p = cal.split('-');              // [YYYY, MM, DD] — render.js's own reading
+      return "Today's To Do: " + p[1] + '/' + p[2] + '/' + p[0].slice(2);
+    }, seeded.cal);
+    // (a) Desktop rail card (makePaneRow → fillRowContent).
+    ok('D30: the desktop rail card reads the pinned pair, not the stored title',
+      await page.evaluate((args) => {
+        const card = document.querySelector('#pane-cards .pane-card[data-id="' + args.id + '"]');
+        return !!card && card.querySelector('.row-title').textContent === args.expected;
+      }, { id: seeded.linked, expected }), 'expected: ' + expected);
+    // (b) The drilled All-Boards list card (makeListRow → fillRowContent).
+    await page.evaluate(() => { if (!listOpen) goToList(); drillCat('todo'); });
+    await page.waitForTimeout(500);
+    ok('D30: the All Boards drilled card reads the pinned pair, not the stored title',
+      await page.evaluate((args) => {
+        const card = document.querySelector('#list-rows .board-row[data-id="' + args.id + '"]');
+        return !!card && card.querySelector('.row-title').textContent === args.expected;
+      }, { id: seeded.linked, expected }));
+    // (c) A plain board's card still reads its own stored title.
+    ok('D30: a plain board card still reads its own title',
+      await page.evaluate((id) => {
+        const card = document.querySelector('#list-rows .board-row[data-id="' + id + '"]');
+        return !!card && card.querySelector('.row-title').textContent === 'Plain Board A';
+      }, seeded.plain));
+    // (d) The untitled placeholder is untouched.
+    ok('D30: the untitled placeholder is untouched',
+      await page.evaluate((id) => {
+        const t = document.querySelector('#list-rows .board-row[data-id="' + id + '"] .row-title');
+        return !!t && t.classList.contains('untitled') && t.textContent.length > 0 &&
+          t.textContent !== "Today's To Do";
+      }, seeded.blank));
+    ok('no page errors (D28)', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  // ---- D31. Mobile drilled card at ≤360px: the date rides the .row-date
+  // line (issue #303, owner ruling Option 2) -------------------------------
+  // PR #306's fix clipped the colon-joined pair to "Today's To Do…" at
+  // ≤360px (two-line clamp, LIST_CARD_H frozen at 76). The ruling: the
+  // title is the NAME only on mobile; the board's cal date rides the
+  // existing .row-date line ahead of the standing Last Updated stamp.
+  // These assertions test what is ON SCREEN (computed display + bounding
+  // boxes), not merely the DOM — the gap that let PR #306 pass QA green.
+  console.log('\n[D31] Mobile card ≤360px: name-only title, date on the .row-date line (issue #303)');
+  {
+    for (const W of [320, 344, 360]) {
+      const ctx = await browser.newContext({ viewport: { width: W, height: 740 } });
+      const page = await ctx.newPage();
+      const errors = [];
+      page.on('pageerror', e => errors.push(String(e)));
+      page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+      await page.goto(URL);
+      await page.waitForTimeout(400);
+      const seeded = await page.evaluate(async () => {
+        const key = calKey(new Date());
+        const linked = newBoardRecord();
+        linked.title = '09/02/26 To Do'; linked.cal = key;   // the retired stored title
+        await idbPut(linked);
+        return { id: linked.id, cal: key };
+      });
+      await page.reload();
+      await page.waitForTimeout(700);
+      await page.evaluate(() => { if (!listOpen) goToList(); drillCat('todo'); });
+      await page.waitForTimeout(500);
+      // The date string, derived from the record's own cal key (survives midnight).
+      const expected = await page.evaluate((cal) => {
+        const p = cal.split('-');
+        return p[1] + '/' + p[2] + '/' + p[0].slice(2);
+      }, seeded.cal);
+      const r = await page.evaluate((id) => {
+        const card = document.querySelector('#list-rows .board-row[data-id="' + id + '"]');
+        if (!card) return null;
+        const title = card.querySelector('.row-title');
+        const dateEl = card.querySelector('.row-date');
+        const boardDate = card.querySelector('.row-board-date');
+        if (!boardDate) return { missing: true };   // the fix is absent: fail loudly, don't crash
+        const cr = card.getBoundingClientRect(), br = boardDate.getBoundingClientRect();
+        return {
+          titleText: title.innerText,
+          // innerText excludes display:none children — the hidden pair span.
+          titleNameOnly: title.innerText === "Today's To Do",
+          titleDateHidden: getComputedStyle(card.querySelector('.row-title-date')).display === 'none',
+          boardDateText: boardDate ? boardDate.textContent.trim() : null,
+          // ON SCREEN: visible, non-zero, and inside the card's own box.
+          dateOnScreen: getComputedStyle(boardDate).display !== 'none' &&
+            br.width > 0 && br.left >= cr.left && br.right <= cr.right &&
+            br.top >= cr.top && br.bottom <= cr.bottom,
+          rowDateText: dateEl.textContent,
+          height: cr.height,
+        };
+      }, seeded.id);
+      ok('D31 @' + W + 'px: the title is the pinned name only; the pair span is hidden',
+        !!r && r.titleNameOnly && r.titleDateHidden, JSON.stringify(r));
+      ok('D31 @' + W + 'px: the cal date is visible ON SCREEN on the .row-date line, inside the card box',
+        !!r && r.dateOnScreen && r.boardDateText.startsWith(expected),
+        'boardDate="' + (r && r.boardDateText) + '" expected="' + expected + '"');
+      ok('D31 @' + W + 'px: the line reads board date first, then Last Updated',
+        !!r && !r.missing && r.rowDateText.indexOf(expected) === 0 &&
+          r.rowDateText.indexOf('Last Updated:') > 0 &&
+          r.rowDateText.indexOf('Last Updated:') > r.rowDateText.indexOf(expected),
+        'rowDate="' + (r && r.rowDateText) + '"');
+      ok('D31 @' + W + 'px: the card is still 76px tall (LIST_CARD_H frozen)',
+        !!r && !r.missing && Math.round(r.height) === 76, 'height=' + (r && r.height));
+      ok('D31 @' + W + 'px: no page errors', errors.length === 0, errors.join(' | '));
+      await ctx.close();
+    }
+
+    // Desktop unchanged: the rail card still reads the full colon-joined pair
+    // on ONE line — the .row-title-date span is visible there, no wrap.
+    const dctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const dpage = await dctx.newPage();
+    const derrors = [];
+    dpage.on('pageerror', e => derrors.push(String(e)));
+    await dpage.goto(URL);
+    await dpage.waitForTimeout(400);
+    const dseed = await dpage.evaluate(async () => {
+      const key = calKey(new Date());
+      const linked = newBoardRecord();
+      linked.title = '09/02/26 To Do'; linked.cal = key;
+      await idbPut(linked);
+      return { id: linked.id, cal: key };
+    });
+    await dpage.reload();
+    await dpage.waitForTimeout(700);
+    await dpage.click('#pane-rail');          // B118: expand the collapsed rail
+    await dpage.waitForTimeout(400);
+    const dexp = await dpage.evaluate((cal) => {
+      const p = cal.split('-');
+      return "Today's To Do: " + p[1] + '/' + p[2] + '/' + p[0].slice(2);
+    }, dseed.cal);
+    const d = await dpage.evaluate((id) => {
+      const card = document.querySelector('#pane-cards .pane-card[data-id="' + id + '"]');
+      if (!card) return null;
+      const title = card.querySelector('.row-title');
+      if (!card.querySelector('.row-title-date')) return { missing: true };  // fix absent
+      return {
+        text: title.textContent,
+        spanShown: getComputedStyle(card.querySelector('.row-title-date')).display !== 'none',
+        boardDateHidden: getComputedStyle(card.querySelector('.row-board-date')).display === 'none',
+        oneLine: title.scrollHeight <= Math.ceil(parseFloat(getComputedStyle(title).lineHeight) * 1.6),
+        rowDateText: card.querySelector('.row-date').textContent,
+      };
+    }, dseed.id);
+    ok('D31 desktop 1440: the rail card still reads the full colon-joined pair on one line',
+      !!d && d.text === dexp && d.spanShown && d.oneLine && d.boardDateHidden, JSON.stringify(d));
+    ok('D31 desktop 1440: no page errors', derrors.length === 0, derrors.join(' | '));
+    await dctx.close();
+  }
+
   await browser.close();
   console.log('\n=== desktop: ' + pass + ' passed, ' + fail + ' failed ===');
   process.exit(fail ? 1 : 0);
