@@ -1277,6 +1277,12 @@ html:not(.desktop) .board-row .row-date {
 html:not(.desktop) .board-row .row-title-date { display: none; }
 .row-board-date { display: none; }
 html:not(.desktop) .board-row .row-board-date { display: inline; }
+/* Issue #307 (owner ruling): the B82 Last Updated stamp is killed on the
+   mobile card only — the cal date carries the .row-date line alone (the
+   joined string cannot fit the 72–85px column and spilled past the card's
+   bottom edge). The stamp keeps its own span so CSS can hide it. Desktop
+   and tablet are untouched: B82 survives there. */
+html:not(.desktop) .board-row .row-last-updated { display: none; }
 
 /* ---- §10.5 Categories (issue #58 / B42, issue #74 / B44, issue #88 / B63,
    issue #97 / B68) -- Three sections — To-Do, Idea, Note — on both the mobile

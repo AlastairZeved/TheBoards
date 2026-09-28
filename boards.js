@@ -57,15 +57,24 @@ function fillRowContent(node, b) {
   else { title.textContent = COPY.untitled; title.classList.add('untitled'); }
   node.appendChild(title);
   const date = document.createElement('span'); date.className = 'row-date';
-  // Mobile skin: the board's cal date leads the line (the card's identity),
-  // then the standing Last Updated stamp — middot ' · ' separated. They are
-  // different facts and are kept BOTH even when they read the same day.
+  // Mobile skin: the board's cal date carries the line alone (issue #307,
+  // owner ruling: "Kill the Last Updated stamp for mobile only. B82 survives
+  // for desktop."). The B82 stamp rides in its own span so the mobile skin
+  // can hide it — a bare text node cannot be hidden. The middot is dropped
+  // rather than relocated: with the stamp hidden on mobile a separator would
+  // be a dangling orphan, and desktop renders .row-board-date as
+  // display:none, so no surface needs it. The stamp had to go because
+  // 'Last Updated: 09/28/26' alone is ~187px of 10px text in a 72–85px
+  // column — no string carries both dates there. The desktop date line
+  // renders 'Last Updated: …' exactly as before.
   if (b.cal) {
     const bd = document.createElement('span'); bd.className = 'row-board-date';
-    bd.textContent = linkedDate(b.cal) + ' · ';
+    bd.textContent = linkedDate(b.cal);
     date.appendChild(bd);
   }
-  date.appendChild(document.createTextNode(COPY.lastUpdated + formatMDY(b.updatedAt || b.createdAt)));
+  const lu = document.createElement('span'); lu.className = 'row-last-updated';
+  lu.textContent = COPY.lastUpdated + formatMDY(b.updatedAt || b.createdAt);
+  date.appendChild(lu);
   node.appendChild(date);
   // The calendar mark (issue #145, R5): a linked board announces its link
   // where its name is read — far right on the card, on both surfaces the
