@@ -1023,6 +1023,39 @@ export function calMD(d) {
   return p(d.getMonth() + 1) + '/' + p(d.getDate());
 }
 
+export function makeCalLine(ev) {
+  const line = document.createElement('div');
+  line.className = 'cal-line' + (ev.state === 'complete' ? ' complete' : '');
+  line.setAttribute('role', 'listitem');
+  line.textContent = ev.text;
+  // Existing events are editable in place (issue #152): the line IS the
+  // control — a tap opens its existing editor, focused with the caret at
+  // the end, inside the tap gesture. No new surface, no mode (B95 intact).
+  // The native click's caret placement fires with the mouseup — on desktop
+  // AFTER the click handler (caretToEnd wins); on touch the placement is
+  // coalesced BEFORE the click dispatch (caretToEnd loses), and the caret
+  // sits at the tap point — so the first typed characters splice mid-word
+  // instead of appending (the bug class this issue reports). The deferred
+  // re-assert runs after both orders and lands the caret at the end either
+  // way. The guard keeps a second tap while editing from re-arming the
+  // editor and double-committing (B81's concern). Edit-entry is navigation,
+  // so it runs raw — the commit is the blur, which writes and re-syncs
+  // itself.
+  // Issue #304: this factory is the ONE birthplace of a .cal-line. It used
+  // to be inlined in makeCalDay only, so a line born from addCalEvent's
+  // create path got no click listener and could never be re-opened after
+  // its first commit — read-only forever, until a full repaint made it a
+  // rendered line. Both paths now share this constructor, so a created
+  // line and a rendered line are the same thing by construction.
+  line.addEventListener('click', (e) => {
+    if (line.hasAttribute('contenteditable')) return;
+    e.preventDefault();
+    startCalLineEdit(line, ev);
+    setTimeout(() => caretToEnd(line), 0);
+  });
+  return line;
+}
+
 export function makeCalDay(day, events, board) {
   const card = document.createElement('div');
   card.className = 'cal-day' + (day.today ? ' today' : events.length ? ' near' : ' far');
@@ -1037,30 +1070,7 @@ export function makeCalDay(day, events, board) {
   dl.className = 'cal-lines on-dark';
   dl.setAttribute('role', 'list');
   for (const ev of events) {
-    const line = document.createElement('div');
-    line.className = 'cal-line' + (ev.state === 'complete' ? ' complete' : '');
-    line.setAttribute('role', 'listitem');
-    line.textContent = ev.text;
-    // Existing events are editable in place (issue #152): the line IS the
-    // control — a tap opens its existing editor, focused with the caret at
-    // the end, inside the tap gesture. No new surface, no mode (B95 intact).
-    // The native click's caret placement fires with the mouseup — on desktop
-    // AFTER the click handler (caretToEnd wins); on touch the placement is
-    // coalesced BEFORE the click dispatch (caretToEnd loses), and the caret
-    // sits at the tap point — so the first typed characters splice mid-word
-    // instead of appending (the bug class this issue reports). The deferred
-    // re-assert runs after both orders and lands the caret at the end either
-    // way. The guard keeps a second tap while editing from re-arming the
-    // editor and double-committing (B81's concern). Edit-entry is navigation,
-    // so it runs raw — the commit is the blur, which writes and re-syncs
-    // itself.
-    line.addEventListener('click', (e) => {
-      if (line.hasAttribute('contenteditable')) return;
-      e.preventDefault();
-      startCalLineEdit(line, ev);
-      setTimeout(() => caretToEnd(line), 0);
-    });
-    dl.appendChild(line);
+    dl.appendChild(makeCalLine(ev));      // issue #304: one shared line factory
   }
   // Capture lives on the day (PRD §6.2's grammar, calendar edition): the
   // zone's last row is the add control — tap and type, no dialogs, no pickers
@@ -1112,10 +1122,9 @@ async function addCalEvent(dateKey, zone) {
       await idbPut(board);
     }
     await idbPut(ev);
-    const line = document.createElement('div');
-    line.className = 'cal-line';
-    line.setAttribute('role', 'listitem');
-    line.textContent = '';
+    const line = makeCalLine(ev);         // issue #304: the shared factory now
+                                          // wires the re-edit click listener on
+                                          // the create path too
     const old = zone.querySelector('.cal-add');
     zone.insertBefore(line, old);
     startCalLineEdit(line, ev);

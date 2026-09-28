@@ -2849,6 +2849,87 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     }
   }
 
+  // ---- D33. a created calendar event can be re-edited (issue #304) ---------
+  // The bug: a .cal-line born from addCalEvent's create path never got the
+  // click listener that makeCalDay's render path wires, so an event written
+  // in the current session opened its editor exactly once and was read-only
+  // afterwards. The fix makes makeCalLine(ev) the ONE birthplace of a line;
+  // both paths use it. This block drives the real UI: click .cal-add, type,
+  // Enter-commit, click away, click the line again — the editor must reopen
+  // with the text intact.
+  console.log('\n[D33] Calendar: an event created this session re-opens its editor (issue #304)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    await page.evaluate(() => document.getElementById('cal-rail').click());
+    await page.waitForTimeout(400);
+    // Create through the real add control on today's day card (index 0, the
+    // same card future-event.js addresses). addCalEvent opens the editor on
+    // arrival (capture precedes structure, §1.1).
+    const at = await page.evaluate(() => {
+      const card = document.querySelectorAll('.cal-day')[0];
+      const r = card.querySelector('.cal-add').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await page.mouse.click(at.x, at.y);
+    await page.waitForTimeout(150);
+    ok('the add control opened a fresh editor on a new line',
+      await page.evaluate(() => {
+        const l = document.querySelector('.cal-line[contenteditable]');
+        return !!l && l.textContent === '';
+      }));
+    await page.keyboard.type('created this session');
+    await page.keyboard.press('Enter');            // commits on blur
+    await page.waitForTimeout(400);
+    ok('the commit persisted the event record',
+      await page.evaluate(async () => {
+        const all = await idbGetAll();
+        return all.some(r => r.text === 'created this session' && r.date === calKey(new Date()));
+      }));
+    // Click away onto the day card's inert date column — a blur with no
+    // editor consequence.
+    const dc = await page.evaluate(() => {
+      const r = document.querySelector('.cal-day .cal-date').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await page.mouse.click(dc.x, dc.y);
+    await page.waitForTimeout(200);
+    ok('after clicking away, no line is editing and the text stayed',
+      await page.evaluate(() => {
+        const line = [...document.querySelectorAll('.cal-line')]
+          .find(l => l.textContent === 'created this session');
+        return !!line && !line.hasAttribute('contenteditable');
+      }));
+    // THE regression: click the created line again — it must reopen its
+    // editor with the committed text intact.
+    const lp = await page.evaluate(() => {
+      const l = [...document.querySelectorAll('.cal-line')]
+        .find(l => l.textContent === 'created this session');
+      const r = l.getBoundingClientRect();
+      return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
+    });
+    await page.mouse.click(lp.x, lp.y);
+    await page.waitForTimeout(150);
+    const reedit = await page.evaluate(() => {
+      const l = [...document.querySelectorAll('.cal-line')]
+        .find(l => l.hasAttribute('contenteditable'));
+      return l ? { text: l.textContent, focused: document.activeElement === l } : null;
+    });
+    ok('clicking the created line re-opens its editor with the text intact (issue #304)',
+      !!reedit && reedit.text === 'created this session' && reedit.focused,
+      JSON.stringify(reedit));
+    // And the reopen is a real editor: a further edit commits too.
+    await page.keyboard.type(' RE-EDITED');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+    ok('the re-opened editor commits (the event record carries the second edit)',
+      await page.evaluate(async () => {
+        const all = await idbGetAll();
+        return all.some(r => r.text === 'created this session RE-EDITED');
+      }));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   await browser.close();
   console.log('\n=== desktop: ' + pass + ' passed, ' + fail + ' failed ===');
   process.exit(fail ? 1 : 0);

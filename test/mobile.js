@@ -2624,6 +2624,93 @@ async function openCat(page, cat) {
     await ctx.close();
   }
 
+  // ---- 30. an event created THIS SESSION can be re-edited (issue #304) ----
+  // The bug: addCalEvent's create path built its .cal-line by hand and never
+  // wired the re-edit click listener that makeCalDay's render path has, so a
+  // line written in the current session opened its editor exactly once and
+  // was read-only afterwards (the issue's "once it's written and clicked
+  // away from, you can't edit it again"). The fix makes makeCalLine(ev) the
+  // ONE birthplace of a .cal-line; both paths share it. This block drives
+  // the real touch UI on today's card: tap .cal-add, type, Enter-commit,
+  // tap away, tap the line again — the editor must reopen with the text
+  // intact, and the reopened editor must commit too.
+  console.log('\n[30] Calendar: an event created this session re-opens its editor (issue #304)');
+  {
+    const { ctx, page, errors } = await newMobilePage(browser);
+    await page.evaluate(() => document.getElementById('action-calendar').click());
+    await page.waitForTimeout(400);
+    // Create through the real add control on today's day card (index 0, the
+    // same card the future-event suite addresses). addCalEvent opens the
+    // editor on arrival (capture precedes structure, §1.1).
+    const at = await page.evaluate(() => {
+      const card = document.querySelectorAll('.cal-day')[0];
+      const r = card.querySelector('.cal-add').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await tap(page, at.x, at.y);
+    await page.waitForTimeout(150);
+    ok('the add control opened a fresh editor on a new line',
+      await page.evaluate(() => {
+        const l = document.querySelector('.cal-line[contenteditable]');
+        return !!l && l.textContent === '';
+      }));
+    await page.keyboard.type('created on mobile');
+    await page.keyboard.press('Enter');            // commits on blur
+    await page.waitForTimeout(400);
+    ok('the commit persisted the event record',
+      await page.evaluate(async () => {
+        const all = await idbGetAll();
+        return all.some(r => r.text === 'created on mobile' && r.date === calKey(new Date()));
+      }));
+    // Tap away on the exit row's inert right half — the same clear-of-the-
+    // stack blur point block 25 uses (issue #259).
+    await tap(page, 300, (await page.evaluate(() => {
+      const r = document.getElementById('cal-top').getBoundingClientRect();
+      return Math.round(r.top + r.height / 2);
+    })));
+    await page.waitForTimeout(400);
+    ok('after tapping away, no line is editing and the text stayed',
+      await page.evaluate(() => {
+        const line = [...document.querySelectorAll('.cal-line')]
+          .find(l => l.textContent === 'created on mobile');
+        return !!line && !line.hasAttribute('contenteditable');
+      }));
+    // THE regression: tap the created line again — it must reopen its editor
+    // with the committed text intact.
+    const lp = await page.evaluate(() => {
+      const l = [...document.querySelectorAll('.cal-line')]
+        .find(l => l.textContent === 'created on mobile');
+      const r = l.getBoundingClientRect();
+      return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
+    });
+    await tap(page, lp.x, lp.y);
+    await page.waitForTimeout(150);
+    const reedit = await page.evaluate(() => {
+      const l = [...document.querySelectorAll('.cal-line')]
+        .find(l => l.hasAttribute('contenteditable'));
+      return l ? { text: l.textContent, focused: document.activeElement === l } : null;
+    });
+    ok('tapping the created line re-opens its editor with the text intact (issue #304)',
+      !!reedit && reedit.text === 'created on mobile' && reedit.focused,
+      JSON.stringify(reedit));
+    // And the reopen is a real editor: a further edit commits too.
+    await page.keyboard.type(' RE-EDITED');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+    const after = await page.evaluate(async () => {
+      const all = await idbGetAll();
+      const ev = all.find(r => r.text === 'created on mobile RE-EDITED');
+      const board = all.find(r => r.cal === calKey(new Date()));
+      return { evText: ev && ev.text,
+               mirrorFirst: (board && board.requirements || '').split('\n')[0] };
+    });
+    ok('the re-opened editor commits (event record AND mirror carry the second edit)',
+      after.evText === 'created on mobile RE-EDITED' &&
+      after.mirrorFirst === 'created on mobile RE-EDITED', JSON.stringify(after));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   // ---- 26. the calendar's exit row is filled and meets the floor (issue #156, B98; renamed/reseated by B134, issue #259) ----
   // The bug: the three #cal-top buttons shipped as EMPTY elements — fillBoardAction
   // was never run for them, so they rendered as 12x16 blank squares (the issue's
