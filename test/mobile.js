@@ -3042,6 +3042,68 @@ async function openCat(page, cat) {
     await ctx.close();
   }
 
+  // ---- 26. mobile sync: the covered board never repaints; hideCal still does
+  // (issue #305). The repaint guard is what is actually on screen: with the
+  // full-screen calendar up, the board is display:none — its anchor must keep
+  // its pre-commit text (no repaint paid for a hidden surface, none fighting
+  // hideCal's own render), and the navigation back (cal-back → hideCal →
+  // renderBoard) must still land the mirror's current text.
+  console.log('\n[26] Mobile: the hidden board skips the repaint; hideCal still repaints it (issue #305)');
+  {
+    const { ctx, page, errors } = await newMobilePage(browser);
+    await page.evaluate(async () => {
+      for (const r of await idbGetAll()) await idbDelete(r.id);
+      const key = calKey(new Date());
+      const b = newBoardRecord();
+      b.title = '09/02/26 To Do'; b.cal = key; b.calReq = 1;
+      b.requirements = 'mobile seed line';
+      const ev = newCalEvent(key, 'mobile seed line');
+      await idbPut(b); await idbPut(ev);
+    });
+    await page.reload();
+    await page.waitForFunction(() =>
+      state.current && state.current.title === '09/02/26 To Do' &&
+      document.getElementById('anchor-requirements').textContent ===
+        state.current.requirements, null, { timeout: 10000 });
+    await page.evaluate(() => document.getElementById('action-calendar').click());
+    await page.waitForTimeout(400);
+
+    // Commit a cal-line edit while the board is entirely covered.
+    const lineBox = await page.evaluate(() => {
+      const l = [...document.querySelectorAll('.cal-line')]
+        .find(l => l.textContent === 'mobile seed line');
+      const r = l.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await tap(page, lineBox.x, lineBox.y);
+    await page.waitForTimeout(150);
+    await page.evaluate(() => {
+      const l = [...document.querySelectorAll('.cal-line')]
+        .find(l => l.hasAttribute('contenteditable'));
+      l.textContent = 'mobile seed line VIA-CAL';
+    });
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    await page.waitForTimeout(800);
+    ok('no repaint fired for the covered board — the anchor keeps its pre-commit text',
+       await page.evaluate(() =>
+         document.getElementById('anchor-requirements').textContent === 'mobile seed line'),
+       'anchor: ' + await page.evaluate(() =>
+         JSON.stringify(document.getElementById('anchor-requirements').textContent)));
+
+    // The navigation back still repaints the board from the settled store.
+    await page.evaluate(() => document.getElementById('cal-back').click());
+    await page.waitForTimeout(700);
+    ok('hideCal still repaints the board on the way back (mirror current)',
+       await page.evaluate(() =>
+         document.getElementById('anchor-requirements').textContent ===
+           'mobile seed line VIA-CAL'),
+       'anchor: ' + await page.evaluate(() =>
+         JSON.stringify(document.getElementById('anchor-requirements').textContent)));
+
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   await browser.close();
   console.log('\n=== mobile: ' + pass + ' passed, ' + fail + ' failed ===');
   process.exit(fail ? 1 : 0);
