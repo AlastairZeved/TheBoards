@@ -2718,6 +2718,137 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await dctx.close();
   }
 
+  // ---- D32. Issue #307: the B82 'Last Updated:' stamp is dropped on the
+  // mobile card only — the cal date carries the .row-date line alone
+  // (owner ruling: "Kill the Last Updated stamp for mobile only. B82
+  // survives for desktop."). The spill it fixes: the joined date+stamp
+  // string wrapped to 3–4 lines in the 72–85px mobile column and painted
+  // past the card's bottom edge (overflow: visible, margin-top: auto).
+  // Assertions are ON-SCREEN (computed display + bounding boxes), and the
+  // width band is swept — the spill held at +3px all the way to 384px,
+  // clearing only at 390, so 375/384 are asserted explicitly.
+  // Not tested here: the desktop drilled-category .board-row surface (a
+  // desktop row renders .row-last-updated by default — no mobile rule
+  // applies); covered by the mobile-hide assertion being scoped to
+  // html:not(.desktop) and by the desktop assertions below.
+  console.log('\\n[D32] Mobile card: cal date alone on the .row-date line, B82 stamp not painted (issue #307)');
+  {
+    for (const W of [320, 344, 360, 375, 384, 390]) {
+      const ctx = await browser.newContext({ viewport: { width: W, height: 740 } });
+      const page = await ctx.newPage();
+      const errors = [];
+      page.on('pageerror', e => errors.push(String(e)));
+      page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+      await page.goto(URL);
+      await page.waitForTimeout(400);
+      const seeded = await page.evaluate(async () => {
+        const key = calKey(new Date());
+        const linked = newBoardRecord();
+        linked.title = '09/02/26 To Do'; linked.cal = key;
+        await idbPut(linked);
+        return { id: linked.id, cal: key };
+      });
+      await page.reload();
+      await page.waitForTimeout(700);
+      await page.evaluate(() => { if (!listOpen) goToList(); drillCat('todo'); });
+      await page.waitForTimeout(500);
+      const expected = await page.evaluate((cal) => {
+        const p = cal.split('-');
+        return p[1] + '/' + p[2] + '/' + p[0].slice(2);
+      }, seeded.cal);
+      const r = await page.evaluate((id) => {
+        const card = document.querySelector('#list-rows .board-row[data-id="' + id + '"]');
+        if (!card) return null;
+        const dateEl = card.querySelector('.row-date');
+        const lu = card.querySelector('.row-last-updated');
+        const boardDate = card.querySelector('.row-board-date');
+        const cr = card.getBoundingClientRect(), dr = dateEl.getBoundingClientRect();
+        // Painted text = the text of the children the engine actually renders
+        // (display !== 'none'). innerText has been observed to include hidden
+        // text on this engine — it is not evidence.
+        const visible = [...dateEl.children]
+          .filter(c => getComputedStyle(c).display !== 'none')
+          .map(c => c.textContent).join('');
+        return {
+          luPresent: !!lu,
+          // 3: the stamp is not painted — computed display none, zero box.
+          luHidden: lu && getComputedStyle(lu).display === 'none' &&
+            lu.getBoundingClientRect().width === 0 && lu.getBoundingClientRect().height === 0,
+          // 1: the date line's bottom sits inside the card's own box.
+          insideCard: dr.bottom <= cr.bottom + 0.01,
+          // 2: the cal date is on screen, non-zero, within the card.
+          boardDateOnScreen: boardDate && getComputedStyle(boardDate).display !== 'none' &&
+            (() => { const b = boardDate.getBoundingClientRect();
+              return b.width > 0 && b.top >= cr.top && b.bottom <= cr.bottom &&
+                b.left >= cr.left && b.right <= cr.right; })(),
+          // 4: the painted line is exactly the date — no trailing middot.
+          paintedText: visible,
+          height: cr.height,
+        };
+      }, seeded.id);
+      ok('D32 @' + W + 'px: the .row-date line sits inside the card box (no spill past the bottom edge)',
+        !!r && r.insideCard, JSON.stringify(r));
+      ok('D32 @' + W + 'px: the cal date is visible on screen, inside the card',
+        !!r && r.boardDateOnScreen, JSON.stringify(r));
+      ok('D32 @' + W + 'px: the B82 stamp span exists but is not painted (display none, zero box)',
+        !!r && r.luPresent && r.luHidden, JSON.stringify(r));
+      ok('D32 @' + W + 'px: the painted date line is exactly the cal date — no dangling middot',
+        !!r && r.paintedText === expected, 'painted="' + (r && r.paintedText) + '" expected="' + expected + '"');
+      ok('D32 @' + W + 'px: the card is still 76px tall (LIST_CARD_H frozen)',
+        !!r && Math.round(r.height) === 76, 'height=' + (r && r.height));
+      ok('D32 @' + W + 'px: no page errors', errors.length === 0, errors.join(' | '));
+      await ctx.close();
+    }
+
+    // Desktop and tablet unchanged (1440×900 desktop, 1024×800 desktop,
+    // 820×1180 tablet): B82 survives — the stamp span is painted, the rail
+    // title keeps the colon-joined pair, .row-board-date stays hidden.
+    for (const VP of [{ width: 1440, height: 900 }, { width: 1024, height: 800 }, { width: 820, height: 1180 }]) {
+      const ctx = await browser.newContext({ viewport: VP });
+      const page = await ctx.newPage();
+      const errors = [];
+      page.on('pageerror', e => errors.push(String(e)));
+      await page.goto(URL);
+      await page.waitForTimeout(400);
+      const seeded = await page.evaluate(async () => {
+        const key = calKey(new Date());
+        const linked = newBoardRecord();
+        linked.title = '09/02/26 To Do'; linked.cal = key;
+        await idbPut(linked);
+        return { id: linked.id, cal: key };
+      });
+      await page.reload();
+      await page.waitForTimeout(700);
+      await page.click('#pane-rail');          // the wide rail is collapsed on boot (D31's approach)
+      await page.waitForTimeout(400);
+      const p = seeded.cal.split('-');
+      const expTitle = "Today's To Do: " + p[1] + '/' + p[2] + '/' + p[0].slice(2);
+      const expDate = 'Last Updated: ' + p[1] + '/' + p[2] + '/' + p[0].slice(2);
+      const r = await page.evaluate((id) => {
+        const card = document.querySelector('.pane-card[data-id="' + id + '"]');
+        if (!card) return null;
+        const lu = card.querySelector('.row-last-updated');
+        const bd = card.querySelector('.row-board-date');
+        const lr = lu && lu.getBoundingClientRect();
+        return {
+          title: card.querySelector('.row-title').textContent,
+          luShown: lu && getComputedStyle(lu).display !== 'none' &&
+            lr.width > 0 && lr.height > 0,
+          luText: lu ? lu.textContent : null,
+          bdHidden: bd && getComputedStyle(bd).display === 'none',
+        };
+      }, seeded.id);
+      ok('D32 ' + VP.width + '×' + VP.height + ': the rail card keeps the colon-joined pair on the title',
+        !!r && r.title === expTitle, JSON.stringify(r) + ' expected="' + expTitle + '"');
+      ok('D32 ' + VP.width + '×' + VP.height + ': the B82 stamp is painted and reads "Last Updated: <date>"',
+        !!r && r.luShown && r.luText === expDate, JSON.stringify(r));
+      ok('D32 ' + VP.width + '×' + VP.height + ': .row-board-date stays hidden on the wide surface',
+        !!r && r.bdHidden, JSON.stringify(r));
+      ok('D32 ' + VP.width + '×' + VP.height + ': no page errors', errors.length === 0, errors.join(' | '));
+      await ctx.close();
+    }
+  }
+
   await browser.close();
   console.log('\n=== desktop: ' + pass + ' passed, ' + fail + ' failed ===');
   process.exit(fail ? 1 : 0);
