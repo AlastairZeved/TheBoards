@@ -9,7 +9,7 @@ import { applyCompleteA11y, boardLinks, clearLink, linkSource, lotEls, makeLotEl
 import { runClockAction } from './render.js';
 import { reflectToolbarSeat, removeLinksForNote, runNoteToolbarAction, setCarriedUi, syncViewTitle, toggleLink, updateLinks, updateNoteToolbar, ensureNoteTitleEl } from './render.js';
 import { menuOpen, menuReturnFocus, openMenuFor } from './menus.js';
-import { renderPane, updateActiveCardTitle, writeThroughRequirements } from './boards.js';
+import { renderCal, renderPane, updateActiveCardTitle, writeThroughRequirements } from './boards.js';
 
 // One recognizer over the board. Targets: note | anchor | lot-item | lot | canvas.
 export const pointers = new Map();          // pointerId -> {x,y,startX,startY}
@@ -560,7 +560,17 @@ function commitAnchor(node) {
   if (node.dataset.anchor === 'requirements' && state.current.cal) {
     // The mirror's reverse direction (issue #154, B106): this commit IS the
     // write-through — not a timeout beside it (B81's commit-on-release).
-    writeThroughRequirements(state.current, reqBefore);
+    // Issue #305: the write-through updates the records, but a calendar face
+    // that is ALREADY on screen kept reading the stale mirror until the user
+    // navigated away and back (mobile's hideCal → renderBoard masked it; the
+    // desktop panel never repaints on navigation because there is none). One
+    // repaint at the commit point, chained after the async write so it reads
+    // the settled store, and guarded on the face actually being shown — the
+    // collapsed rail carries no lines, and a hidden mobile calendar must not
+    // pay for a repaint hideCal will supersede.
+    writeThroughRequirements(state.current, reqBefore).then(() => {
+      if (state.calOpen || state.calExpanded) renderCal();
+    });
     reqBefore = null;
   }
   updateBoardGeometry();      // the band follows its zones (B47), the handle its card (B65)

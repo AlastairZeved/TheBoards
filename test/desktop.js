@@ -2101,6 +2101,86 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await ctx.close();
   }
 
+  // ---- D25b. the sibling surface repaints while ALREADY showing (issue #305)
+  // The D25 blind spot: its assertions only read a surface AFTER navigating to
+  // it, which is the exact shape that hid this bug — the desktop panel never
+  // navigates, so a stale read there never happened. These blocks assert the
+  // ALREADY-VISIBLE surface updates in place, no navigation, in both
+  // directions. With the repaint reverted each block FAILS on its first
+  // assertion (verified on this branch).
+  console.log('\n[D25b] Sync repaints the sibling surface already on screen (issue #305)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    // Seed the linked pair exactly as D25 does, reboot onto it.
+    await page.evaluate(async () => {
+      for (const r of await idbGetAll()) await idbDelete(r.id);
+      const key = calKey(new Date());
+      const b = newBoardRecord();
+      b.title = '09/02/26 To Do'; b.cal = key; b.calReq = 2;
+      b.requirements = 'mirror one\nmirror two\nhand line';
+      const now = Date.now();
+      const ev1 = newCalEvent(key, 'mirror one'); ev1.createdAt = now - 1000;
+      const ev2 = newCalEvent(key, 'mirror two'); ev2.createdAt = now;
+      await idbPut(b); await idbPut(ev1); await idbPut(ev2);
+    });
+    await page.reload();
+    await page.waitForFunction(() =>
+      state.current && state.current.title === '09/02/26 To Do' &&
+      document.getElementById('anchor-requirements').textContent ===
+        state.current.requirements, null, { timeout: 10000 });
+
+    // Expand the calendar panel — BOTH surfaces are now on screen together.
+    await page.click('#cal-rail');
+    await page.waitForTimeout(400);
+
+    // Block 1 (board → calendar): commit a Requirements edit with the panel
+    // already showing; the cal line must change WITHOUT any navigation.
+    await page.evaluate(() => document.getElementById('anchor-requirements').focus());
+    await page.evaluate(() => {
+      document.getElementById('anchor-requirements').textContent =
+        'mirror one D25B\nmirror two\nhand line';
+    });
+    await page.evaluate(() => document.getElementById('anchor-requirements').blur());
+    await page.waitForTimeout(800);
+    ok('cal line repaints in place while the panel is already open',
+       await page.evaluate(() =>
+         [...document.querySelectorAll('.cal-line')].some(l => l.textContent === 'mirror one D25B')),
+       'panel lines: ' + await page.evaluate(() =>
+         JSON.stringify([...document.querySelectorAll('.cal-line')].map(l => l.textContent))));
+    ok('the panel did not close under the repaint (no navigation happened)',
+       await page.evaluate(() =>
+         document.getElementById('cal-view').classList.contains('panel') &&
+         !document.getElementById('cal-rail').hidden === false));
+
+    // Block 2 (calendar → board): commit a cal-line edit with the anchor
+    // already showing beside the panel; the anchor must change WITHOUT any
+    // navigation (D25 would only have seen this after cal-back).
+    await page.click('.cal-line');   // the single-tap re-edit (issue #152/#304)
+    await page.waitForTimeout(200);
+    await page.evaluate(() => {
+      const l = [...document.querySelectorAll('.cal-line')]
+        .find(x => x.hasAttribute('contenteditable'));
+      l.textContent = 'mirror two FROM-CAL';
+    });
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    await page.waitForTimeout(800);
+    // (The tap lands on the FIRST line, 'mirror one D25B' — the positional law
+    // rewrites span line 1; the anchor must show exactly the committed store
+    // span, repainted in place.)
+    ok('requirements anchor repaints in place while the panel is already open',
+       await page.evaluate(() =>
+         document.getElementById('anchor-requirements').textContent ===
+           'mirror two FROM-CAL\nmirror two\nhand line'),
+       'anchor: ' + await page.evaluate(() =>
+         JSON.stringify(document.getElementById('anchor-requirements').textContent)));
+    ok('the B133 filled class survives the repaint',
+       await page.evaluate(() =>
+         document.getElementById('anchor-requirements').classList.contains('filled')));
+
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   console.log('\n[D25] The standing rail survives a desktop→narrow→desktop flip (issue #213, B99)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);

@@ -1131,6 +1131,24 @@ async function addCalEvent(dateKey, zone) {
   });
 }
 
+/* Issue #305, the calendar→board half: a mirror commit from a calendar line
+   rewrites the board's span in the store, but a board whose Requirements
+   anchor is ALREADY on screen (the wide panel's squeeze leaves it beside the
+   calendar) kept the stale text until some navigation happened to repaint it.
+   Repaint once at the commit point — via renderBoard(), never a direct
+   anchor.textContent write, so the B133 pinned-title re-derivation and the
+   'filled' class survive by construction. The guard is what is actually on
+   screen, not viewport width: the mobile full-screen push covers the board
+   entirely (cal-open on a narrow tier), and hideCal already repaints on the
+   way back — a repaint there would pay for a hidden surface and fight
+   hideCal's own render. The wide panel's squeeze leaves the board beside the
+   calendar, so the offsetParent check passes there and only there. */
+function repaintVisibleBoard() {
+  if (state.calOpen && !state.isWide) return;   // the mobile push covers the board
+  const anchor = document.getElementById('anchor-requirements');
+  if (anchor && anchor.offsetParent !== null) renderBoard();
+}
+
 /* The event line's editor. Commit-on-blur writes the event text AND the
    linked board's mirror line together — one edit, both surfaces, the
    mirror's one-writer law. An empty commit discards (B8's rule: the frame
@@ -1146,11 +1164,13 @@ export function startCalLineEdit(line, ev) {
       await idbDelete(ev.id);
       line.remove();
       await syncDateMirror(ev.date);
+      repaintVisibleBoard();
       return;
     }
     ev.text = text;
     await idbPut(ev);
     await syncDateMirror(ev.date);
+    repaintVisibleBoard();
     scheduleSave();
   };
   line.addEventListener('blur', commit, { once: true });
