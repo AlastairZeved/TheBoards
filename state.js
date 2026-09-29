@@ -342,9 +342,10 @@ export function calWindow() {
 
 /* One event record. Plain strings + a state, the §4.1 shape; `date` is the
    calendar link (calKey form) and `createdAt` the mirror's order key — the
-   positional identity the Requirements mirror rewrites around. */
+   positional identity the Requirements mirror rewrites around.
+   `time` is the hour-box top line (R7 of the Hourly View ruling). */
 export function newCalEvent(dateKey, text) {
-  return { id: uuid(), date: dateKey, text: text || '', state: 'active',
+  return { id: uuid(), date: dateKey, text: text || '', time: '', state: 'active',
            createdAt: Date.now() };
 }
 
@@ -452,6 +453,7 @@ export const el = {
   importFile: document.getElementById('import-file'),       // the import tab's file dialog
   calView: document.getElementById('cal-view'),             // calendar screen (issue #145)
   calRail: document.getElementById('cal-rail'),             // the standing rail face (issue #158, B99)
+  calHours: document.getElementById('cal-hours'),           // the hourly view block (issue #313, the Hourly View ruling)
   calReminders: document.getElementById('cal-reminders'), // the recurring-reminders strip (issue #295)
   calStack: document.getElementById('cal-stack'),
   calTop: document.getElementById('cal-top'),

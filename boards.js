@@ -1365,7 +1365,136 @@ export function renderCal() {
       el.calStack.appendChild(makeCalDay(day, dayEvents, board));
     }
     renderCalMonth(new Set(events.map((e) => e.date)));
+    renderCalHours(all);
     renderCalReminders(all);
+  });
+}
+
+/* --- The hourly view (issue #313, the Hourly View ruling) -------------------------------------
+   The expanded face's FIRST content element: today's date line with the plus
+   at its right, then one narrow `.cal-hour` per of today's events in a
+   no-scroll grid. It is a VIEW over the same event records the day card reads
+   (R2): bound to today's key, read through calEventsOf in creation order, no
+   new store. The owner's superseding ruling adds it (TODAY's card keeps its
+   lines below); the mirror carries only `text` (never `time`); and the boxes
+   sit narrow, 3–4 across, in a grid that never scrolls. */
+function renderCalHours(all) {
+  const box = el.calHours;
+  if (!box) return;
+  // An edit is open — rebuilding would throw away the user's typing (the
+  // reminders strip's own guard, B138).
+  if (box.querySelector('[contenteditable]')) return;
+  const today = calKey(new Date());
+  const events = calEventsOf(eventsOf(all), today);
+  box.textContent = '';
+  box.hidden = false;
+
+  // Row 1 — the date line (R3): date left, plus right, one line.
+  const head = document.createElement('div');
+  head.className = 'cal-hours-head';
+  const date = document.createElement('span');
+  date.className = 'cal-hours-date';
+  date.textContent = new Date().toLocaleDateString(undefined,
+    { month: 'long', day: 'numeric' });           // "September 29", no year
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'cal-hours-add';
+  add.setAttribute('aria-label', 'Add an hour');
+  add.textContent = '+';
+  add.addEventListener('click', () => addCalHour(today));
+  head.append(date, add);
+  box.appendChild(head);
+
+  // Row 2 — the hour list, narrow columns, no scroll
+  const list = document.createElement('div');
+  list.className = 'cal-hours-list';
+  list.setAttribute('role', 'list');
+  for (const ev of events) list.appendChild(makeCalHour(ev));
+  box.appendChild(list);
+}
+
+/* One hour box: the time line over the primary text line. The time line is
+   rendered only when the record carries a time (R7) — every pre-existing
+   event has none, so it shows no empty time line. Both lines edit in place:
+   a tap opens its editor, focused with the caret at the end (makeCalLine's
+   grammar, issue #304); the commit writes the box's record and resyncs the
+   mirror. */
+function makeCalHour(ev, opts = {}) {
+  const box = document.createElement('div');
+  box.className = 'cal-hour' + (ev.state === 'complete' ? ' complete' : '');
+  box.setAttribute('role', 'listitem');
+
+  const timeLine = document.createElement('div');
+  timeLine.className = 'cal-hour-time';
+  timeLine.textContent = ev.time || '';
+  timeLine.hidden = !ev.time && !opts.showTime;   // no empty time line (R7)
+  const textLine = document.createElement('div');
+  textLine.className = 'cal-hour-text';
+  textLine.textContent = ev.text;
+  const open = (line) => {
+    if (line.hasAttribute('contenteditable')) return;
+    startHourEdit(line, box, ev);
+    setTimeout(() => caretToEnd(line), 0);
+  };
+  timeLine.addEventListener('click', (e) => { e.preventDefault(); open(timeLine); });
+  textLine.addEventListener('click', (e) => { e.preventDefault(); open(textLine); });
+  box.append(timeLine, textLine);
+  return box;
+}
+
+/* Begin editing a box's line. The commit writes the record's field and, if
+   both lines are now empty, discards the record and the box (B8's rule: the
+   frame must earn its keep — the same arithmetic the day card's line runs). */
+function startHourEdit(line, box, ev) {
+  line.setAttribute('contenteditable', CE);
+  line.focus();
+  caretToEnd(line);
+  const commit = () => {
+    line.removeAttribute('contenteditable');
+    const time = box.querySelector('.cal-hour-time').textContent.trim();
+    const text = box.querySelector('.cal-hour-text').textContent.trim();
+    if (!time && !text) {                           // B8: a whitespace-only box discards
+      idbDelete(ev.id).then(() => {
+        box.remove();
+        syncDateMirror(ev.date);
+        repaintVisibleBoard();
+      });
+      return;
+    }
+    ev.time = time;
+    ev.text = text;
+    idbPut(ev).then(() => {
+      syncDateMirror(ev.date);       // mirrors text only — time never mirrors
+      repaintVisibleBoard();
+      scheduleSave();
+    });
+  };
+  line.addEventListener('blur', commit, { once: true });
+  line.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); line.blur(); }
+  });
+}
+
+/* Add an hour for today (R5's chain, addCalEvent's grammar): ensure today's
+   linked board, write the event record, place the box, and open its TIME line
+   in edit — the cursor's default landing (R5's "which line the editor opens
+   on" change). The orange frame must earn its keep on commit. */
+function addCalHour(dateKey) {
+  commitAction(async () => {                       // creating+writing: a consequence (B81)
+    flushSave();
+    const all = await idbGetAll();
+    const ev = newCalEvent(dateKey, '');
+    if (dateKey <= calKey(new Date())) {           // B131: future-dated stores no board
+      const boards = all.filter(b => b.title !== undefined);
+      const { board } = ensureLinkedBoard(boards, dateKey);
+      if (board.calReq === undefined)
+        board.calReq = calEventsOf(eventsOf(all), dateKey).length;
+      await idbPut(board);
+    }
+    await idbPut(ev);
+    const hour = makeCalHour(ev, { showTime: true });
+    el.calHours.querySelector('.cal-hours-list').appendChild(hour);
+    startHourEdit(hour.querySelector('.cal-hour-time'), hour, ev);
   });
 }
 

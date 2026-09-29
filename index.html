@@ -177,6 +177,10 @@
       <span class="vlabel" aria-hidden="true">Calendar Board</span>
       <span class="cdate" aria-hidden="true"></span>
     </button>
+    <!-- Issue #313: the Hourly View block — today's date + plus at the top,
+         hour boxes below. First content element of the expanded face, before
+         #cal-reminders. -->
+    <div id="cal-hours" role="group" aria-label="Hourly view" hidden></div>
     <!-- Issue #295 (B138): the recurring-reminders strip rides the slack
          issue #293 freed above the day list — mobile tier only (the wide
          panel keeps its own top-packing). Filled by renderCalReminders(). -->
