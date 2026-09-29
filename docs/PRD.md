@@ -183,8 +183,11 @@ A PWA, installable to the home screen, running standalone and fully offline.
 Mobile-first, and mobile is the primary path — the geometry (§5.2), the touch
 floor (§5.3) and the capture path (§6.2) are all specified for touch first, with
 desktop as an explicit second grammar (§5.4). Foldables are first-class: both the
-inner and cover displays of a Z Fold are supported, which is why the manifest
-declares `orientation: "any"` (B11) and why the sheet is viewport-derived (B32).
+inner and cover displays of a Z Fold are supported — the unfolded cover lands in
+the tablet arrangement on its width alone (B103) — which is why the sheet is
+viewport-derived (B32), while the installed mobile surface is portrait-locked
+(B141): the manifest declares `orientation: "portrait"`, so a phone never enters
+a landscape arrangement.
 
 ### §3.2 Offline and storage
 
