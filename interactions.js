@@ -1070,6 +1070,7 @@ function setNoteState(node, complete) {
   if (complete && note.carriedOn) delete note.carriedOn;   // carried status ends at completion (B108)
   node.classList.toggle('complete', complete);
   setCarriedUi(node, note);            // the carried shadow follows the field (B110)
+  setReminderUi(node, note);           // reminder glow follows completion guard (B132)
   applyCompleteA11y(node, complete);
   updateNoteToolbar(node, note);       // Complete ⇄ Restore mark/label (B84)
 }

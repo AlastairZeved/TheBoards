@@ -230,6 +230,9 @@ export function runClockAction(btn) {
       setReminderUi(node, local);
       saveNow();
     } else {
+      // Surfaced echo: immediately update its UI for instant feedback (glow off),
+      // then persist the change on the source board and re-render.
+      setReminderUi(node, { reminder: false, state: 'active' });
       toggleSurfacedReminder(id);
     }
   });
