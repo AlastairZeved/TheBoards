@@ -49,6 +49,17 @@
      binding is .on-dark/.on-light below. */
   --ink-light:       #f4f5f1;
   --ink-dark:        #031019;
+  /* :root's own ink pole — the light one, for the dark-only scheme (B48).
+     --ink/--ink-a were bound ONLY on .on-dark/.on-light, so the tokens
+     COMPOSED from them at :root (--hairline, line 53 below) referenced an
+     undefined variable at their declaration element and were rejected
+     invalid-at-computed-value-time — inheriting as UNSET everywhere the
+     hairline is used (every 1px hairline in the app computed to 0px; the
+     R4 fix's border-bottom on #cal-hours could not paint for this reason,
+     not the flex/height collapse the field report described). The handles
+     still override per surface below (UIUX §2.3). */
+  --ink:             var(--ink-light);
+  --ink-a:           244 245 241;
   /* That surface's ink at the lowest alpha clearing 3:1 on it (UIUX §2.5). */
   --hairline:        rgb(var(--ink-a) / 0.4);
   /* Accents (UIUX §2.6, B52): text only on a near-black ground; anywhere else
