@@ -7,7 +7,7 @@ import { LOGICAL_H, LOGICAL_W, applyLayout, applyNoteWidth, caretToEnd, effScale
 import { rebaseNote, renderX, renderY, setHitInset, toLogical, updateBoardGeometry } from './geometry.js';
 import { applyCompleteA11y, boardLinks, clearLink, linkSource, lotEls, makeLotEl, makeNoteEl, noteEls } from './render.js';
 import { runClockAction } from './render.js';
-import { reflectToolbarSeat, removeLinksForNote, runNoteToolbarAction, setCarriedUi, syncViewTitle, toggleLink, updateLinks, updateNoteToolbar, ensureNoteTitleEl } from './render.js';
+import { reflectToolbarSeat, removeLinksForNote, runNoteToolbarAction, setCarriedUi, setReminderUi, syncViewTitle, toggleLink, updateLinks, updateNoteToolbar, ensureNoteTitleEl } from './render.js';
 import { menuOpen, menuReturnFocus, openMenuFor } from './menus.js';
 import { renderCal, renderPane, updateActiveCardTitle, writeThroughRequirements } from './boards.js';
 
@@ -1070,6 +1070,7 @@ function setNoteState(node, complete) {
   if (complete && note.carriedOn) delete note.carriedOn;   // carried status ends at completion (B108)
   node.classList.toggle('complete', complete);
   setCarriedUi(node, note);            // the carried shadow follows the field (B110)
+  setReminderUi(node, note);           // reminder glow follows completion guard (B132)
   applyCompleteA11y(node, complete);
   updateNoteToolbar(node, note);       // Complete ⇄ Restore mark/label (B84)
 }
