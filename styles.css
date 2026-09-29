@@ -1989,6 +1989,14 @@ html:not(.wide) #cal-reminders {
   gap: 6px;
   border-bottom: 1px solid var(--hairline);   /* R4 (issue #313): the block's bottom edge — the content-width rule separating the hourly view from the day stack below (the existing hairline token, §2.5) */
 }
+/* R4 FIX v3 (issue #313): on the wide PANEL only, the first day card packs
+   directly under this block (its mobile-only #cal-reminders neighbor is
+   display:none there) and the card's 3px --ink-dark box-shadow (#170)
+   overpainted this border's only pixel row. 4px of bottom margin seats the
+   hairline a row clear of that 3px shadow. Scoped to the panel so the mobile
+   tier — where reminders sits between, and the #293 bottom-anchor slack must
+   survive — is untouched. Do NOT touch the .cal-day.today frame (#170). */
+#cal-view.panel #cal-hours { margin-bottom: 4px; }
 .cal-hours-head {
   display: flex; align-items: center;
   color: var(--ink);                    /* --ink-light on .on-dark (the calendar's ground) */
