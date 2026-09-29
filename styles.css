@@ -1976,6 +1976,7 @@ html:not(.wide) #cal-reminders {
   flex: 0 0 auto;
   display: flex; flex-direction: column;
   gap: 6px;
+  border-bottom: 1px solid var(--hairline);   /* R4 (issue #313): the block's bottom edge — the content-width rule separating the hourly view from the day stack below (the existing hairline token, §2.5) */
 }
 .cal-hours-head {
   display: flex; align-items: center;

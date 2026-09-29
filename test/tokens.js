@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v107 — version bumped (shipped bytes changed, the #303 card title reads the pinned linked-board pair at the second seat)',
-    /const CACHE = 'zeved-boards-v107';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v107, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v107';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v108 — version bumped (shipped bytes changed, the #303 card title reads the pinned linked-board pair at the second seat)',
+    /const CACHE = 'zeved-boards-v108';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v108, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v108';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -858,6 +858,12 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /#cal-month \{/.test(css) && /grid-template-columns: repeat\(7, 1fr\)/.test(css));
   ok('a day with events wears exactly one dot — --accent-page, a shade within the palette (issue #191)',
     /\.mo-dot \{/.test(css) && /\.mo-dot \{[^}]*background: var\(--accent-page\);/.test(css));
+  // --- Issue #313 (B142): the hourly view's R4 hairline + R9 collapsed-rail hide ---
+  ok('the hourly block wears the R4 hairline at its bottom edge — 1px solid var(--hairline), the existing token, nothing else separates it from the day stack (issue #313)',
+    /#cal-hours \{[^}]*border-bottom: 1px solid var\(--hairline\);/.test(css) &&
+    !/#cal-hours [^%]{0,400}border-bottom:[^%]{0,40}(#|rgb\(|rgba\()/.test(css));
+  ok('the collapsed rail hides the hourly block too (issue #313, R9) — it joins #cal-top/#cal-stack/#cal-month in the hide selector',
+    /#cal-view\.rail-open #cal-hours,/.test(css));
   ok('today wears the to-do boards\' water fall; the current week gets the pale ink-light band (issue #191)',
     /\.mo-cell\.today \{[^}]*linear-gradient\(180deg, var\(--water-top\) 0%, var\(--water-mid\) 46%, var\(--water-bot\) 100%\)/.test(css) &&
     /\.mo-cell\.wk \{ background: rgb\(244 245 241 \/ \.08\); \}/.test(css));
