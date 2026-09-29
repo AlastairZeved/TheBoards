@@ -2611,8 +2611,8 @@ async function openCat(page, cat) {
         vh: window.innerHeight,
       };
     });
-    ok('today stays the stack\'s dominant card (the 1.6 grow, capped by the stack the month view shares)', 
-      g.today === Math.max(g.today, ...g.others) && g.today > 90, String(g.today));
+    ok('today stays the stack\'s dominant card (the 1.6 grow, capped by the stack; issue #313\'s hourly block now eats the top slack, lowering the cap)',
+          g.today === Math.max(g.today, ...g.others) && g.today > 60, String(g.today));
     ok('a wrapping event renders two readable lines, unclipped',
       g.lineHeight >= 30 && g.lineHeight <= 38, String(g.lineHeight));
     ok('non-today cards shrink to their content (two lines + capture row)',

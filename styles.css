@@ -1962,6 +1962,73 @@ html:not(.wide) #cal-reminders {
   cursor: pointer;
 }
 .rem-plus:focus-visible { outline: 2px solid var(--ink-light); outline-offset: 2px; }
+/* --- Issue #313, B142: the hourly view ---------------------------------
+   The expanded face's first content element: today's date + the add control
+   on the head line, then today's events as narrow orange time boxes. Tokens
+   only — the family's own: the date wears --ink on .on-dark, the plus is the
+   .rem-plus filled-add grammar (--frame fill), each box the B72 inset frame
+   (outline 2px --frame, interior transparent so the view's --chrome ground
+   shows), the text in --ink. The owner's ruling supersedes R3's full-width
+   reading for the MEASURE ONLY: each box is a narrow column — 3–4 fit across
+   the content width (5 preferred if they fit), never a scroll. The time line
+   is subscript: smaller than .cal-hour-text and set low against it. */
+#cal-hours {
+  flex: 0 0 auto;
+  display: flex; flex-direction: column;
+  gap: 6px;
+}
+.cal-hours-head {
+  display: flex; align-items: center;
+  color: var(--ink);                    /* --ink-light on .on-dark (the calendar's ground) */
+  font-size: 15px; font-weight: 600;
+}
+.cal-hours-date {
+  color: var(--ink);
+}
+.cal-hours-add {
+  margin-left: auto;                    /* anchored right, the date's own end */
+  border: none; border-radius: 4px;
+  background: var(--frame);             /* the calendar's own orange accent (B117), the .rem-plus fill */
+  color: var(--ink-dark);
+  font: inherit; font-size: 16px; font-weight: 700; line-height: 1;
+  min-width: 36px; min-height: 32px;    /* the .rem-plus touch floor */
+  cursor: pointer;
+}
+.cal-hours-add:focus-visible { outline: 2px solid var(--ink-light); outline-offset: 2px; }
+/* Row 2: the hour list — narrow columns that wrap, 3–4 across the content
+   width (5 preferred if they fit; the B72 family measure), never scrolling. */
+.cal-hours-list {
+  display: flex; flex-wrap: wrap;
+  gap: 8px;
+}
+.cal-hour {
+  flex: 0 0 calc(25% - 8px);            /* aim 4 across; the min-width thins to 3 on the panel */
+  min-width: 76px;                      /* never narrower than a readable column */
+  outline: 2px solid var(--frame);      /* the family's inset frame (B72) */
+  outline-offset: -2px;
+  background: transparent;              /* the view's ground shows through */
+  color: var(--ink);
+  border-radius: 4px;
+  display: flex; flex-direction: column;
+  gap: 3px;
+  padding: 4px 6px;
+}
+.cal-hour.complete .cal-hour-time,
+.cal-hour.complete .cal-hour-text { text-decoration: line-through; opacity: .55; }
+.cal-hour-time {
+  font-size: 10px; font-weight: 600; line-height: 1.1;
+  color: var(--ink); opacity: .72;                          /* the subscript: set low and small against the text below */
+}
+.cal-hour-text {
+  font-size: 12px; line-height: 1.4;
+  color: var(--ink);
+  overflow-wrap: break-word;
+}
+.cal-hour-time[contenteditable],
+.cal-hour-text[contenteditable] {
+  outline: none;                        /* the editor's own treatment, per .cal-line[contenteditable] */
+  white-space: pre-wrap;
+}
 .cal-day {
   position: relative;
   border-radius: 4px;
@@ -2142,7 +2209,8 @@ html:not(.wide) #cal-reminders {
    reseat (the row's own membership ruling stands). */
 #cal-view.rail-open #cal-top,
 #cal-view.rail-open #cal-stack,
-#cal-view.rail-open #cal-month { display: none; }   /* collapsed shows only the rail face (issue #248: the month view rode along) */
+#cal-view.rail-open #cal-hours,
+#cal-view.rail-open #cal-month { display: none; }   /* collapsed shows only the rail face (issue #248: the month view rode along; issue #313: the hourly block joins the hide) */
 #cal-rail {
   display: flex;
   flex-direction: column;
