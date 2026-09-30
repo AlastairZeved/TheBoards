@@ -1470,9 +1470,11 @@ function startHourEdit(node, ev) {
 
 /* --- The recurring-reminders strip (issue #295, B138) ----------------------
    Fills the slack issue #293 freed above the day list, mobile tier only.
-   Chips read "title — weekday" of the record's stored next-occurrence date
-   (B138 narrows B104's no-time law for THIS component only; firing and
-   notification are out of scope). Records ride the boards store like events
+   Chips render the user's title alone — nothing is appended (issue #320
+   supersedes B138's chip clause; the record's stored next-occurrence date
+   stays on the record, unread). B138 narrows B104's no-time law for THIS
+   component only; firing and notification are out of scope. Records ride the
+   boards store like events
    (one store, no schema bump): the ones carrying a `rem` string. The plus
    block — the calendar's own orange, --frame — adds one via an inline
    editing chip: commit on Enter/blur, Escape or an empty edit discards.
@@ -1489,10 +1491,11 @@ function renderCalReminders(all) {
     const chip = document.createElement('button');
     chip.type = 'button';
     chip.className = 'rem-chip';
-    // The next occurrence is stored as a calKey date; the chip reads only
-    // its weekday. Tap is a placeholder — edit/delete land later (#295).
-    chip.textContent = r.rem + ' — ' +
-      new Date(r.next + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short' });
+    // The next occurrence is stored as a calKey date on the record, but the
+    // chip renders the user's title alone — nothing is appended (issue #320
+    // supersedes B138's chip clause; r.next stays stored, unread). Tap is a
+    // placeholder — edit/delete land later (#295).
+    chip.textContent = r.rem;
     track.appendChild(chip);
   }
   const plus = document.createElement('button');

@@ -117,6 +117,70 @@ async function newPage(browser, viewport = { width: 384, height: 846 }) {
     await ctx.close();
   }
 
+  console.log('\n[V2] A recurring-reminder chip renders the user\'s title alone — no auto-appended weekday, r.next stays stored (issue #320, supersedes B138\'s chip clause)');
+  {
+    const { ctx, page, errors } = await newPage(browser);
+    // Seed one reminder record carrying a real next-occurrence date (the
+    // stored field must survive and stay unread by the chip — nothing is
+    // migrated or stripped).
+    await page.evaluate(async () => {
+      await idbPut({ id: 'rem-seed', rem: 'PAY THE RENT', next: calKey(new Date()) });
+    });
+    await page.reload();
+    await page.waitForTimeout(500);
+    // Open the expanded calendar face via the real tab.
+    await page.evaluate(() => document.getElementById('action-calendar').click());
+    await page.waitForTimeout(900);
+
+    // 1. The seeded chip's textContent is EXACTLY the typed title.
+    const seeded = await page.evaluate(() => {
+      const chips = [...document.querySelectorAll('#cal-reminders .rem-chip')];
+      const c = chips.find(ch => ch.textContent.includes('PAY THE RENT'));
+      const stored = (async () => {
+        const all = await idbGetAll();
+        return all.find(r => r.id === 'rem-seed') || null;
+      })();
+      return stored.then(s => ({ text: c ? c.textContent : null, hasNext: !!(s && 'next' in s), next: s ? s.next : null }));
+    });
+    ok('the seeded reminder chip is the typed title byte-for-byte — no suffix of any kind',
+      seeded.text === 'PAY THE RENT', JSON.stringify(seeded));
+    ok('the stored reminder record still carries r.next — nothing stripped (criterion 3)',
+      seeded.hasNext === true && typeof seeded.next === 'string' && seeded.next.length > 0, JSON.stringify(seeded));
+
+    // 2. Add a reminder through the plus control; the new chip equals what was typed.
+    const plusPos = await page.evaluate(() => {
+      const p = document.querySelector('#cal-reminders .rem-plus');
+      const r = p.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    const c2 = await page.context().newCDPSession(page);
+    await c2.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: plusPos.x, y: plusPos.y }] });
+    await page.waitForTimeout(30);
+    await c2.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await c2.detach();
+    await page.waitForTimeout(300);
+    await page.keyboard.type('CLEAN THE GARAGE');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(700);
+
+    const after = await page.evaluate(async () => {
+      const chips = [...document.querySelectorAll('#cal-reminders .rem-chip')].map(ch => ch.textContent);
+      const stored = (await idbGetAll()).filter(r => typeof r.rem === 'string').map(r => ({ rem: r.rem, hasNext: 'next' in r }));
+      return { chips, stored };
+    });
+    const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
+    ok('every reminder chip is suffix-free and the added chip is exactly the typed title',
+      after.chips.every(t => !WEEKDAY.test(t)) &&
+      after.chips.includes('CLEAN THE GARAGE') && after.chips.includes('PAY THE RENT'),
+      JSON.stringify(after.chips));
+    ok('every stored reminder record that ships a title still carries r.next (writer intact, subset survived)',
+      after.stored.every(s => s.hasNext) && after.stored.some(s => s.rem === 'CLEAN THE GARAGE' && s.hasNext),
+      JSON.stringify(after.stored));
+
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   console.log(`\n=== day-view-suffix: ${pass} passed, ${fail} failed ===`);
   process.exit(fail ? 1 : 0);
 })();
