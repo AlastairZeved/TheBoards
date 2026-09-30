@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v114 — version bumped (the #320 chip-suffix removal + the B138 amendment pin this build family)',
-    /const CACHE = 'zeved-boards-v114';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v114, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v114';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v115 — version bumped (the #329 section rebuild pins this build family)',
+    /const CACHE = 'zeved-boards-v115';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v115, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v115';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -858,24 +858,30 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /#cal-month \{/.test(css) && /grid-template-columns: repeat\(7, 1fr\)/.test(css));
   ok('a day with events wears exactly one dot — --accent-page, a shade within the palette (issue #191)',
     /\.mo-dot \{/.test(css) && /\.mo-dot \{[^}]*background: var\(--accent-page\);/.test(css));
-  // --- Issue #313 (B142): the hourly view's R4 hairline + R9 collapsed-rail hide ---
-  ok('the hourly block wears the R4 hairline at its bottom edge — 1px solid var(--hairline), the existing token, nothing else separates it from the day stack (issue #313)',
-    /#cal-hours \{[^}]*border-bottom: 1px solid var\(--hairline\);/.test(css) &&
-    !/#cal-hours [^%]{0,400}border-bottom:[^%]{0,40}(#|rgb\(|rgba\()/.test(css));
-  ok('the collapsed rail hides the hourly block too (issue #313, R9) — it joins #cal-top/#cal-stack/#cal-month in the hide selector',
-    /#cal-view\.rail-open #cal-hours,/.test(css));
-  // --- Issue #321: the day-view block is one filled orange zone, floored + framed ---
-  ok('the block keeps the B72 inset frame and 4px radius, and is floored so it can never collapse into a one-line chip (issue #321, R1/R4)',
-    /\.cal-hour \{[^}]*min-height: 76px;/.test(css) &&
-    /\.cal-hour \{[^}]*overflow: hidden;/.test(css) &&
-    /\.cal-hour \{[^}]*outline: 2px solid var\(--frame\);/.test(css) &&
-    /\.cal-hour \{[^}]*border-radius: 4px;/.test(css));
-  ok('the box\'s own inset and gap re-seat onto the single zone — gap: 0, padding: 0, so the fill meets the frame with no gutter (issue #321, R5)',
-    /\n  gap: 0;/.test(css) && /\n  padding: 0;/.test(css));
-  ok('the single zone is the ladder\'s dark orange floor var(--water-bot), flex-absorbed with the re-seated inset, ink arriving via the shipped color (issue #321, comment 4)',
-    /\.cal-hour-text \{[^}]*flex: 1 1 auto;/.test(css) &&
-    /\.cal-hour-text \{[^}]*background: var\(--water-bot\);/.test(css) &&
-    /\.cal-hour-text \{[^}]*padding: 4px 6px;/.test(css));
+  // --- Issue #329: the day head + the section's own square two-zone blocks ---
+  ok('the day head is the date alone — a real element, no add control of its own (issue #329)',
+    /id="cal-dayhead"/.test(html) &&
+    /calDayhead: document\.getElementById\('cal-dayhead'\)/.test(app) && /#cal-dayhead \{/.test(css));
+  ok('the section is a three-column grid of square blocks — repeat(3, minmax(0,1fr)) and aspect-ratio 1/1, the inset frame, 4px radius (issue #329)',
+    /#cal-notes-grid \{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\).*/.test(css) &&
+    /\.cal-note \{[^}]*aspect-ratio: 1 \/ 1;/.test(css) &&
+    /\.cal-note \{[^}]*outline: 2px solid var\(--frame\);/.test(css) &&
+    /\.cal-note \{[^}]*border-radius: 4px;/.test(css));
+  ok('the block\'s fills meet the frame — overflow hidden, gap: 0, padding: 0 (issue #329)',
+    /\.cal-note \{[^}]*overflow: hidden;/.test(css) && /\n  gap: 0;/.test(css) && /\n  padding: 0;/.test(css));
+  ok('the band is the lighter orange var(--note) with --ink-dark ink at the title slot type (issue #329)',
+    /\.cal-note-title \{[^}]*background: var\(--note\);/.test(css) &&
+    /\.cal-note-title \{[^}]*color: var\(--ink\);/.test(css) &&
+    /\.cal-note-title \{[^}]*font-size: 13px; font-weight: 600; line-height: 1\.3;/.test(css));
+  ok('the body is the darker orange var(--water-bot) with --ink-light ink, flex-absorbed with the re-seated inset (issue #329)',
+    /\.cal-note-text \{[^}]*flex: 1 1 auto;/.test(css) &&
+    /\.cal-note-text \{[^}]*background: var\(--water-bot\);/.test(css) &&
+    /\.cal-note-text \{[^}]*color: var\(--ink-light\);/.test(css) &&
+    /\.cal-note-text \{[^}]*padding: 4px 6px;/.test(css));
+  ok('the add "+" wears the calendar\'s own orange --frame accent, rightmost in the row (issue #329)',
+    /\.cal-notes-add \{[^}]*background: var\(--frame\);/.test(css));
+  ok('the collapsed rail hides the day head and its squares too (issue #329)',
+    /#cal-view\.rail-open #cal-dayhead,/.test(css) && /#cal-view\.rail-open #cal-notes,/.test(css));
   ok('today wears the to-do boards\' water fall; the current week gets the pale ink-light band (issue #191)',
     /\.mo-cell\.today \{[^}]*linear-gradient\(180deg, var\(--water-top\) 0%, var\(--water-mid\) 46%, var\(--water-bot\) 100%\)/.test(css) &&
     /\.mo-cell\.wk \{ background: rgb\(244 245 241 \/ \.08\); \}/.test(css));
