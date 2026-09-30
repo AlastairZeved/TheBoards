@@ -1379,12 +1379,16 @@ export function renderCal() {
    hour list is empty and ready. No roll machinery is owed — renderCal already
    runs checkDayRoll on every render.
 
-   Row 1 (.cal-hours-head): the date (anchored left, month-day no year) and the
-   plus (anchored right). Row 2 (.cal-hours-list): one .cal-hour per event,
-   the box's top line the time (subscript, set low) over its primary text. On
-   add the NEW box's TIME line opens in edit — capture-on-arrival, retargeted
-   from addCalEvent's text line to the time (R5). Each line commits its field;
-   a commit that leaves BOTH fields empty discards the record and box (B8). */
+   Issue #319: the original head line — the date (month-day, no year) anchored
+   left and a plus anchored right on one row — was a phantom/vestigial top line
+   of the day view. Its plus added a block to a different line than the day
+   cards' own ".cal-add" pluses, so the day's list showed two "+" symbols with
+   two meanings. The head line and its control go together (the issue's ruling):
+   neither renders now. What remains is the hour list alone — one .cal-hour per
+   event, the box's top line the time (subscript, set low) over its primary
+   text. Adding lives with the day cards' single "+" (addCalEvent, issue #319),
+   which adds to the line it sits on. Each line commits its field; a commit
+   that leaves BOTH fields empty discards the record and box (B8). */
 function renderCalHours(events) {
   const box = el.calHours;
   if (box.querySelector('[contenteditable]')) return;  // an edit is open — rebuilding throws the user's typing away
@@ -1392,22 +1396,9 @@ function renderCalHours(events) {
   const todayKey = calKey(new Date());
   const todayEvents = calEventsOf(events, todayKey);
 
-  // Row 1: the date line and the add control, one line.
-  const head = document.createElement('div');
-  head.className = 'cal-hours-head';
-  const date = document.createElement('div');
-  date.className = 'cal-hours-date';
-  date.textContent = new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
-  const add = document.createElement('button');
-  add.type = 'button';
-  add.className = 'cal-hours-add';
-  add.setAttribute('aria-label', 'Add hour');
-  add.textContent = '+';
-  add.addEventListener('click', () => addCalHour(todayKey, box));
-  head.append(date, add);
-  box.appendChild(head);
-
-  // Row 2: the hour list — one .cal-hour per event of the day, creation order.
+  // The hour list — one .cal-hour per event of the day, creation order.
+  // (Issue #319 removed the head row: the date and its own add "+" were the
+  // phantom top line. The day cards carry the day's one "+".)
   const list = document.createElement('div');
   list.className = 'cal-hours-list';
   list.setAttribute('role', 'list');
@@ -1488,30 +1479,11 @@ function startHourEdit(node, ev, field) {
   });
 }
 
-/* The plus control: add a new hour box for today (R5). Ensures the linked
-   board, writes the record, inserts the box at the list's end, and opens its
-   TIME line in edit — capture precedes structure, §1.1, retargeted to the
-   time (this is where the cursor defaults). Creating + writing are
-   consequences, so the whole step runs under commitAction's drop-guard
-   (B81), exactly as addCalEvent does. */
-async function addCalHour(todayKey, box) {
-  commitAction(async () => {
-    flushSave();
-    const all = await idbGetAll();
-    const ev = newCalEvent(todayKey, '');
-    const boards = all.filter(b => b.title !== undefined);
-    const { board } = ensureLinkedBoard(boards, todayKey);
-    if (board.calReq === undefined) {
-      board.calReq = calEventsOf(eventsOf(all), todayKey).length;
-    }
-    await idbPut(board);
-    await idbPut(ev);
-    const hour = makeCalHour(ev, true);               // force the time line so it can open in edit
-    const list = box.querySelector('.cal-hours-list') || box;
-    list.appendChild(hour);
-    startHourEdit(hour.querySelector('.cal-hour-time'), ev, 'time');  // the cursor lands on the time line
-  });
-}
+/* The plus control: add a new hour box for today (R5). Retired by issue #319:
+   the head row that carried this control was a phantom top line of the day
+   view — its plus duplicated the day cards' own ".cal-add", so the day's list
+   showed two "+" symbols with two meanings. Adding now lives with the day
+   cards' single "+" (addCalEvent), which adds to the line it sits on. */
 
 /* --- The recurring-reminders strip (issue #295, B138) ----------------------
    Fills the slack issue #293 freed above the day list, mobile tier only.
