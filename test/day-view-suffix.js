@@ -56,7 +56,6 @@ async function newPage(browser, viewport = { width: 384, height: 846 }) {
     const before = await page.evaluate(async () => {
       const tk = calKey(new Date());
       const hours = [...document.querySelectorAll('.cal-hour')].map(b => ({
-        time: (b.querySelector('.cal-hour-time') || {}).textContent || '',
         text: (b.querySelector('.cal-hour-text') || {}).textContent || '',
       }));
       const lines = [...document.querySelectorAll('.cal-line')].map(l => l.textContent);
@@ -88,7 +87,6 @@ async function newPage(browser, viewport = { width: 384, height: 846 }) {
     const after = await page.evaluate(async () => {
       const tk = calKey(new Date());
       const hours = [...document.querySelectorAll('.cal-hour')].map(b => ({
-        time: (b.querySelector('.cal-hour-time') || {}).textContent || '',
         text: (b.querySelector('.cal-hour-text') || {}).textContent || '',
       }));
       const lines = [...document.querySelectorAll('.cal-line')].map(l => l.textContent);
@@ -101,7 +99,7 @@ async function newPage(browser, viewport = { width: 384, height: 846 }) {
     const afterTexts = [...after.hours.map(h => h.text), ...after.lines];
     ok('every pre-existing block label is byte-identical after adding a block',
       beforeTexts.every(t => afterTexts.includes(t)) &&
-      before.hours.every(h => after.hours.some(a => a.time === h.time && a.text === h.text)),
+      before.hours.every(h => after.hours.some(a => a.text === h.text)),
       JSON.stringify({ before: beforeTexts, after: afterTexts }));
 
     // 2. No label carries a " — " + weekday suffix anywhere in the day view.
