@@ -2011,14 +2011,16 @@ html:not(.wide) #cal-reminders {
 .cal-hour {
   flex: 0 0 calc(25% - 8px);            /* aim 4 across; the min-width thins to 3 on the panel */
   min-width: 76px;                      /* never narrower than a readable column */
-  outline: 2px solid var(--frame);      /* the family's inset frame (B72) */
+  min-height: 76px;                     /* the family's own floor on the second axis (R1): the box can never collapse into a one-line chip */
+  outline: 2px solid var(--frame);      /* the family's inset frame (B72) — stays; the fill must not erase it */
   outline-offset: -2px;
   background: transparent;              /* the view's ground shows through */
   color: var(--ink);
   border-radius: 4px;
+  overflow: hidden;                     /* the filled single zone is clipped to the 4px radius (R1) */
   display: flex; flex-direction: column;
-  gap: 3px;
-  padding: 4px 6px;
+  gap: 0;                               /* R5: the fills meet flush inside the frame — no gutter of the view's ground */
+  padding: 0;                           /* R5: the box's own inset re-seats onto the zone */
 }
 .cal-hour.complete .cal-hour-time,
 .cal-hour.complete .cal-hour-text { text-decoration: line-through; opacity: .55; }
@@ -2028,8 +2030,11 @@ html:not(.wide) #cal-reminders {
 }
 .cal-hour-text {
   font-size: 12px; line-height: 1.4;
-  color: var(--ink);
+  color: var(--ink);                    /* under #cal-view's .on-dark, --ink is --ink-light #f4f5f1 — 11.62:1 on the fill */
   overflow-wrap: break-word;
+  flex: 1 1 auto;                       /* the zone absorbs the box's floored height, so the fill reaches the frame's bottom edge */
+  background: var(--water-bot);         /* #462d1a — the ladder's orange, the water fall's floor (R1/comment 4) */
+  padding: 4px 6px;                     /* the box's own inset, re-seated on the zone, so the fill meets the frame */
 }
 .cal-hour-time[contenteditable],
 .cal-hour-text[contenteditable] {
