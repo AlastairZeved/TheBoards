@@ -2022,12 +2022,7 @@ html:not(.wide) #cal-reminders {
   gap: 0;                               /* R5: the fills meet flush inside the frame — no gutter of the view's ground */
   padding: 0;                           /* R5: the box's own inset re-seats onto the zone */
 }
-.cal-hour.complete .cal-hour-time,
 .cal-hour.complete .cal-hour-text { text-decoration: line-through; opacity: .55; }
-.cal-hour-time {
-  font-size: 10px; font-weight: 600; line-height: 1.1;
-  color: var(--ink); opacity: .72;                          /* the subscript: set low and small against the text below */
-}
 .cal-hour-text {
   font-size: 12px; line-height: 1.4;
   color: var(--ink);                    /* under #cal-view's .on-dark, --ink is --ink-light #f4f5f1 — 11.62:1 on the fill */
@@ -2036,7 +2031,6 @@ html:not(.wide) #cal-reminders {
   background: var(--water-bot);         /* #462d1a — the ladder's orange, the water fall's floor (R1/comment 4) */
   padding: 4px 6px;                     /* the box's own inset, re-seated on the zone, so the fill meets the frame */
 }
-.cal-hour-time[contenteditable],
 .cal-hour-text[contenteditable] {
   outline: none;                        /* the editor's own treatment, per .cal-line[contenteditable] */
   white-space: pre-wrap;

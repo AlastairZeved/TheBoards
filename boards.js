@@ -1406,58 +1406,43 @@ function renderCalHours(events) {
   box.appendChild(list);
 }
 
-/* One hour box (R6): the record's top line is the time, below it the primary
-   text. Both lines open in edit on tap and commit their field on blur (time →
-   `time`, text → `text`); the text commit also re-syncs the linked board's
-   mirror, the one-writer law of startCalLineEdit. A commit that leaves both
-   fields empty discards the record and box (B8's rule: the frame must earn
+/* One hour box (R6): the record's single line is its primary text, which
+   opens in edit on tap and commits to `text` on blur, re-syncing the linked
+   board's mirror (the one-writer law of startCalLineEdit). A commit that
+   leaves the record empty discards the box (B8's rule: the frame must earn
    its keep). `complete` wears the line's strike-through + dim (R6).
 
-   R7: a record with no `time` (every pre-existing event) renders WITHOUT an
-   empty time line — the time line appears only when `time` is non-empty, or
-   on the ADD path (`forceTime`), where the fresh box must open its still-empty
-   time in edit (R5). */
-function makeCalHour(ev, forceTime = false) {
+   Issue #323: the time subscript is retired. The stored `time` field stays on
+   the record — existing values survive untouched, and nothing reads or writes
+   it now — but no hour box renders a time line. */
+function makeCalHour(ev) {
   const box = document.createElement('div');
   box.className = 'cal-hour' + (ev.state === 'complete' ? ' complete' : '');
   box.setAttribute('role', 'listitem');
-  if (ev.time || forceTime) {
-    const time = document.createElement('div');
-    time.className = 'cal-hour-time';
-    if (ev.time) time.textContent = ev.time;
-    time.addEventListener('click', (e) => {
-      if (time.hasAttribute('contenteditable')) return;
-      e.preventDefault();
-      startHourEdit(time, ev, 'time');
-    });
-    box.append(time);
-  }
   const text = document.createElement('div');
   text.className = 'cal-hour-text';
   text.textContent = ev.text;
   text.addEventListener('click', (e) => {
     if (text.hasAttribute('contenteditable')) return;
     e.preventDefault();
-    startHourEdit(text, ev, 'text');
+    startHourEdit(text, ev);
   });
   box.append(text);
   return box;
 }
 
-/* The hour box line's editor: commit-on-blur writes the event's field (time
-   or text). A commit that leaves both loud fields empty discards — B8's rule,
-   the box earns its keep like any frame. The text commit re-syncs the board's
-   mirror (one write, both surfaces); the time commit does not touch the
-   mirror (R7: the mirror carries only `text`). */
-function startHourEdit(node, ev, field) {
+/* The hour box line's editor: commit-on-blur writes the event's `text` and
+   re-syncs the board's mirror (one write, both surfaces). A commit that
+   leaves the record empty discards — B8's rule, the box earns its keep like
+   any frame. Issue #323: the `time` writer is retired with the time line. */
+function startHourEdit(node, ev) {
   node.setAttribute('contenteditable', CE);
   node.focus();
   caretToEnd(node);
   const commit = async () => {
     node.removeAttribute('contenteditable');
     const value = node.textContent.trim();
-    if (field === 'text') ev.text = value;
-    else ev.time = value;
+    ev.text = value;
     if (!(ev.text || '').trim() && !(ev.time || '').trim()) {  // empty commit discards (B8)
       await idbDelete(ev.id);
       const box = node.closest('.cal-hour');
@@ -1467,10 +1452,8 @@ function startHourEdit(node, ev, field) {
       return;
     }
     await idbPut(ev);
-    if (field === 'text') {                    // the mirror carries only text (R7)
-      await syncDateMirror(ev.date);
-      repaintVisibleBoard();
-    }
+    await syncDateMirror(ev.date);
+    repaintVisibleBoard();
     scheduleSave();
   };
   node.addEventListener('blur', commit, { once: true });
