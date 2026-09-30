@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v111 — version bumped (shipped bytes changed, the #320 regression guard pins that day-view block labels carry no weekday suffix)',
-    /const CACHE = 'zeved-boards-v111';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v111, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v111';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v112 — version bumped (shipped bytes changed, the #321 single-filled-zone block + the #320 regression guard both pin this day-view family)',
+    /const CACHE = 'zeved-boards-v112';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v112, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v112';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -864,6 +864,19 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     !/#cal-hours [^%]{0,400}border-bottom:[^%]{0,40}(#|rgb\(|rgba\()/.test(css));
   ok('the collapsed rail hides the hourly block too (issue #313, R9) — it joins #cal-top/#cal-stack/#cal-month in the hide selector',
     /#cal-view\.rail-open #cal-hours,/.test(css));
+  // --- Issue #321: the day-view block is one filled orange zone, floored + framed ---
+  ok('the block keeps the B72 inset frame and 4px radius, and is floored so it can never collapse into a one-line chip (issue #321, R1/R4)',
+    /\.cal-hour \{[^}]*min-height: 76px;/.test(css) &&
+    /\.cal-hour \{[^}]*overflow: hidden;/.test(css) &&
+    /\.cal-hour \{[^}]*outline: 2px solid var\(--frame\);/.test(css) &&
+    /\.cal-hour \{[^}]*border-radius: 4px;/.test(css));
+  ok('the box\'s own inset and gap re-seat onto the single zone — gap: 0, padding: 0, so the fill meets the frame with no gutter (issue #321, R5)',
+    /\n  gap: 0;/.test(css) && /\n  padding: 0;/.test(css));
+  ok('the single zone is the ladder\'s dark orange floor var(--water-bot), flex-absorbed with the re-seated inset, ink arriving via the shipped color (issue #321, comment 4)',
+    /\.cal-hour-text \{[^}]*flex: 1 1 auto;/.test(css) &&
+    /\.cal-hour-text \{[^}]*background: var\(--water-bot\);/.test(css) &&
+    /\.cal-hour-text \{[^}]*padding: 4px 6px;/.test(css) &&
+    !/\.cal-hour-time \{[^}]*background:/.test(css));
   ok('today wears the to-do boards\' water fall; the current week gets the pale ink-light band (issue #191)',
     /\.mo-cell\.today \{[^}]*linear-gradient\(180deg, var\(--water-top\) 0%, var\(--water-mid\) 46%, var\(--water-bot\) 100%\)/.test(css) &&
     /\.mo-cell\.wk \{ background: rgb\(244 245 241 \/ \.08\); \}/.test(css));
