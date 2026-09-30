@@ -1,19 +1,25 @@
-// Issue #320: adding a block to the day view must never append a day-of-week
-// suffix ("— TUE") to any block label. A block's label is exactly what the
-// user typed; adding a block never rewrites the text of existing blocks.
+// Issue #320 + #329: neither the day view nor the section's square blocks may
+// ever append a day-of-week suffix ("— TUE") to a label. A block's label is
+// exactly what the user typed; adding a block never rewrites the text of
+// existing blocks.
 //
-// This suite reproduces the issue's exact scenario (phone width, the expanded
-// #cal-view face, today's events carrying time fields) and asserts the two
-// acceptance behaviours as shipped:
-//   1. every pre-existing block label is byte-identical after adding a block;
-//   2. no block label carries a " — " + weekday suffix — the appended string is
-//      absent from the render path, not stripped at render time.
-// The regression is written to FAIL if a future change ever recomposes a
-// weekday into a block label (the tempting wrong fix is a render-time scrub,
-// which cannot make this suite pass — it asserts the stored/rendered text is
-// untouched, so a scrub that eats a user-typed suffix fails here too).
+// Issue #329 replaced the retired reminders strip and the retired hourly
+// boxes with the section's OWN records rendered as square two-zone blocks
+// (a lighter-orange title band over a darker orange body), three across. This
+// suite reproduces #320's exact acceptance behaviours on the current surface:
+//   1. every pre-existing label is byte-identical after adding a block;
+//   2. no label carries a " — " + weekday suffix — the appended string is
+//      absent from the render path, not stripped at render time;
+//   3. the section's blocks render from the released reminder records: the
+//      band carries the stored `rem` title alone, the body carries the stored
+//      `next` free text (a legacy calKey date renders as an empty body), and
+//      nothing is read from a calendar event record;
+//   4. the row's "+" adds a square in edit with the caret in the title band;
+//      Enter in the band (or a tap on the darker body) moves the caret into
+//      the body; a commit writes BOTH fields in one step.
 //
-// Pure display: nothing here writes records beyond seeding the day's events.
+// The regression is written to FAIL if a future change re-composes a weekday
+// into a label (the tempting wrong fix is a render-time scrub).
 
 const { chromium } = require('playwright');
 const URL = process.env.BOARDS_URL || 'http://localhost:8000/index.html';
@@ -23,7 +29,7 @@ let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
 async function newPage(browser, viewport = { width: 384, height: 846 }) {
-  const ctx = await browser.newContext({ viewport, isMobile: true, hasTouch: true, deviceScaleFactor: 3 });
+  const ctx = await browser.newContext({ viewport, isMobile: true, hasTouch: true, deviceScaleFactor: 3, serviceWorkers: 'block' });
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
@@ -34,51 +40,47 @@ async function newPage(browser, viewport = { width: 384, height: 846 }) {
   return { ctx, page, errors };
 }
 
-(async () => {
-  const browser = await chromium.launch({ ...launchOpts });
+async function tap(page, x, y) {
+  const c = await page.context().newCDPSession(page);
+  await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+  await page.waitForTimeout(30);
+  await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await c.detach();
+}
+async function center(page, sel) {
+  const r = await (await page.$(sel)).boundingBox();
+  return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+}
+const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
 
-  console.log('\n[V1] Adding a block appends no day-of-week suffix to any label (issue #320)');
+(async () => {
+  const browser = await chromium.launch(launchOpts);
+
+  console.log('\n[V1] Adding a block to the day view appends no day-of-week suffix to any label (issue #320 — the 7-day rows stay, unchanged from #329)');
   {
     const { ctx, page, errors } = await newPage(browser);
-    // Seed today with two time-carrying blocks, exactly the issue's shape:
-    // "9-2 WORK ON REPOS" and "1-2 LUNCH".
     await page.evaluate(async () => {
       const tk = calKey(new Date());
       const e1 = newCalEvent(tk, 'WORK ON REPOS'); e1.time = '9-2';
       const e2 = newCalEvent(tk, 'LUNCH'); e2.time = '1-2';
       await idbPut(e1); await idbPut(e2);
     });
-    // Open the expanded calendar face (the day view) via the real tab.
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(900);
 
-    // Snapshot every block label BEFORE adding.
     const before = await page.evaluate(async () => {
       const tk = calKey(new Date());
-      const hours = [...document.querySelectorAll('.cal-hour')].map(b => ({
-        text: (b.querySelector('.cal-hour-text') || {}).textContent || '',
-      }));
-      const lines = [...document.querySelectorAll('.cal-line')].map(l => l.textContent);
-      const stored = (await idbGetAll()).filter(r => r.date === tk).map(r => r.text);
-      return { hours, lines, stored };
+      return {
+        lines: [...document.querySelectorAll('.cal-line')].map(l => l.textContent),
+        stored: (await idbGetAll()).filter(r => r.date === tk).map(r => r.text),
+      };
     });
-    ok('the two seeded blocks render with their exact text (no suffix at rest)',
-      before.hours.length === 2 &&
-      before.hours.every(h => h.text === 'WORK ON REPOS' || h.text === 'LUNCH') &&
-      before.lines.every(l => l === 'WORK ON REPOS' || l === 'LUNCH'),
-      JSON.stringify(before));
+    ok('the two seeded day blocks render with their exact text (no suffix at rest)',
+      before.lines.length === 2 &&
+      before.lines.every(l => l === 'WORK ON REPOS' || l === 'LUNCH'), JSON.stringify(before));
 
-    // Add a block via the day card's "+" and type its label.
-    const addPos = await page.evaluate(() => {
-      const add = document.querySelector('.cal-day .cal-add');
-      const r = add.getBoundingClientRect();
-      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-    });
-    const c = await page.context().newCDPSession(page);
-    await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: addPos.x, y: addPos.y }] });
-    await page.waitForTimeout(30);
-    await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await c.detach();
+    const addPos = await center(page, '.cal-day .cal-add');
+    await tap(page, addPos.x, addPos.y);
     await page.waitForTimeout(300);
     await page.keyboard.type('NEW BLOCK ENTRY');
     await page.keyboard.press('Enter');
@@ -86,101 +88,113 @@ async function newPage(browser, viewport = { width: 384, height: 846 }) {
 
     const after = await page.evaluate(async () => {
       const tk = calKey(new Date());
-      const hours = [...document.querySelectorAll('.cal-hour')].map(b => ({
-        text: (b.querySelector('.cal-hour-text') || {}).textContent || '',
-      }));
-      const lines = [...document.querySelectorAll('.cal-line')].map(l => l.textContent);
-      const stored = (await idbGetAll()).filter(r => r.date === tk).map(r => r.text);
-      return { hours, lines, stored };
+      return {
+        lines: [...document.querySelectorAll('.cal-line')].map(l => l.textContent),
+        stored: (await idbGetAll()).filter(r => r.date === tk).map(r => r.text),
+      };
     });
-
-    // 1. Every pre-existing label is byte-identical after the add.
-    const beforeTexts = [...before.hours.map(h => h.text), ...before.lines];
-    const afterTexts = [...after.hours.map(h => h.text), ...after.lines];
-    ok('every pre-existing block label is byte-identical after adding a block',
-      beforeTexts.every(t => afterTexts.includes(t)) &&
-      before.hours.every(h => after.hours.some(a => a.text === h.text)),
-      JSON.stringify({ before: beforeTexts, after: afterTexts }));
-
-    // 2. No label carries a " — " + weekday suffix anywhere in the day view.
-    const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
-    const allLabels = [...after.hours.map(h => h.text), ...after.lines, ...after.stored];
-    ok('no day-view block label carries a " — WEEKDAY" suffix (the appended string is gone)',
-      allLabels.every(t => !WEEKDAY.test(t)), JSON.stringify(allLabels));
-
-    // 3. The new block's label is exactly what was typed.
-    ok('the added block\'s label is exactly the typed text',
-      after.lines.includes('NEW BLOCK ENTRY') && after.stored.includes('NEW BLOCK ENTRY'),
-      JSON.stringify(after.lines));
-
+    ok('every day-block label is byte-identical after adding + no weekday suffix anywhere + the new label is exactly typed',
+      after.lines.includes('NEW BLOCK ENTRY') && after.stored.includes('NEW BLOCK ENTRY') &&
+      [...after.lines, ...after.stored].every(t => !WEEKDAY.test(t)), JSON.stringify(after));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
 
-  console.log('\n[V2] A recurring-reminder chip renders the user\'s title alone — no auto-appended weekday, r.next stays stored (issue #320, supersedes B138\'s chip clause)');
+  console.log('\n[V2] The section\'s own records render as square blocks from the released reminder records — the title alone, legacy dates empty, r.next stays stored (issue #329 supersedes B138/B144)');
   {
     const { ctx, page, errors } = await newPage(browser);
     // Seed one reminder record carrying a real next-occurrence date (the
-    // stored field must survive and stay unread by the chip — nothing is
-    // migrated or stripped).
+    // stored field must survive and stay unread by any strip — nothing is
+    // migrated, stripped, or rewritten; a legacy calKey date is not body text).
     await page.evaluate(async () => {
       await idbPut({ id: 'rem-seed', rem: 'PAY THE RENT', next: calKey(new Date()) });
     });
     await page.reload();
     await page.waitForTimeout(500);
-    // Open the expanded calendar face via the real tab.
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(900);
 
-    // 1. The seeded chip's textContent is EXACTLY the typed title.
-    const seeded = await page.evaluate(() => {
-      const chips = [...document.querySelectorAll('#cal-reminders .rem-chip')];
-      const c = chips.find(ch => ch.textContent.includes('PAY THE RENT'));
-      const stored = (async () => {
-        const all = await idbGetAll();
-        return all.find(r => r.id === 'rem-seed') || null;
-      })();
-      return stored.then(s => ({ text: c ? c.textContent : null, hasNext: !!(s && 'next' in s), next: s ? s.next : null }));
-    });
-    ok('the seeded reminder chip is the typed title byte-for-byte — no suffix of any kind',
-      seeded.text === 'PAY THE RENT', JSON.stringify(seeded));
-    ok('the stored reminder record still carries r.next — nothing stripped (criterion 3)',
-      seeded.hasNext === true && typeof seeded.next === 'string' && seeded.next.length > 0, JSON.stringify(seeded));
+    // 1. The header is the date alone — no add control of its own.
+    const head = await page.evaluate(() => ({
+      text: document.getElementById('cal-dayhead').textContent,
+      hasButton: !!document.getElementById('cal-dayhead').querySelector('button'),
+    }));
+    ok('the day head carries the date alone (a real date string, no add control)',
+      head.text.length > 0 && head.hasButton === false, JSON.stringify(head));
 
-    // 2. Add a reminder through the plus control; the new chip equals what was typed.
-    const plusPos = await page.evaluate(() => {
-      const p = document.querySelector('#cal-reminders .rem-plus');
-      const r = p.getBoundingClientRect();
-      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    // 2. The seeded record renders as a square block: band = the title alone,
+    //    body = empty (the legacy calKey date is not user body text).
+    const note = await page.evaluate(async () => {
+      const n = [...document.querySelectorAll('#cal-notes-grid .cal-note')].find(x => x.querySelector('.cal-note-title').textContent === 'PAY THE RENT');
+      const s = n && n.querySelector('.cal-note-text');
+      const stored = (await idbGetAll()).find(r => r.id === 'rem-seed') || null;
+      const r = n && n.getBoundingClientRect();
+      return { title: n ? n.querySelector('.cal-note-title').textContent : null,
+               bodyText: s ? s.textContent : null,
+               square: r ? (r.width / r.height) : null,
+               storedNext: stored && stored.next };
     });
-    const c2 = await page.context().newCDPSession(page);
-    await c2.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: plusPos.x, y: plusPos.y }] });
-    await page.waitForTimeout(30);
-    await c2.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await c2.detach();
-    await page.waitForTimeout(300);
+    ok('the seeded block\'s band is the typed title byte-for-byte — no suffix of any kind (issue #320)',
+      note.title === 'PAY THE RENT', JSON.stringify(note));
+    ok('the seeded block is a square and its body is empty (a legacy calKey date is not body text)',
+      note.square !== null && note.square >= 0.95 && note.square <= 1.15 && note.bodyText === '', JSON.stringify(note));
+    ok('the stored reminder record still carries r.next — nothing stripped or rewritten',
+      typeof note.storedNext === 'string' && note.storedNext.length === 10, JSON.stringify(note));
+
+    // 3. The row's "+" adds a square in edit, caret in the title band.
+    const p = await center(page, '#cal-notes-add');
+    await tap(page, p.x, p.y);
+    await page.waitForTimeout(400);
+    const addState = await page.evaluate(() => {
+      const ae = document.activeElement;
+      return { activeIsBand: ae && ae.classList && ae.classList.contains('cal-note-title'),
+               inEdit: ae && ae.hasAttribute && ae.hasAttribute('contenteditable') };
+    });
+    ok('tapping "+" adds a square with the caret in the title band (in edit)',
+      addState.activeIsBand === true && addState.inEdit === true, JSON.stringify(addState));
+
+    // 4. Type in the band; Enter hands off to the darker body; type; commit.
     await page.keyboard.type('CLEAN THE GARAGE');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(300);
+    const enterState = await page.evaluate(() =>
+      document.activeElement && document.activeElement.classList.contains('cal-note-text'));
+    ok('Enter in the title band moves the caret into the darker body',
+      enterState === true, JSON.stringify(enterState));
+    await page.keyboard.type('and the garage');
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(600);
 
     const after = await page.evaluate(async () => {
-      const chips = [...document.querySelectorAll('#cal-reminders .rem-chip')].map(ch => ch.textContent);
-      const stored = (await idbGetAll()).filter(r => typeof r.rem === 'string').map(r => ({ rem: r.rem, hasNext: 'next' in r }));
-      return { chips, stored };
+      const recs = (await idbGetAll()).filter(r => typeof r.rem === 'string');
+      const added = recs.find(r => r.id !== 'rem-seed') || null;
+      return { title: added && added.rem, body: added && added.next, keys: added && Object.keys(added).sort() };
     });
-    const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
-    ok('every reminder chip is suffix-free and the added chip is exactly the typed title',
-      after.chips.every(t => !WEEKDAY.test(t)) &&
-      after.chips.includes('CLEAN THE GARAGE') && after.chips.includes('PAY THE RENT'),
-      JSON.stringify(after.chips));
-    ok('every stored reminder record that ships a title still carries r.next (writer intact, subset survived)',
-      after.stored.every(s => s.hasNext) && after.stored.some(s => s.rem === 'CLEAN THE GARAGE' && s.hasNext),
-      JSON.stringify(after.stored));
+    ok('the added square commits BOTH fields — band and body free text, no weekday suffix, no new field',
+      after.title === 'CLEAN THE GARAGE' && after.body === 'and the garage' &&
+      !WEEKDAY.test(after.title) && JSON.stringify(after.keys) === JSON.stringify(['id', 'next', 'rem']),
+      JSON.stringify(after));
+
+    // 5. A tap on the darker body of an existing block seats the caret there too.
+    await page.evaluate(() => {
+      const t = document.querySelector('#cal-notes-grid .cal-note-text');
+      t.scrollIntoView(); return true;
+    });
+    await page.waitForTimeout(200);
+    const tb = await page.$('#cal-notes-grid .cal-note-text');
+    const b2 = await tb.boundingBox();
+    await tap(page, b2.x + b2.width / 2, b2.y + b2.height / 2);
+    await page.waitForTimeout(400);
+    const tapState = await page.evaluate(() =>
+      document.activeElement && document.activeElement.classList.contains('cal-note-text'));
+    ok('a tap on the darker part moves the caret into the darker part',
+      tapState === true, JSON.stringify(tapState));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
 
   console.log(`\n=== day-view-suffix: ${pass} passed, ${fail} failed ===`);
+  await browser.close();
   process.exit(fail ? 1 : 0);
 })();

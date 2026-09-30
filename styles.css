@@ -54,9 +54,9 @@
      COMPOSED from them at :root (--hairline, line 53 below) referenced an
      undefined variable at their declaration element and were rejected
      invalid-at-computed-value-time — inheriting as UNSET everywhere the
-     hairline is used (every 1px hairline in the app computed to 0px; the
-     R4 fix's border-bottom on #cal-hours could not paint for this reason,
-     not the flex/height collapse the field report described). The handles
+         hairline is used (every 1px hairline in the app computed to 0px; the
+         R4 fix's hourly-strip border-bottom could not paint for this reason,
+         not the flex/height collapse the field report described). The handles
      still override per surface below (UIUX §2.3). */
   --ink:             var(--ink-light);
   --ink-a:           244 245 241;
@@ -1930,111 +1930,85 @@ html.wide #cal-export { margin-left: auto; }
   min-height: 0;
 }
 html:not(.wide) #cal-stack { justify-content: flex-end; }   /* issue #293: the days list bottom-anchors to the month view's top — the leftover slack renders ABOVE the list as intended whitespace (mobile tier only; the wide panel keeps its own packing) */
-/* Issue #295 (B138): the recurring-reminders strip fills that freed slack.
-   Mobile tier only — the wide panel keeps its own top-packing. Tokens only:
-   the strip wears the ladder #cal-view already binds (B117). */
-#cal-reminders { display: none; }
-html:not(.wide) #cal-reminders {
+/* Issue #329: the day head — today's date alone (month-day, no year), no add
+   control on it. Tokens only: the view's light ink on its own ground, the
+   title slot type (the shipped 13px/600/1.3). */
+#cal-dayhead {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 6px;
-  flex: 0 0 auto;                      /* the strip is its content's size — it eats slack, never the day cards' ground */
+  padding-bottom: 6px;
+  color: var(--ink-light);
+  font-size: 13px; font-weight: 600; line-height: 1.3;
+}
+/* Issue #329: the section's OWN records as square orange two-zone blocks,
+   three across, the left/right pager (the month view's .mo-nav grammar) and
+   the add "+" at the row's right. Tokens only — the ladder #cal-view already
+   binds (B117): the block the B72 inset frame (outline 2px --frame, interior
+   transparent), the band var(--note) with --ink-dark via the band's own
+   .on-light, the body var(--water-bot) with --ink-light under the view's
+   .on-dark, radius 4px. */
+#cal-notes {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding-bottom: 6px;
 }
-.rem-track {
+#cal-notes-grid {
   flex: 1;
   min-width: 0;
-  display: flex; align-items: center; gap: 6px;
-  overflow: hidden;                    /* the pager's page turn, not a slide — no snap, no swipe */
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));   /* exactly three across at every phone width */
+  gap: 8px;
+  align-items: stretch;
 }
-.rem-chip {
+.cal-note {
+  aspect-ratio: 1 / 1;              /* the block is square — the owner's "square fucking box" */
+  outline: 2px solid var(--frame);      /* the family's inset frame (B72) — the fill must not erase it */
+  outline-offset: -2px;
+  background: transparent;              /* the view's ground shows through */
+  color: var(--ink);
+  border-radius: 4px;
+  overflow: hidden;                     /* the two fills clip to the 4px radius */
+  display: flex; flex-direction: column;
+  gap: 0;                               /* the fills meet flush inside the frame — no gutter of the view's ground */
+  padding: 0;                           /* the inset re-seats onto the zones below */
+}
+.cal-note-title {
+  background: var(--note);              /* #e3c6aa — the lighter-orange title band (R2) */
+  color: var(--ink);                    /* --ink-dark #031019 via the node's own .on-light — 11.84:1 */
+  font-size: 13px; font-weight: 600; line-height: 1.3;   /* the title slot type */
+  padding: 4px 6px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;   /* the single-line read */
+}
+.cal-note-text {
+  flex: 1 1 auto;                       /* the darker fill reaches the frame's bottom edge */
+  background: var(--water-bot);         /* #462d1a — the darker orange body (R3) */
+  color: var(--ink-light);              /* #f4f5f1 under #cal-view's .on-dark — 11.62:1 */
+  font-size: 12px; line-height: 1.4;
+  padding: 4px 6px;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden; overflow-wrap: break-word;   /* two lines read, a third never draws */
+}
+.cal-note-title[contenteditable],
+.cal-note-text[contenteditable] {
+  outline: none;
+  display: block; -webkit-line-clamp: unset;   /* the editor grows freely; the clamp is for the read, not the write */
+  white-space: pre-wrap;
+}
+.cal-notes-add {
   flex: 0 0 auto;
   border: none; border-radius: 4px;
-  background: var(--card);
-  color: var(--ink-light);
-  font: inherit; font-size: 12px; font-weight: 600; line-height: 1.3;
-  padding: 6px 10px;
-  cursor: pointer;                     /* placeholder tap — edit/delete land later (#295) */
-  white-space: nowrap;
-}
-.rem-chip input {
-  width: 11ch;
-  border: none; outline: none; padding: 0;
-  background: transparent; color: inherit;
-  font: inherit; font-weight: 600;
-}
-.rem-plus {
-  flex: 0 0 auto;
-  border: none; border-radius: 4px;
-  background: var(--frame);            /* the calendar's own orange accent (B117) */
+  background: var(--frame);             /* the calendar's own orange accent (B117) */
   color: var(--ink-dark);
   font: inherit; font-size: 16px; font-weight: 700; line-height: 1;
   min-width: 36px; min-height: 32px;
   cursor: pointer;
 }
-.rem-plus:focus-visible { outline: 2px solid var(--ink-light); outline-offset: 2px; }
-/* --- Issue #313, B142: the hourly view ---------------------------------
-   The expanded face's first content element: today's events as narrow orange
-   time boxes. Tokens only — the family's own: each box the B72 inset frame
-   (outline 2px --frame, interior transparent so the view's --chrome ground
-   shows), the text in --ink. The owner's ruling supersedes R3's full-width
-   reading for the MEASURE ONLY: each box is a narrow column — 3–4 fit across
-   the content width (5 preferred if they fit), never a scroll. The time line
-   is subscript: smaller than .cal-hour-text and set low against it.
+.cal-notes-add:focus-visible { outline: 2px solid var(--ink-light); outline-offset: 2px; }
 
-   Issue #319: the original head line (the date + its own add "+") is retired
-   — it was a phantom top line of the day view whose plus duplicated the day
-   cards' ".cal-add", showing two "+" symbols with two meanings. Only the hour
-   list remains. */
-#cal-hours {
-  flex: 0 0 auto;
-  display: flex; flex-direction: column;
-  gap: 6px;
-  border-bottom: 1px solid var(--hairline);   /* R4 (issue #313): the block's bottom edge — the content-width rule separating the hourly view from the day stack below (the existing hairline token, §2.5) */
-}
-/* R4 FIX v3 (issue #313): on the wide PANEL only, the first day card packs
-   directly under this block (its mobile-only #cal-reminders neighbor is
-   display:none there) and the card's 3px --ink-dark box-shadow (#170)
-   overpainted this border's only pixel row. 4px of bottom margin seats the
-   hairline a row clear of that 3px shadow. Scoped to the panel so the mobile
-   tier — where reminders sits between, and the #293 bottom-anchor slack must
-   survive — is untouched. Do NOT touch the .cal-day.today frame (#170). */
-#cal-view.panel #cal-hours { margin-bottom: 4px; }
-/* Row 1 of the hourly view (the date + its own add "+") is retired by issue
-   #319: the phantom top line of the day view. Only the hour list rule below
-   remains. */
-
-.cal-hours-list {
-  display: flex; flex-wrap: wrap;
-  gap: 8px;
-}
-.cal-hour {
-  flex: 0 0 calc(25% - 8px);            /* aim 4 across; the min-width thins to 3 on the panel */
-  min-width: 76px;                      /* never narrower than a readable column */
-  min-height: 76px;                     /* the family's own floor on the second axis (R1): the box can never collapse into a one-line chip */
-  outline: 2px solid var(--frame);      /* the family's inset frame (B72) — stays; the fill must not erase it */
-  outline-offset: -2px;
-  background: transparent;              /* the view's ground shows through */
-  color: var(--ink);
-  border-radius: 4px;
-  overflow: hidden;                     /* the filled single zone is clipped to the 4px radius (R1) */
-  display: flex; flex-direction: column;
-  gap: 0;                               /* R5: the fills meet flush inside the frame — no gutter of the view's ground */
-  padding: 0;                           /* R5: the box's own inset re-seats onto the zone */
-}
-.cal-hour.complete .cal-hour-text { text-decoration: line-through; opacity: .55; }
-.cal-hour-text {
-  font-size: 12px; line-height: 1.4;
-  color: var(--ink);                    /* under #cal-view's .on-dark, --ink is --ink-light #f4f5f1 — 11.62:1 on the fill */
-  overflow-wrap: break-word;
-  flex: 1 1 auto;                       /* the zone absorbs the box's floored height, so the fill reaches the frame's bottom edge */
-  background: var(--water-bot);         /* #462d1a — the ladder's orange, the water fall's floor (R1/comment 4) */
-  padding: 4px 6px;                     /* the box's own inset, re-seated on the zone, so the fill meets the frame */
-}
-.cal-hour-text[contenteditable] {
-  outline: none;                        /* the editor's own treatment, per .cal-line[contenteditable] */
-  white-space: pre-wrap;
-}
 .cal-day {
   position: relative;
   border-radius: 4px;
@@ -2215,8 +2189,9 @@ html:not(.wide) #cal-reminders {
    reseat (the row's own membership ruling stands). */
 #cal-view.rail-open #cal-top,
 #cal-view.rail-open #cal-stack,
-#cal-view.rail-open #cal-hours,
-#cal-view.rail-open #cal-month { display: none; }   /* collapsed shows only the rail face (issue #248: the month view rode along; issue #313: the hourly block joins the hide) */
+#cal-view.rail-open #cal-dayhead,
+#cal-view.rail-open #cal-notes,
+#cal-view.rail-open #cal-month { display: none; }   /* collapsed shows only the rail face (issue #248: the month view rode along; issue #329: the day head and its squares join the hide) */
 #cal-rail {
   display: flex;
   flex-direction: column;

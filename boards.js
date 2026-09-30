@@ -1365,198 +1365,172 @@ export function renderCal() {
       el.calStack.appendChild(makeCalDay(day, dayEvents, board));
     }
     renderCalMonth(new Set(events.map((e) => e.date)));
-    renderCalHours(events);
-    renderCalReminders(all);
+    renderCalNotes(all);
   });
 }
 
-/* --- The hourly view (issue #313, B142) --------------------------------
-   Today's events as orange time boxes at the expanded face's top — the face's
-   first content element (R1). Bound to today (R2): the same day key
-   checkDayRoll computes, read through calEventsOf — a view over To-Do boards
-   (issue #145 R5), never a record of its own. Boxes render in creation order,
-   cleared by the day roll (R8): on a new day the key has no records, so the
-   hour list is empty and ready. No roll machinery is owed — renderCal already
-   runs checkDayRoll on every render.
+/* --- The day-note section (issue #329) ------------------------------------
+   The expanded face's top content. FIRST a head — today's date alone
+   (month-day, no year, the shipped month-grid format) with no add control on
+   it — then the section's OWN records as square orange two-zone blocks (a
+   lighter-orange title band over a darker orange body), three across, the
+   left/right pager in the row, and the add "+" rightmost.
 
-   Issue #319: the original head line — the date (month-day, no year) anchored
-   left and a plus anchored right on one row — was a phantom/vestigial top line
-   of the day view. Its plus added a block to a different line than the day
-   cards' own ".cal-add" pluses, so the day's list showed two "+" symbols with
-   two meanings. The head line and its control go together (the issue's ruling):
-   neither renders now. What remains is the hour list alone — one .cal-hour per
-   event, the box's top line the time (subscript, set low) over its primary
-   text. Adding lives with the day cards' single "+" (addCalEvent, issue #319),
-   which adds to the line it sits on. Each line commits its field; a commit
-   that leaves BOTH fields empty discards the record and box (B8). */
-function renderCalHours(events) {
-  const box = el.calHours;
-  if (box.querySelector('[contenteditable]')) return;  // an edit is open — rebuilding throws the user's typing away
-  box.textContent = '';
-  const todayKey = calKey(new Date());
-  const todayEvents = calEventsOf(events, todayKey);
+   Standards: the records are the recurring-reminder records the retired
+   recurring-reminders strip and its chips (B138/B144) held. CALENDAR EVENTS ARE
+   NEVER READ HERE — the owner's law, stated twice: "The events from the
+   calendar have no bearing on this section whatsoever and are not linked."
+   Neither zone is pre-filled, auto-populated, or compiled from a calendar
+   record; both are whatever the user types ("Not for you to pre-determine").
 
-  // The hour list — one .cal-hour per event of the day, creation order.
-  // (Issue #319 removed the head row: the date and its own add "+" were the
-  // phantom top line. The day cards carry the day's one "+".)
-  const list = document.createElement('div');
-  list.className = 'cal-hours-list';
-  list.setAttribute('role', 'list');
-  for (const ev of todayEvents) list.appendChild(makeCalHour(ev));
-  box.appendChild(list);
+   The block's geometry keeps the square's own intent — three across, and a
+   block is a square — rendered as a three-column grid (`repeat(3,
+   minmax(0, 1fr))`) of aspect-ratio 1/1 blocks, the owner's "3 should fit
+   easily". The two fills are the ladder's own tokens: band `var(--note)`
+   #e3c6aa with --ink-dark via the band's own .on-light; body `var(--water-bot)`
+   #462d1a with --ink-light under #cal-view's .on-dark; frame `var(--frame)`
+   #b48158, radius 4px. Pages of three page left/right through the month view's
+   own .mo-nav grammar — no pager is invented.
+
+   Binding (declared per the impl card's data-model note): the band writes the
+   record's `rem` field; the body writes the record's `next` field. No field
+   is added, migrated, or renamed in storage. Legacy records carried a calKey
+   date in `next` (the retired next-occurrence); that value is not user body
+   text, so it renders as an empty body until the user types into it — nothing
+   is rewritten or dropped on render. */
+let calNotePage = 0;                 // the page of three the section shows
+const CALKEY_DATE = /^\d{4}-\d{2}-\d{2}$/;   // a legacy next-occurrence calKey, not body text
+
+// The record's body text: `next`, unless it is a legacy calKey date.
+function calNoteBody(r) {
+  const n = typeof r.next === 'string' ? r.next : '';
+  return CALKEY_DATE.test(n) ? '' : n;
 }
 
-/* One hour box (R6): the record's single line is its primary text, which
-   opens in edit on tap and commits to `text` on blur, re-syncing the linked
-   board's mirror (the one-writer law of startCalLineEdit). A commit that
-   leaves the record empty discards the box (B8's rule: the frame must earn
-   its keep). `complete` wears the line's strike-through + dim (R6).
+function renderCalNotes(all) {
+  const grid = el.calNotesGrid;
+  // The head — the date alone, no add control (today, month-day, no year).
+  el.calDayhead.textContent =
+    new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+  wireCalNotes();
+  if (grid.querySelector('[contenteditable]')) return;   // an edit is open — don't throw the typing away
+  grid.textContent = '';
+  const recs = all.filter((r) => typeof r.rem === 'string');
+  const perPage = 3, pages = Math.max(1, Math.ceil(recs.length / perPage));
+  if (calNotePage >= pages) calNotePage = pages - 1;
+  if (calNotePage < 0) calNotePage = 0;
+  for (const r of recs.slice(calNotePage * perPage, calNotePage * perPage + perPage)) {
+    grid.appendChild(makeCalNote(r));
+  }
+  const hasPages = recs.length > perPage;
+  el.calNotesPrev.hidden = !hasPages;
+  el.calNotesNext.hidden = !hasPages;
+  el.calNotesPrev.disabled = calNotePage <= 0;
+  el.calNotesNext.disabled = calNotePage >= pages - 1;
+}
 
-   Issue #323: the time subscript is retired. The stored `time` field stays on
-   the record — existing values survive untouched, and nothing reads or writes
-   it now — but no hour box renders a time line. */
-function makeCalHour(ev) {
-  const box = document.createElement('div');
-  box.className = 'cal-hour' + (ev.state === 'complete' ? ' complete' : '');
-  box.setAttribute('role', 'listitem');
-  const text = document.createElement('div');
-  text.className = 'cal-hour-text';
-  text.textContent = ev.text;
-  text.addEventListener('click', (e) => {
-    if (text.hasAttribute('contenteditable')) return;
+async function refreshCalNotes() { renderCalNotes(await idbGetAll()); }
+
+let calNotesWired = false;
+function wireCalNotes() {
+  if (calNotesWired) return;
+  calNotesWired = true;
+  el.calNotesPrev.textContent = '‹';
+  el.calNotesNext.textContent = '›';
+  el.calNotesPrev.addEventListener('click', () => { if (calNotePage > 0) { calNotePage--; refreshCalNotes(); } });
+  el.calNotesNext.addEventListener('click', () => { calNotePage++; refreshCalNotes(); });
+  el.calNotesAdd.addEventListener('click', () => {
+    commitAction(async () => {          // the drop-guard (B81): one tap adds one note
+      const rec = { id: 'rem-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                    rem: '', next: '' };
+      await idbPut(rec);                // neither zone is pre-filled — nothing app-supplied
+      const all = await idbGetAll();
+      const recs = all.filter((r) => typeof r.rem === 'string');
+      const idx = recs.findIndex((r) => r.id === rec.id);
+      calNotePage = Math.floor(Math.max(0, idx) / 3);   // page lands on the new note wherever its id sorts
+      renderCalNotes(all);
+      const block = [...el.calNotesGrid.querySelectorAll('.cal-note')].find((b) => b.dataset.id === rec.id);
+      if (block) startCalNoteEdit(block, rec, 'band');   // the caret starts in the title band
+    });
+  });
+}
+
+/* One square block: its own two zones, exactly as the ruling names them —
+   the lighter-orange title band over the darker body. */
+function makeCalNote(rec) {
+  const block = document.createElement('div');
+  block.className = 'cal-note';
+  block.setAttribute('role', 'listitem');
+  block.dataset.id = rec.id;
+  const band = document.createElement('div');
+  band.className = 'cal-note-title on-light';   // .on-light rebinds --ink to --ink-dark on the band
+  band.textContent = rec.rem || '';
+  const body = document.createElement('div');
+  body.className = 'cal-note-text';
+  body.textContent = calNoteBody(rec);
+  block.append(band, body);
+  // A tap opens the entry's editor and seats the caret in the ZONE that was
+  // tapped — the band if the tap landed on it, the body if on the body
+  // (issue #329's re-entry rule; the deferred re-assert lands the caret at
+  // the end whichever order the native caret placement fires in, #304).
+  block.addEventListener('click', (e) => {
+    if (band.hasAttribute('contenteditable') || body.hasAttribute('contenteditable')) return;
     e.preventDefault();
-    startHourEdit(text, ev);
+    const zone = e.target === body ? 'body' : 'band';
+    startCalNoteEdit(block, rec, zone);
+    setTimeout(() => caretToEnd(zone === 'body' ? body : band), 0);
   });
-  box.append(text);
-  return box;
+  return block;
 }
 
-/* The hour box line's editor: commit-on-blur writes the event's `text` and
-   re-syncs the board's mirror (one write, both surfaces). A commit that
-   leaves the record empty discards — B8's rule, the box earns its keep like
-   any frame. Issue #323: the `time` writer is retired with the time line. */
-function startHourEdit(node, ev) {
-  node.setAttribute('contenteditable', CE);
-  node.focus();
-  caretToEnd(node);
+/* The two-zone editor. The commit is the blur and writes BOTH fields in one
+   step — `rem` from the band, `next` from the body — re-rendering the page
+   once (the mirror/roll paths are the calendar's, not this section's). A
+   commit that leaves both fields empty discards the record and the block
+   (B8's rule: the frame must earn its keep). */
+function startCalNoteEdit(block, rec, seat) {
+  const band = block.querySelector('.cal-note-title');
+  const body = block.querySelector('.cal-note-text');
+  band.setAttribute('contenteditable', CE);
+  body.setAttribute('contenteditable', CE);
+  const target = seat === 'body' ? body : band;
+  target.focus();
+  caretToEnd(target);
+  const inside = (n) => n && (n === band || n === body || block.contains(n));
+  let committed = false;
   const commit = async () => {
-    node.removeAttribute('contenteditable');
-    const value = node.textContent.trim();
-    ev.text = value;
-    if (!(ev.text || '').trim() && !(ev.time || '').trim()) {  // empty commit discards (B8)
-      await idbDelete(ev.id);
-      const box = node.closest('.cal-hour');
-      if (box) box.remove();
-      await syncDateMirror(ev.date);
-      repaintVisibleBoard();
+    if (committed) return;
+    committed = true;
+    band.removeAttribute('contenteditable');
+    body.removeAttribute('contenteditable');
+    const rem = band.textContent.trim();
+    const next = body.textContent.trim();
+    if (!rem && !next) {                            // B8: an empty commit discards
+      await idbDelete(rec.id);
+      block.remove();
+      await refreshCalNotes();
       return;
     }
-    await idbPut(ev);
-    await syncDateMirror(ev.date);
-    repaintVisibleBoard();
+    rec.rem = rem;
+    rec.next = next;
+    await idbPut(rec);
+    await refreshCalNotes();
     scheduleSave();
   };
-  node.addEventListener('blur', commit, { once: true });
-  node.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); node.blur(); }
+  block.addEventListener('focusout', (e) => {
+    if (inside(e.relatedTarget)) return;    // moving band→body is a hand-off, not a commit
+    commit();
   });
-}
-
-/* The plus control: add a new hour box for today (R5). Retired by issue #319:
-   the head row that carried this control was a phantom top line of the day
-   view — its plus duplicated the day cards' own ".cal-add", so the day's list
-   showed two "+" symbols with two meanings. Adding now lives with the day
-   cards' single "+" (addCalEvent), which adds to the line it sits on. */
-
-/* --- The recurring-reminders strip (issue #295, B138) ----------------------
-   Fills the slack issue #293 freed above the day list, mobile tier only.
-   Chips render the user's title alone — nothing is appended (issue #320
-   supersedes B138's chip clause; the record's stored next-occurrence date
-   stays on the record, unread). B138 narrows B104's no-time law for THIS
-   component only; firing and notification are out of scope. Records ride the
-   boards store like events
-   (one store, no schema bump): the ones carrying a `rem` string. The plus
-   block — the calendar's own orange, --frame — adds one via an inline
-   editing chip: commit on Enter/blur, Escape or an empty edit discards.
-   Overflow pages via .mo-nav buttons (the month view's grammar): a page
-   turn is an instant scrollLeft jump, never a slide; no swipe. */
-function renderCalReminders(all) {
-  const box = el.calReminders;
-  if (box.querySelector('input')) return;   // an edit is open — rebuilding would throw away the user's typing
-  box.textContent = '';
-  if (document.documentElement.classList.contains('wide')) return;  // the wide panel keeps its own top-packing
-  const track = document.createElement('div');
-  track.className = 'rem-track';
-  for (const r of all.filter((x) => typeof x.rem === 'string')) {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'rem-chip';
-    // The next occurrence is stored as a calKey date on the record, but the
-    // chip renders the user's title alone — nothing is appended (issue #320
-    // supersedes B138's chip clause; r.next stays stored, unread). Tap is a
-    // placeholder — edit/delete land later (#295).
-    chip.textContent = r.rem;
-    track.appendChild(chip);
-  }
-  const plus = document.createElement('button');
-  plus.type = 'button';
-  plus.className = 'rem-plus';
-  plus.setAttribute('aria-label', 'Add a recurring reminder');
-  plus.textContent = '+';
-  plus.addEventListener('click', () => {
-    const chip = document.createElement('div');
-    chip.className = 'rem-chip';
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.maxLength = 40;
-    input.placeholder = 'Title';
-    input.setAttribute('aria-label', 'Reminder title');
-    chip.appendChild(input);
-    track.appendChild(chip);
-    track.scrollLeft = track.scrollWidth;      // the new chip is where the typing is
-    let done = false;                          // blur fires after a key commit — once only
-    const commit = async () => {
-      if (done) return;
-      done = true;
-      const title = input.value.trim();
-      chip.remove();
-      if (!title) return;                      // an empty edit discards itself
-      await idbPut({ id: 'rem-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-                     rem: title, next: calKey(new Date()) });
-      renderCalReminders(await idbGetAll());
-    };
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { done = true; chip.remove(); }
-      else if (e.key === 'Enter') commit();
-    });
-    input.addEventListener('blur', commit);
-    input.focus();
+  band.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {                // R6.2: Enter in the title band hands off to the darker area
+      e.preventDefault();
+      body.focus();
+      caretToEnd(body);
+    }
   });
-  box.append(track, plus);
-  // The pager, in the month view's .mo-nav grammar — visible only when the
-  // chips overflow the track; a turn jumps one track-width, instantly.
-  const nav = (dir, label) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'mo-nav rem-nav';
-    b.setAttribute('aria-label', label);
-    b.textContent = dir < 0 ? '‹' : '›';
-    b.addEventListener('click', () => { track.scrollLeft += dir * track.clientWidth; });
-    return b;
-  };
-  const back = nav(-1, 'Previous reminders');
-  const fwd = nav(1, 'Next reminders');
-  const navUpd = () => {
-    const over = track.scrollWidth > track.clientWidth;
-    back.hidden = !over;
-    fwd.hidden = !over;
-    back.disabled = track.scrollLeft <= 0;
-    fwd.disabled = track.scrollLeft >= track.scrollWidth - track.clientWidth - 1;
-  };
-  back.hidden = fwd.hidden = true;
-  box.append(back, track, fwd, plus);          // ‹ chips › +, the orange block rightmost
-  track.addEventListener('scroll', navUpd, { passive: true });
-  requestAnimationFrame(navUpd);               // the measure needs a laid-out track
+  body.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); body.blur(); }   // R6.4: Enter ends the entry
+  });
 }
 
 /* --- The month view (issue #191) ------------------------------------------

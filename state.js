@@ -455,8 +455,12 @@ export const el = {
   importFile: document.getElementById('import-file'),       // the import tab's file dialog
   calView: document.getElementById('cal-view'),             // calendar screen (issue #145)
   calRail: document.getElementById('cal-rail'),             // the standing rail face (issue #158, B99)
-  calHours: document.getElementById('cal-hours'),           // the hourly view (issue #313, B142)
-  calReminders: document.getElementById('cal-reminders'), // the recurring-reminders strip (issue #295)
+  calDayhead: document.getElementById('cal-dayhead'),       // the day head — the date alone (issue #329)
+  calNotes: document.getElementById('cal-notes'),           // the section's own records (issue #329)
+  calNotesGrid: document.getElementById('cal-notes-grid'),  // the square blocks, three across
+  calNotesPrev: document.getElementById('cal-notes-prev'),  // the .mo-nav pager, left
+  calNotesNext: document.getElementById('cal-notes-next'),  // the .mo-nav pager, right
+  calNotesAdd: document.getElementById('cal-notes-add'),    // the row's add "+"
   calStack: document.getElementById('cal-stack'),
   calTop: document.getElementById('cal-top'),
   calBack: document.getElementById('cal-back'),

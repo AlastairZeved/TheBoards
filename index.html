@@ -177,16 +177,20 @@
       <span class="vlabel" aria-hidden="true">Calendar Board</span>
       <span class="cdate" aria-hidden="true"></span>
     </button>
-    <!-- Issue #313 (B142): the hourly view — the expanded face's FIRST content
-         element. Today's date on the head line, the plus adding an orange
-         .cal-hour time box to the hour list below; boxes are today's calendar
-         event records (the `time` field), read through calEventsOf and cleared
-         by the day roll. Filled by renderCalHours(). -->
-    <div id="cal-hours" role="group" aria-label="Hourly view"></div>
-    <!-- Issue #295 (B138): the recurring-reminders strip rides the slack
-         issue #293 freed above the day list — mobile tier only (the wide
-         panel keeps its own top-packing). Filled by renderCalReminders(). -->
-    <div id="cal-reminders" role="group" aria-label="Recurring reminders"></div>
+    <!-- Issue #329: the day head — today's date alone (month-day, no year).
+         No add control on it. Filled by renderCalNotes(). -->
+    <div id="cal-dayhead" role="group" aria-label="Today"></div>
+    <!-- Issue #329: the section's OWN records — the recurring-reminder
+         records the retired strip held — as square orange two-zone blocks,
+         three across, left/right pagination beyond three (the .mo-nav pager
+         grammar), add "+" at the row's right. Calendar events are never read
+         here. Filled by renderCalNotes(). -->
+    <div id="cal-notes" role="group" aria-label="Day notes">
+      <button type="button" class="mo-nav" id="cal-notes-prev" aria-label="Previous day notes"></button>
+      <div id="cal-notes-grid" role="list"></div>
+      <button type="button" class="mo-nav" id="cal-notes-next" aria-label="Next day notes"></button>
+      <button type="button" class="cal-notes-add" id="cal-notes-add" aria-label="Add a day note"></button>
+    </div>
     <div id="cal-stack"></div>
     <div id="cal-month" role="group" aria-label="Month view"></div>
     <!-- B134 (issue #259): the exit control renders LAST — at the view's very
