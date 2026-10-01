@@ -3010,6 +3010,73 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await ctx.close();
   }
 
+  // ---- D34. The desktop calendar panel carries the same square-block section
+  // and the same seating as mobile (issue #334) --------------------------------
+  // #334 asked for three things on desktop: the weekly view resting on the
+  // month view, six squares in two rows of three then pagination, and the
+  // add "+". The latter two shipped with B146 (#333) at the mobile tier and
+  // were ALREADY true on desktop — measured, not assumed. The first was not:
+  // #293's bottom-anchor was scoped html:not(.wide), so on desktop the day
+  // rows (flex: 0 0 auto, never shrinking) spilled DOWN over the month view
+  // on any panel shorter than the list — measured -34px at 1366x768 and
+  // -82px at 1280x720. The invariant at every height: the last day row's
+  // bottom sits on the month view's top, i.e. the stack's own margin-top.
+  // Each viewport is a FRESH context — scheduleEnvironment tears the expanded
+  // panel down on a width flip, so resizing one page would not measure what
+  // a user sees.
+  console.log('\n[D34] The desktop panel carries the square blocks, their pager, the add "+", and the week view seated on the month view (issue #334)');
+  for (const [w, h] of [[1440, 900], [1366, 768], [1280, 720]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h } });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(String(e)));
+    page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+    await page.goto(URL);
+    await page.waitForFunction(() => !!document.querySelector('#board'));
+    await page.waitForTimeout(400);
+    // Six records: the section must page at six, two rows of three, no pager.
+    await page.evaluate(async () => {
+      for (let i = 0; i < 6; i++) await idbPut({ id: 'rem-' + i, rem: 'BLOCK ' + i, next: '' });
+    });
+    await page.reload();
+    await page.waitForTimeout(600);
+    await page.evaluate(() => document.getElementById('cal-rail').click());
+    await page.waitForTimeout(800);
+    const geo = await page.evaluate(() => {
+      const blocks = [...document.querySelectorAll('#cal-notes-grid .cal-note')];
+      const tops = blocks.map((b) => Math.round(b.getBoundingClientRect().top));
+      const last = [...document.querySelectorAll('#cal-stack .cal-day')].pop().getBoundingClientRect();
+      const month = document.getElementById('cal-month').getBoundingClientRect();
+      return {
+        html: document.documentElement.className,
+        blocks: blocks.length,
+        rows: new Set(tops).size,
+        threeAcross: tops.length === 0 || new Set(blocks.map((b) => Math.round(b.getBoundingClientRect().x))).size === 3,
+        pagerShown: !document.getElementById('cal-notes-prev').hidden ||
+                    !document.getElementById('cal-notes-next').hidden,
+        addText: document.getElementById('cal-notes-add').textContent.trim(),
+        gapLastRowToMonth: +(month.top - last.bottom).toFixed(1),
+        monthMargin: parseFloat(getComputedStyle(document.getElementById('cal-month')).marginTop),
+        overflow: document.getElementById('cal-view').scrollHeight - document.getElementById('cal-view').clientHeight,
+      };
+    });
+    console.log(`  [${w}x${h}] ${JSON.stringify(geo)}`);
+    ok(`[${w}x${h}] desktop tier active (html.desktop set)`, /desktop/.test(geo.html), geo.html);
+    ok(`[${w}x${h}] six squares render in exactly TWO rows of three — the second row is used, not left empty (issue #334 item 2)`,
+      geo.blocks === 6 && geo.rows === 2 && geo.threeAcross, JSON.stringify([geo.blocks, geo.rows, geo.threeAcross]));
+    ok(`[${w}x${h}] the pager stays hidden at six — it appears only past the page (issue #334 item 2, B146)`,
+      geo.pagerShown === false, JSON.stringify(geo.pagerShown));
+    ok(`[${w}x${h}] the add button carries its "+" (issue #334 item 3, B146)`,
+      geo.addText === '+', JSON.stringify(geo.addText));
+    ok(`[${w}x${h}] the week view rests ON the month view — the last day row's bottom meets the month's top within its 8px margin, no gap, no overlap (issue #334 item 1)`,
+      Math.abs(geo.gapLastRowToMonth - geo.monthMargin) <= 1 && geo.gapLastRowToMonth >= 0,
+      JSON.stringify([geo.gapLastRowToMonth, geo.monthMargin]));
+    ok(`[${w}x${h}] the panel does not overflow — one bounded page, never a scroll`,
+      geo.overflow === 0, JSON.stringify(geo.overflow));
+    ok(`[${w}x${h}] no page errors`, errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   await browser.close();
   console.log('\n=== desktop: ' + pass + ' passed, ' + fail + ' failed ===');
   process.exit(fail ? 1 : 0);

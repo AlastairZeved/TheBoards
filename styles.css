@@ -1929,7 +1929,15 @@ html.wide #cal-export { margin-left: auto; }
   gap: 7px;
   min-height: 0;
 }
-html:not(.wide) #cal-stack { justify-content: flex-end; }   /* issue #293: the days list bottom-anchors to the month view's top — the leftover slack renders ABOVE the list as intended whitespace (mobile tier only; the wide panel keeps its own packing) */
+/* Issue #293 + #334: the days list bottom-anchors to the month view's top —
+   the leftover slack renders ABOVE the list as intended whitespace. Scoped to
+   mobile only since #293 ("the wide panel keeps its own packing"); #334
+   removed that scope — on desktop the rows are flex:0 0 auto and never shrink,
+   so a panel shorter than the list had them spilling DOWN over the month view
+   (measured: -34px at 1366x768, -82px at 1280x720). Bottom-anchoring seats
+   them on the month view at every height, and any true overflow now falls out
+   the TOP as whitespace — the #293 behaviour, unscoped. */
+#cal-stack { justify-content: flex-end; }
 /* Issue #329: the day head — today's date alone (month-day, no year), no add
    control on it. Tokens only: the view's light ink on its own ground, the
    title slot type (the shipped 13px/600/1.3). */
