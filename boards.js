@@ -4,6 +4,7 @@ import { CAT_SEC_GAP, CE, COPY, GLYPH, LEAVE_MS, LIST_CARD_COLS, LIST_CARD_H, LI
 import { LONGPRESS_MS, MOVE_THRESHOLD, PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP, SWAP_MS, calBoardOf } from './state.js';
 import { calEventsOf, calKey, calWindow, el, ensureLinkedBoard, EMBED, histPush, newBoardRecord, newCalEvent, state } from './state.js';
 import { syncMirror, mirrorEventsOf } from './state.js';
+import { idbGetAll, idbPut } from './persistence.js';
 import { flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, saveTimer, scheduleSave } from './persistence.js';
 import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze, setPaneCollapsed } from './geometry.js';
 import { applyBoardCat, renderBoard, syncViewTitle } from './render.js';
@@ -995,7 +996,98 @@ export function calMD(d) {
   return p(d.getMonth() + 1) + '/' + p(d.getDate());
 }
 
-export function makeCalDay(day, events, board) {
+/* --- Reminder grid for today's day card (issue #329, #331) -----------------
+   Today's day card carries a reminder grid at its top: square two-zone blocks
+   (lighter-orange title band over darker orange body), three across. Records
+   are stored as { id, rem: title, next: body } in the main store. The grid
+   fits 6 blocks (2 rows x 3 cols) before pagination would apply. */
+function renderReminderGrid(dayKey, zone, all) {
+  // Filter reminders with a 'rem' field
+  const reminders = all.filter(r => typeof r.rem === 'string' && r.rem.trim().length > 0);
+  // Sort by creation/update time, newest first
+  reminders.sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+
+  const grid = document.createElement('div');
+  grid.id = 'cal-notes-grid';
+  grid.className = 'cal-notes-grid';
+  grid.setAttribute('role', 'list');
+
+  for (const rem of reminders.slice(0, 6)) { // 6 blocks max (2 rows x 3 cols)
+    grid.appendChild(makeReminderBlock(rem));
+  }
+
+  // Add the "+" button as a grid item
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.id = 'cal-notes-add';
+  addBtn.className = 'cal-note cal-note-add';
+  addBtn.setAttribute('aria-label', 'Add reminder');
+  addBtn.innerHTML = GLYPH.plus || '+';
+  addBtn.addEventListener('click', () => addReminderBlock(grid));
+  grid.appendChild(addBtn);
+
+  zone.appendChild(grid);
+}
+
+function makeReminderBlock(rem) {
+  const block = document.createElement('div');
+  block.className = 'cal-note';
+  block.dataset.id = rem.id;
+
+  const titleBand = document.createElement('div');
+  titleBand.className = 'cal-note-title';
+  titleBand.setAttribute('contenteditable', CE);
+  titleBand.setAttribute('role', 'textbox');
+  titleBand.setAttribute('aria-multiline', 'false');
+  titleBand.textContent = rem.rem;
+  titleBand.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const body = block.querySelector('.cal-note-text');
+      if (body) body.focus();
+    }
+  });
+  titleBand.addEventListener('blur', () => commitReminderBlock(block, rem.id));
+  block.appendChild(titleBand);
+
+  const body = document.createElement('div');
+  body.className = 'cal-note-text';
+  body.setAttribute('contenteditable', CE);
+  body.setAttribute('role', 'textbox');
+  body.setAttribute('aria-multiline', 'true');
+  body.textContent = rem.next || '';
+  body.addEventListener('blur', () => commitReminderBlock(block, rem.id));
+  block.appendChild(body);
+
+  // Tap on body focuses it
+  body.addEventListener('click', () => body.focus());
+
+  return block;
+}
+
+async function commitReminderBlock(block, id) {
+  const titleBand = block.querySelector('.cal-note-title');
+  const body = block.querySelector('.cal-note-text');
+  const rem = titleBand.textContent.trim();
+  const next = body.textContent.trim();
+  if (!rem) return; // Discard empty
+  await idbPut({ id, rem, next, updatedAt: Date.now() });
+}
+
+async function addReminderBlock(grid) {
+  const id = crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+  const block = makeReminderBlock({ id, rem: '', next: '' });
+  // Insert before the add button
+  const addBtn = grid.querySelector('#cal-notes-add');
+  grid.insertBefore(block, addBtn);
+  const titleBand = block.querySelector('.cal-note-title');
+  titleBand.focus();
+}
+
+export function makeCalDay(day, events, board, all) {
   const card = document.createElement('div');
   card.className = 'cal-day' + (day.today ? ' today' : events.length ? ' near' : ' far');
   const dc = document.createElement('div');
@@ -1005,6 +1097,22 @@ export function makeCalDay(day, events, board) {
   const d2 = document.createElement('div'); d2.className = 'cal-d2';
   d2.textContent = calMD(day.date);
   dc.append(d1, d2);
+
+  // Reminder grid for today's card (issue #329, #331)
+  if (day.today) {
+    const remZone = document.createElement('div');
+    remZone.className = 'cal-remind-zone on-dark';
+    remZone.id = 'cal-dayhead';
+    // The day head carries the date alone — no add control of its own
+    const headText = document.createElement('div');
+    headText.className = 'cal-dayhead-text';
+    headText.textContent = d1.textContent + ' ' + d2.textContent;
+    remZone.appendChild(headText);
+    card.appendChild(remZone);
+    // Render the reminder grid with the all data
+    renderReminderGrid(day.key, remZone, all);
+  }
+
   const dl = document.createElement('div');
   dl.className = 'cal-lines on-dark';
   dl.setAttribute('role', 'list');
@@ -1305,7 +1413,7 @@ export function renderCal() {
     for (const day of days) {
       const board = calBoardOf(all, day.key);
       const dayEvents = calEventsOf(events, day.key);
-      el.calStack.appendChild(makeCalDay(day, dayEvents, board));
+      el.calStack.appendChild(makeCalDay(day, dayEvents, board, all));
     }
     renderCalMonth(new Set(events.map((e) => e.date)));
   });

@@ -2143,3 +2143,81 @@ html.wide .pane-card .row-cal-mark svg { width: 12px; height: 12px; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+
+/* --- Reminder grid for today's day card (issue #329, #331) ----------------
+   A grid of square two-zone blocks (lighter-orange title band over darker
+   orange body), three across. Fits 6 blocks (2 rows) before pagination. */
+.cal-remind-zone {
+  padding: 8px 9px 4px;
+}
+#cal-dayhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.cal-dayhead-text {
+  font-size: 12px; font-weight: 600; color: var(--ink-light);
+  text-transform: uppercase; letter-spacing: .08em; opacity: .55;
+}
+.cal-notes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+.cal-note {
+  position: relative;
+  border-radius: 4px;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--reminder);
+}
+.cal-note-title {
+  flex: 0 0 50%;
+  background: var(--tab-remind);
+  color: var(--ink-dark);
+  padding: 4px 6px;
+  font-size: 11px; font-weight: 600; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  outline: none;
+}
+.cal-note-title:focus {
+  outline: 2px solid var(--ink-light);
+  outline-offset: -2px;
+}
+.cal-note-text {
+  flex: 1 1 50%;
+  background: var(--reminder);
+  color: var(--ink-dark);
+  padding: 4px 6px;
+  font-size: 11px; line-height: 1.3;
+  white-space: pre-wrap; overflow-wrap: break-word;
+  overflow: hidden;
+  outline: none;
+}
+.cal-note-text:focus {
+  outline: 2px solid var(--ink-light);
+  outline-offset: -2px;
+}
+.cal-note-add {
+  background: transparent;
+  color: var(--ink-light);
+  opacity: .7;
+  display: flex; align-items: center; justify-content: center;
+}
+.cal-note-add .glyph { display: flex; }
+.cal-note-add .glyph svg { display: block; width: 24px; height: 24px; }
+.cal-note-add:hover, .cal-note-add:focus-visible { opacity: 1; }
+.cal-note-add:focus-visible {
+  outline: 2px solid var(--ink-light);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--ink-dark);
+}
+
+/* --- Accessibility -------------------------------------------------------- */
+html:not(.desktop) .cal-day .cal-notes-grid { overflow: hidden; }
+.cal-note-title[aria-invalid="true"] { border: 2px solid var(--danger); }
+

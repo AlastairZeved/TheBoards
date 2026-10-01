@@ -219,6 +219,8 @@ export const GLYPH = {
   // page-turn pair. B134 (issue #259) mirrors it right, matching the
   // calendar's exit control (arrow on the right, pointing right).
   paneCollapse: MARK(16, '<path d="M9.5 3.5L5 8l4.5 4.5"/>'),  // B135 (issue #279): left chevron — the calendar's mark mirrored, this rail collapses left
+  // The plus mark for the reminder grid add button (issue #331)
+  plus: MARK(16, '<path d="M8 2.5v11M2.5 8h11"/>'),
 };
 
 // contenteditable mode: prefer plaintext-only (Chromium/Samsung Internet — the
