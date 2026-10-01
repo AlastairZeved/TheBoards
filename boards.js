@@ -1398,7 +1398,11 @@ export function renderCal() {
    date in `next` (the retired next-occurrence); that value is not user body
    text, so it renders as an empty body until the user types into it — nothing
    is rewritten or dropped on render. */
-let calNotePage = 0;                 // the page of three the section shows
+let calNotePage = 0;                 // the page of six the section shows
+// Issue #331: two rows of three, THEN paginate. B145 shipped one row of three
+// and paged at 3, leaving the ground under the first row empty. One number, two
+// readers — the slice and the page-the-new-record-lands-on both read this.
+const CAL_NOTE_PER_PAGE = 6;
 const CALKEY_DATE = /^\d{4}-\d{2}-\d{2}$/;   // a legacy next-occurrence calKey, not body text
 
 // The record's body text: `next`, unless it is a legacy calKey date.
@@ -1416,7 +1420,7 @@ function renderCalNotes(all) {
   if (grid.querySelector('[contenteditable]')) return;   // an edit is open — don't throw the typing away
   grid.textContent = '';
   const recs = all.filter((r) => typeof r.rem === 'string');
-  const perPage = 3, pages = Math.max(1, Math.ceil(recs.length / perPage));
+  const perPage = CAL_NOTE_PER_PAGE, pages = Math.max(1, Math.ceil(recs.length / perPage));
   if (calNotePage >= pages) calNotePage = pages - 1;
   if (calNotePage < 0) calNotePage = 0;
   for (const r of recs.slice(calNotePage * perPage, calNotePage * perPage + perPage)) {
@@ -1437,6 +1441,10 @@ function wireCalNotes() {
   calNotesWired = true;
   el.calNotesPrev.textContent = '‹';
   el.calNotesNext.textContent = '›';
+  // Issue #331: the add button shipped with no content at all — an empty
+  // orange square. Its two siblings in this row carry their marks as text
+  // ('‹'/'›', and `.cal-add`'s '+' below), so it wears the same grammar.
+  el.calNotesAdd.textContent = '+';
   el.calNotesPrev.addEventListener('click', () => { if (calNotePage > 0) { calNotePage--; refreshCalNotes(); } });
   el.calNotesNext.addEventListener('click', () => { calNotePage++; refreshCalNotes(); });
   el.calNotesAdd.addEventListener('click', () => {
@@ -1447,7 +1455,7 @@ function wireCalNotes() {
       const all = await idbGetAll();
       const recs = all.filter((r) => typeof r.rem === 'string');
       const idx = recs.findIndex((r) => r.id === rec.id);
-      calNotePage = Math.floor(Math.max(0, idx) / 3);   // page lands on the new note wherever its id sorts
+      calNotePage = Math.floor(Math.max(0, idx) / CAL_NOTE_PER_PAGE);   // page lands on the new note wherever its id sorts
       renderCalNotes(all);
       const block = [...el.calNotesGrid.querySelectorAll('.cal-note')].find((b) => b.dataset.id === rec.id);
       if (block) startCalNoteEdit(block, rec, 'band');   // the caret starts in the title band

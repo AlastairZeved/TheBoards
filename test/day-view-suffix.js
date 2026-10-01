@@ -194,6 +194,47 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     await ctx.close();
   }
 
+  console.log('\n[V3] The section pages at SIX, not three — two rows of three, then the pager; and the add button carries its "+" (issue #331)');
+  {
+    const { ctx, page, errors } = await newPage(browser);
+    // Six records: the page must hold all six in two rows and show no pager.
+    await page.evaluate(async () => {
+      for (let i = 0; i < 6; i++) await idbPut({ id: 'rem-' + i, rem: 'BLOCK ' + i, next: '' });
+    });
+    await page.reload();
+    await page.waitForTimeout(600);
+    await page.evaluate(() => document.getElementById('action-calendar').click());
+    await page.waitForTimeout(900);
+
+    let got = await page.evaluate(() => {
+      const g = document.getElementById('cal-notes-grid');
+      const blocks = [...g.querySelectorAll('.cal-note')];
+      const rows = new Set(blocks.map((b) => Math.round(b.getBoundingClientRect().top))).size;
+      return { count: blocks.length, rows,
+        pagerShown: !document.getElementById('cal-notes-prev').hidden || !document.getElementById('cal-notes-next').hidden,
+        addText: document.getElementById('cal-notes-add').textContent.trim() };
+    });
+    ok('six blocks render on ONE page in TWO rows — the ground under row one is used (issue #331)',
+      got.count === 6 && got.rows === 2 && got.pagerShown === false, JSON.stringify(got));
+    ok('the add button carries a "+" — it shipped as an empty orange square (issue #331)',
+      got.addText === '+', JSON.stringify(got));
+
+    // A seventh record turns the pager on.
+    await page.evaluate(() => idbPut({ id: 'rem-6', rem: 'BLOCK 6', next: '' }));
+    await page.reload();
+    await page.waitForTimeout(600);
+    await page.evaluate(() => document.getElementById('action-calendar').click());
+    await page.waitForTimeout(900);
+    got = await page.evaluate(() => ({
+      count: document.querySelectorAll('#cal-notes-grid .cal-note').length,
+      pagerShown: !document.getElementById('cal-notes-prev').hidden || !document.getElementById('cal-notes-next').hidden }));
+    ok('the seventh block overflows to page two — pagination starts past six, not past three (issue #331)',
+      got.count === 6 && got.pagerShown === true, JSON.stringify(got));
+
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   console.log(`\n=== day-view-suffix: ${pass} passed, ${fail} failed ===`);
   await browser.close();
   process.exit(fail ? 1 : 0);
