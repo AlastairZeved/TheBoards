@@ -881,7 +881,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('the add "+" wears the calendar\'s own orange --frame accent, rightmost in the row (issue #329)',
     /\.cal-notes-add \{[^}]*background: var\(--frame\);/.test(css));
   ok('the collapsed rail hides the day head and its squares too (issue #329)',
-    /#cal-view\.rail-open #cal-dayhead,/.test(css) && /#cal-view\.rail-open #cal-notes,/.test(css));
+    /#cal-view\.rail-open #cal-frame,/.test(css));
   ok('today wears the to-do boards\' water fall; the current week gets the pale ink-light band (issue #191)',
     /\.mo-cell\.today \{[^}]*linear-gradient\(180deg, var\(--water-top\) 0%, var\(--water-mid\) 46%, var\(--water-bot\) 100%\)/.test(css) &&
     /\.mo-cell\.wk \{ background: rgb\(244 245 241 \/ \.08\); \}/.test(css));

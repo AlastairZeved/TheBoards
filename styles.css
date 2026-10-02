@@ -1938,16 +1938,30 @@ html.wide #cal-export { margin-left: auto; }
    them on the month view at every height, and any true overflow now falls out
    the TOP as whitespace — the #293 behaviour, unscoped. */
 #cal-stack { justify-content: flex-end; }
+/* Issue #336: frame the top section (today's date + the day-note squares)
+   with a 2px dark-orange border and light-orange fill from the calendar
+   palette. The frame wraps #cal-dayhead and #cal-notes as one unit. */
+#cal-frame {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 2px solid var(--water-bot);   /* #462d1a — the darker orange */
+  border-radius: 4px;
+  background: var(--note);              /* #e3c6aa — the lighter orange */
+}
 /* Issue #329: the day head — today's date alone (month-day, no year), no add
    control on it. Tokens only: the view's light ink on its own ground, the
-   title slot type (the shipped 13px/600/1.3). */
+   title slot type (the shipped 13px/600/1.3). The .on-light class (added in
+   HTML) rebinds --ink to --ink-dark so the date reads on the light --note fill. */
 #cal-dayhead {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 6px;
   padding-bottom: 6px;
-  color: var(--ink-light);
+  color: var(--ink);              /* .on-light (on the element) rebinds to --ink-dark for legibility on --note */
   font-size: 13px; font-weight: 600; line-height: 1.3;
 }
 /* Issue #329: the section's OWN records as square orange two-zone blocks,
@@ -2197,9 +2211,8 @@ html.wide #cal-export { margin-left: auto; }
    reseat (the row's own membership ruling stands). */
 #cal-view.rail-open #cal-top,
 #cal-view.rail-open #cal-stack,
-#cal-view.rail-open #cal-dayhead,
-#cal-view.rail-open #cal-notes,
-#cal-view.rail-open #cal-month { display: none; }   /* collapsed shows only the rail face (issue #248: the month view rode along; issue #329: the day head and its squares join the hide) */
+#cal-view.rail-open #cal-frame,
+#cal-view.rail-open #cal-month { display: none; }   /* collapsed shows only the rail face (issue #248: the month view rode along; issue #329: the day head and its squares join the hide; issue #336: #cal-frame now wraps both) */
 #cal-rail {
   display: flex;
   flex-direction: column;
