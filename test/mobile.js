@@ -2612,13 +2612,13 @@ async function openCat(page, cat) {
       };
     });
     ok('today stays the stack\'s dominant card (the 1.6 grow, capped by the stack; issue #313\'s hourly block now eats the top slack, lowering the cap)',
-          g.today === Math.max(g.today, ...g.others) && g.today >= 44, String(g.today));
+          g.today === Math.max(g.today, ...g.others) && g.today > 60, String(g.today));
     ok('a wrapping event renders two readable lines, unclipped',
       g.lineHeight >= 30 && g.lineHeight <= 38, String(g.lineHeight));
     ok('non-today cards shrink to their content (two lines + capture row)',
       g.others.every(h => h > 40 && h < 80), JSON.stringify(g.others));
     ok('the stack bottom-anchors to the month view: last card flush at the stack\'s bottom, the freed ground renders above the list (issue #293)',
-      g.bottomGap >= -1 && g.bottomGap <= 1 && g.month.h > 100 && g.month.top >= g.stackBottom - 1 && g.month.bottom <= g.vh,
+      g.bottomGap >= -1 && g.bottomGap <= 1 && g.topSlack > 0 && g.month.h > 100 && g.month.top >= g.stackBottom - 1 && g.month.bottom <= g.vh,
       JSON.stringify(g));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();

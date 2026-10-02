@@ -1974,12 +1974,9 @@ html.wide #cal-export { margin-left: auto; }
 #cal-notes {
   flex: 0 0 auto;
   display: flex;
+  align-items: center;
   gap: 6px;
   padding-bottom: 6px;
-}
-#cal-notes > .mo-nav,
-#cal-notes > .cal-notes-add {
-  align-self: center;
 }
 #cal-notes-grid {
   flex: 1;
@@ -1988,7 +1985,6 @@ html.wide #cal-export { margin-left: auto; }
   grid-template-columns: repeat(3, minmax(0, 1fr));   /* exactly three across at every phone width */
   gap: 8px;
   align-items: stretch;
-  aspect-ratio: 3 / 2;              /* reserve height for two rows of squares (3 cols × 2 rows) on ALL modes */
 }
 .cal-note {
   aspect-ratio: 1 / 1;              /* the block is square — the owner's "square fucking box" */
