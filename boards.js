@@ -1413,8 +1413,8 @@ function calNoteBody(r) {
 
 function renderCalNotes(all) {
   const grid = el.calNotesGrid;
-  // The head — the date alone (today, month-day, no year).
-  el.calDayheadDate.textContent =
+  // The head — the date alone, no add control (today, month-day, no year).
+  el.calDayhead.textContent =
     new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
   wireCalNotes();
   if (grid.querySelector('[contenteditable]')) return;   // an edit is open — don't throw the typing away
