@@ -1405,6 +1405,17 @@ let calNotePage = 0;                 // the page of six the section shows
 const CAL_NOTE_PER_PAGE = 6;
 const CALKEY_DATE = /^\d{4}-\d{2}-\d{2}$/;   // a legacy next-occurrence calKey, not body text
 
+// Ordinal suffix for day of month: 1st, 2nd, 3rd, 4th, ... 21st, 22nd, 23rd, 24th, ...
+function ordinalSuffix(day) {
+  if (day >= 11 && day <= 13) return 'th';
+  switch (day % 10) {
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
+  }
+}
+
 // The record's body text: `next`, unless it is a legacy calKey date.
 function calNoteBody(r) {
   const n = typeof r.next === 'string' ? r.next : '';
@@ -1413,9 +1424,14 @@ function calNoteBody(r) {
 
 function renderCalNotes(all) {
   const grid = el.calNotesGrid;
-  // The head — the date alone (today, month-day, no year).
-  el.calDayheadDate.textContent =
-    new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+  // The head — today's date with weekday and ordinal suffix (e.g., "Thursday, October 2nd").
+  const now = new Date();
+  const weekday = now.toLocaleDateString(undefined, { weekday: 'long' });
+  const monthDay = now.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+  const day = now.getDate();
+  const suffix = ordinalSuffix(day);
+  el.calDayheadDate.innerHTML =
+    `${weekday}, ${monthDay}<sup>${suffix}</sup>`;
   wireCalNotes();
   if (grid.querySelector('[contenteditable]')) return;   // an edit is open — don't throw the typing away
   grid.textContent = '';
