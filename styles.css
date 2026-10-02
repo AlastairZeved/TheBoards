@@ -1988,7 +1988,7 @@ html.wide #cal-export { margin-left: auto; }
   grid-template-columns: repeat(3, minmax(0, 1fr));   /* exactly three across at every phone width */
   gap: 8px;
   align-items: stretch;
-  aspect-ratio: 3 / 2;              /* reserve height for two rows of squares (3 cols × 2 rows) */
+  aspect-ratio: 3 / 2;              /* reserve height for two rows of squares (3 cols × 2 rows) on ALL modes */
 }
 .cal-note {
   aspect-ratio: 1 / 1;              /* the block is square — the owner's "square fucking box" */
