@@ -199,9 +199,14 @@
     <div id="cal-stack"></div>
     <div id="cal-month" role="group" aria-label="Month view"></div>
     <!-- B134 (issue #259): the exit control renders LAST — at the view's very
-         bottom, below the month view, anchored left. Reads `Collapse ▶`. -->
+         bottom, below the month view, anchored left. Reads `Collapse ▶`.
+         B148 (issue #342): the row's second control — `Today`, anchored RIGHT
+         of Collapse — resets the month view to the current month and the week
+         view to the shipped today+6 window. The day-note section above is not
+         touched by it. -->
     <div id="cal-top" role="group" aria-label="Calendar actions">
       <button type="button" class="cal-act on-light" id="cal-back"></button>
+      <button type="button" class="cal-act on-light" id="cal-today"></button>
     </div>
   </section>
 

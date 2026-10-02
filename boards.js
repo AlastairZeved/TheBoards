@@ -1553,6 +1553,28 @@ function startCalNoteEdit(block, rec, seat) {
 let calMonthAnchor = null;
 let calWeekAnchor = null;
 
+/* B148 (issue #342): `Today` — reset BOTH anchors to the shipped defaults, so
+   the month view returns to the current month and the week view to the
+   today+6 window (calWindow's, R7.4). Nulling calWeekAnchor is exactly what
+   renderCal's `calWeekAnchor ? calWeekOf(calWeekAnchor) : calWindow()` reads
+   as the default, so no new window is computed here and no state is stored —
+   both anchors are render-time state (R4's law), the same two the month
+   arrows and the day-cell tap already write.
+
+   Pure navigation: it moves the view and persists nothing a stray tap could
+   duplicate, so it runs raw — no commitAction (B81, the rail's precedent).
+   The day-note section above is untouched: renderCal redraws it from its own
+   records, and the owner ruled the reset covers the month and week views only
+   ("The top section with the squares is not impacted by this button at all").
+
+   Both anchors are cleared unconditionally, even when they already sit on
+   today — the control states one act, "today", and it is never stale. */
+function goCalToday() {
+  calMonthAnchor = null;
+  calWeekAnchor = null;
+  renderCal();
+}
+
 const MO_WDS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 /* The Sunday-first week containing `anchor`: seven consecutive days, today
@@ -1688,6 +1710,7 @@ export function registerBoards() {
     if (state.isWide && state.calExpanded) { collapseCalRail(); return; }
     goCalBack();
   });
+  el.calToday.addEventListener('click', goCalToday);
   el.calRail.addEventListener('click', () => {
     // Furniture's one act: expand (B99). Pure navigation, no commit (B81).
     if (!state.isWide || state.calExpanded) return;

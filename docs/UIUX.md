@@ -947,10 +947,11 @@ tab retires on wide (`html.wide #action-calendar { display: none }`) —
 mobile keeps the four-tab row and the tab-driven full-screen view, unchanged.
 B100 retires desktop's **All Boards** R1 button too (`html.desktop #cal-boards
 { display: none }`, with the handler guarding): the rail names every board,
-and the panel's exit control is **Collapse** alone, anchored bottom-left below
-the month view (B124's one-control row, renamed and reseated by B134 — mockup
-6's **Back + Export** row, its Export right-anchor and its `margin-left: auto`
-retire with it). The tablet tier renders
+and the panel's exit row is **Collapse** (anchored bottom-left below the month
+view, renamed and reseated by B134) plus **`Today`** (anchored bottom-right,
+added by B148) — B124's one-control row is superseded in its count only (mockup
+6's **Back + Export** row and its All Boards membership remain retired, and
+Export's right-anchor does not return; `Today` takes that corner instead). The tablet tier renders
 this same rail + panel arrangement under the touch grammar (B96; B103's
 final gate: **one width floor, `min-width: 744px`, orientation-blind** —
 unfolded foldables, iPads, and Android tablets take this arrangement in
@@ -960,8 +961,8 @@ leg are superseded), its All tab kept.
 (2026-09-16: B119 — issue #212 — supersedes the tablet All tab: the
 `#cal-boards` guard widens from `isDesktop` to `isWide`, so the calendar
 panel's All Boards control retires on tablet with the tab; the panel's exit
-control is **Collapse** alone on wide as on mobile — B124's one-control row,
-renamed and reseated by B134. The rail + panel
+row is **Collapse + `Today`** on wide as on mobile — B124's one-control row,
+renamed and reseated by B134, its count superseded by B148. The rail + panel
 arrangement itself stands on tablet — B118's collapse grammar included.)
 
 **The calendar's exit control.** One `--frame` flat tab in the row-control
@@ -981,6 +982,18 @@ spent **edge-ward and downward, never upward** — the month view sits directly
 above the control and an upward collar would steal the month grid's taps
 (B134, superseding B98's upward spend). Hover, press, and keyboard focus state
 themselves (brightness 1.1 / 0.92, §2.7's two-tone ring) — state is never colour.
+
+(2026-10-02: B148 — issue #342 — the row carries a **second** control,
+**`Today`**, anchored **right**: same `.cal-act` species, same tokens, same
+drawn mark and label idiom, seated by `#cal-today { margin-left: auto; }` while
+`#cal-back`'s existing `margin-right: auto` absorbs the slack, so Collapse holds
+the bottom-left corner and `Today` the bottom-right. One tap returns the **month
+view** to the current month AND the **week view** to the shipped today-at-the-top
++ 6 window; the **day-note squares above are untouched** by it. The mark is
+`GLYPH.calendar` — the calendar's own already-drawn glyph, B50's law, no new
+mark invented. Collapse's seat, label, arrow and label-first order are unchanged;
+the row's row-last seat below the month view is unchanged. Nothing else in this
+section moves.)
 
 **The 7-day stack.** `#cal-stack` is a column of seven `#cal-day` cards,
 today first — computed at render (R4), never stored. A day card is a
@@ -1504,8 +1517,9 @@ calendar's exit row, the rail already naming every category with every board —
 so `#list-view` has no entry path on desktop and never shows. The drill's
 B82 split survives as code (rising panel under `html:not(.desktop)`), simply
 unreachable on desktop; wide's board row is **two tabs** (Export · Import) and
-the calendar's exit control is **Collapse** alone, anchored bottom-left below
-the month view (B124's one-control row, renamed and reseated by B134).
+the calendar's exit row is **Collapse** (bottom-left) plus **`Today`**
+(bottom-right, B148), below the month view (B124's one-control row, renamed and
+reseated by B134, its count superseded by B148).
 
 (2026-09-16: B118 — issue #211 — supersedes the rail's always-visible 300px
 geometry: on wide the rail ships collapsed as a 40px face, mirroring the

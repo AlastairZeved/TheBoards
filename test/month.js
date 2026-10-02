@@ -207,6 +207,89 @@ async function monthReady(page, minCells = 1) {
     await ctx.close();
   }
 
+  console.log('\n[M5] The exit row\'s `Today` resets BOTH the month and the week view (issue #342, B148)');
+  {
+    const { ctx, page, errors } = await newPage(browser);
+    await page.evaluate(() => document.getElementById('action-calendar').click());
+    await monthReady(page);
+    await page.waitForTimeout(300);
+    // Baseline: the shipped defaults. The label reads the month on show, the
+    // stack's first card is today and its last is today+6.
+    const readState = () => page.evaluate(() => {
+      const label = document.querySelector('.mo-label').textContent;
+      const now = new Date();
+      const cards = [...document.querySelectorAll('.cal-day')];
+      return {
+        label,
+        wantMonth: now.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+        firstToday: cards.length > 0 && cards[0].classList.contains('today'),
+        nCards: cards.length,
+        // the stack's LAST card's key, read off its header text is fragile —
+        // read the anchors' effect instead: a today-first, today+6 window has
+        // exactly one .today card and 7 cards total.
+        todayCards: cards.filter(d => d.classList.contains('today')).length,
+      };
+    });
+    const boot = await readState();
+    ok('at boot the month view reads the current month and the week view is today + 6',
+      boot.label === boot.wantMonth && boot.todayCards === 1 && boot.nCards === 7, JSON.stringify(boot));
+    // Drive BOTH anchors off today: the month back arrow, then a tap on a
+    // day cell in a different week.
+    await page.click('.mo-head .mo-nav');                     // previous month
+    await monthReady(page);
+    await page.waitForTimeout(300);
+    const offMonth = await page.evaluate(() => {
+      const now = new Date();
+      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        .toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+      return { label: document.querySelector('.mo-label').textContent, prev };
+    });
+    ok('the month view moved off the current month (the precondition)',
+      offMonth.label === offMonth.prev, JSON.stringify(offMonth));
+    // Tap a day cell 20+ days out so the tapped week cannot contain today.
+    const farCell = await page.evaluate(() => {
+      const cells = [...document.querySelectorAll('.mo-cell:not(.today)')];
+      const c = cells[Math.min(cells.length - 1, 24)];
+      const r = c.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2, n: c.textContent };
+    });
+    await page.mouse.click(farCell.x, farCell.y);
+    await page.waitForTimeout(400);
+    const offWeek = await readState();
+    ok('the week view moved off the today-first window (the precondition)',
+      offWeek.todayCards === 0 || offWeek.firstToday === false, JSON.stringify(offWeek));
+    // The control itself: present, filled, seated right, in the row.
+    const ctl = await page.evaluate(() => {
+      const row = document.getElementById('cal-top').getBoundingClientRect();
+      const back = document.getElementById('cal-back').getBoundingClientRect();
+      const t = document.getElementById('cal-today');
+      const r = t.getBoundingClientRect();
+      return {
+        exists: !!t, label: (t.querySelector('.label') || {}).textContent || '',
+        hasSvg: !!t.querySelector('svg'), h: r.height, w: r.width,
+        backLeft: Math.abs(back.left - row.left) < 12,
+        todayRight: Math.abs(row.right - r.right) < 12,
+        sameRow: Math.abs(back.top - r.top) < 2,
+      };
+    });
+    ok('`Today` renders in the exit row with the drawn mark and its label (issue #342, B148)',
+      ctl.exists && ctl.label === 'Today' && ctl.hasSvg, JSON.stringify(ctl));
+    ok('`Today` is the same species as Collapse — same height, clearing the §6 touch floor as drawn',
+      ctl.h >= 44 && ctl.w >= 44, `${ctl.w}x${ctl.h}`);
+    ok('Collapse holds the row\'s LEFT corner and `Today` its RIGHT, on the same line',
+      ctl.backLeft && ctl.todayRight && ctl.sameRow, JSON.stringify(ctl));
+    // The act.
+    await page.click('#cal-today');
+    await monthReady(page);
+    await page.waitForTimeout(400);
+    const reset = await readState();
+    ok('`Today` returns the month view to the current month', reset.label === reset.wantMonth, JSON.stringify(reset));
+    ok('`Today` returns the week view to today at the top with the next 6 days beneath it',
+      reset.firstToday && reset.todayCards === 1 && reset.nCards === 7, JSON.stringify(reset));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   console.log('\n[M4] The month view fits the wide panel (desktop)');
   {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
