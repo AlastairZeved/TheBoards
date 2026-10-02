@@ -456,7 +456,6 @@ export const el = {
   calView: document.getElementById('cal-view'),             // calendar screen (issue #145)
   calRail: document.getElementById('cal-rail'),             // the standing rail face (issue #158, B99)
   calDayhead: document.getElementById('cal-dayhead'),       // the day head — the date alone (issue #329)
-  calDayheadDate: document.getElementById('cal-dayhead-date'), // the date text inside the day head
   calNotes: document.getElementById('cal-notes'),           // the section's own records (issue #329)
   calNotesGrid: document.getElementById('cal-notes-grid'),  // the square blocks, three across
   calNotesPrev: document.getElementById('cal-notes-prev'),  // the .mo-nav pager, left

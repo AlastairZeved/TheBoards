@@ -182,20 +182,18 @@
          palette. The frame wraps #cal-dayhead and #cal-notes as one unit. -->
     <div id="cal-frame" role="group" aria-label="Today and day notes">
       <!-- Issue #329: the day head — today's date alone (month-day, no year).
-           The add "+" button sits on this line, anchored to the far right.
-           Filled by renderCalNotes(). -->
-      <div id="cal-dayhead" class="on-light" role="group" aria-label="Today">
-        <span id="cal-dayhead-date"></span>
-        <button type="button" class="cal-notes-add" id="cal-notes-add" aria-label="Add a day note"></button>
-      </div>
+           No add control on it. Filled by renderCalNotes(). -->
+      <div id="cal-dayhead" class="on-light" role="group" aria-label="Today"></div>
       <!-- Issue #329: the section's OWN records — the recurring-reminder
            records the retired strip held — as square orange two-zone blocks,
            three across, left/right pagination beyond three (the .mo-nav pager
-           grammar). Calendar events are never read here. Filled by renderCalNotes(). -->
+           grammar), add "+" at the row's right. Calendar events are never read
+           here. Filled by renderCalNotes(). -->
       <div id="cal-notes" role="group" aria-label="Day notes">
         <button type="button" class="mo-nav" id="cal-notes-prev" aria-label="Previous day notes"></button>
         <div id="cal-notes-grid" role="list"></div>
         <button type="button" class="mo-nav" id="cal-notes-next" aria-label="Next day notes"></button>
+        <button type="button" class="cal-notes-add" id="cal-notes-add" aria-label="Add a day note"></button>
       </div>
     </div>
     <div id="cal-stack"></div>
