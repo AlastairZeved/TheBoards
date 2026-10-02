@@ -1949,7 +1949,7 @@ html.wide #cal-export { margin-left: auto; }
   padding: 10px 12px;
   border: 2px solid var(--water-bot);   /* #462d1a — the darker orange */
   border-radius: 4px;
-  background: var(--note);              /* #e3c6aa — the lighter orange */
+  background: var(--water-top);         /* #815a42 — the weekly view's gradient orange */
 }
 /* Issue #329: the day head — today's date alone (month-day, no year), no add
    control on it. Tokens only: the view's light ink on its own ground, the
@@ -2011,7 +2011,7 @@ html.wide #cal-export { margin-left: auto; }
 }
 .cal-note-text {
   flex: 1 1 auto;                       /* the darker fill reaches the frame's bottom edge */
-  background: var(--water-bot);         /* #462d1a — the darker orange body (R3) */
+  background: var(--frame);             /* #b48158 — the calendar's frame orange, matching the Collapse button */
   color: var(--ink-light);              /* #f4f5f1 under #cal-view's .on-dark — 11.62:1 */
   font-size: 12px; line-height: 1.4;
   padding: 4px 6px;
