@@ -265,15 +265,15 @@ async function monthReady(page, minCells = 1) {
       const t = document.getElementById('cal-today');
       const r = t.getBoundingClientRect();
       return {
-        exists: !!t, label: (t.querySelector('.label') || {}).textContent || '',
-        hasSvg: !!t.querySelector('svg'), h: r.height, w: r.width,
+        exists: !!t, label: t.textContent.trim(),
+        h: r.height, w: r.width,
         backLeft: Math.abs(back.left - row.left) < 12,
         todayRight: Math.abs(row.right - r.right) < 12,
         sameRow: Math.abs(back.top - r.top) < 2,
       };
     });
-    ok('`Today` renders in the exit row with the drawn mark and its label (issue #342, B148)',
-      ctl.exists && ctl.label === 'Today' && ctl.hasSvg, JSON.stringify(ctl));
+    ok('`Today\` renders in the exit row, reading "Today" (issue #342, B148)',
+      ctl.exists && ctl.label === 'Today', JSON.stringify(ctl));
     ok('`Today` is the same species as Collapse — same height, clearing the §6 touch floor as drawn',
       ctl.h >= 44 && ctl.w >= 44, `${ctl.w}x${ctl.h}`);
     ok('Collapse holds the row\'s LEFT corner and `Today` its RIGHT, on the same line',

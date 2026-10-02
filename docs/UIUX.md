@@ -989,9 +989,9 @@ drawn mark and label idiom, seated by `#cal-today { margin-left: auto; }` while
 `#cal-back`'s existing `margin-right: auto` absorbs the slack, so Collapse holds
 the bottom-left corner and `Today` the bottom-right. One tap returns the **month
 view** to the current month AND the **week view** to the shipped today-at-the-top
-+ 6 window; the **day-note squares above are untouched** by it. The mark is
-`GLYPH.calendar` — the calendar's own already-drawn glyph, B50's law, no new
-mark invented. Collapse's seat, label, arrow and label-first order are unchanged;
++ 6 window; the **day-note squares above are untouched** by it. It reads
+**`Today`**, in the row's own `.cal-act` species. Collapse's seat, label, arrow
+and label-first order are unchanged;
 the row's row-last seat below the month view is unchanged. Nothing else in this
 section moves.)
 

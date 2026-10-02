@@ -234,10 +234,7 @@ export function registerMenus() {
 
   fillBoardAction(el.calBack, GLYPH.calBack, COPY.calBack);
   // B148 (issue #342): the exit row's second control, `Today`, anchored right.
-  // It wears GLYPH.calendar — the calendar's OWN drawn mark (B50: marks are
-  // drawn, never typed), already in the app's hand for the Calendar tab. No
-  // new glyph is invented for the reset.
-  fillBoardAction(el.calToday, GLYPH.calendar, COPY.calToday);
+  el.calToday.textContent = COPY.calToday;
   fillBoardAction(el.paneCollapse, GLYPH.paneCollapse, COPY.paneCollapse);  // B118: the expanded pane's arrow
 
   el.actionBoards.addEventListener('click', () => {
