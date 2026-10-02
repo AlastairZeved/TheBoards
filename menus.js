@@ -234,7 +234,8 @@ export function registerMenus() {
 
   fillBoardAction(el.calBack, GLYPH.calBack, COPY.calBack);
   // B148 (issue #342): the exit row's second control, `Today`, anchored right.
-  el.calToday.textContent = COPY.calToday;
+  // Filled like every other control in this species — mark and label, one box.
+  fillBoardAction(el.calToday, GLYPH.calendar, COPY.calToday);
   fillBoardAction(el.paneCollapse, GLYPH.paneCollapse, COPY.paneCollapse);  // B118: the expanded pane's arrow
 
   el.actionBoards.addEventListener('click', () => {

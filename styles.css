@@ -1920,8 +1920,14 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
    the view's bottom-right corner, mirroring #pane-collapse's seat on the
    board's left edge (B135). #cal-back's own margin-right:auto absorbs the
    slack between the two, so each takes its own corner. Same .cal-act species,
-   same tokens, same §6 collar — only the seat is new. */
+   same tokens, same §6 collar.
+   Both controls grow to the SAME width: they are one species in one row, so
+   the longer label sets the box and the shorter one matches it. Left to their
+   own content they measure differently (Collapse 130px, Today 110px) and read
+   as two different buttons. flex-grow on both, from the row's own left edge,
+   splits the slack between them — the row's flex context, no new token. */
 #cal-today { margin-left: auto; }
+#cal-back, #cal-today { flex-grow: 1; flex-basis: 0; }
 /* B100 (issue #157) as widened by B119 (issue #212): wide's calendar row is
    Back + Export only — the centred All Boards control retires on tablet the
    same way it retired on desktop. With it gone, Export takes the row's

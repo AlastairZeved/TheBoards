@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v119 — version bumped (the #342 Today button pins this build)',
-    /const CACHE = 'zeved-boards-v119';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v119, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v119';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v120 — version bumped (the #342 Today button pins this build)',
+    /const CACHE = 'zeved-boards-v120';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v120, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v120';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -926,12 +926,14 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('the exit row carries Collapse THEN Today, both in #cal-top, Today second in the markup (issue #342, B148)',
     /<div id="cal-top"[^>]*>\s*<button type="button" class="cal-act on-light" id="cal-back"><\/button>\s*<button type="button" class="cal-act on-light" id="cal-today"><\/button>\s*<\/div>/.test(html) &&
     /calToday: document\.getElementById\('cal-today'\)/.test(app));
-  ok('Today is filled at boot with its label (issue #342, B148)',
-    /el\.calToday\.textContent = COPY\.calToday;/.test(app) &&
+  ok('Today is filled like every control in the row\'s species — mark and label, one box (issue #342, B148)',
+    /fillBoardAction\(el\.calToday, GLYPH\.calendar, COPY\.calToday\)/.test(app) &&
     /calToday: 'Today', calBack: 'Collapse',/.test(app));
   ok('Today takes the row\'s RIGHT anchor and Collapse keeps its own left one — each control holds a corner (issue #342, B148)',
     /#cal-back\s*\{ margin-right: auto;/.test(css) && /#cal-today \{ margin-left: auto; \}/.test(css) &&
     /#cal-today \{ margin-left: auto; \}/.test(css));
+  ok('both exit-row controls grow to the SAME width — one species in one row reads as one box (issue #342, B148)',
+    /#cal-back, #cal-today \{ flex-grow: 1; flex-basis: 0; \}/.test(css));
   ok('the reset is pure navigation — it clears BOTH anchors and re-renders, persisting nothing and committing no action (issue #342, B148; B81)',
     /function goCalToday\(\) \{\s*calMonthAnchor = null;\s*calWeekAnchor = null;\s*renderCal\(\);\s*\}/.test(app) &&
     /el\.calToday\.addEventListener\('click', goCalToday\)/.test(app) &&

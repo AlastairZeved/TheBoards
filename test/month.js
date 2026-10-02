@@ -276,6 +276,21 @@ async function monthReady(page, minCells = 1) {
       ctl.exists && ctl.label === 'Today', JSON.stringify(ctl));
     ok('`Today` is the same species as Collapse — same height, clearing the §6 touch floor as drawn',
       ctl.h >= 44 && ctl.w >= 44, `${ctl.w}x${ctl.h}`);
+    // The two controls are ONE species in one row: same box, not two sizes.
+    // Regression — a label-only Today shipped visibly narrower than Collapse.
+    const box = await page.evaluate(() => {
+      const b = document.getElementById('cal-back').getBoundingClientRect();
+      const t = document.getElementById('cal-today').getBoundingClientRect();
+      return { bh: +b.height.toFixed(1), bw: +b.width.toFixed(1),
+               th: +t.height.toFixed(1), tw: +t.width.toFixed(1),
+               backSvg: !!document.querySelector('#cal-back svg'),
+               todaySvg: !!document.querySelector('#cal-today svg') };
+    });
+    ok('`Today` and `Collapse` are the same size — one species, one row (issue #342, B148)',
+      Math.abs(box.bh - box.th) < 0.5 && Math.abs(box.bw - box.tw) < 0.5,
+      `collapse ${box.bw}x${box.bh} / today ${box.tw}x${box.th}`);
+    ok('both controls render a drawn mark beside the label (issue #342, B148)',
+      box.backSvg && box.todaySvg, JSON.stringify(box));
     ok('Collapse holds the row\'s LEFT corner and `Today` its RIGHT, on the same line',
       ctl.backLeft && ctl.todayRight && ctl.sameRow, JSON.stringify(ctl));
     // The act.
