@@ -233,6 +233,10 @@ export function registerMenus() {
   fillBoardAction(el.actionCalendar, GLYPH.calendar, COPY.calendar);
 
   fillBoardAction(el.calBack, GLYPH.calBack, COPY.calBack);
+  // B148 (issue #342): Today wears no mark — the owner ruled a text-only
+  // control ("one anchored to the right side that says 'Today'"), so its
+  // glyph span is empty and the label alone renders.
+  fillBoardAction(el.calToday, '', COPY.calToday);
   fillBoardAction(el.paneCollapse, GLYPH.paneCollapse, COPY.paneCollapse);  // B118: the expanded pane's arrow
 
   el.actionBoards.addEventListener('click', () => {

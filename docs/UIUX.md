@@ -972,7 +972,13 @@ retires). It reads **`Collapse ▶`** — label first, the mark after it, pointi
 right — and it pops the view's pushed History state (`goCalBack`); it is the
 always-visible exit, with the OS gesture as the second route, never
 the only one. All Boards and Export are not in this row: they left the
-calendar view in B124. The tab renders its act — drawn mark
+calendar view in B124. **Today joins the row as its second control, anchored
+right** (B148, issue #342): the same `.cal-act` species, filled at boot by the
+same `fillBoardAction`, but **text alone** — `Today`, riding the existing
+`COPY.calToday` token, no drawn mark, as ruled — and one tap resets both
+render-time anchors: the month view back to the current month and the weekly
+stack back to the shipped today-at-top, next-6-days window (R4). The
+day-note squares above the row are not impacted by it. The tab renders its act — drawn mark
 (22px) beside its label (`15px/600`) — in a frame that clears §6's touch
 floor **as drawn** (B98: `padding: 14px 16px`, ≈ 48px tall on touch), with
 the §6 decoupled collar (`--hit` on the row, set at render) topping up
