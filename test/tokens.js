@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v120 — version bumped (the #343 day-head seat pins this build)',
-    /const CACHE = 'zeved-boards-v120';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v120, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v120';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v121 — version bumped (the #353 Go Back rename pins this build)',
+    /const CACHE = 'zeved-boards-v121';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v121, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v121';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -842,7 +842,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /actionCalendar: document\.getElementById\('action-calendar'\)/.test(app));
   ok('the tab opens the calendar as a history navigation (B9: pushed, never shadowed; embed swaps in replaceState, B124)',
     /actionCalendar\.addEventListener\('click'[\s\S]*?histPush\(\{ v: 'cal' \}\)/.test(app));
-  ok('the calendar view is a real element whose exit row is Collapse alone (B124 row membership; renamed by B134, issue #259)',
+  ok('the calendar view is a real element whose exit row is one control, Go Back (B124 row membership; renamed by B134, issue #259; renamed Go Back by B151, issue #353)',
     /id="cal-view"/.test(html) && /id="cal-back"/.test(html) &&
     !/id="cal-boards"/.test(html) && !/id="cal-export"/.test(html));
   // --- Issue #158 / B99: the standing calendar rail (wide) ---
@@ -919,10 +919,11 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('rail-up is not "open": the screen grammar rides calExpanded, not the furniture',
     /calExpanded: false,/.test(app) &&
     /if \(state\.isWide && state\.calExpanded\) \{ collapseCalRail\(\); return; \}/.test(app));
-  // --- Issue #259 / B134: the exit control's name, seat and arrow ---
-  ok('the exit control is Collapse, filled at boot with label-then-arrow (issue #259, B134; B124 retired All Boards and Export from the calendar)',
-    /fillBoardAction\(el\.calBack, GLYPH\.calBack, COPY\.calBack\)/.test(app) &&
-    /calToday: 'Today', calBack: 'Collapse',/.test(app) &&
+  // --- Issue #259 / B134, renamed by B151 (issue #353): the exit control ---
+  ok('the exit control is Go Back, filled at boot text-only — no arrow glyph (B151, issue #353; B134 reseated it, B124 retired All Boards and Export from the calendar)',
+    /fillBoardAction\(el\.calBack, '', COPY\.calBack\)/.test(app) &&
+    /calToday: 'Today', calBack: 'Go Back',/.test(app) &&
+    !/GLYPH\.calBack/.test(app) &&
     !/fillBoardAction\(el\.calBoards/.test(app) && !/fillBoardAction\(el\.calExport/.test(app) &&
     !/getElementById\('cal-boards'\)/.test(app) && !/getElementById\('cal-export'\)/.test(app));
   ok('the exit row renders LAST — after the month view, at the view\'s bottom (issue #259, B134 superseded B124\'s above-the-month seat)',
@@ -939,13 +940,13 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     !/GLYPH\.calToday/.test(app));
   ok('Today resets both anchors in one act and commits nothing (issue #342, B148; B81 raw navigation)',
     /el\.calToday\.addEventListener\('click'[\s\S]{0,600}?calMonthAnchor = null;[\s\S]{0,200}?calWeekAnchor = null;[\s\S]{0,200}?renderCal\(\);/.test(app));
-  ok('the pane\'s collapse control mirrors the calendar\'s — .cal-act keeps the calendar\'s label-first row-reverse, #pane-collapse\'s own id rule drops it to mark-first (issue #279, B135 supersedes B134\'s pane-collapse grammar clause alone)',
+  ok('the pane\'s collapse control mirrors the calendar\'s — both text-only now, so the .cal-act row-reverse is inert and #pane-collapse\'s direction override is dropped (B151, issue #353 supersedes B135\'s arrow grammar)',
     /\.cal-act \{[^}]*flex-direction: row-reverse;/.test(css) &&
-    /#pane-collapse \{[^}]*flex-direction: row;/.test(css));
-  ok('the two collapse marks point opposite ways — the calendar\'s right chevron, the pane\'s new left chevron, mirrored about x (issue #279, B135)',
-    /calBack:   MARK\(16, '<path d="M6\.5 3\.5L11 8l-4\.5 4\.5"\/><path d="M11 8h-6\.5"\/>'\)/.test(app) &&
-    /paneCollapse: MARK\(16, '<path d="M9\.5 3\.5L5 8l4\.5 4\.5"\/>'\)/.test(app) &&
-    !/paneCollapse: MARK\(16, '<path d="M6\.5 3\.5L11 8l-4\.5 4\.5"\/>'\)/.test(app));
+    !/#pane-collapse \{[^}]*flex-direction: row;/.test(css));
+  ok('neither collapse control carries an arrow mark — the right chevron and the left chevron are both out of the glyph set (B151, issue #353 supersedes B134\'s and B135\'s marks)',
+    !/calBack:\s+MARK\(/.test(app) &&
+    !/paneCollapse: MARK\(/.test(app) &&
+    /paneCollapse: 'Go Back'/.test(app));
   ok('the pane\'s collapse control anchors bottom-right (issue #259, B134; seat stands under B135)',
     /#pane-collapse \{[^}]*align-self: flex-end;/.test(css) &&
     /<div id="pane-cards"><\/div>\s*<button type="button" id="pane-collapse"/.test(html));
