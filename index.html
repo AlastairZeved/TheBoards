@@ -202,6 +202,10 @@
          bottom, below the month view, anchored left. Reads `Collapse ▶`. -->
     <div id="cal-top" role="group" aria-label="Calendar actions">
       <button type="button" class="cal-act on-light" id="cal-back"></button>
+      <!-- B148 (issue #342): the Today control joins the row, anchored right —
+           resets both anchors (month to the current month, the stack to the
+           shipped today+6 window). -->
+      <button type="button" class="cal-act on-light" id="cal-today"></button>
     </div>
   </section>
 

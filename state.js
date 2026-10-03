@@ -464,6 +464,7 @@ export const el = {
   calStack: document.getElementById('cal-stack'),
   calTop: document.getElementById('cal-top'),
   calBack: document.getElementById('cal-back'),
+  calToday: document.getElementById('cal-today'),       // B148 (issue #342): the row's right anchor
   calMonth: document.getElementById('cal-month'),       // the month view's ground (issue #191)
   actionCalendar: document.getElementById('action-calendar'), // 4th board-action tab (R7.2)
 };

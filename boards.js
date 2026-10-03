@@ -1688,6 +1688,17 @@ export function registerBoards() {
     if (state.isWide && state.calExpanded) { collapseCalRail(); return; }
     goCalBack();
   });
+  el.calToday.addEventListener('click', () => {
+    // B148 (issue #342): Today resets both render-time anchors in one act —
+    // `calMonthAnchor = null` puts the month view back on the current month
+    // and `calWeekAnchor = null` returns the stack to the shipped today+6
+    // window (R4) — then re-renders. Raw navigation, nothing committed (B81).
+    // The day-note section above (#cal-frame) is untouched: renderCal re-draws
+    // it from the same records, its page position (calNotePage) unmodified.
+    calMonthAnchor = null;
+    calWeekAnchor = null;
+    renderCal();
+  });
   el.calRail.addEventListener('click', () => {
     // Furniture's one act: expand (B99). Pure navigation, no commit (B81).
     if (!state.isWide || state.calExpanded) return;

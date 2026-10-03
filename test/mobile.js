@@ -2723,7 +2723,7 @@ async function openCat(page, cat) {
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(400);
     const geo = await page.evaluate(() => {
-      const ids = ['cal-back'];   // B124 (issue #237): the row is ONE control; B134 renamed it Collapse (issue #259)
+      const ids = ['cal-back'];   // B148 (issue #342): Today joins the row as its right anchor — this assertion re-pinned deliberately; the row is no longer ONE control
       return ids.map((id) => {
         const b = document.getElementById(id);
         const r = b.getBoundingClientRect();
@@ -3099,6 +3099,93 @@ async function openCat(page, cat) {
            'mobile seed line VIA-CAL'),
        'anchor: ' + await page.evaluate(() =>
          JSON.stringify(document.getElementById('anchor-requirements').textContent)));
+
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  console.log('\n[30] The Today control resets the month and week views (issue #342, B148)');
+  {
+    const { ctx, page, errors } = await newMobilePage(browser);
+    await page.evaluate(() => document.getElementById('action-calendar').click());
+    await page.waitForTimeout(400);
+
+    // The row: Collapse anchored left, Today anchored right, same species.
+    const row = await page.evaluate(() => {
+      const ids = ['cal-back', 'cal-today'];
+      const top = document.getElementById('cal-top').getBoundingClientRect();
+      return ids.map((id) => {
+        const b = document.getElementById(id);
+        const r = b.getBoundingClientRect();
+        return { id, w: r.width, h: r.height, left: r.left - top.left,
+                 label: (b.querySelector('.label') || {}).textContent || '',
+                 hasSvg: !!b.querySelector('svg') };
+      });
+    });
+    const [back, today] = row;
+    ok('the exit row carries Collapse left and Today right (issue #342, B148)',
+      back.label === 'Collapse' && today.label === 'Today' &&
+      back.left < 20 && today.left > back.w, JSON.stringify(row));
+    ok('Today renders text alone — no drawn mark, as ruled (issue #342, B148)',
+      !today.hasSvg, JSON.stringify(today));
+    ok('both controls clear the 44px touch floor AS DRAWN (§6, B98)',
+      back.h >= 44 && back.w >= 44 && today.h >= 44 && today.w >= 44,
+      JSON.stringify(row));
+
+    // The day-note squares above: count them before the reset — the reset
+    // must not disturb this section (the issue's non-impact clause).
+    const notesBefore = await page.evaluate(() =>
+      document.querySelectorAll('.cal-note').length);
+
+    // Drift both anchors: page the month back twice, then tap a non-today
+    // cell — the week view swaps to that week (the month view's one act).
+    await page.evaluate(() => {
+      document.querySelector('#cal-month .mo-nav').click();
+      document.querySelector('#cal-month .mo-nav').click();
+    });
+    await page.waitForTimeout(200);
+    await page.evaluate(() => {
+      const c = [...document.querySelectorAll('#cal-month .mo-cell')]
+        .find(c => !c.classList.contains('today'));
+      c.click();
+    });
+    await page.waitForTimeout(300);
+    const drifted = await page.evaluate(() => ({
+      label: document.querySelector('#cal-month .mo-label').textContent,
+      firstIsToday: !!document.querySelector('#cal-stack .cal-day.today:first-child'),
+    }));
+    ok('precondition: the anchors drifted (month off today, week off the window)',
+      !drifted.firstIsToday, JSON.stringify(drifted));
+
+    // Today resets both, in one act.
+    await page.evaluate(() => document.getElementById('cal-today').click());
+    await page.waitForTimeout(300);
+    const thisMonth = await page.evaluate(() =>
+      new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' }));
+    ok('Today restores the month view to the current month (issue #342, B148)',
+      (await page.evaluate(() =>
+        document.querySelector('#cal-month .mo-label').textContent)) === thisMonth,
+      'label: ' + await page.evaluate(() =>
+        document.querySelector('#cal-month .mo-label').textContent));
+    ok('Today restores the weekly stack — today first, six days after, seven cards (issue #342, B148)',
+      await page.evaluate(() => {
+        const days = [...document.querySelectorAll('#cal-stack .cal-day')];
+        if (days.length !== 7) return false;
+        if (!days[0].classList.contains('today')) return false;
+        if (days[0].querySelector('.cal-d1').textContent !== 'Today') return false;
+        // Consecutive keys: each card's date label advances one day.
+        const md = (d) => String(d.getMonth() + 1).padStart(2, '0') + '/' +
+                         String(d.getDate()).padStart(2, '0');
+        let prev = new Date(); prev.setHours(12, 0, 0, 0);
+        for (let i = 1; i < 7; i++) {
+          prev = new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1);
+          const got = days[i].querySelector('.cal-d2').textContent;
+          if (got !== md(prev)) return false;
+        }
+        return true;
+      }));
+    ok('the day-note squares above are untouched by the reset (issue #342: not impacted)',
+      (await page.evaluate(() => document.querySelectorAll('.cal-note').length)) === notesBefore);
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
