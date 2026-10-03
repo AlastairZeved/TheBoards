@@ -1370,8 +1370,9 @@ export function renderCal() {
 }
 
 /* --- The day-note section (issue #329) ------------------------------------
-   The expanded face's top content. FIRST a head — today's date alone
-   (month-day, no year, the shipped month-grid format) with no add control on
+   The expanded face's top content. FIRST a head — today's date, the weekday
+   with it and the ordinal suffix as superscript ("Friday, October 2nd",
+   issue #341; month-day, no year) with no add control on
    it — then the section's OWN records as square orange two-zone blocks (a
    lighter-orange title band over a darker orange body), three across, the
    left/right pager in the row, and the add "+" rightmost.
@@ -1411,11 +1412,28 @@ function calNoteBody(r) {
   return CALKEY_DATE.test(n) ? '' : n;
 }
 
+// The day-of-month ordinal suffix: 1st, 2nd, 3rd, 4th … 11th/12th/13th, 21st…
+function calOrdinal(n) {
+  const v = n % 100;
+  return ['th', 'st', 'nd', 'rd'][(v - 20) % 10] || ['th', 'st', 'nd', 'rd'][v] || 'th';
+}
+
 function renderCalNotes(all) {
   const grid = el.calNotesGrid;
-  // The head — the date alone, no add control (today, month-day, no year).
-  el.calDayhead.textContent =
-    new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+  // The head — today, weekday + month-day (no year) with the ordinal suffix
+  // as superscript: "Friday, October 2nd" (issue #341). No add control.
+  const today = new Date();
+  const head = el.calDayhead;
+  // The head is a flex row (gap 6px) — the date and its suffix ride in ONE
+  // span so they set as "3rd", not as two spaced flex items.
+  const label = document.createElement('span');
+  label.textContent =
+    today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  const sup = document.createElement('sup');
+  sup.textContent = calOrdinal(today.getDate());
+  label.appendChild(sup);
+  head.textContent = '';
+  head.appendChild(label);
   wireCalNotes();
   if (grid.querySelector('[contenteditable]')) return;   // an edit is open — don't throw the typing away
   grid.textContent = '';
