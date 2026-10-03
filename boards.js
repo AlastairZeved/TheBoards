@@ -1345,6 +1345,11 @@ export function renderCal() {
   checkDayRoll();                // the day-roll launch (B105): once per day key
   el.calView.hidden = false;
   el.calStack.textContent = '';
+  // Issue #343: the day head is seated OUT of the top frame — the node moves
+  // into #cal-stack as its first child, where the stack's bottom-anchor
+  // (issue #293/#334) seats it directly above the day rows, in the gap under
+  // the frame. The frame's upper line stays intentionally blank (issue #343).
+  el.calStack.appendChild(el.calDayhead);
   // §6/B7's collar on the exit row (issue #156, B98; retargeted by B134,
   // issue #259): the row's tab draws at the floor as a visible frame now, and
   // the collar tops up the width where geometry is tight — spent
@@ -1370,10 +1375,12 @@ export function renderCal() {
 }
 
 /* --- The day-note section (issue #329) ------------------------------------
-   The expanded face's top content. FIRST a head — today's date, the weekday
-   with it and the ordinal suffix as superscript ("Friday, October 2nd",
-   issue #341; month-day, no year) with no add control on
-   it — then the section's OWN records as square orange two-zone blocks (a
+   The expanded face's top content. The section's head — today's date, the
+   weekday with it and the ordinal suffix as superscript ("Friday, October
+   2nd", issue #341; month-day, no year) with no add control on it — is seated
+   OUT of the frame, in the gap underneath the section, right on top of the
+   weekly view (issue #343); the frame's upper line is intentionally blank.
+   Then the section's OWN records as square orange two-zone blocks (a
    lighter-orange title band over a darker orange body), three across, the
    left/right pager in the row, and the add "+" rightmost.
 

@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v119 — version bumped (the #341 day-head format pins this build)',
-    /const CACHE = 'zeved-boards-v119';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v119, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v119';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v120 — version bumped (the #343 day-head seat pins this build)',
+    /const CACHE = 'zeved-boards-v120';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v120, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v120';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -859,9 +859,13 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('a day with events wears exactly one dot — --accent-page, a shade within the palette (issue #191)',
     /\.mo-dot \{/.test(css) && /\.mo-dot \{[^}]*background: var\(--accent-page\);/.test(css));
   // --- Issue #329: the day head + the section's own square two-zone blocks ---
-  ok('the day head reads the weekday with the date and the ordinal suffix as superscript — "Friday, October 2nd" — a real element, no add control of its own (issues #329, #341)',
+  ok('the day head reads the weekday with the date and the ordinal suffix as superscript — "Friday, October 2nd" — a real element, seated OUT of the frame (issue #343: in the gap under the section, centered on top of the weekly view, --ink-light ink), no add control of its own (issues #329, #341, #343)',
     /id="cal-dayhead"/.test(html) &&
+    html.indexOf('id="cal-dayhead"') > html.indexOf('id="cal-notes-add"') &&
     /calDayhead: document\.getElementById\('cal-dayhead'\)/.test(app) && /#cal-dayhead \{/.test(css) &&
+    /el\.calStack\.appendChild\(el\.calDayhead\)/.test(app) &&
+    /#cal-dayhead \{[^}]*justify-content: center;/.test(css) &&
+    /#cal-dayhead \{[^}]*font-size: 13px; font-weight: 600; line-height: 1\.3;/.test(css) &&
     /weekday: 'long', month: 'long', day: 'numeric'/.test(app) &&
     /function calOrdinal\(/.test(app) && /createElement\('sup'\)/.test(app));
   ok('the section is a three-column grid of square blocks — repeat(3, minmax(0,1fr)) and aspect-ratio 1/1, the inset frame, 4px radius (issue #329)',
