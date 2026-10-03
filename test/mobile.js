@@ -2734,11 +2734,12 @@ async function openCat(page, cat) {
       });
     });
     for (const g of geo) {
-      ok(`${g.id} renders a glyph and its label (the row states its acts)`,
-        g.hasSvg && g.label.length > 0, JSON.stringify(g));
+      // B151 (issue #353): Go Back renders text alone — no arrow glyph (the
+      // B98 glyph pins retire with the mark; the floor and label pins stand).
+      ok(`${g.id} renders its label, text-only — no arrow glyph (B151, issue #353)`,
+        !g.hasSvg && g.label === 'Go Back', JSON.stringify(g));
       ok(`${g.id} clears the 44px touch floor AS DRAWN (§6, B98)`,
         g.h >= 44 && g.w >= 44, `${g.w}x${g.h}`);
-      ok(`${g.id}'s mark is legible at rest (22px glyph)`, g.glyphW >= 20, String(g.glyphW));
     }
     // The collar: --hit set on #cal-top; a tap BELOW the visual box (inside the
     // collar, which spends edge-ward now the row sits at the view's bottom —
@@ -2756,18 +2757,19 @@ async function openCat(page, cat) {
       b.dispatchEvent(e);
       return n;
     });
-    ok('a tap in the collar below the visual frame fires Collapse', fired === 1, String(fired));
-    // B134 (issue #259): the row renders LAST — the month view precedes it in
-    // the DOM — and the control reads `Collapse ▶`: the label's box sits left
-    // of the mark's, though the markup appends the mark first.
-    ok('the exit row renders below the month view, and reads label-then-arrow (issue #259, B134)',
+    ok('a tap in the collar below the visual frame fires Go Back', fired === 1, String(fired));
+    // B151 (issue #353): the row renders LAST — the month view precedes it in
+    // the DOM — and the control reads `Go Back`, text alone: the label is the
+    // box that renders, the arrow glyph retired with the rename.
+    ok('the exit row renders below the month view, and reads `Go Back` text-only (issue #353, B151)',
       await page.evaluate(() => {
         const top = document.getElementById('cal-top'), month = document.getElementById('cal-month');
         const precedes = month.compareDocumentPosition(top) & Node.DOCUMENT_POSITION_FOLLOWING;
         const b = document.getElementById('cal-back');
         const l = b.querySelector('.label').getBoundingClientRect();
-        const gl = b.querySelector('.glyph').getBoundingClientRect();
-        return !!precedes && l.right <= gl.left + 1 && getComputedStyle(b).flexDirection === 'row-reverse';
+        const svg = !!b.querySelector('.glyph svg');
+        return { ok: !!precedes && b.textContent.trim() === 'Go Back' && !svg && l.width > 0,
+                 text: b.textContent.trim(), svg, lw: l.width, precedes: !!precedes };
       }));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
@@ -3123,8 +3125,8 @@ async function openCat(page, cat) {
       });
     });
     const [back, today] = row;
-    ok('the exit row carries Collapse left and Today right (issue #342, B148)',
-      back.label === 'Collapse' && today.label === 'Today' &&
+    ok('the exit row carries Go Back left and Today right (issue #342, B148; renamed by B151, issue #353)',
+      back.label === 'Go Back' && today.label === 'Today' &&
       back.left < 20 && today.left > back.w, JSON.stringify(row));
     ok('Today renders text alone — no drawn mark, as ruled (issue #342, B148)',
       !today.hasSvg, JSON.stringify(today));

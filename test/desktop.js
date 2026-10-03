@@ -2233,23 +2233,21 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       const offx = parseFloat(getComputedStyle(document.getElementById('board')).getPropertyValue('--offx'));
       return Math.abs(offx - 300) < 0.5 && Math.abs(window.LOGICAL_W - (1440 - 300 - 40) / 0.9) < 1;
     }));
-    // B135 (issue #279): the pane's collapse control sits at the pane's
-    // BOTTOM-RIGHT corner (B134's seat stands) and reads `◀ Collapse` — the
-    // mark FIRST, pointing LEFT: the calendar's `Collapse ▶` mirrored,
-    // because this rail collapses left. Supersedes B134's grammar clause only.
-    ok('the pane\'s collapse control sits at the pane\'s bottom-right corner, reading arrow-then-label — the mark first and pointing left (issue #279, B135)',
+    // B151 (issue #353): the pane's exit control sits at the pane's
+    // BOTTOM-RIGHT corner (B134's seat stands) and reads `Go Back`, text
+    // alone — B135's mirrored arrow retires with the rename.
+    ok('the pane\'s exit control sits at the pane\'s bottom-right corner, reading `Go Back` text-only — no arrow glyph (issue #353, B151)',
       await page.evaluate(() => {
         const p = document.getElementById('pane'), b = document.getElementById('pane-collapse');
         const pr = p.getBoundingClientRect(), br = b.getBoundingClientRect();
         const l = b.querySelector('.label').getBoundingClientRect();
-        const gl = b.querySelector('.glyph').getBoundingClientRect();
         const rightAnchored = Math.abs(pr.right - br.right) <= 20;      // the pane's own right padding
         const bottomAnchored = Math.abs(pr.bottom - br.bottom) <= 20;   // the pane's own bottom padding
-        const order = gl.right <= l.left + 1 && getComputedStyle(b).flexDirection === 'row';
-        const leftChevron = b.querySelector('.glyph path').getAttribute('d') === 'M9.5 3.5L5 8l4.5 4.5';
-        return rightAnchored && bottomAnchored && order && leftChevron;
+        const textOnly = b.querySelector('.label').textContent === 'Go Back' &&
+          !b.querySelector('.glyph svg') && b.textContent.trim() === 'Go Back';
+        return rightAnchored && bottomAnchored && textOnly && l.width > 0;
       }));
-    // (c) the arrow is the collapse affordance.
+    // (c) the control is the collapse affordance.
     await page.click('#pane-collapse');
     await page.waitForTimeout(300);
     ok('arrow: the pane collapses back to the 40px face', await page.evaluate(() => {
@@ -2258,7 +2256,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
         !document.getElementById('pane-rail').hidden &&
         document.getElementById('pane-collapse').hidden &&
         getComputedStyle(document.getElementById('pane-cards')).display === 'none';
-    }));
+      }));
     // (d) the calendar rail's own grammar is untouched by its sibling.
     await page.click('#cal-rail');
     await page.waitForTimeout(300);
