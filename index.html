@@ -177,13 +177,11 @@
       <span class="vlabel" aria-hidden="true">Calendar Board</span>
       <span class="cdate" aria-hidden="true"></span>
     </button>
-    <!-- Issue #336: frame the top section (today's date + the day-note squares)
-         with a 2px dark-orange border and light-orange fill from the calendar
-         palette. The frame wraps #cal-dayhead and #cal-notes as one unit. -->
-    <div id="cal-frame" role="group" aria-label="Today and day notes">
-      <!-- Issue #329: the day head — today's date alone (month-day, no year).
-           No add control on it. Filled by renderCalNotes(). -->
-      <div id="cal-dayhead" class="on-light" role="group" aria-label="Today"></div>
+    <!-- Issue #336: frame the top section (the day-note squares) with a 2px
+         dark-orange border and light-orange fill from the calendar palette.
+         The frame's upper line is INTENTIONALLY blank (issue #343) — to be
+         updated in a future issue. -->
+    <div id="cal-frame" role="group" aria-label="Day notes">
       <!-- Issue #329: the section's OWN records — the recurring-reminder
            records the retired strip held — as square orange two-zone blocks,
            three across, left/right pagination beyond three (the .mo-nav pager
@@ -196,6 +194,12 @@
         <button type="button" class="cal-notes-add" id="cal-notes-add" aria-label="Add a day note"></button>
       </div>
     </div>
+    <!-- Issue #343: the day head — today's date — is seated OUT of the
+         frame, in the gap underneath it, right on top of the weekly view.
+         renderCal() moves the node into #cal-stack, where the stack's own
+         bottom-anchor (issue #293/#334) seats it directly above the day
+         rows. Filled by renderCalNotes(). -->
+    <div id="cal-dayhead" role="group" aria-label="Today"></div>
     <div id="cal-stack"></div>
     <div id="cal-month" role="group" aria-label="Month view"></div>
     <!-- B134 (issue #259): the exit control renders LAST — at the view's very

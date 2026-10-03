@@ -235,6 +235,43 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     await ctx.close();
   }
 
+  console.log('\n[V5] The day head is seated in the gap under the day-note section — inside the weekly stack, centered to the view, --ink-light ink (issue #343)');
+  {
+    const { ctx, page, errors } = await newPage(browser);
+    await page.evaluate(() => document.getElementById('action-calendar').click());
+    await page.waitForTimeout(900);
+
+    const seat = await page.evaluate(() => {
+      const head = document.getElementById('cal-dayhead');
+      const view = document.getElementById('cal-view');
+      const firstRow = document.querySelector('#cal-stack .cal-day');
+      const hr = head.getBoundingClientRect(), vr = view.getBoundingClientRect();
+      const fr = firstRow ? firstRow.getBoundingClientRect() : null;
+      return {
+        parentIsStack: head.parentElement === document.getElementById('cal-stack'),
+        inFrame: !!head.closest('#cal-frame'),
+        headCenterX: hr.x + hr.width / 2,
+        viewCenterX: vr.x + vr.width / 2,
+        color: getComputedStyle(head).color,
+        headBottom: hr.bottom,
+        rowTop: fr ? fr.top : null,
+        text: head.textContent,
+      };
+    });
+    ok('the head renders inside #cal-stack, out of the frame (issue #343)',
+      seat.parentIsStack === true && seat.inFrame === false, JSON.stringify(seat));
+    ok('the head is centered to the view horizontally (within 2px) (issue #343)',
+      Math.abs(seat.headCenterX - seat.viewCenterX) <= 2, JSON.stringify(seat));
+    ok('the head wears the palette\'s approved --ink-light on the view\'s ground (issue #343)',
+      seat.color === 'rgb(244, 245, 241)', JSON.stringify(seat));
+    ok('the head sits directly above the weekly view\'s first day row — above it, never over it (issue #343)',
+      seat.rowTop !== null && seat.headBottom <= seat.rowTop + 1, JSON.stringify(seat));
+    ok('the head still carries the date wording (B149 composition intact)',
+      seat.text.length > 0, JSON.stringify(seat.text));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   console.log(`\n=== day-view-suffix: ${pass} passed, ${fail} failed ===`);
   await browser.close();
   process.exit(fail ? 1 : 0);
