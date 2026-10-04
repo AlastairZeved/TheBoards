@@ -58,12 +58,11 @@
         <span class="cdot" aria-hidden="true"></span>
         <span class="vlabel" aria-hidden="true">All Boards</span>
       </button>
-      <!-- B134 (issue #259): the pane's collapse control sits at the pane's
-           BOTTOM-RIGHT corner. B135 (issue #279): it reads `◀ Collapse` —
-           mark first, pointing left, the calendar's `Collapse ▶` mirrored,
-           because this rail collapses left. -->
+      <!-- B151 (issue #353): the pane's way off reads `Go Back`, no arrow
+           glyph — the label alone renders (B134's seat stands, B135's
+           mirrored mark retires). -->
       <div id="pane-cards"></div>
-      <button type="button" id="pane-collapse" class="cal-act on-light" aria-label="Collapse the boards rail"
+      <button type="button" id="pane-collapse" class="cal-act on-light" aria-label="Go Back"
               hidden></button>
     </aside>
 
@@ -157,9 +156,10 @@
   </section>
 
   <!-- Calendar view (issue #145): the 7-day rolling stack, the third screen.
-       The owner's exit control (R1, renamed and reseated by B134, issue #259)
-       is its visible way off — Collapse alone, rendered at the very BOTTOM of
-       the view, below the month view, anchored left, reading `Collapse ▶`;
+       The owner's exit control (R1, renamed and reseated by B134, issue #259;
+       renamed again by B151, issue #353) is its visible way off — Go Back
+       alone, rendered at the very BOTTOM of
+       the view, below the month view, anchored left, reading `Go Back`;
        Export remains reachable elsewhere and All Boards via the picker/rail.
        The stack renders one day card per
        rolling date, today first (R4 computes the window; nothing stored).
@@ -202,8 +202,9 @@
     <div id="cal-dayhead" role="group" aria-label="Today"></div>
     <div id="cal-stack"></div>
     <div id="cal-month" role="group" aria-label="Month view"></div>
-    <!-- B134 (issue #259): the exit control renders LAST — at the view's very
-         bottom, below the month view, anchored left. Reads `Collapse ▶`. -->
+    <!-- B151 (issue #353): the exit control renders LAST — at the view's very
+         bottom, below the month view, anchored left. Reads `Go Back`, no
+         arrow glyph (B134's `Collapse ▶` retires). -->
     <div id="cal-top" role="group" aria-label="Calendar actions">
       <button type="button" class="cal-act on-light" id="cal-back"></button>
       <!-- B148 (issue #342): the Today control joins the row, anchored right —

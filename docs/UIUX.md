@@ -939,15 +939,17 @@ reserves its 40px from the frame at all times (`CAL_RAIL_W`; the room is
 three columns: boards, board, calendar). One tap expands the rail
 leftward into the panel docked at the right edge (320 unscaled px,
 `--frame` border) and the board reflows beside it — the R6 squeeze,
-entered from the rail; the panel's **Collapse** control is the collapse arrow
-— the panel's bottom-left, below the month view, reading `Collapse ▶` (B134) —
+entered from the rail; the panel's **Go Back** control is the way off
+— the panel's bottom-left, below the month view, reading `Go Back`, text
+alone (B134 seated and named it; B151, issue #353, renamed it and retired
+the arrow) —
 and on collapse the board renders exactly where it was. The rail commits
 nothing and pushes no history (B81: navigation runs raw). The Calendar
 tab retires on wide (`html.wide #action-calendar { display: none }`) —
 mobile keeps the four-tab row and the tab-driven full-screen view, unchanged.
 B100 retires desktop's **All Boards** R1 button too (`html.desktop #cal-boards
 { display: none }`, with the handler guarding): the rail names every board,
-and the panel's exit control is **Collapse** alone, anchored bottom-left below
+and the panel's exit control is **Go Back** alone, anchored bottom-left below
 the month view (B124's one-control row, renamed and reseated by B134 — mockup
 6's **Back + Export** row, its Export right-anchor and its `margin-left: auto`
 retire with it). The tablet tier renders
@@ -960,16 +962,17 @@ leg are superseded), its All tab kept.
 (2026-09-16: B119 — issue #212 — supersedes the tablet All tab: the
 `#cal-boards` guard widens from `isDesktop` to `isWide`, so the calendar
 panel's All Boards control retires on tablet with the tab; the panel's exit
-control is **Collapse** alone on wide as on mobile — B124's one-control row,
+control is **Go Back** alone on wide as on mobile — B124's one-control row,
 renamed and reseated by B134. The rail + panel
 arrangement itself stands on tablet — B118's collapse grammar included.)
 
 **The calendar's exit control.** One `--frame` flat tab in the row-control
-species: **Collapse**, anchored **left at the very bottom of the calendar
+species: **Go Back**, anchored **left at the very bottom of the calendar
 view, below the month view** — the month view renders above it and the control
 renders last, in every mode (B134: the wide-only `order: -1` row-on-top rule
-retires). It reads **`Collapse ▶`** — label first, the mark after it, pointing
-right — and it pops the view's pushed History state (`goCalBack`); it is the
+retires). It reads **`Go Back`** — text alone, no arrow glyph (B151,
+issue #353: the owner's rename of B134's `Collapse ▶`; the mark retires with
+it) — and it pops the view's pushed History state (`goCalBack`); it is the
 always-visible exit, with the OS gesture as the second route, never
 the only one. All Boards and Export are not in this row: they left the
 calendar view in B124. **Today joins the row as its second control, anchored
@@ -1478,7 +1481,7 @@ screen**, reached by choosing its button. Routing is two levels of History API
 state (`{v:'list'}` the picker, `{v:'cat',cat}` a drill, `{v:'cal'}` the calendar
 (B95)) specifically so the OS back gesture returns through every level
 (drill → picker → board; calendar → board). Back is never intercepted,
-shadowed or disabled — and the calendar's **Collapse** control makes the
+shadowed or disabled — and the calendar's **Go Back** control makes the
 calendar's route visible (B95's exit row, renamed and reseated by B134), so
 the gesture is a second way, never the only way. **The picker is
 the Parking Lot turned into the 2×2 grid wherever it exists** (B100, issue
@@ -1510,7 +1513,7 @@ calendar's exit row, the rail already naming every category with every board —
 so `#list-view` has no entry path on desktop and never shows. The drill's
 B82 split survives as code (rising panel under `html:not(.desktop)`), simply
 unreachable on desktop; wide's board row is **two tabs** (Export · Import) and
-the calendar's exit control is **Collapse** alone, anchored bottom-left below
+the calendar's exit control is **Go Back** alone, anchored bottom-left below
 the month view (B124's one-control row, renamed and reseated by B134).
 
 (2026-09-16: B118 — issue #211 — supersedes the rail's always-visible 300px
@@ -1531,6 +1534,13 @@ mirror of the calendar's `Collapse ▶` — the rail sits on the sheet's left ed
 and collapses left, so the mark leads and points left. The pane's bottom-right
 seat (B134), the label text and the `aria-label` stand; the calendar's exit
 control is untouched.)
+
+(2026-10-03: B151 — issue #353 — the owner renames BOTH rails' way off to
+**`Go Back`** and removes the arrow glyph from both: the calendar's exit
+control and the expanded pane's control each read `Go Back`, text alone —
+B134's `Collapse ▶` and B135's mirrored `◀ Collapse` marks retire with the
+rename. The seats, the History acts, B118's collapse grammar, and B148's
+Today control are untouched.)
 
 (2026-09-16: B119 — issue #212 — narrows the picker above to **mobile-only**
 and widens this arrangement's reach: tablet joins desktop as a wide tier

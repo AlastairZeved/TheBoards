@@ -69,10 +69,8 @@ export function fillBoardAction(btn, glyph, label) {
   btn.append(g, l);
 }
 /* The calendar's exit row (issue #156, B98; reseated and renamed by B134,
-   issue #259): the same fill, the same family, rendered `Collapse ▶` — the
-   label first, the mark after it (`.cal-act`'s row-reverse), so the fill
-   order here stays board-row-exact. Collapse wears GLYPH.calBack (drawn for
-   B95's R1, mirrored right by B134); the row is that one control (B124).
+   issue #259; renamed again by B151, issue #353): the same fill, rendered
+   `Go Back` — text alone, no arrow glyph (B134/B135's marks retire, B151).
    Filling at boot is what makes the row controls at all — the issue's
    "untappable / invisible" report was empty <button>s rendering as blank
    squares. */
@@ -232,12 +230,14 @@ export function registerMenus() {
   fillBoardAction(el.actionImport, GLYPH.import, COPY.import);
   fillBoardAction(el.actionCalendar, GLYPH.calendar, COPY.calendar);
 
-  fillBoardAction(el.calBack, GLYPH.calBack, COPY.calBack);
+  // B151 (issue #353): the exit control reads `Go Back`, no arrow glyph —
+  // the label alone renders, the same text-only treatment B148 gave Today.
+  fillBoardAction(el.calBack, '', COPY.calBack);
   // B148 (issue #342): Today wears no mark — the owner ruled a text-only
   // control ("one anchored to the right side that says 'Today'"), so its
   // glyph span is empty and the label alone renders.
   fillBoardAction(el.calToday, '', COPY.calToday);
-  fillBoardAction(el.paneCollapse, GLYPH.paneCollapse, COPY.paneCollapse);  // B118: the expanded pane's arrow
+  fillBoardAction(el.paneCollapse, '', COPY.paneCollapse);  // B151 (issue #353): `Go Back`, text alone
 
   el.actionBoards.addEventListener('click', () => {
     if (listOpen || lotMenuOpen) returnToBoard();
