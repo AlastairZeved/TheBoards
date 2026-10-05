@@ -2,7 +2,7 @@
 
 [![standard-readme compliant](https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/RichardLitt/standard-readme)
 
-[Task tracking, creative ideation.
+Task tracking, creative ideation.
 
 A personal, offline, installable web app for notes and tasks that works like a sketchbook page. You tap anywhere on a bounded canvas, a note box appears, and you type. You can drag notes around, resize them, and connect them. The position and size of a note are the organization; no folders, tags, search, filters, or settings. 
 
