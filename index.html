@@ -177,28 +177,14 @@
       <span class="vlabel" aria-hidden="true">Calendar Board</span>
       <span class="cdate" aria-hidden="true"></span>
     </button>
-    <!-- Issue #336: frame the top section (the day-note squares) with a 2px
-         dark-orange border and light-orange fill from the calendar palette.
-         The frame's upper line is INTENTIONALLY blank (issue #343) — to be
-         updated in a future issue. -->
-    <div id="cal-frame" role="group" aria-label="Day notes">
-      <!-- Issue #329: the section's OWN records — the recurring-reminder
-           records the retired strip held — as square orange two-zone blocks,
-           three across, left/right pagination beyond three (the .mo-nav pager
-           grammar), add "+" at the row's right. Calendar events are never read
-           here. Filled by renderCalNotes(). -->
-      <div id="cal-notes" role="group" aria-label="Day notes">
-        <button type="button" class="mo-nav" id="cal-notes-prev" aria-label="Previous day notes"></button>
-        <div id="cal-notes-grid" role="list"></div>
-        <button type="button" class="mo-nav" id="cal-notes-next" aria-label="Next day notes"></button>
-        <button type="button" class="cal-notes-add" id="cal-notes-add" aria-label="Add a day note"></button>
-      </div>
-    </div>
-    <!-- Issue #343: the day head — today's date — is seated OUT of the
-         frame, in the gap underneath it, right on top of the weekly view.
-         renderCal() moves the node into #cal-stack, where the stack's own
-         bottom-anchor (issue #293/#334) seats it directly above the day
-         rows. Filled by renderCalNotes(). -->
+    <!-- Issue #363: the top day-note section (#cal-frame, issues
+         #329/#331/#336) is DELETED on every tier. The day head is the
+         expanded face's first content; the day-note squares render inside
+         the day cards of #cal-stack below. -->
+    <!-- Issue #343: the day head — today's date — is seated right on top of
+         the weekly view. renderCal() moves the node into #cal-stack, where
+         the stack's own bottom-anchor seats it directly above the day rows.
+         Filled by renderCalDayhead(). -->
     <div id="cal-dayhead" role="group" aria-label="Today"></div>
     <div id="cal-stack"></div>
     <div id="cal-month" role="group" aria-label="Month view"></div>

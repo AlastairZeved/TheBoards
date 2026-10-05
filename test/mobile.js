@@ -2473,130 +2473,127 @@ async function openCat(page, cat) {
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
-  // ---- 25. an existing calendar event is editable in place (issue #152) ----
-  // The bug: makeCalDay rendered existing events as inert text — only the add
-  // flow ever opened the editor. The fix wires the line's own tap to its
-  // existing editor (B97): tap an event -> contenteditable, focused, caret at
-  // the END of the text (the issue's expected behavior), inside the tap
-  // gesture. Commit-on-blur persists the event and re-syncs the mirror; an
-  // empty commit discards (B8); a completed event stays completed.
-  // Flows are separated because two taps inside the double-tap window make
-  // Chromium word-select the now-editable line — native text behavior, not
-  // the app's — so each flow opens its editor fresh.
-  console.log('\n[25] Calendar: tap an existing event edits it in place (issue #152, B97)');
+  // ---- 25. an existing day-note square is editable in place (issue #152, B97; re-pinned to the B153 surface) ----
+  // The block pinned the tap-to-edit gesture grammar against the event lines
+  // the weekly stack used to render — lines issue #363/B153 DELETED (the day
+  // card shows only day-note squares now; startCalLineEdit/addCalEvent are
+  // dead code). The grammar itself survives on the squares: tap a .cal-note
+  // -> contenteditable zones, focused, caret at the END of the tapped zone's
+  // text (the issue's expected behavior), inside the tap gesture.
+  // Commit-on-blur writes the RECORD and re-syncs the store (the mirror
+  // paths are the calendar events', not the notes'); an empty commit
+  // discards (B8). Flows are separated because two taps inside the
+  // double-tap window make Chromium word-select the now-editable zone —
+  // native text behavior, not the app's — so each flow opens its editor
+  // fresh.
+  console.log('\n[25] Calendar: tap an existing day-note square edits it in place (issue #152, B97; re-pinned by B153)');
   {
     const { ctx, page, errors } = await newMobilePage(browser);
-    // Seed today's date with an event + its linked board, as R5 leaves them.
+    // Seed today's card with a day-note record — the {id, rem, next, day}
+    // shape the squares render from (B153: the `day` field binds per card).
     const seeded = await page.evaluate(async () => {
       const key = calKey(new Date());
-      const b = newBoardRecord();
-      b.title = '09/02/26 To Do'; b.cal = key; b.calReq = 1;
-      b.requirements = 'existing event line';
-      const ev = newCalEvent(key, 'existing event line');
-      await idbPut(b); await idbPut(ev);
-      return { key, evId: ev.id };
+      const rec = { id: 'rem-25a', rem: 'existing note title', next: 'existing note body', day: key };
+      await idbPut(rec);
+      return { key, id: rec.id };
     });
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(400);
     const open = await page.evaluate(() => !document.getElementById('cal-view').hidden);
-    ok('calendar opened with the seeded event rendered', open &&
+    ok('calendar opened with the seeded square rendered on today\'s card', open &&
       (await page.evaluate(() =>
-        [...document.querySelectorAll('.cal-line')].some(l => l.textContent === 'existing event line'))));
+        [...document.querySelectorAll('.cal-day.today .cal-note-title')]
+          .some(b => b.textContent === 'existing note title'))));
 
-    // Blur by tapping the exit row's inert right half (issue #259): it is
-    // clear of the day stack AND of the month grid, so a blur never swaps the
-    // week out from under the assertion (the old 200,700 point landed on a
-    // month cell once B134 moved the exit row below the grid).
-    const calBlur = async () => tap(page, 300, (await page.evaluate(() => {
-      const r = document.getElementById('cal-top').getBoundingClientRect();
+    // Blur by tapping the day head: it is inert title ground above the stack
+    // (B153's seat). The old exit-row blur point now shares its row with the
+    // right-anchored Today control (B148), so the clear ground moved up.
+    const calBlur = async () => tap(page, 192, (await page.evaluate(() => {
+      const r = document.getElementById('cal-dayhead').getBoundingClientRect();
       return Math.round(r.top + r.height / 2);
     })));
-    const tapLine = async (text) => {
-      const p = await page.evaluate((t) => {
-        const l = [...document.querySelectorAll('.cal-line')].find(l => l.textContent === t);
-        const r = l.getBoundingClientRect();
+    const tapZone = async (sel, text) => {
+      const p = await page.evaluate(([s, t]) => {
+        const z = [...document.querySelectorAll('.cal-day.today ' + s)]
+          .find(z => z.textContent === t);
+        const r = z.getBoundingClientRect();
         return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
-      }, text);
+      }, [sel, text]);
       await tap(page, p.x, p.y);
     };
-    const editLine = () => page.evaluate(() => {
-      const l = [...document.querySelectorAll('.cal-line')]
-        .find(l => l.hasAttribute('contenteditable'));
-      return l ? { text: l.textContent, complete: l.classList.contains('complete') } : null;
+    const editingCount = () => page.evaluate(() =>
+      [...document.querySelectorAll('.cal-note')]
+        .filter(n => n.querySelector('[contenteditable]')).length);
+    const editState = () => page.evaluate(() => {
+      const n = [...document.querySelectorAll('.cal-note')]
+        .find(n => n.querySelector('[contenteditable]'));
+      if (!n) return null;
+      const ae = document.activeElement;
+      return { title: n.querySelector('.cal-note-title').textContent,
+               body: n.querySelector('.cal-note-text').textContent,
+               focused: ae && (ae.classList.contains('cal-note-title') ? 'band' :
+                        ae.classList.contains('cal-note-text') ? 'body' : null) };
     });
 
     // Flow 1: open, focus, caret at the END (the issue's expected behavior).
-    await tapLine('existing event line');
+    await tapZone('.cal-note-title', 'existing note title');
     await page.waitForTimeout(80);
-    const editing = await page.evaluate(() => {
-      const l = [...document.querySelectorAll('.cal-line')]
-        .find(l => l.hasAttribute('contenteditable'));
-      if (!l) return null;
-      return { isLine: l.textContent === 'existing event line',
-               focused: document.activeElement === l };
-    });
-    ok('the tap opens the existing editor on the line', !!editing, 'none found');
-    ok('the line has focus (keyboard opens, inside the gesture)',
-      editing && editing.focused);
+    const editing = await editState();
+    ok('the tap opens the existing editor on the square', !!editing, 'none found');
+    ok('the tapped zone has focus (keyboard opens, inside the gesture)',
+      editing && editing.focused === 'band');
     // The caret-at-end contract is proven behaviorally (the B90 pattern):
     // typing a marker must append — an end-placed caret means the marker
     // lands after the existing text, never inside it.
     await page.keyboard.type('!');
     await page.waitForTimeout(80);
     ok('the caret sits at the end of the text (issue #152 expected behavior — typing appends)',
-      (await editLine()).text === 'existing event line!');
+      (await editState()).title === 'existing note title!');
     await calBlur();
     await page.waitForTimeout(400);
 
-    // Flow 2: the re-arm guard. startCalLineEdit arms the blur commit, so a
-    // second editor on the same line would DOUBLE-COMMIT the same event.
-    // The guard must prevent that. Observable black-box: exactly one line
+    // Flow 2: the re-arm guard. startCalNoteEdit arms the blur commit, so a
+    // second editor on the same square would DOUBLE-COMMIT the same record.
+    // The guard must prevent that. Observable black-box: exactly one square
     // carries contenteditable across the second tap (issue #182 — module
     // scope no longer lets a test wrap the function itself).
-    await tapLine('existing event line!');       // opens the editor (arm 1)
+    await tapZone('.cal-note-title', 'existing note title!');   // opens the editor (arm 1)
     await page.waitForTimeout(80);
-    const armed1 = await page.evaluate(() =>
-      document.querySelectorAll('.cal-line[contenteditable]').length);
-    await tapLine('existing event line!');       // the second tap while editing
+    const armed1 = await editingCount();
+    await tapZone('.cal-note-title', 'existing note title!');   // the second tap while editing
     await page.waitForTimeout(120);
-    const armed2 = await page.evaluate(() =>
-      document.querySelectorAll('.cal-line[contenteditable]').length);
+    const armed2 = await editingCount();
     ok('a second tap while editing does not re-arm the editor (exactly one editor open)',
       armed1 === 1 && armed2 === 1, 'armed=' + armed1 + '->' + armed2);
     await calBlur();                             // close flow 2's editor
     await page.waitForTimeout(400);
 
-    // Flow 3: type the edit, blur, read back what persisted (record + mirror).
-    await tapLine('existing event line!');
+    // Flow 3: type the edit, blur, read back what persisted (the record).
+    await tapZone('.cal-note-title', 'existing note title!');
     await page.waitForTimeout(80);
     await page.keyboard.type(' EDITED');
     await calBlur();
     await page.waitForTimeout(400);              // commit + debounced save
     const after = await page.evaluate(async (id) => {
       const all = await idbGetAll();
-      const ev = all.find(r => r.id === id);
-      const board = all.find(r => r.cal === calKey(new Date()));
-      const lines = (board && board.requirements || '').split('\n');
-      return { evText: ev && ev.text, state: ev && ev.state,
-               mirrorFirst: lines[0], calReq: board && board.calReq };
-    }, seeded.evId);
-    ok('the edit persisted to the event record',
-      after.evText === 'existing event line! EDITED', JSON.stringify(after));
-    ok('the linked board mirror re-synced with the edit (one writer)',
-      after.mirrorFirst === 'existing event line! EDITED' && after.calReq === 1,
-      JSON.stringify(after));
+      const rec = all.find(r => r.id === id);
+      return { rem: rec && rec.rem, next: rec && rec.next, day: rec && rec.day };
+    }, seeded.id);
+    ok('the edit persisted to the day-note record (the store re-synced on commit)',
+      after.rem === 'existing note title! EDITED' && after.next === 'existing note body'
+        && after.day === seeded.key, JSON.stringify(after));
 
-    // Flow 4: empty commit discards (B8) — seed a second event, clear it, blur.
-    const ev2 = await page.evaluate(async () => {
-      const e = newCalEvent(calKey(new Date()), 'doomed');
-      await idbPut(e);
-      await syncDateMirror(calKey(new Date()));
+    // Flow 4: empty commit discards (B8) — seed a second record, clear its
+    // band, blur. Both fields empty = the discard.
+    const doomed = await page.evaluate(async () => {
+      const r = { id: 'rem-25doom', rem: 'doomed', next: '', day: calKey(new Date()) };
+      await idbPut(r);
       renderCal();
-      await new Promise(r => setTimeout(r, 300));
-      return e.id;
+      await new Promise(res => setTimeout(res, 300));
+      return r.id;
     });
     await page.waitForTimeout(200);
-    await tapLine('doomed');
+    await tapZone('.cal-note-title', 'doomed');
     await page.waitForTimeout(80);
     await page.keyboard.press('Control+a');
     await page.keyboard.press('Backspace');
@@ -2605,114 +2602,110 @@ async function openCat(page, cat) {
     const gone = await page.evaluate(async (id) => {
       const all = await idbGetAll();
       return { record: all.some(r => r.id === id),
-               line: [...document.querySelectorAll('.cal-line')]
-                 .some(l => l.textContent === 'doomed') };
-    }, ev2);
-    ok('an empty commit discards the event record and its line (B8)',
-      !gone.record && !gone.line, JSON.stringify(gone));
+               square: [...document.querySelectorAll('.cal-day.today .cal-note-title')]
+                 .some(b => b.textContent === 'doomed') };
+    }, doomed);
+    ok('an empty commit discards the day-note record and its square (B8)',
+      !gone.record && !gone.square, JSON.stringify(gone));
 
-    // Flow 5: a completed event stays completed through an edit (state and
-    // text are independent — the strike survives editing). Flow 4's commit
-    // re-synced the mirror and re-rendered the stack, so re-locate the line
-    // after the fresh render before tapping.
-    const ev3 = await page.evaluate(async () => {
-      const e = newCalEvent(calKey(new Date()), 'struck line');
-      e.state = 'complete';
-      await idbPut(e);
-      await syncDateMirror(calKey(new Date()));
-      renderCal();
-      await new Promise(r => setTimeout(r, 300));
-      return e.id;
-    });
-    await page.waitForTimeout(200);
-    await tapLine('struck line');
+    // Flow 5: the two zones are independent — a tap on the darker body seats
+    // the caret THERE, and the one-step commit writes BOTH fields (the
+    // band's text rides through untouched, as a completed event's state once
+    // rode through its edit). Flow 4's commit re-rendered the stack, so
+    // re-locate the square after the fresh render before tapping.
+    await tapZone('.cal-note-text', 'existing note body');
     await page.waitForTimeout(80);
-    ok('a completed event keeps its strike while editing',
-      (await editLine()).complete);
-    await page.keyboard.type(' done');
+    ok('a tap on the darker body seats the caret in the body',
+      (await editState()).focused === 'body');
+    await page.keyboard.type(' updated');
     await calBlur();
     await page.waitForTimeout(400);
-    const struckAfter = await page.evaluate(async (id) => {
-      const ev = (await idbGetAll()).find(r => r.id === id);
-      const l = [...document.querySelectorAll('.cal-line')]
-        .find(l => l.textContent === 'struck line done');
-      return { state: ev.state, stillStruck: l.classList.contains('complete') };
-    }, ev3);
-    ok('a completed event remains completed after its edit commits',
-      struckAfter.state === 'complete' && struckAfter.stillStruck, JSON.stringify(struckAfter));
+    const bodyAfter = await page.evaluate(async (id) => {
+      const rec = (await idbGetAll()).find(r => r.id === id);
+      return { rem: rec.rem, next: rec.next };
+    }, seeded.id);
+    ok('the body edit commits with the band carried through (both fields, one step)',
+      bodyAfter.rem === 'existing note title! EDITED' &&
+      bodyAfter.next === 'existing note body updated', JSON.stringify(bodyAfter));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
 
-  // ---- 25b. Non-today cards shrink to their text; the stack bottom-anchors to the month view (issue #170 + #191 + #293)
-  // The law: a non-today day card is sized by its content — two lines of event
-  // text read comfortably, nothing clipped — today keeps the stack's dominant
-  // share (the 1.6 grow, its cap now against the shorter stack the month view
-  // shares the ground with, issue #191). Issue #293 re-seats the freed ground:
-  // the stack bottom-anchors to the month view's top and the slack renders
-  // ABOVE the day list as intended whitespace.
-  console.log('\n[25b] Calendar: non-today cards shrink; the stack bottom-anchors to the month view (issue #170 + #191 + #293)');
+  // ---- 25b. Non-today cards shrink to their content; the face flows from the top of the view (issue #170 + #191 + #293; slack re-seated by B153)
+  // The law: a non-today day card is sized by its content — a card with a
+  // square reads comfortably, nothing clipped — today keeps the stack's
+  // dominant share (the 1.6 grow, its cap against the stack, issue #191).
+  // Issue #293 bottom-anchored the stack to the month view with the slack
+  // ABOVE the list; issue #363/B153 supersedes that seating — the head, the
+  // weekly stack and the month view flow from the TOP of the view and
+  // whatever slack remains falls BELOW the month view, above the
+  // bottom-seated exit row.
+  console.log('\n[25b] Calendar: non-today cards shrink; the face flows from the top, the slack below the month view (issue #170 + #191 + #293, re-seated by B153)');
   {
     const { ctx, page, errors } = await newMobilePage(browser);
     await page.evaluate(async () => {
-      const key = calKey(new Date());
-      const b = newBoardRecord();
-      b.title = '09/16/26 To Do'; b.cal = key; b.calReq = 1;
-      b.requirements = 'a long event line that must wrap onto two comfortable lines';
-      const ev = newCalEvent(key, 'a long event line that must wrap onto two comfortable lines');
-      await idbPut(b); await idbPut(ev);
+      const tk = calKey(new Date());
+      const tm = new Date(); tm.setDate(tm.getDate() + 1);
+      await idbPut({ id: 'rem-25b-long', rem: 'LONG NOTE',
+        next: 'a long body of text that must wrap onto two comfortable lines', day: tk });
+      await idbPut({ id: 'rem-25b-short', rem: 'SHORT NOTE', next: '', day: calKey(tm) });
     });
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(400);
     const g = await page.evaluate(() => {
       const stack = document.getElementById('cal-stack').getBoundingClientRect();
       const days = [...document.querySelectorAll('.cal-day')];
-      const line = [...document.querySelectorAll('.cal-line')]
-        .find(l => l.textContent === 'a long event line that must wrap onto two comfortable lines');
+      const note = [...document.querySelectorAll('.cal-day.today .cal-note')]
+        .find(n => n.querySelector('.cal-note-text').textContent.startsWith('a long body'));
+      const nr = note && note.getBoundingClientRect();
+      const month = document.getElementById('cal-month').getBoundingClientRect();
+      const top = document.getElementById('cal-top').getBoundingClientRect();
       return {
         today: +days[0].getBoundingClientRect().height.toFixed(1),
         others: days.slice(1).map(d => +d.getBoundingClientRect().height.toFixed(1)),
-        lineHeight: +line.getBoundingClientRect().height.toFixed(1),
-        bottomGap: +(stack.bottom - days[6].getBoundingClientRect().bottom).toFixed(1),
-        topSlack: +(days[0].getBoundingClientRect().top - stack.top).toFixed(1),
-        month: (() => { const r = document.getElementById('cal-month').getBoundingClientRect();
-                        return { top: +r.top.toFixed(1), bottom: +r.bottom.toFixed(1), h: +r.height.toFixed(1) }; })(),
-        stackBottom: +stack.bottom.toFixed(1),
+        noteH: nr ? +nr.height.toFixed(1) : null,
+        noteInCard: note ? !!note.closest('.cal-day.today') : false,
+        monthBottomGap: +(top.top - month.bottom).toFixed(1),
+        monthBelowStack: +(month.top - stack.bottom).toFixed(1),
         vh: window.innerHeight,
+        fits: +(month.bottom).toFixed(1) <= window.innerHeight,
       };
     });
-    ok('today stays the stack\'s dominant card (the 1.6 grow, capped by the stack; issue #313\'s hourly block now eats the top slack, lowering the cap)',
+    ok('today stays the stack\'s dominant card (the 1.6 grow, capped by the stack)',
           g.today === Math.max(g.today, ...g.others) && g.today > 60, String(g.today));
-    ok('a wrapping event renders two readable lines, unclipped',
-      g.lineHeight >= 30 && g.lineHeight <= 38, String(g.lineHeight));
-    ok('non-today cards shrink to their content (two lines + capture row)',
-      g.others.every(h => h > 40 && h < 80), JSON.stringify(g.others));
-    ok('the stack bottom-anchors to the month view: last card flush at the stack\'s bottom, the freed ground renders above the list (issue #293)',
-      g.bottomGap >= -1 && g.bottomGap <= 1 && g.topSlack > 0 && g.month.h > 100 && g.month.top >= g.stackBottom - 1 && g.month.bottom <= g.vh,
-      JSON.stringify(g));
+    ok('the long day-note body renders inside today\'s card, wrapped and readable, unclipped',
+      g.noteInCard && g.noteH >= 30, 'inCard=' + g.noteInCard + ' h=' + g.noteH);
+    ok('non-today cards shrink to their content (the empty cards at the row\'s floor, the square-bearing card fit to its square)',
+      g.others.every(h => h >= 40 && h <= 110) && g.others.some(h => h < 60), JSON.stringify(g.others));
+    ok('the face flows from the top: the month view follows the stack and the slack falls below it, above the exit row (B153 re-seats #293)',
+      g.monthBelowStack >= -1 && g.monthBottomGap > 0 && g.fits, JSON.stringify(g));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
 
-  // ---- 30. an event created THIS SESSION can be re-edited (issue #304) ----
+  // ---- 30. a day note created THIS SESSION can be re-edited (issue #304; re-pinned to the B153 surface) ----
   // The bug: addCalEvent's create path built its .cal-line by hand and never
   // wired the re-edit click listener that makeCalDay's render path has, so a
   // line written in the current session opened its editor exactly once and
   // was read-only afterwards (the issue's "once it's written and clicked
-  // away from, you can't edit it again"). The fix makes makeCalLine(ev) the
-  // ONE birthplace of a .cal-line; both paths share it. This block drives
-  // the real touch UI on today's card: tap .cal-add, type, Enter-commit,
-  // tap away, tap the line again — the editor must reopen with the text
-  // intact, and the reopened editor must commit too.
-  console.log('\n[30] Calendar: an event created this session re-opens its editor (issue #304)');
+  // away from, you can't edit it again"). The fix made makeCalLine(ev) the
+  // ONE birthplace of a .cal-line; both paths shared it. Issue #363/B153
+  // retired addCalEvent/makeCalLine with the lines; the card's "+" now
+  // births a DAY NOTE through addCalNote, whose paintCal → makeCalNote path
+  // IS the render path — one birthplace by construction. This block drives
+  // the real touch UI on today's card: tap .cal-day.today .cal-add, type the
+  // band, Enter to the body, commit, tap the square again — the editor must
+  // reopen with the text intact, and the reopened editor must commit too.
+  console.log('\n[30] Calendar: a day note created this session re-opens its editor (issue #304; re-pinned by B153)');
   {
     const { ctx, page, errors } = await newMobilePage(browser);
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(400);
     // Create through the real add control on today's day card (index 0, the
-    // same card the future-event suite addresses). addCalEvent opens the
-    // editor on arrival (capture precedes structure, §1.1).
+    // same card the future-event suite addresses). addCalNote opens the
+    // editor on arrival (capture precedes structure, §1.1) with the caret in
+    // the title band.
     const at = await page.evaluate(() => {
       const card = document.querySelectorAll('.cal-day')[0];
       const r = card.querySelector('.cal-add').getBoundingClientRect();
@@ -2720,64 +2713,72 @@ async function openCat(page, cat) {
     });
     await tap(page, at.x, at.y);
     await page.waitForTimeout(150);
-    ok('the add control opened a fresh editor on a new line',
+    ok('the add control opened a fresh square in edit, caret in the title band',
       await page.evaluate(() => {
-        const l = document.querySelector('.cal-line[contenteditable]');
-        return !!l && l.textContent === '';
+        const card = document.querySelector('.cal-day.today');
+        const n = [...card.querySelectorAll('.cal-note')]
+          .find(n => n.querySelector('[contenteditable]'));
+        if (!n) return false;
+        const band = n.querySelector('.cal-note-title');
+        return band.textContent === '' && document.activeElement === band;
       }));
     await page.keyboard.type('created on mobile');
-    await page.keyboard.press('Enter');            // commits on blur
+    await page.keyboard.press('Enter');            // R6.2: the band hands off to the body
+    await page.waitForTimeout(150);
+    await page.keyboard.type('and its body');
+    await page.keyboard.press('Enter');            // R6.4: Enter in the body ends the entry
     await page.waitForTimeout(400);
-    ok('the commit persisted the event record',
+    ok('the commit persisted the day-note record, dated to the card (the `day` field)',
       await page.evaluate(async () => {
         const all = await idbGetAll();
-        return all.some(r => r.text === 'created on mobile' && r.date === calKey(new Date()));
+        return all.some(r => r.rem === 'created on mobile' &&
+          r.next === 'and its body' && r.day === calKey(new Date()));
       }));
-    // Tap away on the exit row's inert right half — the same clear-of-the-
-    // stack blur point block 25 uses (issue #259).
-    await tap(page, 300, (await page.evaluate(() => {
-      const r = document.getElementById('cal-top').getBoundingClientRect();
+    // Tap away on the day head's inert ground — the same clear-of-the-stack
+    // blur point block 25 uses (the exit row now carries Today, B148).
+    await tap(page, 192, (await page.evaluate(() => {
+      const r = document.getElementById('cal-dayhead').getBoundingClientRect();
       return Math.round(r.top + r.height / 2);
     })));
     await page.waitForTimeout(400);
-    ok('after tapping away, no line is editing and the text stayed',
+    ok('after tapping away, no square is editing and the text stayed',
       await page.evaluate(() => {
-        const line = [...document.querySelectorAll('.cal-line')]
-          .find(l => l.textContent === 'created on mobile');
-        return !!line && !line.hasAttribute('contenteditable');
+        const note = [...document.querySelectorAll('.cal-day.today .cal-note')]
+          .find(n => n.querySelector('.cal-note-title').textContent === 'created on mobile');
+        return !!note && !note.querySelector('[contenteditable]');
       }));
-    // THE regression: tap the created line again — it must reopen its editor
-    // with the committed text intact.
+    // THE regression: tap the created square again — it must reopen its
+    // editor with the committed text intact.
     const lp = await page.evaluate(() => {
-      const l = [...document.querySelectorAll('.cal-line')]
-        .find(l => l.textContent === 'created on mobile');
-      const r = l.getBoundingClientRect();
+      const b = [...document.querySelectorAll('.cal-day.today .cal-note-title')]
+        .find(b => b.textContent === 'created on mobile');
+      const r = b.getBoundingClientRect();
       return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
     });
     await tap(page, lp.x, lp.y);
     await page.waitForTimeout(150);
     const reedit = await page.evaluate(() => {
-      const l = [...document.querySelectorAll('.cal-line')]
-        .find(l => l.hasAttribute('contenteditable'));
-      return l ? { text: l.textContent, focused: document.activeElement === l } : null;
+      const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
+        .find(n => n.querySelector('[contenteditable]'));
+      if (!n) return null;
+      const band = n.querySelector('.cal-note-title');
+      return { text: band.textContent, focused: document.activeElement === band };
     });
-    ok('tapping the created line re-opens its editor with the text intact (issue #304)',
+    ok('tapping the created square re-opens its editor with the text intact (issue #304)',
       !!reedit && reedit.text === 'created on mobile' && reedit.focused,
       JSON.stringify(reedit));
     // And the reopen is a real editor: a further edit commits too.
     await page.keyboard.type(' RE-EDITED');
-    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');            // R6.2: band hands off to the body…
+    await page.keyboard.press('Enter');            // …R6.4: Enter in the body ends the entry
     await page.waitForTimeout(400);
     const after = await page.evaluate(async () => {
-      const all = await idbGetAll();
-      const ev = all.find(r => r.text === 'created on mobile RE-EDITED');
-      const board = all.find(r => r.cal === calKey(new Date()));
-      return { evText: ev && ev.text,
-               mirrorFirst: (board && board.requirements || '').split('\n')[0] };
+      const rec = (await idbGetAll()).find(r => r.rem === 'created on mobile RE-EDITED');
+      return rec ? { rem: rec.rem, next: rec.next, day: rec.day, today: calKey(new Date()) } : null;
     });
-    ok('the re-opened editor commits (event record AND mirror carry the second edit)',
-      after.evText === 'created on mobile RE-EDITED' &&
-      after.mirrorFirst === 'created on mobile RE-EDITED', JSON.stringify(after));
+    ok('the re-opened editor commits (the record carries the second edit, body and day intact)',
+      !!after && after.next === 'and its body' && after.day === after.today,
+      JSON.stringify(after));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
@@ -3141,19 +3142,27 @@ async function openCat(page, cat) {
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(400);
 
-    // Commit a cal-line edit while the board is entirely covered.
-    const lineBox = await page.evaluate(() => {
-      const l = [...document.querySelectorAll('.cal-line')]
-        .find(l => l.textContent === 'mobile seed line');
-      const r = l.getBoundingClientRect();
-      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    // Commit a day-NOTE edit while the board is entirely covered (B153: the
+    // squares replaced the rendered lines; the edit writes the RECORD — the
+    // board's mirror is not a day-note writer, so the hidden board has
+    // nothing to repaint and nothing to fight hideCal over).
+    await page.evaluate(async () => {
+      await idbPut({ id: 'rem-cov', rem: 'mobile seed note', next: '', day: calKey(new Date()) });
+      renderCal();
     });
-    await tap(page, lineBox.x, lineBox.y);
+    await page.waitForTimeout(400);
+    const noteBox = await page.evaluate(() => {
+      const b = [...document.querySelectorAll('.cal-day.today .cal-note-title')]
+        .find(b => b.textContent === 'mobile seed note');
+      const r = b.getBoundingClientRect();
+      return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
+    });
+    await tap(page, noteBox.x, noteBox.y);
     await page.waitForTimeout(150);
     await page.evaluate(() => {
-      const l = [...document.querySelectorAll('.cal-line')]
-        .find(l => l.hasAttribute('contenteditable'));
-      l.textContent = 'mobile seed line VIA-CAL';
+      const b = [...document.querySelectorAll('.cal-day.today .cal-note-title')]
+        .find(b => b.hasAttribute('contenteditable'));
+      b.textContent = 'mobile seed note VIA-CAL';
     });
     await page.evaluate(() => document.activeElement && document.activeElement.blur());
     await page.waitForTimeout(800);
@@ -3162,14 +3171,20 @@ async function openCat(page, cat) {
          document.getElementById('anchor-requirements').textContent === 'mobile seed line'),
        'anchor: ' + await page.evaluate(() =>
          JSON.stringify(document.getElementById('anchor-requirements').textContent)));
+    ok('the day-note commit wrote the RECORD (the store is the durable thing now, not a rendered line)',
+       await page.evaluate(async () =>
+         (await idbGetAll()).some(r => r.id === 'rem-cov' &&
+           r.rem === 'mobile seed note VIA-CAL' && r.day === calKey(new Date()))),
+       'records: ' + await page.evaluate(async () =>
+         JSON.stringify((await idbGetAll()).filter(r => r.id === 'rem-cov'))));
 
     // The navigation back still repaints the board from the settled store.
     await page.evaluate(() => document.getElementById('cal-back').click());
     await page.waitForTimeout(700);
-    ok('hideCal still repaints the board on the way back (mirror current)',
+    ok('hideCal still repaints the board on the way back (mirror current, untouched by the note edit)',
        await page.evaluate(() =>
          document.getElementById('anchor-requirements').textContent ===
-           'mobile seed line VIA-CAL'),
+           'mobile seed line'),
        'anchor: ' + await page.evaluate(() =>
          JSON.stringify(document.getElementById('anchor-requirements').textContent)));
 
@@ -3180,6 +3195,18 @@ async function openCat(page, cat) {
   console.log('\n[30] The Today control resets the month and week views (issue #342, B148)');
   {
     const { ctx, page, errors } = await newMobilePage(browser);
+    // Seed per-day day-note records (B153's `day` field): two on today's
+    // card, four on tomorrow's — tomorrow's card pages at three, so the
+    // reset's per-day-pager clause is observable. Seeded BEFORE the open so
+    // the first renderCal draws them.
+    await page.evaluate(async () => {
+      const tk = calKey(new Date());
+      const tm = new Date(); tm.setDate(tm.getDate() + 1);
+      await idbPut({ id: 'rem-t0', rem: 'TODAY NOTE A', next: '', day: tk });
+      await idbPut({ id: 'rem-t1', rem: 'TODAY NOTE B', next: '', day: tk });
+      for (let i = 0; i < 4; i++)
+        await idbPut({ id: 'rem-w' + i, rem: 'TOMORROW NOTE ' + i, next: '', day: calKey(tm) });
+    });
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(400);
 
@@ -3205,10 +3232,26 @@ async function openCat(page, cat) {
       back.h >= 44 && back.w >= 44 && today.h >= 44 && today.w >= 44,
       JSON.stringify(row));
 
-    // The day-note squares above: count them before the reset — the reset
-    // must not disturb this section (the issue's non-impact clause).
+    // The day-note squares in the cards: count today's card's before the
+    // reset — the reset must not disturb the records (the issue's
+    // non-impact clause, now lived by the in-card squares, B153). Page
+    // tomorrow's card forward first so the reset's pager clause is
+    // observable: the pager must come back to its first page.
     const notesBefore = await page.evaluate(() =>
-      document.querySelectorAll('.cal-note').length);
+      document.querySelectorAll('.cal-day.today .cal-note').length);
+    await page.evaluate(() => {
+      const tm = document.querySelectorAll('#cal-stack .cal-day')[1];
+      [...tm.querySelectorAll('.cal-notes-nav')].find(b => b.textContent === '\u203a').click();
+    });
+    await page.waitForTimeout(300);
+    const paged = await page.evaluate(() => {
+      const tm = document.querySelectorAll('#cal-stack .cal-day')[1];
+      return { shown: tm.querySelectorAll('.cal-note').length,
+               prevShown: [...tm.querySelectorAll('.cal-notes-nav')]
+                 .some(b => b.textContent === '\u2039' && !b.hidden) };
+    });
+    ok("precondition: tomorrow's card is paged to its second page (one square, \u2039 showing)",
+      paged.shown === 1 && paged.prevShown, JSON.stringify(paged));
 
     // Drift both anchors: page the month back twice, then tap a non-today
     // cell — the week view swaps to that week (the month view's one act).
@@ -3257,8 +3300,24 @@ async function openCat(page, cat) {
         }
         return true;
       }));
-    ok('the day-note squares above are untouched by the reset (issue #342: not impacted)',
-      (await page.evaluate(() => document.querySelectorAll('.cal-note').length)) === notesBefore);
+    ok('the in-card day-note squares are untouched by the reset (issue #342: not impacted; B153 seats them in the cards)',
+      (await page.evaluate(() =>
+        document.querySelectorAll('.cal-day.today .cal-note').length)) === notesBefore);
+    ok("the per-day pager returns to its first page with the anchors (B153: a reset shows every card's first page)",
+      await page.evaluate(() => {
+        const tm = document.querySelectorAll('#cal-stack .cal-day')[1];
+        return tm.querySelectorAll('.cal-note').length === 3 &&
+          [...tm.querySelectorAll('.cal-notes-nav')]
+            .every(b => b.textContent === '\u2039' ? b.hidden : true);
+      }));
+    ok('the seeded day-note records survive the reset in the store',
+      await page.evaluate(async () => {
+        const tk = calKey(new Date());
+        const tm = new Date(); tm.setDate(tm.getDate() + 1);
+        const all = await idbGetAll();
+        return all.filter(r => r.day === tk).length === 2 &&
+               all.filter(r => r.day === calKey(tm)).length === 4;
+      }));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();

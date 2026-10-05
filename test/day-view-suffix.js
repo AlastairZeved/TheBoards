@@ -1,22 +1,23 @@
-// Issue #320 + #329: neither the day view nor the section's square blocks may
-// ever append a day-of-week suffix ("— TUE") to a label. A block's label is
-// exactly what the user typed; adding a block never rewrites the text of
-// existing blocks.
-//
-// Issue #329 replaced the retired reminders strip and the retired hourly
-// boxes with the section's OWN records rendered as square two-zone blocks
-// (a lighter-orange title band over a darker orange body), three across. This
-// suite reproduces #320's exact acceptance behaviours on the current surface:
-//   1. every pre-existing label is byte-identical after adding a block;
+// Issue #320 + #363: neither the day cards' square blocks may ever append a
+// day-of-week suffix ("— TUE") to a label, and the day-note records render as
+// the two-zone orange squares INSIDE each day card of the weekly stack
+// (issue #363/B153: the top section is deleted, three squares per day, the
+// card's "+" rightmost, a ‹/› pager beyond three). A block's label is exactly
+// what the user typed; adding a block never rewrites the text of existing
+// blocks. This suite reproduces #320's exact acceptance behaviours on the
+// current surface:
+//   1. every pre-existing label is byte-identical after adding a square;
 //   2. no label carries a " — " + weekday suffix — the appended string is
 //      absent from the render path, not stripped at render time;
-//   3. the section's blocks render from the released reminder records: the
-//      band carries the stored `rem` title alone, the body carries the stored
+//   3. the squares render from the released day-note records: the band
+//      carries the stored `rem` title alone, the body carries the stored
 //      `next` free text (a legacy calKey date renders as an empty body), and
 //      nothing is read from a calendar event record;
-//   4. the row's "+" adds a square in edit with the caret in the title band;
-//      Enter in the band (or a tap on the darker body) moves the caret into
-//      the body; a commit writes BOTH fields in one step.
+//   4. the card's "+" adds a square dated to the card (the new `day` field)
+//      in edit with the caret in the title band; Enter in the band (or a tap
+//      on the darker body) moves the caret into the body; a commit writes
+//      BOTH fields in one step;
+//   5. a day beyond three squares pages on the card (‹/›).
 //
 // The regression is written to FAIL if a future change re-composes a weekday
 // into a label (the tempting wrong fix is a render-time scrub).
@@ -56,58 +57,62 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
 (async () => {
   const browser = await chromium.launch(launchOpts);
 
-  console.log('\n[V1] Adding a block to the day view appends no day-of-week suffix to any label (issue #320 — the 7-day rows stay, unchanged from #329)');
+  console.log('\n[V1] Adding a square to a day card appends no day-of-week suffix to any label (issue #320 — the labels stay, unchanged from #329)');
   {
     const { ctx, page, errors } = await newPage(browser);
     await page.evaluate(async () => {
       const tk = calKey(new Date());
-      const e1 = newCalEvent(tk, 'WORK ON REPOS'); e1.time = '9-2';
-      const e2 = newCalEvent(tk, 'LUNCH'); e2.time = '1-2';
-      await idbPut(e1); await idbPut(e2);
+      await idbPut({ id: 'rem-v1a', rem: 'WORK ON REPOS', next: '9-2', day: tk });
+      await idbPut({ id: 'rem-v1b', rem: 'LUNCH', next: '1-2', day: tk });
     });
+    await page.reload();
+    await page.waitForTimeout(500);
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(900);
 
     const before = await page.evaluate(async () => {
       const tk = calKey(new Date());
       return {
-        lines: [...document.querySelectorAll('.cal-line')].map(l => l.textContent),
-        stored: (await idbGetAll()).filter(r => r.date === tk).map(r => r.text),
+        titles: [...document.querySelectorAll('.cal-day.today .cal-note-title')].map(b => b.textContent),
+        stored: (await idbGetAll()).filter(r => r.day === tk).map(r => r.rem),
       };
     });
-    ok('the two seeded day blocks render with their exact text (no suffix at rest)',
-      before.lines.length === 2 &&
-      before.lines.every(l => l === 'WORK ON REPOS' || l === 'LUNCH'), JSON.stringify(before));
+    ok('the two seeded squares render with their exact text (no suffix at rest)',
+      before.titles.length === 2 &&
+      before.titles.every(l => l === 'WORK ON REPOS' || l === 'LUNCH'), JSON.stringify(before));
 
-    const addPos = await center(page, '.cal-day .cal-add');
+    const addPos = await center(page, '.cal-day.today .cal-add');
     await tap(page, addPos.x, addPos.y);
     await page.waitForTimeout(300);
     await page.keyboard.type('NEW BLOCK ENTRY');
-    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');          // the band hands off to the body (R6.2)
+    await page.keyboard.press('Enter');          // Enter in the body ends the entry (R6.4)
     await page.waitForTimeout(700);
 
     const after = await page.evaluate(async () => {
       const tk = calKey(new Date());
       return {
-        lines: [...document.querySelectorAll('.cal-line')].map(l => l.textContent),
-        stored: (await idbGetAll()).filter(r => r.date === tk).map(r => r.text),
+        titles: [...document.querySelectorAll('.cal-day.today .cal-note-title')].map(b => b.textContent),
+        stored: (await idbGetAll()).filter(r => r.day === tk).map(r => r.rem),
       };
     });
-    ok('every day-block label is byte-identical after adding + no weekday suffix anywhere + the new label is exactly typed',
-      after.lines.includes('NEW BLOCK ENTRY') && after.stored.includes('NEW BLOCK ENTRY') &&
-      [...after.lines, ...after.stored].every(t => !WEEKDAY.test(t)), JSON.stringify(after));
+    ok('every square label is byte-identical after adding + no weekday suffix anywhere + the new label is exactly typed',
+      after.titles.includes('NEW BLOCK ENTRY') && after.stored.includes('NEW BLOCK ENTRY') &&
+      [...after.titles, ...after.stored].every(t => !WEEKDAY.test(t)), JSON.stringify(after));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
 
-  console.log('\n[V2] The section\'s own records render as square blocks from the released reminder records — the title alone, legacy dates empty, r.next stays stored (issue #329 supersedes B138/B144)');
+  console.log('\n[V2] The day-note squares render from the released day-note records — the title alone, legacy dates empty, r.next stays stored, and a record without a `day` value renders nowhere (issue #363: nothing migrated, the #323 disposition)');
   {
     const { ctx, page, errors } = await newPage(browser);
-    // Seed one reminder record carrying a real next-occurrence date (the
-    // stored field must survive and stay unread by any strip — nothing is
-    // migrated, stripped, or rewritten; a legacy calKey date is not body text).
+    // Seed one record carrying a real next-occurrence-style calKey (the stored
+    // field must survive and stay unread as body text — nothing is migrated,
+    // stripped, or rewritten) and one record with NO day field (pre-#363
+    // legacy: stored but unreachable).
     await page.evaluate(async () => {
-      await idbPut({ id: 'rem-seed', rem: 'PAY THE RENT', next: calKey(new Date()) });
+      await idbPut({ id: 'rem-seed', rem: 'PAY THE RENT', next: calKey(new Date()), day: calKey(new Date()) });
+      await idbPut({ id: 'rem-orphan', rem: 'ORPHAN RECORD', next: '', });
     });
     await page.reload();
     await page.waitForTimeout(500);
@@ -122,27 +127,32 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     ok('the day head carries the date alone (a real date string, no add control)',
       head.text.length > 0 && head.hasButton === false, JSON.stringify(head));
 
-    // 2. The seeded record renders as a square block: band = the title alone,
-    //    body = empty (the legacy calKey date is not user body text).
+    // 2. The seeded record renders as a square in ITS day's card: band = the
+    //    title alone, body = empty (the legacy calKey date is not user text).
+    //    The orphan record renders nowhere.
     const note = await page.evaluate(async () => {
-      const n = [...document.querySelectorAll('#cal-notes-grid .cal-note')].find(x => x.querySelector('.cal-note-title').textContent === 'PAY THE RENT');
+      const n = [...document.querySelectorAll('.cal-note')].find(x => x.querySelector('.cal-note-title').textContent === 'PAY THE RENT');
       const s = n && n.querySelector('.cal-note-text');
+      const orphan = [...document.querySelectorAll('.cal-note-title')].some(b => b.textContent === 'ORPHAN RECORD');
       const stored = (await idbGetAll()).find(r => r.id === 'rem-seed') || null;
       const r = n && n.getBoundingClientRect();
       return { title: n ? n.querySelector('.cal-note-title').textContent : null,
                bodyText: s ? s.textContent : null,
+               inCard: n ? !!n.closest('.cal-day') : false,
+               orphanRendered: orphan,
                square: r ? (r.width / r.height) : null,
                storedNext: stored && stored.next };
     });
-    ok('the seeded block\'s band is the typed title byte-for-byte — no suffix of any kind (issue #320)',
+    ok("the seeded block's band is the typed title byte-for-byte — no suffix of any kind (issue #320)",
       note.title === 'PAY THE RENT', JSON.stringify(note));
-    ok('the seeded block is a square and its body is empty (a legacy calKey date is not body text)',
-      note.square !== null && note.square >= 0.95 && note.square <= 1.15 && note.bodyText === '', JSON.stringify(note));
-    ok('the stored reminder record still carries r.next — nothing stripped or rewritten',
+    ok('the block lives INSIDE a day card (issue #363), is square, and its body is empty (a legacy calKey date is not body text)',
+      note.inCard === true && note.square !== null && note.square >= 0.9 && note.square <= 1.15 && note.bodyText === '', JSON.stringify(note));
+    ok('the orphan record (no `day` field) renders nowhere but stays stored — nothing migrated',
+      note.orphanRendered === false &&
       typeof note.storedNext === 'string' && note.storedNext.length === 10, JSON.stringify(note));
 
-    // 3. The row's "+" adds a square in edit, caret in the title band.
-    const p = await center(page, '#cal-notes-add');
+    // 3. The card's "+" adds a square in edit, caret in the title band.
+    const p = await center(page, '.cal-day.today .cal-add');
     await tap(page, p.x, p.y);
     await page.waitForTimeout(400);
     const addState = await page.evaluate(() => {
@@ -150,7 +160,7 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
       return { activeIsBand: ae && ae.classList && ae.classList.contains('cal-note-title'),
                inEdit: ae && ae.hasAttribute && ae.hasAttribute('contenteditable') };
     });
-    ok('tapping "+" adds a square with the caret in the title band (in edit)',
+    ok('tapping the card\'s "+" adds a square with the caret in the title band (in edit)',
       addState.activeIsBand === true && addState.inEdit === true, JSON.stringify(addState));
 
     // 4. Type in the band; Enter hands off to the darker body; type; commit.
@@ -166,22 +176,20 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     await page.waitForTimeout(600);
 
     const after = await page.evaluate(async () => {
-      const recs = (await idbGetAll()).filter(r => typeof r.rem === 'string');
-      const added = recs.find(r => r.id !== 'rem-seed') || null;
-      return { title: added && added.rem, body: added && added.next, keys: added && Object.keys(added).sort() };
+      const tk = calKey(new Date());
+      const recs = (await idbGetAll()).filter(r => r.day === tk && r.id !== 'rem-seed');
+      const added = recs[0] || null;
+      return { title: added && added.rem, body: added && added.next,
+               day: added && added.day, keys: added && Object.keys(added).sort() };
     });
-    ok('the added square commits BOTH fields — band and body free text, no weekday suffix, no new field',
+    ok("the added square commits BOTH fields and carries the card's day — no weekday suffix, nothing pre-filled",
       after.title === 'CLEAN THE GARAGE' && after.body === 'and the garage' &&
-      !WEEKDAY.test(after.title) && JSON.stringify(after.keys) === JSON.stringify(['id', 'next', 'rem']),
+      /^\d{4}-\d{2}-\d{2}$/.test(after.day) &&
+      !WEEKDAY.test(after.title) && JSON.stringify(after.keys) === JSON.stringify(['day', 'id', 'next', 'rem']),
       JSON.stringify(after));
 
     // 5. A tap on the darker body of an existing block seats the caret there too.
-    await page.evaluate(() => {
-      const t = document.querySelector('#cal-notes-grid .cal-note-text');
-      t.scrollIntoView(); return true;
-    });
-    await page.waitForTimeout(200);
-    const tb = await page.$('#cal-notes-grid .cal-note-text');
+    const tb = await page.$('.cal-day.today .cal-note-text');
     const b2 = await tb.boundingBox();
     await tap(page, b2.x + b2.width / 2, b2.y + b2.height / 2);
     await page.waitForTimeout(400);
@@ -194,12 +202,13 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     await ctx.close();
   }
 
-  console.log('\n[V3] The section pages at SIX, not three — two rows of three, then the pager; and the add button carries its "+" (issue #331)');
+  console.log('\n[V3] A day pages at THREE, on the card — three squares shown, then the ‹/› pager; the "+" carries its "+" (issue #363 supersedes #331\'s six)');
   {
     const { ctx, page, errors } = await newPage(browser);
-    // Six records: the page must hold all six in two rows and show no pager.
+    // Four records on TODAY's date: the card must show three and page the rest.
     await page.evaluate(async () => {
-      for (let i = 0; i < 6; i++) await idbPut({ id: 'rem-' + i, rem: 'BLOCK ' + i, next: '' });
+      const tk = calKey(new Date());
+      for (let i = 0; i < 4; i++) await idbPut({ id: 'rem-' + i, rem: 'BLOCK ' + i, next: '', day: tk });
     });
     await page.reload();
     await page.waitForTimeout(600);
@@ -207,35 +216,33 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     await page.waitForTimeout(900);
 
     let got = await page.evaluate(() => {
-      const g = document.getElementById('cal-notes-grid');
-      const blocks = [...g.querySelectorAll('.cal-note')];
-      const rows = new Set(blocks.map((b) => Math.round(b.getBoundingClientRect().top))).size;
-      return { count: blocks.length, rows,
-        pagerShown: !document.getElementById('cal-notes-prev').hidden || !document.getElementById('cal-notes-next').hidden,
-        addText: document.getElementById('cal-notes-add').textContent.trim() };
+      const card = document.querySelector('.cal-day.today');
+      const blocks = [...card.querySelectorAll('.cal-note')];
+      return { count: blocks.length,
+        pagerShown: [...card.querySelectorAll('.cal-notes-nav')].some(b => !b.hidden),
+        addText: card.querySelector('.cal-add').textContent.trim() };
     });
-    ok('six blocks render on ONE page in TWO rows — the ground under row one is used (issue #331)',
-      got.count === 6 && got.rows === 2 && got.pagerShown === false, JSON.stringify(got));
-    ok('the add button carries a "+" — it shipped as an empty orange square (issue #331)',
+    ok('three squares render on the card and the pager is on (issue #363: up to 3 per day)',
+      got.count === 3 && got.pagerShown === true, JSON.stringify(got));
+    ok("the add button carries a \"+\" (issue #331's grammar, on the card now)",
       got.addText === '+', JSON.stringify(got));
 
-    // A seventh record turns the pager on.
-    await page.evaluate(() => idbPut({ id: 'rem-6', rem: 'BLOCK 6', next: '' }));
-    await page.reload();
-    await page.waitForTimeout(600);
-    await page.evaluate(() => document.getElementById('action-calendar').click());
-    await page.waitForTimeout(900);
-    got = await page.evaluate(() => ({
-      count: document.querySelectorAll('#cal-notes-grid .cal-note').length,
-      pagerShown: !document.getElementById('cal-notes-prev').hidden || !document.getElementById('cal-notes-next').hidden }));
-    ok('the seventh block overflows to page two — pagination starts past six, not past three (issue #331)',
-      got.count === 6 && got.pagerShown === true, JSON.stringify(got));
+    // Paging back shows the first three.
+    await page.evaluate(() => [...document.querySelector('.cal-day.today').querySelectorAll('.cal-notes-nav')]
+      .find(b => b.textContent === '‹').click());
+    await page.waitForTimeout(400);
+    got = await page.evaluate(() => {
+      const card = document.querySelector('.cal-day.today');
+      return { titles: [...card.querySelectorAll('.cal-note-title')].map(b => b.textContent) };
+    });
+    ok('paging the card back shows its first three squares',
+      got.titles.length === 3 && got.titles[0] === 'BLOCK 0', JSON.stringify(got));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
 
-  console.log('\n[V5] The day head is seated in the gap under the day-note section — inside the weekly stack, centered to the view, --ink-light ink (issue #343)');
+  console.log('\n[V5] The day head is seated above the weekly stack — inside #cal-stack, centered to the view, --ink-light ink at the display step (issues #343 + #363)');
   {
     const { ctx, page, errors } = await newPage(browser);
     await page.evaluate(() => document.getElementById('action-calendar').click());
@@ -250,6 +257,7 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
       return {
         parentIsStack: head.parentElement === document.getElementById('cal-stack'),
         inFrame: !!head.closest('#cal-frame'),
+        fontSize: getComputedStyle(head).fontSize,
         headCenterX: hr.x + hr.width / 2,
         viewCenterX: vr.x + vr.width / 2,
         color: getComputedStyle(head).color,
@@ -258,13 +266,15 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
         text: head.textContent,
       };
     });
-    ok('the head renders inside #cal-stack, out of the frame (issue #343)',
+    ok('the head renders inside #cal-stack and no top frame exists anywhere (issue #363)',
       seat.parentIsStack === true && seat.inFrame === false, JSON.stringify(seat));
     ok('the head is centered to the view horizontally (within 2px) (issue #343)',
       Math.abs(seat.headCenterX - seat.viewCenterX) <= 2, JSON.stringify(seat));
-    ok('the head wears the palette\'s approved --ink-light on the view\'s ground (issue #343)',
+    ok("the head wears the palette's approved --ink-light on the view's ground (issue #343)",
       seat.color === 'rgb(244, 245, 241)', JSON.stringify(seat));
-    ok('the head sits directly above the weekly view\'s first day row — above it, never over it (issue #343)',
+    ok('the head renders at the display step — 21px, the largest existing title token (issue #363)',
+      seat.fontSize === '21px', JSON.stringify(seat));
+    ok("the head sits directly above the weekly view's first day row — above it, never over it (issue #343)",
       seat.rowTop !== null && seat.headBottom <= seat.rowTop + 1, JSON.stringify(seat));
     ok('the head still carries the date wording (B149 composition intact)',
       seat.text.length > 0, JSON.stringify(seat.text));

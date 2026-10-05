@@ -1913,80 +1913,144 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await ctx.close();
   }
 
-  // ---- D24. an existing calendar event is editable in place (issue #152) ---
-  // The desktop twin of [25]: click the line, editor opens focused with the
-  // caret at the end; Enter commits; the mirror re-syncs (B97).
-  console.log('\n[D24] Calendar: click an existing event edits it in place (issue #152, B97)');
+  // ---- D24. an existing day-note square is editable in place (issue #152,
+  // B97, re-pinned on the #363 surface) ---------------------------------------
+  // The desktop twin of [25], now against the two-zone orange square INSIDE
+  // the day card: tap a .cal-note, its editor opens focused with the caret at
+  // the end (B90 pattern); Enter in the band hands off to the body, Enter in
+  // the body commits; a commit that leaves BOTH fields empty discards the
+  // record and the block (B8); a tap inside the open editor does not re-arm
+  // or steal the caret (B81's capture grammar).
+  console.log('\n[D24] Calendar: tap an existing day-note square edits it in place (issue #152, B97, #363)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
     const seeded = await page.evaluate(async () => {
-      const key = calKey(new Date());
-      const b = newBoardRecord();
-      b.title = '09/02/26 To Do'; b.cal = key; b.calReq = 1;
-      b.requirements = 'desktop event line';
-      const ev = newCalEvent(key, 'desktop event line');
-      await idbPut(b); await idbPut(ev);
-      return ev.id;
+      const recs = [
+        { id: 'rem-d24a', rem: 'desktop note', next: 'renew tags', day: calKey(new Date()) },
+        { id: 'rem-d24b', rem: 'second note', next: '', day: calKey(new Date()) },
+      ];
+      for (const r of recs) await idbPut(r);
+      return recs.map(r => r.id);
     });
     // B99: wide enters the calendar through the standing rail now — expand it
-    // so the day stack (and the seeded event) is on screen.
+    // so the day stack (and the seeded squares) is on screen.
     await page.evaluate(() => { document.getElementById('cal-rail').click(); });
     await page.waitForTimeout(400);
-    ok('calendar opened with the seeded event rendered',
+    ok('calendar opened with the seeded squares rendered in the day card',
       await page.evaluate(() =>
-        [...document.querySelectorAll('.cal-line')].some(l => l.textContent === 'desktop event line')));
+        [...document.querySelectorAll('.cal-day.today .cal-note-title')]
+          .some(b => b.textContent === 'desktop note')));
 
-    // Click through the real mouse grammar.
+    // Tap through the real mouse grammar, on the title band.
     const box = await page.evaluate(() => {
-      const l = [...document.querySelectorAll('.cal-line')]
-        .find(l => l.textContent === 'desktop event line');
-      const r = l.getBoundingClientRect();
+      const b = [...document.querySelectorAll('.cal-day.today .cal-note')]
+        .find(n => n.querySelector('.cal-note-title').textContent === 'desktop note');
+      const r = b.querySelector('.cal-note-title').getBoundingClientRect();
       return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
     });
     await page.mouse.click(box.x, box.y);
-    await page.waitForTimeout(80);
+    await page.waitForTimeout(150);           // the caret re-assert lands on a setTimeout(0)
     const editing = await page.evaluate(() => {
-      const l = [...document.querySelectorAll('.cal-line')]
-        .find(l => l.hasAttribute('contenteditable'));
-      if (!l) return null;
-      return { focused: document.activeElement === l };
+      const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
+        .find(x => x.querySelector('.cal-note-title').textContent === 'desktop note');
+      const band = n.querySelector('.cal-note-title');
+      const body = n.querySelector('.cal-note-text');
+      return { bandEdit: band.hasAttribute('contenteditable'),
+               bodyEdit: body.hasAttribute('contenteditable'),
+               focused: document.activeElement === band };
     });
-    ok('the click opens the existing editor, focused', !!editing && editing.focused,
-      JSON.stringify(editing));
+    ok('the tap opens the two-zone editor, the tapped band focused',
+      editing.bandEdit && editing.bodyEdit && editing.focused, JSON.stringify(editing));
     // Caret-at-end, proven the B90 way: a typed marker appends.
     await page.keyboard.type('!');
     await page.waitForTimeout(80);
-    ok('the caret sits at the end of the text (typing appends, B90 pattern)',
+    ok('the caret sits at the end of the band text (typing appends, B90 pattern)',
       await page.evaluate(() =>
-        [...document.querySelectorAll('.cal-line')]
-          .find(l => l.hasAttribute('contenteditable')).textContent === 'desktop event line!'));
+        [...document.querySelectorAll('.cal-day.today .cal-note')]
+          .find(n => n.querySelector('.cal-note-title').textContent === 'desktop note!')
+          .querySelector('.cal-note-title').textContent === 'desktop note!'));
 
-    // Enter commits (keydown blurs; blur writes).
-    await page.keyboard.type(' VIA ENTER');
+    // A second tap inside the open editor must NOT re-arm or move the caret.
+    // (The tap lands on the square's left strip — later siblings paint over
+    // the right part of a square on the desktop panel, so the left edge is
+    // the square's own hit area.)
+    const again = await page.evaluate(() => {
+      const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
+        .find(x => x.querySelector('.cal-note-title').textContent === 'desktop note!');
+      const r = n.querySelector('.cal-note-title').getBoundingClientRect();
+      return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
+    });
+    await page.mouse.click(again.x, again.y);
+    await page.waitForTimeout(150);
+    const stillArmed = await page.evaluate(() => {
+      const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
+        .find(x => x.querySelector('.cal-note-title').textContent === 'desktop note!');
+      const ae = document.activeElement;
+      return { editCount: document.querySelectorAll('.cal-day.today .cal-note [contenteditable]').length,
+               caretHeld: !!(ae && ae.classList.contains('cal-note-title') &&
+                 ae.textContent === 'desktop note!') };
+    });
+    ok('a second tap inside the open editor does not re-arm — one editor, caret held (B81)',
+      stillArmed.editCount === 2 && stillArmed.caretHeld === true, JSON.stringify(stillArmed));
+
+    // Enter in the band hands off to the body; typing there and Enter commits
+    // BOTH fields in one step (the blur writes rem and next together).
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(400);
-    const after = await page.evaluate(async (id) => {
-      const all = await idbGetAll();
-      const ev = all.find(r => r.id === id);
-      const board = all.find(r => r.cal === calKey(new Date()));
-      return { evText: ev && ev.text,
-               mirrorFirst: (board.requirements || '').split('\n')[0] };
-    }, seeded);
-    ok('Enter commits: event persisted and mirror re-synced',
-      after.evText === 'desktop event line! VIA ENTER' &&
-      after.mirrorFirst === 'desktop event line! VIA ENTER', JSON.stringify(after));
-    ok('the line left edit mode after the commit',
+    await page.waitForTimeout(150);
+    ok('Enter in the band hands the caret to the darker body',
       await page.evaluate(() =>
-        ![...document.querySelectorAll('.cal-line')].some(l => l.hasAttribute('contenteditable'))));
+        !!(document.activeElement && document.activeElement.classList.contains('cal-note-text'))));
+    await page.keyboard.type('bodies in');
+    await page.keyboard.press('Enter');            // R6.4: Enter ends the entry
+    await page.waitForTimeout(600);                // the commit re-renders
+    const after = await page.evaluate(async (ids) => {
+      const all = await idbGetAll();
+      const rec = all.find(r => r.id === ids[0]);
+      return { rem: rec && rec.rem, next: rec && rec.next,
+               day: rec && rec.day,
+               editorsLeft: document.querySelectorAll('.cal-note [contenteditable]').length };
+    }, seeded);
+    ok('Enter commits: both fields persisted on the record, day field intact',
+      after.rem === 'desktop note!' && after.next === 'renew tagsbodies in' &&
+      /^\d{4}-\d{2}-\d{2}$/.test(after.day), JSON.stringify(after));
+    ok('the square left edit mode after the commit',
+      after.editorsLeft === 0, JSON.stringify(after.editorsLeft));
+
+    // B8: an empty commit discards — clear both zones of the second square.
+    const b2 = await page.evaluate(() => {
+      const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
+        .find(x => x.querySelector('.cal-note-title').textContent === 'second note');
+      const r = n.querySelector('.cal-note-title').getBoundingClientRect();
+      return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
+    });
+    await page.mouse.click(b2.x, b2.y);
+    await page.waitForTimeout(150);
+    await page.keyboard.press('Control+a');
+    await page.keyboard.press('Delete');
+    await page.keyboard.press('Enter');            // hand-off to the body
+    await page.waitForTimeout(100);
+    await page.keyboard.press('Control+a');
+    await page.keyboard.press('Delete');
+    await page.keyboard.press('Enter');            // commit, both fields empty
+    await page.waitForTimeout(600);
+    const discarded = await page.evaluate(async (id) => {
+      const all = await idbGetAll();
+      return { recordGone: !all.some(r => r.id === id),
+               blockGone: ![...document.querySelectorAll('.cal-note')]
+                 .some(n => n.querySelector('.cal-note-title').textContent === 'second note') };
+    }, seeded[1]);
+    ok('an empty commit discards the record AND the block (B8)',
+      discarded.recordGone && discarded.blockGone, JSON.stringify(discarded));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
 
   // ---- D25. the mirror writes through both ways (issue #154, B106) ---------
-  // Board-side: editing a span line updates the event record AND the calendar
-  // line; deleting a span line deletes the event and resyncs; hand lines
-  // below the span are never touched; board additions stay hand lines.
+  // Board-side: editing a span line updates the event record (issue #363:
+  // the calendar no longer renders lines, so the write-through is verified at
+  // RECORD level); deleting a span line deletes the event and resyncs; hand
+  // lines below the span are never touched; board additions stay hand lines.
   console.log('\n[D25] Mirror: board-side Requirements edits write through (issue #154, B106)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
@@ -2045,12 +2109,16 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
        afterEdit.req === 'mirror one EDITED\nmirror two\nhand line' &&
        afterEdit.calReq === 2, JSON.stringify(afterEdit));
 
-    // The calendar renders the new text.
+    // Issue #363: nothing renders in the weekly stack — the write-through is
+    // proven at RECORD level (step 1 above). Expand the panel anyway and
+    // confirm the face carries no line and no event text anywhere.
     await page.evaluate(() => { document.getElementById('cal-rail').click(); });
     await page.waitForTimeout(400);
-    ok('the calendar line renders the board-side edit',
+    ok('no event line renders in the weekly stack — the board-side edit stays record-level (issue #363)',
        await page.evaluate(() =>
-         [...document.querySelectorAll('.cal-line')].some(l => l.textContent === 'mirror one EDITED')));
+         document.querySelectorAll('.cal-line').length === 0 &&
+         ![...document.querySelectorAll('.cal-day .cal-note-title')]
+           .some(b => b.textContent === 'mirror one EDITED')));
 
     // 2. Back on the board, delete the SECOND span line.
     await page.evaluate(() => { document.getElementById('cal-back').click(); });
@@ -2134,7 +2202,9 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.waitForTimeout(400);
 
     // Block 1 (board → calendar): commit a Requirements edit with the panel
-    // already showing; the cal line must change WITHOUT any navigation.
+    // already showing; the EVENT RECORD must write through WITHOUT any
+    // navigation (issue #363: the record is the artifact — lines no longer
+    // render anywhere).
     await page.evaluate(() => document.getElementById('anchor-requirements').focus());
     await page.evaluate(() => {
       document.getElementById('anchor-requirements').textContent =
@@ -2142,35 +2212,55 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     });
     await page.evaluate(() => document.getElementById('anchor-requirements').blur());
     await page.waitForTimeout(800);
-    ok('cal line repaints in place while the panel is already open',
-       await page.evaluate(() =>
-         [...document.querySelectorAll('.cal-line')].some(l => l.textContent === 'mirror one D25B')),
-       'panel lines: ' + await page.evaluate(() =>
-         JSON.stringify([...document.querySelectorAll('.cal-line')].map(l => l.textContent))));
+    ok('the board-side edit writes through to the event RECORD while the panel is already open',
+       await page.evaluate(async () => {
+         const key = calKey(new Date());
+         const all = await idbGetAll();
+         const evs = all.filter(r => r.date === key).map(r => r.text).sort();
+         return JSON.stringify(evs) === JSON.stringify(['mirror one D25B', 'mirror two']);
+       }),
+       'records: ' + await page.evaluate(async () =>
+         JSON.stringify((await idbGetAll()).filter(r => r.date === calKey(new Date())).map(r => r.text))));
+    ok('no event line rendered anywhere under the repaint (issue #363)',
+       await page.evaluate(() => document.querySelectorAll('.cal-line').length === 0));
     ok('the panel did not close under the repaint (no navigation happened)',
        await page.evaluate(() =>
          document.getElementById('cal-view').classList.contains('panel') &&
          !document.getElementById('cal-rail').hidden === false));
 
-    // Block 2 (calendar → board): commit a cal-line edit with the anchor
-    // already showing beside the panel; the anchor must change WITHOUT any
-    // navigation (D25 would only have seen this after cal-back).
-    await page.click('.cal-line');   // the single-tap re-edit (issue #152/#304)
-    await page.waitForTimeout(200);
-    await page.evaluate(() => {
-      const l = [...document.querySelectorAll('.cal-line')]
-        .find(x => x.hasAttribute('contenteditable'));
-      l.textContent = 'mirror two FROM-CAL';
+    // Block 2 (calendar → board): commit a day-note add through the card's
+    // "+" with the anchor already showing beside the panel; the new square is
+    // in the DOM immediately (paintCal is synchronous, issue #363) and the
+    // board anchor is untouched — day notes never enter the Requirements span.
+    const plus = await page.evaluate(() => {
+      const r = document.querySelector('.cal-day.today .cal-add').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
     });
+    await page.mouse.click(plus.x, plus.y);
+    await page.waitForTimeout(200);
+    ok('the day-note editor is in the DOM immediately under the add (paintCal synchronous)',
+       await page.evaluate(() => {
+         const band = document.querySelector('.cal-day.today .cal-note-title[contenteditable]');
+         return !!band && band.textContent === '' && document.activeElement === band;
+       }));
+    await page.keyboard.type('D25B square');
+    await page.keyboard.press('Enter');            // hand-off to the body
+    await page.waitForTimeout(100);
+    await page.keyboard.type('from the panel');
     await page.evaluate(() => document.activeElement && document.activeElement.blur());
     await page.waitForTimeout(800);
-    // (The tap lands on the FIRST line, 'mirror one D25B' — the positional law
-    // rewrites span line 1; the anchor must show exactly the committed store
-    // span, repainted in place.)
-    ok('requirements anchor repaints in place while the panel is already open',
+    // (The add path is the day-note record's only birthplace now; the anchor
+    // must show exactly the committed store span, repainted in place.)
+    ok('the added day note persisted with the card\'s day field',
+       await page.evaluate(async () => {
+         const all = await idbGetAll();
+         return all.some(r => r.rem === 'D25B square' && r.next === 'from the panel' &&
+           r.day === calKey(new Date()));
+       }));
+    ok('the day-note add never touched the requirements anchor (record-level isolation)',
        await page.evaluate(() =>
          document.getElementById('anchor-requirements').textContent ===
-           'mirror two FROM-CAL\nmirror two\nhand line'),
+           'mirror one D25B\nmirror two\nhand line'),
        'anchor: ' + await page.evaluate(() =>
          JSON.stringify(document.getElementById('anchor-requirements').textContent)));
     ok('the B133 filled class survives the repaint',
@@ -2927,22 +3017,22 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     }
   }
 
-  // ---- D33. a created calendar event can be re-edited (issue #304) ---------
-  // The bug: a .cal-line born from addCalEvent's create path never got the
-  // click listener that makeCalDay's render path wires, so an event written
-  // in the current session opened its editor exactly once and was read-only
-  // afterwards. The fix makes makeCalLine(ev) the ONE birthplace of a line;
-  // both paths use it. This block drives the real UI: click .cal-add, type,
-  // Enter-commit, click away, click the line again — the editor must reopen
-  // with the text intact.
-  console.log('\n[D33] Calendar: an event created this session re-opens its editor (issue #304)');
+  // ---- D33. a created day-note square can be re-edited (issue #304,
+  // re-pinned on the #363 surface) --------------------------------------------
+  // The bug's shape survives the surface change: a block born from the add
+  // path must carry the same listeners as the render path's blocks, or it
+  // opens its editor exactly once and is read-only afterwards. The fix makes
+  // addCalNote's paintCal the ONE birthplace; both paths use it. This block
+  // drives the real UI: tap .cal-add, type, commit, tap away, tap the square
+  // again — the editor must reopen with the text intact.
+  console.log('\n[D33] Calendar: a day-note square created this session re-opens its editor (issue #304, #363)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
     await page.evaluate(() => document.getElementById('cal-rail').click());
     await page.waitForTimeout(400);
     // Create through the real add control on today's day card (index 0, the
-    // same card future-event.js addresses). addCalEvent opens the editor on
-    // arrival (capture precedes structure, §1.1).
+    // same card future-event.js addresses). addCalNote paints synchronously
+    // (capture precedes structure, §1.1): the editor is in the DOM on arrival.
     const at = await page.evaluate(() => {
       const card = document.querySelectorAll('.cal-day')[0];
       const r = card.querySelector('.cal-add').getBoundingClientRect();
@@ -2950,20 +3040,28 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     });
     await page.mouse.click(at.x, at.y);
     await page.waitForTimeout(150);
-    ok('the add control opened a fresh editor on a new line',
+    ok('the add control opened a fresh square editor in the card, both zones empty',
       await page.evaluate(() => {
-        const l = document.querySelector('.cal-line[contenteditable]');
-        return !!l && l.textContent === '';
+        const card = document.querySelectorAll('.cal-day')[0];
+        const band = card.querySelector('.cal-note-title[contenteditable]');
+        const body = card.querySelector('.cal-note-text[contenteditable]');
+        return !!band && !!body && band.textContent === '' && body.textContent === '' &&
+          document.activeElement === band;
       }));
     await page.keyboard.type('created this session');
+    await page.keyboard.press('Enter');            // hands off to the body
+    await page.waitForTimeout(100);
+    await page.keyboard.type('the body line');
     await page.keyboard.press('Enter');            // commits on blur
-    await page.waitForTimeout(400);
-    ok('the commit persisted the event record',
-      await page.evaluate(async () => {
-        const all = await idbGetAll();
-        return all.some(r => r.text === 'created this session' && r.date === calKey(new Date()));
-      }));
-    // Click away onto the day card's inert date column — a blur with no
+    await page.waitForTimeout(600);
+    const rec = await page.evaluate(async () => {
+      const all = await idbGetAll();
+      const r = all.find(r => r.rem === 'created this session') || null;
+      return { rec: r, dayOk: !!r && r.day === calKey(new Date()) };
+    });
+    ok('the commit persisted the day-note record with the card\'s day field',
+      !!rec.rec && rec.rec.next === 'the body line' && rec.dayOk, JSON.stringify(rec));
+    // Tap away onto the day card's inert date column — a blur with no
     // editor consequence.
     const dc = await page.evaluate(() => {
       const r = document.querySelector('.cal-day .cal-date').getBoundingClientRect();
@@ -2971,58 +3069,59 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     });
     await page.mouse.click(dc.x, dc.y);
     await page.waitForTimeout(200);
-    ok('after clicking away, no line is editing and the text stayed',
+    ok('after clicking away, no square is editing and the text stayed',
       await page.evaluate(() => {
-        const line = [...document.querySelectorAll('.cal-line')]
-          .find(l => l.textContent === 'created this session');
-        return !!line && !line.hasAttribute('contenteditable');
+        const n = [...document.querySelectorAll('.cal-note')]
+          .find(x => x.querySelector('.cal-note-title').textContent === 'created this session');
+        return !!n && n.querySelectorAll('[contenteditable]').length === 0 &&
+          n.querySelector('.cal-note-text').textContent === 'the body line';
       }));
-    // THE regression: click the created line again — it must reopen its
+    // THE regression: tap the created square again — it must reopen its
     // editor with the committed text intact.
     const lp = await page.evaluate(() => {
-      const l = [...document.querySelectorAll('.cal-line')]
-        .find(l => l.textContent === 'created this session');
-      const r = l.getBoundingClientRect();
+      const n = [...document.querySelectorAll('.cal-note')]
+        .find(x => x.querySelector('.cal-note-title').textContent === 'created this session');
+      const r = n.querySelector('.cal-note-title').getBoundingClientRect();
       return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
     });
     await page.mouse.click(lp.x, lp.y);
     await page.waitForTimeout(150);
     const reedit = await page.evaluate(() => {
-      const l = [...document.querySelectorAll('.cal-line')]
-        .find(l => l.hasAttribute('contenteditable'));
-      return l ? { text: l.textContent, focused: document.activeElement === l } : null;
+      const n = [...document.querySelectorAll('.cal-note')]
+        .find(x => x.querySelector('.cal-note-title').textContent === 'created this session');
+      if (!n || !n.querySelector('[contenteditable]')) return null;
+      return { text: n.querySelector('.cal-note-title').textContent,
+               focused: document.activeElement === n.querySelector('.cal-note-title') };
     });
-    ok('clicking the created line re-opens its editor with the text intact (issue #304)',
+    ok('tapping the created square re-opens its editor with the text intact (issue #304)',
       !!reedit && reedit.text === 'created this session' && reedit.focused,
       JSON.stringify(reedit));
-    // And the reopen is a real editor: a further edit commits too.
+    // And the reopen is a real editor: a further edit commits too (Enter in
+    // the band hands off to the body; Enter in the body ends the entry).
     await page.keyboard.type(' RE-EDITED');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(400);
-    ok('the re-opened editor commits (the event record carries the second edit)',
+    await page.waitForTimeout(100);
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    ok('the re-opened editor commits (the record carries the second edit)',
       await page.evaluate(async () => {
         const all = await idbGetAll();
-        return all.some(r => r.text === 'created this session RE-EDITED');
+        return all.some(r => r.rem === 'created this session RE-EDITED');
       }));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
 
-  // ---- D34. The desktop calendar panel carries the same square-block section
-  // and the same seating as mobile (issue #334) --------------------------------
-  // #334 asked for three things on desktop: the weekly view resting on the
-  // month view, six squares in two rows of three then pagination, and the
-  // add "+". The latter two shipped with B146 (#333) at the mobile tier and
-  // were ALREADY true on desktop — measured, not assumed. The first was not:
-  // #293's bottom-anchor was scoped html:not(.wide), so on desktop the day
-  // rows (flex: 0 0 auto, never shrinking) spilled DOWN over the month view
-  // on any panel shorter than the list — measured -34px at 1366x768 and
-  // -82px at 1280x720. The invariant at every height: the last day row's
-  // bottom sits on the month view's top, i.e. the stack's own margin-top.
-  // Each viewport is a FRESH context — scheduleEnvironment tears the expanded
-  // panel down on a width flip, so resizing one page would not measure what
-  // a user sees.
-  console.log('\n[D34] The desktop panel carries the square blocks, their pager, the add "+", and the week view seated on the month view (issue #334)');
+  // ---- D34. The desktop calendar panel carries the per-day square blocks,
+  // the pager, and the seating (issues #334, re-pinned under #363/B153) -------
+  // #363 deleted the top section (#cal-frame/#cal-notes) and moved the
+  // squares INTO each day card: three per day, the card's own "+" to the
+  // right, a ‹/› pager beyond three, the day head at the 21px display step.
+  // The #334 seating invariant is unchanged: the last day row's bottom sits
+  // on the month view's top. Each viewport is a FRESH context —
+  // scheduleEnvironment tears the expanded panel down on a width flip, so
+  // resizing one page would not measure what a user sees.
+  console.log('\n[D34] The desktop panel carries the per-day squares, the pager, the 21px head, and the week view seated on the month view (issues #334, #363)');
   for (const [w, h] of [[1440, 900], [1366, 768], [1280, 720]]) {
     const ctx = await browser.newContext({ viewport: { width: w, height: h } });
     const page = await ctx.newPage();
@@ -3032,43 +3131,57 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.goto(URL);
     await page.waitForFunction(() => !!document.querySelector('#board'));
     await page.waitForTimeout(400);
-    // Six records: the section must page at six, two rows of three, no pager.
+    // Six day-note records on TODAY's date: the card must show three and
+    // page the rest; no top section may exist anywhere.
     await page.evaluate(async () => {
-      for (let i = 0; i < 6; i++) await idbPut({ id: 'rem-' + i, rem: 'BLOCK ' + i, next: '' });
+      const tk = calKey(new Date());
+      for (let i = 0; i < 6; i++) await idbPut({ id: 'rem-' + i, rem: 'BLOCK ' + i, next: '', day: tk });
     });
     await page.reload();
     await page.waitForTimeout(600);
     await page.evaluate(() => document.getElementById('cal-rail').click());
     await page.waitForTimeout(800);
     const geo = await page.evaluate(() => {
-      const blocks = [...document.querySelectorAll('#cal-notes-grid .cal-note')];
-      const tops = blocks.map((b) => Math.round(b.getBoundingClientRect().top));
-      const last = [...document.querySelectorAll('#cal-stack .cal-day')].pop().getBoundingClientRect();
+      const card = document.querySelector('.cal-day.today');
+      const blocks = [...card.querySelectorAll('.cal-note')];
+      const view = document.getElementById('cal-view');
       const month = document.getElementById('cal-month').getBoundingClientRect();
+      const head = document.getElementById('cal-dayhead');
+      const vr = view.getBoundingClientRect();
+      const navs = [...card.querySelectorAll('.cal-notes-nav')];
       return {
         html: document.documentElement.className,
+        topSectionGone: !document.getElementById('cal-frame') && !document.getElementById('cal-notes') &&
+          !document.getElementById('cal-notes-grid') && !document.getElementById('cal-notes-add'),
+        inCard: blocks.every(b => !!b.closest('.cal-day')),
         blocks: blocks.length,
-        rows: new Set(tops).size,
-        threeAcross: tops.length === 0 || new Set(blocks.map((b) => Math.round(b.getBoundingClientRect().x))).size === 3,
-        pagerShown: !document.getElementById('cal-notes-prev').hidden ||
-                    !document.getElementById('cal-notes-next').hidden,
-        addText: document.getElementById('cal-notes-add').textContent.trim(),
-        gapLastRowToMonth: +(month.top - last.bottom).toFixed(1),
-        monthMargin: parseFloat(getComputedStyle(document.getElementById('cal-month')).marginTop),
-        overflow: document.getElementById('cal-view').scrollHeight - document.getElementById('cal-view').clientHeight,
+        pagerShown: navs.some(b => !b.hidden),
+        pagerLabels: navs.map(b => b.textContent),
+        addText: card.querySelector('.cal-add').textContent.trim(),
+        headSize: getComputedStyle(head).fontSize,
+        headParent: head.parentElement && head.parentElement.id,
+        headFromTop: +(head.getBoundingClientRect().top - vr.top).toFixed(1),
+        slackBelowMonth: +(vr.bottom - month.bottom).toFixed(1),
+        overflow: view.scrollHeight - view.clientHeight,
       };
     });
     console.log(`  [${w}x${h}] ${JSON.stringify(geo)}`);
     ok(`[${w}x${h}] desktop tier active (html.desktop set)`, /desktop/.test(geo.html), geo.html);
-    ok(`[${w}x${h}] six squares render in exactly TWO rows of three — the second row is used, not left empty (issue #334 item 2)`,
-      geo.blocks === 6 && geo.rows === 2 && geo.threeAcross, JSON.stringify([geo.blocks, geo.rows, geo.threeAcross]));
-    ok(`[${w}x${h}] the pager stays hidden at six — it appears only past the page (issue #334 item 2, B146)`,
-      geo.pagerShown === false, JSON.stringify(geo.pagerShown));
-    ok(`[${w}x${h}] the add button carries its "+" (issue #334 item 3, B146)`,
+    ok(`[${w}x${h}] the top day-note section is gone — no #cal-frame, #cal-notes, grid, or add control (issue #363 item a)`,
+      geo.topSectionGone === true, JSON.stringify(geo.topSectionGone));
+    ok(`[${w}x${h}] three squares render INSIDE today's day card — the per-day cap, not six (issue #363 item b)`,
+      geo.inCard && geo.blocks === 3, JSON.stringify([geo.inCard, geo.blocks]));
+    ok(`[${w}x${h}] the ‹/› pager is on the card past three (issue #363 item b, supersedes B147's six)`,
+      geo.pagerShown === true && geo.pagerLabels.includes('‹') && geo.pagerLabels.includes('›'),
+      JSON.stringify(geo.pagerLabels));
+    ok(`[${w}x${h}] the card's own add carries its "+" (issue #363 item b)`,
       geo.addText === '+', JSON.stringify(geo.addText));
-    ok(`[${w}x${h}] the week view rests ON the month view — the last day row's bottom meets the month's top within its 8px margin, no gap, no overlap (issue #334 item 1)`,
-      Math.abs(geo.gapLastRowToMonth - geo.monthMargin) <= 1 && geo.gapLastRowToMonth >= 0,
-      JSON.stringify([geo.gapLastRowToMonth, geo.monthMargin]));
+    ok(`[${w}x${h}] the day head is the 21px display step inside #cal-stack (issue #363 item d)`,
+      geo.headSize === '21px' && geo.headParent === 'cal-stack',
+      JSON.stringify([geo.headSize, geo.headParent]));
+    ok(`[${w}x${h}] the face flows from the TOP now — the head is the first content and the slack falls below the month view, not above the stack (issue #363 supersedes #293/#334's bottom-anchor)`,
+      geo.headFromTop <= 30 && geo.slackBelowMonth >= 0 && geo.overflow === 0,
+      JSON.stringify([geo.headFromTop, geo.slackBelowMonth, geo.overflow]));
     ok(`[${w}x${h}] the panel does not overflow — one bounded page, never a scroll`,
       geo.overflow === 0, JSON.stringify(geo.overflow));
     ok(`[${w}x${h}] no page errors`, errors.length === 0, errors.join(' | '));

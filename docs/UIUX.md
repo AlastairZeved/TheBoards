@@ -980,8 +980,7 @@ right** (B148, issue #342): the same `.cal-act` species, filled at boot by the
 same `fillBoardAction`, but **text alone** — `Today`, riding the existing
 `COPY.calToday` token, no drawn mark, as ruled — and one tap resets both
 render-time anchors: the month view back to the current month and the weekly
-stack back to the shipped today-at-top, next-6-days window (R4). The
-day-note squares above the row are not impacted by it. The tab renders its act — drawn mark
+stack back to the shipped today-at-top, next-6-days window (R4). The tab renders its act — drawn mark
 (22px) beside its label (`15px/600`) — in a frame that clears §6's touch
 floor **as drawn** (B98: `padding: 14px 16px`, ≈ 48px tall on touch), with
 the §6 decoupled collar (`--hit` on the row, set at render) topping up
@@ -991,22 +990,44 @@ above the control and an upward collar would steal the month grid's taps
 (B134, superseding B98's upward spend). Hover, press, and keyboard focus state
 themselves (brightness 1.1 / 0.92, §2.7's two-tone ring) — state is never colour.
 
-**The 7-day stack.** `#cal-stack` is a column of seven `#cal-day` cards,
-today first — computed at render (R4), never stored. A day card is a
-two-column grid: the date card (`--card`, the day's name over MM/DD) beside
-one timeline zone on the water's fall. Attention recedes with distance from
-now — today lit (the two-tone outline ring, full scale, `flex 1.6`), events
-near, empty days far (`brightness .6`, lines at .62 alpha). Scale and
-luminance, never icons.
+**The day head.** `#cal-dayhead` is today's date alone — weekday, comma,
+month-day, the ordinal suffix as a real `<sup>` (B149) — seated as
+`#cal-stack`'s first child, directly above the weekly stack (B150), centered
+to the view horizontally, in the view's own light ink (`--ink-light` on the
+`--chrome` ground, §2.3). It renders at the set's display step, **21px/600**
+(UIUX §13.1; the `.cat-head` token, B63) — a header, not a label (issue #363:
+"larger font size so it reads as a header").
 
-**Capture.** Each day's zone closes with the `+` row — the calendar edition
-of §6.2: tap and type, the caret arrives with the tap. Commit-on-blur writes
-the event and its linked board's mirror line together; an empty commit
-discards (B8). Completed events strike through at .55. An **existing** event
-line is editable in place (B97): its own tap opens the same editor — focused,
-caret always at the end of the text, inside the tap gesture; a second tap
-while editing does nothing (B81's re-arm guard); the commit touches text
-only, so a completed event keeps its strike through an edit.
+**The 7-day stack.** `#cal-stack` is a column of seven `#cal-day` cards,
+today first — computed at render (R4), never stored — flowing from the top of
+the view (issue #363 supersedes the bottom-anchor seating of #293/#334: the
+face moves up into the space the deleted top section freed, gap 10px, and
+whatever slack remains falls below the month view). A day card is a
+two-column grid: the date card (`--card`, the day's name over MM/DD) beside
+the day's notes zone on the water's fall. Attention recedes with distance
+from now — today lit (the two-tone outline ring, full scale, `flex 1.6`),
+days with notes near, empty days far (`brightness .6`). Scale and luminance,
+never icons.
+
+**The day-note squares (issue #363).** The top day-note section
+(`#cal-frame`, #329/#331/#336) is deleted on every tier. Its records render
+as the same two-zone orange square blocks INSIDE each day card: the band
+`var(--note)` with `--ink-dark` via the band's own `.on-light`, the body
+`var(--water-bot)` with `--ink-light`, the B72 inset frame (`outline: 2px
+solid var(--frame)`), radius 4px — three squares per day, the card's `+`
+rightmost, and a `‹`/`›` pager (the `.mo-nav` grammar) on the card when a day
+holds more than three. The band writes the record's `rem` field; the body
+writes `next` (a legacy calKey value there renders as an empty body —
+nothing is rewritten); the `+` writes a NEW `day` field on the record — the
+card's calKey — so a square lands on its own day; records without `day` stay
+stored but unreachable. The band is a single line read (ellipsis); the body
+clamps to two lines. Calendar events never render in the weekly stack (the
+cards show only day-note squares); the event records and their mirror sync
+with the linked To-Do boards continue untouched.
+
+**Capture.** Each day's zone carries the card's `+` — the calendar edition
+of §6.2: tap and type, the caret arrives with the tap, in the square's title
+band. Commit-on-blur writes the record; an empty commit discards (B8).
 
 ---
 
