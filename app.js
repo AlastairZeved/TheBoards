@@ -70,13 +70,21 @@ function applyEnvironment() {
   const tablet = EMBED_MODE ? false : !desktop && TABLET_MQ.matches;
   const wide = EMBED_MODE ? EMBED_MODE === 'desktop' : desktop || tablet;
   const tierChanged = wide !== state.isWide;
-  const changed = !lastEnv || tierChanged || vw !== lastEnv.vw || vh !== lastEnv.vh;
+  // B152 (issue #360): a focusout hold armed the pass — the keyboard-up
+  // resizes were consumed by the editing guard, so the retraction can read
+  // unchanged against lastEnv and still owe the held frame ONE application.
+  const changed = !lastEnv || tierChanged || vw !== lastEnv.vw || vh !== lastEnv.vh ||
+                  state.holdFramePending;
+  state.holdFramePending = false;
   lastEnv = { vw, vh, wide };
   if (!changed) return;
   inEnvironmentPass(true);
   try {
     if (tierChanged) applyTier(desktop, tablet);
-    applyLayout(vw, vh);                // the ONE frame this pass owes
+    // B152 (issue #360): an application discharges the focusout hold — the
+    // held frame has landed, so nothing is deferred and no stale baseline
+    // may outlive it (a future edit in a smaller room must re-baseline).
+    if (!applyLayout(vw, vh)) { state.layoutDeferred = false; state.editStartH = 0; }
   } finally {
     inEnvironmentPass(false);
   }
@@ -369,7 +377,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v121';
+const OWN_BUILD = 'v122';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

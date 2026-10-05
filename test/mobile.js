@@ -255,6 +255,7 @@ async function openCat(page, cat) {
     await tap(page, 200, 560);
     await page.waitForTimeout(80);
     ok('note created low on the sheet', (await noteCount(page)) === 1);
+    await countPasses(page);
     const before = await page.evaluate(() =>
       getComputedStyle(document.querySelector('#board')).getPropertyValue('--logical-h'));
     await page.setViewportSize({ width: 384, height: 450 });   // "keyboard up"
@@ -264,12 +265,31 @@ async function openCat(page, cat) {
     ok('--logical-h unchanged while editing', before === during, before + ' -> ' + during);
     ok('note still present', (await noteCount(page)) === 1);
     ok('editor still focused (no flap)', await activeIsNoteText(page));
-    // blur -> deferred layout lands
+    // blur with the room STILL shrunken (B152, issue #360): this is the exact
+    // state the audit found landing a keyboard-shrunken frame on Gecko/WebKit,
+    // where the layout viewport itself shrinks. The pre-B152 pin asserted the
+    // frame applies on blur; B152 rewrites that pin deliberately — the edit
+    // commits, the frame HOLDS, and it lands when the room is restored. The
+    // landing is asserted by APPLICATION COUNT, not by a --logical-h change:
+    // the restored 846px room computes the same logical height the held frame
+    // was showing (846px -> 846px), so the write itself is the only witness.
     await page.evaluate(() => document.activeElement.blur());
     await page.waitForTimeout(200);
-    const after = await page.evaluate(() =>
-      getComputedStyle(document.querySelector('#board')).getPropertyValue('--logical-h'));
-    ok('deferred layout applies after blur', after !== during, during + ' -> ' + after);
+    const heldAfter = await page.evaluate(() => ({
+      lh: getComputedStyle(document.querySelector('#board')).getPropertyValue('--logical-h'),
+      deferred: state.layoutDeferred,
+    }));
+    ok('blur with the room still shrunken holds the frame (B152)', heldAfter.lh === during, during + ' -> ' + heldAfter.lh);
+    ok('...the deferral survives for the restore', heldAfter.deferred === true);
+    clearPasses(page);
+    await page.setViewportSize({ width: 384, height: 846 });   // the keyboard's retraction
+    await page.waitForTimeout(200);
+    const after = await page.evaluate(() => ({
+      passes: window.__passes.length,
+      deferred: state.layoutDeferred,
+    }));
+    ok('the restored room lands the deferred layout as ONE application (B152)', after.passes === 1, JSON.stringify(after));
+    ok('...and the deferral is discharged', after.deferred === false);
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
@@ -1307,6 +1327,57 @@ async function openCat(page, cat) {
       !(await activeIsNoteText(page)));
     ok('...and the held frame lands as one application',
       (await passes(page)).length === 1, JSON.stringify(await passes(page)));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  // ---- 12f. blur with the keyboard still up holds the frame on engines ----
+  // ---- without navigator.virtualKeyboard (issue #360, B152) -----------------
+  // Chromium's interactive-widget=resizes-visual keeps innerHeight full under
+  // the keyboard, so THIS browser cannot show the break: Gecko and WebKit
+  // shrink the layout viewport itself. The scenario simulates exactly that
+  // semantics — editStartH is forced to the pre-keyboard height (the focusin
+  // baseline B152 captures), the viewport is shrunk to the keyboard-up
+  // height (which this browser reflects in innerHeight, as Gecko does), and
+  // the editor is blurred with the keyboard still up. Pre-fix, focusout lands
+  // the held frame against the shrunken innerHeight — the keyboard-shrunken
+  // frame B64 exists to keep out of storage. Post-fix the frame stays
+  // deferred and the retraction resize lands it, through the environment
+  // pass, at the restored height.
+  console.log('\n[12f] Blur with the keyboard still up holds the frame where innerHeight shrinks (issue #360, B152)');
+  {
+    const { ctx, page, errors } = await newMobilePage(browser);
+    await tap(page, 250, 620);
+    await page.keyboard.type('gecko hold');
+    // the baseline focusin recorded, before the keyboard shrinks the room
+    await page.evaluate(() => { state.editStartH = 846; });
+    await countPasses(page);
+    await page.setViewportSize({ width: 384, height: 450 });   // keyboard up (Gecko semantics)
+    await page.waitForTimeout(300);
+    ok('the shrink holds the frame and keeps focus as B28 left it (precondition)',
+      (await passes(page)).length === 0 && await activeIsNoteText(page));
+    await page.evaluate(() => document.activeElement.blur());  // blur-by-tap, keyboard STILL up
+    await page.waitForTimeout(300);
+    const held = await page.evaluate(() => ({
+      deferred: state.layoutDeferred,
+      baseline: state.editStartH,
+      text: (state.current.notes[0] || {}).text,
+    }));
+    ok('blur with the keyboard still up COMMITS the note but HOLDS the frame (B152)',
+      held.deferred === true && held.text === 'gecko hold', JSON.stringify(held));
+    ok('...the baseline survives for the chain (a keyboard already up re-baselines nothing)',
+      held.baseline === 846, JSON.stringify(held));
+    await page.setViewportSize({ width: 384, height: 846 });   // the keyboard's retraction resize
+    await page.waitForTimeout(400);
+    const landed = await page.evaluate(() => ({
+      passes: window.__passes.map(p => p.vh),
+      deferred: state.layoutDeferred,
+      baseline: state.editStartH,
+    }));
+    ok('the retraction resize lands the held frame as ONE application, at the restored height (B152)',
+      landed.passes.length === 1 && landed.passes[0] === 846, JSON.stringify(landed));
+    ok('...and the deferral is discharged and the baseline cleared',
+      landed.deferred === false && landed.baseline === 0, JSON.stringify(landed));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
