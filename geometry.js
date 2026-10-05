@@ -38,13 +38,14 @@ export function onFrameReflow(fn) { frameUi.frameReflow = fn; }
    expands FROM the rail, it doesn't add to it. */
 const CAL_RAIL_W = 40;               // the collapsed rail (mockup 6: 40px, right edge)
 export function applyLayout(vw, vh) {
-  if (deferLayoutIfEditing()) return;    // issue #281 item 2: never move the board under a focused editor
+  if (deferLayoutIfEditing()) return true;    // issue #281 item 2: never move the board under a focused editor
   // Issue #281 item 3: the environment pass hands in the viewport IT read, so
   // this frame and the tier the pass applied come from one read of the room. A
   // bare applyLayout() (boot, the font swap's re-measure, the deferred frame
   // landing on focusout) still reads the live viewport.
   computeFrame(vw ?? window.innerWidth, vh ?? window.innerHeight);
   applyFrame();
+  return false;                               // applied: nothing is held (B152's landing reads this)
 }
 
 /* Split (issue #176): applyLayout's two natural halves — the scale-to-fit math

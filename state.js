@@ -484,7 +484,13 @@ export const state = {
   editVVWidth: 0,         // the width of the PREVIOUS resize of this edit (issue #281): a fold
                           // changes width, the keyboard never does — the blur's second gate
   editVVH: 0,             // ...and its height, so a size told twice by both listeners is inert
+  editStartH: 0,          // the layout-viewport height when the edit began (issue #360): engines
+                          // without navigator.virtualKeyboard (Gecko/WebKit) shrink innerHeight
+                          // under the keyboard too, so focusout can tell a still-shrunken room
+                          // from a restored one; 0 = no baseline (desktop, or no edit yet)
   layoutDeferred: false,
+  holdFramePending: false, // a focusout hold (B152) armed the pass: land the held frame even
+                           // if the restored viewport reads unchanged against lastEnv
   menuInvoker: null,      // desktop contextmenu: focus returns here on close
   swallowTap: false,      // the pointerdown that dismissed a menu is inert (B30)
   calOpen: false,         // the MOBILE full-screen calendar (B95's third screen)

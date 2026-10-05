@@ -1,7 +1,7 @@
 /* --- 7. Gesture recognizer ----------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { ACTION_DELAY, CE, COPY, DBLCLICK_MS, LEAVE_MS, LONGPRESS_MS, MAX_SCALE, MIN_SCALE, MOVE_THRESHOLD } from './state.js';
-import { NOTE_MIN_W, TOAST_HIDE_MS, UNDO_MS, el, state, uuid } from './state.js';
+import { NOTE_MIN_W, TOAST_HIDE_MS, UNDO_MS, el, state, uuid, KB_HIDE_SLOP } from './state.js';
 import { saveNow, scheduleSave } from './persistence.js';
 import { LOGICAL_H, LOGICAL_W, applyLayout, applyNoteWidth, caretToEnd, effScale, noteMaxW, placeCaretAtPoint } from './geometry.js';
 import { rebaseNote, renderX, renderY, setHitInset, toLogical, updateBoardGeometry } from './geometry.js';
@@ -1312,10 +1312,42 @@ function onFocusOut(e) {
   // A viewport change held back during the edit lands now that nothing is at
   // stake — the keyboard's own retraction resize would repeat it, but a
   // rotation or fold has no such second chance.
-  if (state.layoutDeferred) { state.layoutDeferred = false; requestAnimationFrame(() => applyLayout()); }
+  //
+  // Issue #360 (B152): on engines without navigator.virtualKeyboard (Gecko,
+  // WebKit) the layout viewport ITSELF shrinks under the keyboard — Chromium's
+  // interactive-widget=resizes-visual is ignored there — so blur-by-tap with
+  // the keyboard still up would land the held frame against a shrunken
+  // innerHeight: the keyboard-shrunken frame B64 exists to keep out of
+  // storage. The room is read against this edit's own focus-in baseline, so a
+  // fold (width change, not this comparison) and Chromium (innerHeight stays
+  // full under the keyboard, the meta's whole job) both fall through and
+  // blur-apply exactly as B28/B80 left them. When the gate holds, the frame
+  // stays deferred: the keyboard's retraction resize is guaranteed on close,
+  // and it lands through the environment pass at the restored height.
+  const stillShrunken = state.editStartH && !state.isDesktop &&
+    window.innerHeight < state.editStartH - KB_HIDE_SLOP;
+  if (state.layoutDeferred && !stillShrunken) {
+    state.layoutDeferred = false;
+    requestAnimationFrame(() => applyLayout());
+  }
+  if (stillShrunken) {
+    // arm the environment pass: the retraction resize must land the held frame
+    // even if the restored viewport reads unchanged against its lastEnv (B152)
+    state.holdFramePending = true;
+  } else {
+    state.editStartH = 0;
+  }
 }
 
 function onFocusIn(e) {
+  // Issue #360 (B152): the edit's layout-viewport baseline. Chromium's
+  // interactive-widget=resizes-visual keeps innerHeight full under the
+  // keyboard, but Gecko/WebKit shrink it — so blur while the keyboard is
+  // still up must be distinguishable from a restored room on those engines.
+  // The max keeps a keyboard that was ALREADY up when this edit began (the
+  // held-frame chain, B152's focusout gate) from re-baselining the edit on
+  // its own shrunken height.
+  if (!state.isDesktop) state.editStartH = Math.max(state.editStartH, window.innerHeight);
   if (pointers.size) return;
   const t = e.target;
   if (!t.classList) return;
