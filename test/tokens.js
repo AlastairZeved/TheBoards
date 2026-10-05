@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v122 — version bumped (the #360 B152 engine-safe blur pins this build)',
-    /const CACHE = 'zeved-boards-v122';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v122, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v122';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v125 — version bumped (the #363 B153 calendar-face rebuild pins this build)',
+    /const CACHE = 'zeved-boards-v125';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v125, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v125';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -858,18 +858,23 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /#cal-month \{/.test(css) && /grid-template-columns: repeat\(7, 1fr\)/.test(css));
   ok('a day with events wears exactly one dot — --accent-page, a shade within the palette (issue #191)',
     /\.mo-dot \{/.test(css) && /\.mo-dot \{[^}]*background: var\(--accent-page\);/.test(css));
-  // --- Issue #329: the day head + the section's own square two-zone blocks ---
-  ok('the day head reads the weekday with the date and the ordinal suffix as superscript — "Friday, October 2nd" — a real element, seated OUT of the frame (issue #343: in the gap under the section, centered on top of the weekly view, --ink-light ink), no add control of its own (issues #329, #341, #343)',
+  // --- Issue #363 (B153): the top section deleted — the day head above the
+  // --- weekly stack, the day-note squares INSIDE the day cards ---
+  ok('the day head reads the weekday with the date and the ordinal suffix as superscript — "Friday, October 2nd" — a real element, centered on top of the weekly view, --ink-light ink at the display step 21px (issue #363: a header, the largest existing title token), no add control of its own (issues #341, #343, #363)',
     /id="cal-dayhead"/.test(html) &&
-    html.indexOf('id="cal-dayhead"') > html.indexOf('id="cal-notes-add"') &&
+    html.indexOf('id="cal-dayhead"') < html.indexOf('id="cal-stack"') &&
     /calDayhead: document\.getElementById\('cal-dayhead'\)/.test(app) && /#cal-dayhead \{/.test(css) &&
     /el\.calStack\.appendChild\(el\.calDayhead\)/.test(app) &&
     /#cal-dayhead \{[^}]*justify-content: center;/.test(css) &&
-    /#cal-dayhead \{[^}]*font-size: 13px; font-weight: 600; line-height: 1\.3;/.test(css) &&
+    /#cal-dayhead \{[^}]*font-size: 21px; font-weight: 600; line-height: 1\.3;/.test(css) &&
     /weekday: 'long', month: 'long', day: 'numeric'/.test(app) &&
     /function calOrdinal\(/.test(app) && /createElement\('sup'\)/.test(app));
-  ok('the section is a three-column grid of square blocks — repeat(3, minmax(0,1fr)) and aspect-ratio 1/1, the inset frame, 4px radius (issue #329)',
-    /#cal-notes-grid \{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\).*/.test(css) &&
+  ok('the top day-note section is deleted — no #cal-frame, no #cal-notes, no .cal-notes-add anywhere in the shipped sources (issue #363: delete it, do not cram or resize)',
+    !/id="cal-frame"/.test(html) && !/#cal-frame[ \{]/.test(css) && !/id="cal-notes"/.test(html) &&
+    !/\.cal-notes-add/.test(css) &&
+    !/calNotesGrid|calNotesPrev|calNotesNext|calNotesAdd/.test(app));
+  ok('the squares live in the day cards — the in-card row is a three-column grid, aspect-ratio 1/1, the inset frame, 4px radius (issue #363: the records re-render as the squares inside each card)',
+    /\.cal-notes-grid \{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/.test(css) &&
     /\.cal-note \{[^}]*aspect-ratio: 1 \/ 1;/.test(css) &&
     /\.cal-note \{[^}]*outline: 2px solid var\(--frame\);/.test(css) &&
     /\.cal-note \{[^}]*border-radius: 4px;/.test(css));
@@ -884,10 +889,22 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /\.cal-note-text \{[^}]*background: var\(--water-bot\);/.test(css) &&
     /\.cal-note-text \{[^}]*color: var\(--ink-light\);/.test(css) &&
     /\.cal-note-text \{[^}]*padding: 4px 6px;/.test(css));
-  ok('the add "+" wears the calendar\'s own orange --frame accent, rightmost in the row (issue #329)',
-    /\.cal-notes-add \{[^}]*background: var\(--frame\);/.test(css));
-  ok('the collapsed rail hides the day head and its squares too (issue #329)',
-    /#cal-view\.rail-open #cal-frame,/.test(css));
+  ok('the card\'s "+" adds a DAY NOTE dated to the card — the record carries the new day field, the per-day filter renders the squares, nothing migrated (issue #363)',
+    /day: dateKey \}/.test(app) && /r\.day === day\.key/.test(app) &&
+    /function calNoteRecords\(all\)/.test(app) &&
+    /typeof r\.day === 'string'/.test(app));
+  ok('the per-day pager pages a day beyond three squares and the "+" sits rightmost in the row (issue #363)',
+    /CAL_NOTE_PER_DAY = 3/.test(app) &&
+    /cal-notes-nav/.test(css) && /calDayNotePage\[day\.key\]/.test(app));
+  ok('calendar events no longer render in the weekly stack — the line factory and the calendar-side add/edit path are gone, the sync machinery untouched (issue #363)',
+    !/function makeCalLine/.test(app) && !/function addCalEvent/.test(app) &&
+    !/function startCalLineEdit/.test(app) && !/cal-lines/.test(css) &&
+    /export async function syncDateMirror/.test(app));
+  ok('the face moves up into the freed space — the bottom-anchor seating is superseded, the stack gap widened for the ruling\'s breathing room (issue #363)',
+    !/#cal-stack \{ justify-content: flex-end; \}/.test(css) &&
+    /#cal-stack \{ gap: 10px; \}/.test(css));
+  ok('the collapsed rail hides the day head and the stack too (issue #329, re-seated by #363)',
+    /#cal-view\.rail-open #cal-stack,/.test(css));
   ok('today wears the to-do boards\' water fall; the current week gets the pale ink-light band (issue #191)',
     /\.mo-cell\.today \{[^}]*linear-gradient\(180deg, var\(--water-top\) 0%, var\(--water-mid\) 46%, var\(--water-bot\) 100%\)/.test(css) &&
     /\.mo-cell\.wk \{ background: rgb\(244 245 241 \/ \.08\); \}/.test(css));
@@ -979,13 +996,14 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('the squeeze is render-time state: true frame kept, nothing stored (R6)',
     /let calSqueeze = false/.test(app) && /frameUi\.LOGICAL_W_TRUE/.test(app) &&
     /note\.rw = frameUi\.LOGICAL_W_TRUE \|\| LOGICAL_W/.test(app));
-  // --- Issue #152 / B97: existing events are editable in place ---
-  ok('an existing event line opens its existing editor on tap, with the caret re-asserted to the end after the native placement (issue #152, B97)',
-    /line\.addEventListener\('click', \(e\) => \{\s*\n\s*if \(line\.hasAttribute\('contenteditable'\)\) return;\s*\n\s*e\.preventDefault\(\);\s*\n\s*startCalLineEdit\(line, ev\);\s*\n\s*setTimeout\(\(\) => caretToEnd\(line\), 0\);\s*\n\s*\}\)/.test(app));
+  // --- Issue #152 / B97 on the #363 surface: the day-note squares are
+  // --- editable in place (the event lines they replaced are gone) ---
+  ok('an existing day-note square opens its editor on tap, with the caret re-asserted to the end after the native placement (issue #152, B97; #363 moved the surface)',
+    /block\.addEventListener\('click', \(e\) => \{\s*\n\s*if \(band\.hasAttribute\('contenteditable'\) \|\| body\.hasAttribute\('contenteditable'\)\) return;\s*\n\s*e\.preventDefault\(\);\s*\n\s*const zone = e\.target === body \? 'body' : 'band';\s*\n\s*startCalNoteEdit\(block, rec, zone\);\s*\n\s*setTimeout\(\(\) => caretToEnd\(zone === 'body' \? body : band\), 0\);\s*\n\s*\}\)/.test(app));
   ok('the editor always lands the caret at the end of the text (the issue expected behavior)',
-    /function startCalLineEdit[\s\S]*?line\.focus\(\);\s*\n\s*caretToEnd\(line\);/.test(app));
+    /const target = seat === 'body' \? body : band;\s*\n\s*target\.focus\(\);\s*\n\s*caretToEnd\(target\);/.test(app));
   ok('the second tap while editing cannot re-arm a second editor (B81)',
-    /if \(line\.hasAttribute\('contenteditable'\)\) return;/.test(app));
+    /if \(band\.hasAttribute\('contenteditable'\) \|\| body\.hasAttribute\('contenteditable'\)\) return;/.test(app));
   const external = /https?:\/\//;
   ok('no CDN URL in styles.css', !external.test(css.replace(/http:\/\/www\.w3\.org/g, '')));
   // Social/AEO metadata (issue #244) carries absolute URLs by design — og:image,

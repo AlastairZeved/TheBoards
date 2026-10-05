@@ -1025,42 +1025,9 @@ export function calMD(d) {
   return p(d.getMonth() + 1) + '/' + p(d.getDate());
 }
 
-export function makeCalLine(ev) {
-  const line = document.createElement('div');
-  line.className = 'cal-line' + (ev.state === 'complete' ? ' complete' : '');
-  line.setAttribute('role', 'listitem');
-  line.textContent = ev.text;
-  // Existing events are editable in place (issue #152): the line IS the
-  // control — a tap opens its existing editor, focused with the caret at
-  // the end, inside the tap gesture. No new surface, no mode (B95 intact).
-  // The native click's caret placement fires with the mouseup — on desktop
-  // AFTER the click handler (caretToEnd wins); on touch the placement is
-  // coalesced BEFORE the click dispatch (caretToEnd loses), and the caret
-  // sits at the tap point — so the first typed characters splice mid-word
-  // instead of appending (the bug class this issue reports). The deferred
-  // re-assert runs after both orders and lands the caret at the end either
-  // way. The guard keeps a second tap while editing from re-arming the
-  // editor and double-committing (B81's concern). Edit-entry is navigation,
-  // so it runs raw — the commit is the blur, which writes and re-syncs
-  // itself.
-  // Issue #304: this factory is the ONE birthplace of a .cal-line. It used
-  // to be inlined in makeCalDay only, so a line born from addCalEvent's
-  // create path got no click listener and could never be re-opened after
-  // its first commit — read-only forever, until a full repaint made it a
-  // rendered line. Both paths now share this constructor, so a created
-  // line and a rendered line are the same thing by construction.
-  line.addEventListener('click', (e) => {
-    if (line.hasAttribute('contenteditable')) return;
-    e.preventDefault();
-    startCalLineEdit(line, ev);
-    setTimeout(() => caretToEnd(line), 0);
-  });
-  return line;
-}
-
-export function makeCalDay(day, events, board) {
+export function makeCalDay(day, dayNotes, board) {
   const card = document.createElement('div');
-  card.className = 'cal-day' + (day.today ? ' today' : events.length ? ' near' : ' far');
+  card.className = 'cal-day' + (day.today ? ' today' : dayNotes.length ? ' near' : ' far');
   const dc = document.createElement('div');
   dc.className = 'cal-date on-dark';
   const d1 = document.createElement('div'); d1.className = 'cal-d1';
@@ -1068,117 +1035,14 @@ export function makeCalDay(day, events, board) {
   const d2 = document.createElement('div'); d2.className = 'cal-d2';
   d2.textContent = calMD(day.date);
   dc.append(d1, d2);
-  const dl = document.createElement('div');
-  dl.className = 'cal-lines on-dark';
-  dl.setAttribute('role', 'list');
-  for (const ev of events) {
-    dl.appendChild(makeCalLine(ev));      // issue #304: one shared line factory
-  }
-  // Capture lives on the day (PRD §6.2's grammar, calendar edition): the
-  // zone's last row is the add control — tap and type, no dialogs, no pickers
-  // (R5: adding an event is the trigger that creates the linked board, so the
-  // control carries that consequence and runs under commitAction's guard).
-  const add = document.createElement('button');
-  add.type = 'button';
-  add.className = 'cal-add';
-  add.setAttribute('aria-label', 'Add event ' + calMD(day.date));
-  add.textContent = '+';
-  add.addEventListener('click', () => addCalEvent(day.key, dl));
-  dl.appendChild(add);
-  card.append(dc, dl);
+  // Issue #363: the day's own zone is its day-note squares — the calendar
+  // events that used to render as text lines here no longer render at all;
+  // the sync machinery keeps syncing, the card shows only the squares.
+  const zone = document.createElement('div');
+  zone.className = 'cal-notes on-dark';
+  renderCalDayNotes(zone, day, dayNotes);
+  card.append(dc, zone);
   return card;
-}
-
-/* Add an event to a date (R5's whole chain, one consequence):
-   1. the date's linked board is ensured (created on the first event) —
-      UNLESS the date is in the future (B131): the event record is the only
-      stored thing; the board materializes on its date via the morning
-      lifecycle, which gives it the same first-sync calReq (launchTodayBoard),
-   2. the event record is written to the store,
-   3. the board's Requirements mirror is synced (same-day only, per 1),
-   4. the records persist, and the line appears in the day zone at once.
-   Creating + writing are consequences (records change), so the whole step
-   runs under commitAction's drop-guard (B81) — a double-tap adds one event.
-   The line's editor opens on arrival: capture precedes structure, §1.1. */
-async function addCalEvent(dateKey, zone) {
-  commitAction(async () => {            // the guard arms synchronously (B81); the
-                                        // work itself is fire-and-forget, like every
-                                        // async consequence in this file
-
-    flushSave();
-    const all = await idbGetAll();
-    const ev = newCalEvent(dateKey, '');
-    if (dateKey <= calKey(new Date())) {  // B131 (issue #250): a FUTURE-dated
-                                          // event stores the event record
-                                          // alone — its linked board is derived
-                                          // state that materializes on its date
-                                          // via the morning lifecycle, so
-                                          // nothing future-dated ever enters
-                                          // the boards store.
-      const boards = all.filter(b => b.title !== undefined);
-      const { board } = ensureLinkedBoard(boards, dateKey);
-      if (board.calReq === undefined) {
-        // First sync for this board: the span is the events it already had.
-        board.calReq = calEventsOf(eventsOf(all), dateKey).length;
-      }
-      await idbPut(board);
-    }
-    await idbPut(ev);
-    const line = makeCalLine(ev);         // issue #304: the shared factory now
-                                          // wires the re-edit click listener on
-                                          // the create path too
-    const old = zone.querySelector('.cal-add');
-    zone.insertBefore(line, old);
-    startCalLineEdit(line, ev);
-  });
-}
-
-/* Issue #305, the calendar→board half: a mirror commit from a calendar line
-   rewrites the board's span in the store, but a board whose Requirements
-   anchor is ALREADY on screen (the wide panel's squeeze leaves it beside the
-   calendar) kept the stale text until some navigation happened to repaint it.
-   Repaint once at the commit point — via renderBoard(), never a direct
-   anchor.textContent write, so the B133 pinned-title re-derivation and the
-   'filled' class survive by construction. The guard is what is actually on
-   screen, not viewport width: the mobile full-screen push covers the board
-   entirely (cal-open on a narrow tier), and hideCal already repaints on the
-   way back — a repaint there would pay for a hidden surface and fight
-   hideCal's own render. The wide panel's squeeze leaves the board beside the
-   calendar, so the offsetParent check passes there and only there. */
-function repaintVisibleBoard() {
-  if (state.calOpen && !state.isWide) return;   // the mobile push covers the board
-  const anchor = document.getElementById('anchor-requirements');
-  if (anchor && anchor.offsetParent !== null) renderBoard();
-}
-
-/* The event line's editor. Commit-on-blur writes the event text AND the
-   linked board's mirror line together — one edit, both surfaces, the
-   mirror's one-writer law. An empty commit discards (B8's rule: the frame
-   must earn its keep), sweeping the event record with it. */
-export function startCalLineEdit(line, ev) {
-  line.setAttribute('contenteditable', CE);
-  line.focus();
-  caretToEnd(line);
-  const commit = async () => {
-    line.removeAttribute('contenteditable');
-    const text = line.textContent.trim();
-    if (!text) {                            // B8: a whitespace commit discards
-      await idbDelete(ev.id);
-      line.remove();
-      await syncDateMirror(ev.date);
-      repaintVisibleBoard();
-      return;
-    }
-    ev.text = text;
-    await idbPut(ev);
-    await syncDateMirror(ev.date);
-    repaintVisibleBoard();
-    scheduleSave();
-  };
-  line.addEventListener('blur', commit, { once: true });
-  line.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); line.blur(); }
-  });
 }
 
 /* Re-sync a date's whole mirror after any event write: the board's span is
@@ -1191,7 +1055,8 @@ export async function syncDateMirror(dateKey) {
   if (syncMirror(board, calEventsOf(eventsOf(all), dateKey))) await idbPut(board);
 }
 
-/* The REVERSE direction of startCalLineEdit (issue #154, B106): a board-side
+/* The REVERSE direction of the retired calendar-side line editor (issue
+   #154, B106): a board-side
    Requirements commit writes through to the event records the mirror's span
    mirrors, then resyncs. Within the span the BOARD is the word now — each
    span line rewrites its positional event (mirrorEventsOf's law, span line
@@ -1277,7 +1142,7 @@ export function checkDayRoll() {
 async function launchTodayBoard(today, morning) {
   commitAction(async () => {            // creating the board is a consequence
                                         // (ensureLinkedBoard's contract, B81) —
-                                        // same wrap as addCalEvent's R5 chain
+                                        // same wrap as the retired event-add chain's
     // B131: the boot pick can BE a ghost (the most-recent record is often a
     // future board the pre-fix build created). Detach it BEFORE flushSave —
     // persist() early-returns on no current, so the ghost's snapshot never
@@ -1291,7 +1156,7 @@ async function launchTodayBoard(today, morning) {
     const { board } = ensureLinkedBoard(boards, today);
     if (morning) {
       if (board.calReq === undefined) {
-        // B131 (issue #250): the first sync addCalEvent no longer does for a
+        // B131 (issue #250): the first sync (the retired event-add's job) no longer does for a
         // future-dated event's board — the span is the events it already had.
         board.calReq = calEventsOf(eventsOf(all), today).length;
       }
@@ -1346,12 +1211,23 @@ async function carryForward(boards, todayBoard, today) {
 export function renderCal() {
   checkDayRoll();                // the day-roll launch (B105): once per day key
   el.calView.hidden = false;
+  flushSave();
+  idbGetAll().then(paintCal);
+}
+
+/* The expanded face's one painter, synchronous on a store read: the day
+   cards (issue #363: each card is its day-note squares) and the month view.
+   renderCal is its caller after the fetch; addCalNote paints directly so the
+   new block is in the DOM the moment its editor arms — no race with the
+   async fetch. */
+function paintCal(all) {
   el.calStack.textContent = '';
-  // Issue #343: the day head is seated OUT of the top frame — the node moves
-  // into #cal-stack as its first child, where the stack's bottom-anchor
-  // (issue #293/#334) seats it directly above the day rows, in the gap under
-  // the frame. The frame's upper line stays intentionally blank (issue #343).
+  // Issue #343: the day head rides inside #cal-stack as its first child,
+  // where the stack's bottom-anchor seats it directly above the day rows.
+  // Issue #363: with the top section deleted, the head is the expanded face's
+  // first content — the freed top space falls out ABOVE it as whitespace.
   el.calStack.appendChild(el.calDayhead);
+  renderCalDayhead();
   // §6/B7's collar on the exit row (issue #156, B98; retargeted by B134,
   // issue #259): the row's tab draws at the floor as a visible frame now, and
   // the collar tops up the width where geometry is tight — spent
@@ -1363,57 +1239,41 @@ export function renderCal() {
   // inherits the right one. Half-pixel headroom, per the board row's note.
   el.calTop.style.setProperty('--hit', (hitInset(el.calTop, 1) + 0.5) + 'px');
   const days = calWeekAnchor ? calWeekOf(calWeekAnchor) : calWindow();
-  flushSave();
-  idbGetAll().then((all) => {
-    const events = eventsOf(all);      // event records ride the boards store (§1.7)
-    for (const day of days) {
-      const board = calBoardOf(all, day.key);
-      const dayEvents = calEventsOf(events, day.key);
-      el.calStack.appendChild(makeCalDay(day, dayEvents, board));
-    }
-    renderCalMonth(new Set(events.map((e) => e.date)));
-    renderCalNotes(all);
-  });
+  const events = eventsOf(all);      // event records ride the boards store (§1.7)
+  const notes = calNoteRecords(all); // the day-note records (issue #363: per day)
+  for (const day of days) {
+    const board = calBoardOf(all, day.key);
+    el.calStack.appendChild(makeCalDay(day, notes.filter((r) => r.day === day.key), board));
+  }
+  renderCalMonth(new Set(events.map((e) => e.date)));
 }
 
-/* --- The day-note section (issue #329) ------------------------------------
-   The expanded face's top content. The section's head — today's date, the
-   weekday with it and the ordinal suffix as superscript ("Friday, October
-   2nd", issue #341; month-day, no year) with no add control on it — is seated
-   OUT of the frame, in the gap underneath the section, right on top of the
-   weekly view (issue #343); the frame's upper line is intentionally blank.
-   Then the section's OWN records as square orange two-zone blocks (a
-   lighter-orange title band over a darker orange body), three across, the
-   left/right pager in the row, and the add "+" rightmost.
+/* --- The day-note squares (issue #363) -------------------------------------
+   The top section (#cal-frame, #cal-notes, issues #329/#331/#336) is DELETED
+   on every tier. Its stored records survive — the #323 disposition, nothing
+   migrated, nothing stripped — and re-render as the two-zone orange square
+   blocks INSIDE each day card of the weekly stack: up to three squares per
+   day, the card's own "+" to the right of the squares, and a ‹/› pager on the
+   card when a day holds more than three.
 
-   Standards: the records are the recurring-reminder records the retired
-   recurring-reminders strip and its chips (B138/B144) held. CALENDAR EVENTS ARE
-   NEVER READ HERE — the owner's law, stated twice: "The events from the
-   calendar have no bearing on this section whatsoever and are not linked."
-   Neither zone is pre-filled, auto-populated, or compiled from a calendar
-   record; both are whatever the user types ("Not for you to pre-determine").
+   Per-day binding (the owner's ruling): the card's "+" writes a NEW `day`
+   field on the record — the day card's calKey, written on add. A record
+   without `day` (every record written before this ruling) has no day card to
+   render on and stays unreachable, exactly as the retired `next`-occurrence
+   value stayed stored-but-unread. CALENDAR EVENTS ARE NEVER READ HERE — the
+   events keep syncing with the linked To-Do boards' Requirements (the mirror
+   machinery untouched), they simply no longer render in the weekly stack:
+   the card shows only the day-note squares. */
 
-   The block's geometry keeps the square's own intent — three across, and a
-   block is a square — rendered as a three-column grid (`repeat(3,
-   minmax(0, 1fr))`) of aspect-ratio 1/1 blocks, the owner's "3 should fit
-   easily". The two fills are the ladder's own tokens: band `var(--note)`
-   #e3c6aa with --ink-dark via the band's own .on-light; body `var(--water-bot)`
-   #462d1a with --ink-light under #cal-view's .on-dark; frame `var(--frame)`
-   #b48158, radius 4px. Pages of three page left/right through the month view's
-   own .mo-nav grammar — no pager is invented.
+let calDayNotePage = {};             // per-day pager position: day.key -> page
 
-   Binding (declared per the impl card's data-model note): the band writes the
-   record's `rem` field; the body writes the record's `next` field. No field
-   is added, migrated, or renamed in storage. Legacy records carried a calKey
-   date in `next` (the retired next-occurrence); that value is not user body
-   text, so it renders as an empty body until the user types into it — nothing
-   is rewritten or dropped on render. */
-let calNotePage = 0;                 // the page of six the section shows
-// Issue #331: two rows of three, THEN paginate. B145 shipped one row of three
-// and paged at 3, leaving the ground under the first row empty. One number, two
-// readers — the slice and the page-the-new-record-lands-on both read this.
-const CAL_NOTE_PER_PAGE = 6;
-const CALKEY_DATE = /^\d{4}-\d{2}-\d{2}$/;   // a legacy next-occurrence calKey, not body text
+const CAL_NOTE_PER_DAY = 3;          // the owner's cap: three squares per day
+const CALKEY_DATE = /^\d{4}-\d{2}-\d{2}$/;   // a calKey date (the `day` field; also a legacy next-occurrence calKey, not body text)
+
+function calNoteRecords(all) {
+  return all.filter((r) => typeof r.rem === 'string' && typeof r.day === 'string'
+    && CALKEY_DATE.test(r.day));
+}
 
 // The record's body text: `next`, unless it is a legacy calKey date.
 function calNoteBody(r) {
@@ -1427,10 +1287,9 @@ function calOrdinal(n) {
   return ['th', 'st', 'nd', 'rd'][(v - 20) % 10] || ['th', 'st', 'nd', 'rd'][v] || 'th';
 }
 
-function renderCalNotes(all) {
-  const grid = el.calNotesGrid;
-  // The head — today, weekday + month-day (no year) with the ordinal suffix
-  // as superscript: "Friday, October 2nd" (issue #341). No add control.
+/* The day head (issues #341/#343, unchanged composition): today, weekday +
+   month-day (no year) with the ordinal suffix as superscript. No add control. */
+function renderCalDayhead() {
   const today = new Date();
   const head = el.calDayhead;
   // The head is a flex row (gap 6px) — the date and its suffix ride in ONE
@@ -1443,50 +1302,87 @@ function renderCalNotes(all) {
   label.appendChild(sup);
   head.textContent = '';
   head.appendChild(label);
-  wireCalNotes();
-  if (grid.querySelector('[contenteditable]')) return;   // an edit is open — don't throw the typing away
-  grid.textContent = '';
-  const recs = all.filter((r) => typeof r.rem === 'string');
-  const perPage = CAL_NOTE_PER_PAGE, pages = Math.max(1, Math.ceil(recs.length / perPage));
-  if (calNotePage >= pages) calNotePage = pages - 1;
-  if (calNotePage < 0) calNotePage = 0;
-  for (const r of recs.slice(calNotePage * perPage, calNotePage * perPage + perPage)) {
-    grid.appendChild(makeCalNote(r));
-  }
-  const hasPages = recs.length > perPage;
-  el.calNotesPrev.hidden = !hasPages;
-  el.calNotesNext.hidden = !hasPages;
-  el.calNotesPrev.disabled = calNotePage <= 0;
-  el.calNotesNext.disabled = calNotePage >= pages - 1;
 }
 
-async function refreshCalNotes() { renderCalNotes(await idbGetAll()); }
+/* One day card's notes zone (issue #363): the day's own records as square
+   two-zone blocks — three shown, the card's "+" rightmost, the ‹/› pager on
+   the card when the day holds more than three (the .mo-nav grammar; page
+   state is per day, render-time only, nothing stored). Calendar events are
+   never read here. */
+const CAL_PAGER = { prev: '‹', next: '›' };
 
-let calNotesWired = false;
-function wireCalNotes() {
-  if (calNotesWired) return;
-  calNotesWired = true;
-  el.calNotesPrev.textContent = '‹';
-  el.calNotesNext.textContent = '›';
-  // Issue #331: the add button shipped with no content at all — an empty
-  // orange square. Its two siblings in this row carry their marks as text
-  // ('‹'/'›', and `.cal-add`'s '+' below), so it wears the same grammar.
-  el.calNotesAdd.textContent = '+';
-  el.calNotesPrev.addEventListener('click', () => { if (calNotePage > 0) { calNotePage--; refreshCalNotes(); } });
-  el.calNotesNext.addEventListener('click', () => { calNotePage++; refreshCalNotes(); });
-  el.calNotesAdd.addEventListener('click', () => {
-    commitAction(async () => {          // the drop-guard (B81): one tap adds one note
-      const rec = { id: 'rem-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-                    rem: '', next: '' };
-      await idbPut(rec);                // neither zone is pre-filled — nothing app-supplied
-      const all = await idbGetAll();
-      const recs = all.filter((r) => typeof r.rem === 'string');
-      const idx = recs.findIndex((r) => r.id === rec.id);
-      calNotePage = Math.floor(Math.max(0, idx) / CAL_NOTE_PER_PAGE);   // page lands on the new note wherever its id sorts
-      renderCalNotes(all);
-      const block = [...el.calNotesGrid.querySelectorAll('.cal-note')].find((b) => b.dataset.id === rec.id);
-      if (block) startCalNoteEdit(block, rec, 'band');   // the caret starts in the title band
-    });
+function renderCalDayNotes(zone, day, recs) {
+  const row = document.createElement('div');
+  row.className = 'cal-notes-row';
+  const pages = Math.max(1, Math.ceil(recs.length / CAL_NOTE_PER_DAY));
+  if (!calDayNotePage[day.key]) calDayNotePage[day.key] = 0;
+  let page = Math.min(Math.max(calDayNotePage[day.key], 0), pages - 1);
+  const hasPages = recs.length > CAL_NOTE_PER_DAY;
+  const draw = () => {
+    if (row.querySelector('[contenteditable]')) return;  // an edit is open — don't throw the typing away
+    row.textContent = '';
+    if (hasPages) {
+      const prev = document.createElement('button');
+      prev.type = 'button';
+      prev.className = 'mo-nav cal-notes-nav';
+      prev.setAttribute('aria-label', 'Previous ' + calMD(day.date) + ' notes');
+      prev.textContent = CAL_PAGER.prev;
+      prev.disabled = page <= 0;
+      prev.hidden = page <= 0;
+      prev.addEventListener('click', () => { page--; calDayNotePage[day.key] = page; draw(); });
+      row.appendChild(prev);
+    }
+    const grid = document.createElement('div');
+    grid.className = 'cal-notes-grid';
+    grid.setAttribute('role', 'list');
+    for (const r of recs.slice(page * CAL_NOTE_PER_DAY, page * CAL_NOTE_PER_DAY + CAL_NOTE_PER_DAY)) {
+      grid.appendChild(makeCalNote(r));
+    }
+    row.appendChild(grid);
+    if (hasPages) {
+      const next = document.createElement('button');
+      next.type = 'button';
+      next.className = 'mo-nav cal-notes-nav';
+      next.setAttribute('aria-label', 'Next ' + calMD(day.date) + ' notes');
+      next.textContent = CAL_PAGER.next;
+      next.disabled = page >= pages - 1;
+      next.hidden = page >= pages - 1;
+      next.addEventListener('click', () => { page++; calDayNotePage[day.key] = page; draw(); });
+      row.appendChild(next);
+    }
+    // The card's "+": right of the squares. It adds a DAY NOTE to this date —
+    // the event-add chain it used to run (R5's linked-board trigger) retired
+    // with the lines; the sync machinery itself keeps syncing without it.
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'cal-add';
+    add.setAttribute('aria-label', 'Add a note ' + calMD(day.date));
+    add.textContent = '+';
+    add.addEventListener('click', () => addCalNote(day.key));
+    row.appendChild(add);
+    zone.textContent = '';
+    zone.appendChild(row);
+  };
+  draw();
+}
+
+/* Add a day note to a date (the one consequence, under commitAction's guard):
+   the record is written with the NEW `day` field — the date's calKey, the
+   per-day binding the squares render from — and its editor opens on arrival,
+   the caret in the title band. Neither zone is pre-filled: nothing
+   app-supplied ever enters the record (issues #329/#363). */
+async function addCalNote(dateKey) {
+  commitAction(async () => {
+    const rec = { id: 'rem-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                  rem: '', next: '', day: dateKey };
+    await idbPut(rec);
+    const all = await idbGetAll();
+    const recs = calNoteRecords(all).filter((r) => r.day === dateKey);
+    const idx = recs.findIndex((r) => r.id === rec.id);
+    calDayNotePage[dateKey] = Math.floor(Math.max(0, idx) / CAL_NOTE_PER_DAY);
+    paintCal(all);                     // synchronous — the block is in the DOM now
+    const block = [...document.querySelectorAll('.cal-notes-grid .cal-note')].find((b) => b.dataset.id === rec.id);
+    if (block) startCalNoteEdit(block, rec, 'band');   // the caret starts in the title band
   });
 }
 
@@ -1543,13 +1439,13 @@ function startCalNoteEdit(block, rec, seat) {
     if (!rem && !next) {                            // B8: an empty commit discards
       await idbDelete(rec.id);
       block.remove();
-      await refreshCalNotes();
+      renderCal();
       return;
     }
     rec.rem = rem;
     rec.next = next;
     await idbPut(rec);
-    await refreshCalNotes();
+    renderCal();
     scheduleSave();
   };
   block.addEventListener('focusout', (e) => {
@@ -1719,11 +1615,14 @@ export function registerBoards() {
     // B148 (issue #342): Today resets both render-time anchors in one act —
     // `calMonthAnchor = null` puts the month view back on the current month
     // and `calWeekAnchor = null` returns the stack to the shipped today+6
-    // window (R4) — then re-renders. Raw navigation, nothing committed (B81).
-    // The day-note section above (#cal-frame) is untouched: renderCal re-draws
-    // it from the same records, its page position (calNotePage) unmodified.
+    // window (R4) — then re-renders. Issue #363: the day-note squares ride
+    // the day cards renderCal re-draws, their per-day page positions
+    // (calDayNotePage) unmodified.
     calMonthAnchor = null;
     calWeekAnchor = null;
+    // Issue #363: the pager positions reset with the anchors — a reset to
+    // "today" shows the squares' first page on every card.
+    calDayNotePage = {};
     renderCal();
   });
   el.calRail.addEventListener('click', () => {

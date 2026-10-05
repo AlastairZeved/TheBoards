@@ -8,7 +8,7 @@ import { registerInteractions, selected } from './interactions.js';
 import { closeMenu, fillBoardAction, registerMenus } from './menus.js';
 import { EXPORT_GEO, EXPORT_W, buildBoardPdf, exportBoardPdf, exportCalPdf, exportNoteBox, exportX, pdfTextW } from './export.js';
 import { BOARD_CATS, GRID_ORDER, catOf, catOrder, catPageCap, catView, drillCat, goToList, listOpen, lotMenuOpen } from './boards.js';
-import { checkDayRoll, makeCalDay, newBoardIn, openBoardObj, popping, registerBoards, renderCal, renderPane, returnToBoard, showCalRail, startCalLineEdit } from './boards.js';
+import { checkDayRoll, makeCalDay, newBoardIn, openBoardObj, popping, registerBoards, renderCal, renderPane, returnToBoard, showCalRail } from './boards.js';
 import { swapBoard, swapping, syncDateMirror, collapsePane } from './boards.js';
 
 /* --- B125 frame-guard -----------------------------------------------------
@@ -307,7 +307,6 @@ const SURFACE = {
   get returnToBoard() { return returnToBoard; },
   get saveNow() { return saveNow; },
   get selected() { return selected; },
-  get startCalLineEdit() { return startCalLineEdit; },
   get state() { return state; },
   get swapBoard() { return swapBoard; },
   get swapping() { return swapping; },
@@ -377,7 +376,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v122';
+const OWN_BUILD = 'v125';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

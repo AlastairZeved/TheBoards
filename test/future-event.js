@@ -2,8 +2,11 @@
 // issue #250): the event record is the only stored thing at event creation;
 // the board materializes on its date via the morning lifecycle (B108), with
 // the same first-sync calReq and a one-time boot sweep deleting the ghost
-// boards the pre-fix build left behind. Black-box: the event is created
-// through the real UI (.cal-add → type → blur-commit); the roll is driven by
+// boards the pre-fix build left behind. Black-box on the CURRENT surface
+// (issue #363/B153): calendar events no longer render in the weekly stack —
+// the event is seeded as a RECORD (idbPut of newCalEvent), every assertion
+// that read a rendered .cal-line now reads the store through idbGetAll, and
+// the day cards show only their day-note squares. The roll is driven by
 // Playwright's clock (the repo's precedent left fake-clock to QA — this suite
 // adopts the sanctioned tool instead of leaving the ruling untested).
 const { chromium } = require('playwright');
@@ -25,35 +28,38 @@ async function newPage(browser, ctxOpts = {}) {
   return { ctx, page, errors };
 }
 
-// Create an event through the real UI on the day card whose .cal-add sits at
-// the given offset from today's (day index into the week stack), then commit.
-async function addEventViaUI(page, dayIdx, text) {
-  await page.evaluate(() => document.getElementById('action-calendar').click());
-  await page.waitForTimeout(400);
-  const at = await page.evaluate((i) => {
-    const card = document.querySelectorAll('.cal-day')[i];
-    const r = card.querySelector('.cal-add').getBoundingClientRect();
-    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-  }, dayIdx);
-  const c = await page.context().newCDPSession(page);
-  await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: at.x, y: at.y }] });
-  await page.waitForTimeout(30);
-  await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await c.detach();
-  await page.waitForTimeout(150);
-  await page.keyboard.type(text);
-  await page.waitForTimeout(80);
-  await page.evaluate(() => document.querySelector('.cal-line[contenteditable]')?.blur());
+// Seed an event RECORD for the date `dayOffset` days from today, then reboot
+// onto the store (an empty boot made its own board). Issue #363: the add path
+// that used to birth events through the UI (.cal-add) now adds DAY NOTES, so
+// the record is the only way in — which is exactly what B131 governs.
+async function seedEventRecord(page, dayOffset, text) {
+  await page.evaluate(async ({ dayOffset, text }) => {
+    const d = new Date(); d.setDate(d.getDate() + dayOffset);
+    await idbPut(newCalEvent(calKey(d), text));
+  }, { dayOffset, text });
+  await page.reload();
+  await page.waitForFunction(() => !!document.querySelector('#board'));
   await page.waitForTimeout(600);
+}
+
+// Open the calendar face (narrow tier) and report what the week stack shows.
+async function openCalendar(page) {
+  await page.evaluate(() => document.getElementById('action-calendar').click());
+  await page.waitForTimeout(700);
+  return page.evaluate(() => ({
+    lines: [...document.querySelectorAll('.cal-line')].map(l => l.textContent),
+    squares: [...document.querySelectorAll('.cal-day .cal-note')].map(b => b.querySelector('.cal-note-title').textContent),
+    adds: document.querySelectorAll('.cal-day .cal-add').length,
+  }));
 }
 
 (async () => {
   const browser = await chromium.launch(launchOpts);
 
-  console.log('\n[F1] A future-dated event creates NO board record (B131) — UI surface');
+  console.log('\n[F1] A future-dated event RECORD creates NO board (B131) — record-level on the #363 surface');
   {
     const { ctx, page, errors } = await newPage(browser);
-    await addEventViaUI(page, 2, 'future event line');       // day 2 of the week stack
+    await seedEventRecord(page, 2, 'future event line');       // day 2 from today
     const got = await page.evaluate(async () => {
       const tm = new Date(); tm.setDate(tm.getDate() + 2);
       const tk = calKey(tm);
@@ -67,26 +73,31 @@ async function addEventViaUI(page, dayIdx, text) {
     ok('the event record exists for the future date', got.event, JSON.stringify(got));
     ok('no boards record exists for any future date (store-level, not menu-level)',
        got.futureBoards === 0, JSON.stringify(got));
-    ok('the calendar still renders the future event line',
-       await page.evaluate(() => [...document.querySelectorAll('.cal-line')]
-         .some(l => l.textContent === 'future event line')));
+    const shown = await openCalendar(page);
+    ok('no event line renders anywhere in the weekly stack (issue #363)',
+       shown.lines.length === 0, JSON.stringify(shown.lines));
+    ok('the day cards carry no event text — only day-note squares render (and none is seeded here)',
+       shown.squares.length === 0 && shown.squares.every(s => s !== 'future event line'), JSON.stringify(shown.squares));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
 
-  console.log('\n[F2] A TODAY-dated event still creates its linked board (regression — B131 must not touch the same-day path)');
+  console.log('\n[F2] A TODAY-dated event RECORD still syncs its linked board (regression — B131 must not touch the same-day path)');
   {
     const { ctx, page, errors } = await newPage(browser);
-    await addEventViaUI(page, 0, 'today event line');        // today's day card
+    await seedEventRecord(page, 0, 'today event line');        // today's date
     const got = await page.evaluate(async () => {
       const tk = calKey(new Date());
       const all = await idbGetAll();
       const b = all.find(r => r.cal === tk);
-      return { board: !!b, calReq: b && b.calReq, event: all.some(r => r.date === tk && r.text === 'today event line') };
+      return { board: !!b, calReq: b && b.calReq,
+               event: all.some(r => r.date === tk && r.text === 'today event line'),
+               req: b && b.requirements };
     });
     ok('today\'s linked board exists with the event\'s first-sync span',
        got.board && got.calReq === 1, JSON.stringify(got));
-    ok('the event record exists', got.event);
+    ok('the event record exists and the mirror read it into the span',
+       got.event && (got.req || '').indexOf('today event line') !== -1, JSON.stringify(got));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
@@ -146,13 +157,17 @@ async function addEventViaUI(page, dayIdx, text) {
     ok('boot is CURRENT on it', g.curCal === g.tk, g.curCal + ' want ' + g.tk);
     ok('the span synced at materialization (calReq = the event it already had, B131)',
        g.calReq === 1, JSON.stringify(g));
-    ok('the mirror read the event line', (g.req || '').indexOf('materialize me') !== -1, JSON.stringify(g.req));
+    ok('the mirror read the event record into the span', (g.req || '').indexOf('materialize me') !== -1, JSON.stringify(g.req));
     ok('the pre-fix ghost board was swept (store-level)', !g.ghost, JSON.stringify(g));
     ok('nothing future-dated remains in the boards store', !g.anyFuture, JSON.stringify(g));
-    ok('the event record survived the sweep', g.evSurvived, JSON.stringify(g));
+    ok('the event record survived the sweep (records persist; issue #363: they just no longer render)',
+       g.evSurvived, JSON.stringify(g));
     ok('yesterday\'s incomplete note carried forward with carriedOn = today',
        g.carriedOn === g.tk, JSON.stringify(g));
     ok('yesterday\'s board keeps only completes', !g.ybIncomplete, JSON.stringify(g));
+    const shown = await openCalendar(page);
+    ok('after the roll, no line renders for the materialized event — the card shows only its day-note squares',
+       shown.lines.length === 0, JSON.stringify(shown.lines));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
