@@ -1999,12 +1999,12 @@ html.wide #cal-export { margin-left: auto; }
 }
 .cal-notes-grid .cal-note { min-width: 0; }   /* a square never shoves the pager or the "+" off the row */
 
-/* Issue #329: the section's OWN records as square orange two-zone blocks,
+/* Issue #329: the section's OWN records as square orange one-zone blocks
+   (issue #365: the title band is deleted, the square is one large body),
    three across, the left/right pager (the month view's .mo-nav grammar) and
    the add "+" at the row's right. Tokens only — the ladder #cal-view already
    binds (B117): the block the B72 inset frame (outline 2px --frame, interior
-   transparent), the band var(--note) with --ink-dark via the band's own
-   .on-light, the body var(--water-bot) with --ink-light under the view's
+   transparent), the body var(--water-mid) with --ink-light under the view's
    .on-dark, radius 4px. */
 #cal-notes {
   flex: 0 0 auto;

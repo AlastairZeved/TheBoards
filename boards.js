@@ -1251,8 +1251,9 @@ function paintCal(all) {
 /* --- The day-note squares (issue #363) -------------------------------------
    The top section (#cal-frame, #cal-notes, issues #329/#331/#336) is DELETED
    on every tier. Its stored records survive — the #323 disposition, nothing
-   migrated, nothing stripped — and re-render as the two-zone orange square
-   blocks INSIDE each day card of the weekly stack: up to three squares per
+   migrated, nothing stripped — and re-render as the one-zone deep-orange
+   square blocks (issue #365) INSIDE each day card of the weekly stack: up to
+   three squares per
    day, the card's own "+" to the right of the squares, and a ‹/› pager on the
    card when a day holds more than three.
 
@@ -1304,8 +1305,9 @@ function renderCalDayhead() {
   head.appendChild(label);
 }
 
-/* One day card's notes zone (issue #363): the day's own records as square
-   two-zone blocks — three shown, the card's "+" rightmost, the ‹/› pager on
+/* One day card's notes zone (issue #363; one-zone squares per issue #365):
+   the day's own records as square blocks — three shown, the card's "+" rightmost,
+   the ‹/› pager on
    the card when the day holds more than three (the .mo-nav grammar; page
    state is per day, render-time only, nothing stored). Calendar events are
    never read here. */
@@ -1369,8 +1371,8 @@ function renderCalDayNotes(zone, day, recs) {
 /* Add a day note to a date (the one consequence, under commitAction's guard):
    the record is written with the NEW `day` field — the date's calKey, the
    per-day binding the squares render from — and its editor opens on arrival,
-   the caret in the square's one zone (issue #365). Neither zone is pre-filled:
-   nothing
+   the caret in the square's one zone (issue #365). The zone is not pre-filled:
+   no
    app-supplied ever enters the record (issues #329/#363). */
 async function addCalNote(dateKey) {
   commitAction(async () => {

@@ -1,22 +1,22 @@
 // Issue #320 + #363: neither the day cards' square blocks may ever append a
 // day-of-week suffix ("— TUE") to a label, and the day-note records render as
-// the two-zone orange squares INSIDE each day card of the weekly stack
+// the one-zone orange squares INSIDE each day card of the weekly stack
 // (issue #363/B153: the top section is deleted, three squares per day, the
-// card's "+" rightmost, a ‹/› pager beyond three). A block's label is exactly
+// card's "+" rightmost, a ‹/› pager beyond three; one zone per issue #365). A
+// block's label is exactly
 // what the user typed; adding a block never rewrites the text of existing
 // blocks. This suite reproduces #320's exact acceptance behaviours on the
 // current surface:
 //   1. every pre-existing label is byte-identical after adding a square;
 //   2. no label carries a " — " + weekday suffix — the appended string is
 //      absent from the render path, not stripped at render time;
-//   3. the squares render from the released day-note records: the band
-//      carries the stored `rem` title alone, the body carries the stored
-//      `next` free text (a legacy calKey date renders as an empty body), and
+//   3. the squares render from the released day-note records: the one zone
+//      carries the stored `next` free text (a legacy calKey date renders as
+//      an empty square; `rem` stays stored-but-unread, issue #365), and
 //      nothing is read from a calendar event record;
 //   4. the card's "+" adds a square dated to the card (the new `day` field)
-//      in edit with the caret in the title band; Enter in the band (or a tap
-//      on the darker body) moves the caret into the body; a commit writes
-//      BOTH fields in one step;
+//      in edit with the caret in the square's one zone; Enter ends the entry;
+//      a commit writes `next` (`rem` untouched, issue #365);
 //   5. a day beyond three squares pages on the card (‹/›).
 //
 // The regression is written to FAIL if a future change re-composes a weekday
