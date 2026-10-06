@@ -1914,20 +1914,21 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
   }
 
   // ---- D24. an existing day-note square is editable in place (issue #152,
-  // B97, re-pinned on the #363 surface) ---------------------------------------
-  // The desktop twin of [25], now against the two-zone orange square INSIDE
+  // B97, re-pinned on the #363/#365 surface) ----------------------------------
+  // The desktop twin of [25], now against the ONE-zone orange square INSIDE
   // the day card: tap a .cal-note, its editor opens focused with the caret at
-  // the end (B90 pattern); Enter in the band hands off to the body, Enter in
-  // the body commits; a commit that leaves BOTH fields empty discards the
-  // record and the block (B8); a tap inside the open editor does not re-arm
-  // or steal the caret (B81's capture grammar).
-  console.log('\n[D24] Calendar: tap an existing day-note square edits it in place (issue #152, B97, #363)');
+  // the end (B90 pattern); Enter ends the entry and commits `next` (the one
+  // zone writes next; `rem` stays stored-but-unread, #323); a commit that
+  // leaves BOTH fields empty discards the record and the block (B8); a tap
+  // inside the open editor does not re-arm or steal the caret (B81).
+  console.log('\n[D24] Calendar: tap an existing day-note square edits it in place (issue #152, B97, #363/#365)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
     const seeded = await page.evaluate(async () => {
       const recs = [
         { id: 'rem-d24a', rem: 'desktop note', next: 'renew tags', day: calKey(new Date()) },
         { id: 'rem-d24b', rem: 'second note', next: '', day: calKey(new Date()) },
+        { id: 'rem-d24c', rem: '', next: '', day: calKey(new Date()) },
       ];
       for (const r of recs) await idbPut(r);
       return recs.map(r => r.id);
@@ -1936,39 +1937,37 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // so the day stack (and the seeded squares) is on screen.
     await page.evaluate(() => { document.getElementById('cal-rail').click(); });
     await page.waitForTimeout(400);
-    ok('calendar opened with the seeded squares rendered in the day card',
+    ok('calendar opened with the seeded square rendered in the day card — the zone shows `next`',
       await page.evaluate(() =>
-        [...document.querySelectorAll('.cal-day.today .cal-note-title')]
-          .some(b => b.textContent === 'desktop note')));
+        [...document.querySelectorAll('.cal-day.today .cal-note-text')]
+          .some(b => b.textContent === 'renew tags')));
 
-    // Tap through the real mouse grammar, on the title band.
+    // Tap through the real mouse grammar, on the square's one zone.
     const box = await page.evaluate(() => {
       const b = [...document.querySelectorAll('.cal-day.today .cal-note')]
-        .find(n => n.querySelector('.cal-note-title').textContent === 'desktop note');
-      const r = b.querySelector('.cal-note-title').getBoundingClientRect();
+        .find(n => n.querySelector('.cal-note-text').textContent === 'renew tags');
+      const r = b.querySelector('.cal-note-text').getBoundingClientRect();
       return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
     });
     await page.mouse.click(box.x, box.y);
     await page.waitForTimeout(150);           // the caret re-assert lands on a setTimeout(0)
     const editing = await page.evaluate(() => {
       const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
-        .find(x => x.querySelector('.cal-note-title').textContent === 'desktop note');
-      const band = n.querySelector('.cal-note-title');
+        .find(x => x.querySelector('.cal-note-text').textContent === 'renew tags');
       const body = n.querySelector('.cal-note-text');
-      return { bandEdit: band.hasAttribute('contenteditable'),
-               bodyEdit: body.hasAttribute('contenteditable'),
-               focused: document.activeElement === band };
+      return { bodyEdit: body.hasAttribute('contenteditable'),
+               focused: document.activeElement === body };
     });
-    ok('the tap opens the two-zone editor, the tapped band focused',
-      editing.bandEdit && editing.bodyEdit && editing.focused, JSON.stringify(editing));
+    ok('the tap opens the one-zone editor, the zone focused',
+      editing.bodyEdit && editing.focused, JSON.stringify(editing));
     // Caret-at-end, proven the B90 way: a typed marker appends.
     await page.keyboard.type('!');
     await page.waitForTimeout(80);
-    ok('the caret sits at the end of the band text (typing appends, B90 pattern)',
+    ok('the caret sits at the end of the zone text (typing appends, B90 pattern)',
       await page.evaluate(() =>
         [...document.querySelectorAll('.cal-day.today .cal-note')]
-          .find(n => n.querySelector('.cal-note-title').textContent === 'desktop note!')
-          .querySelector('.cal-note-title').textContent === 'desktop note!'));
+          .find(n => n.querySelector('.cal-note-text').textContent === 'renew tags!')
+          .querySelector('.cal-note-text').textContent === 'renew tags!'));
 
     // A second tap inside the open editor must NOT re-arm or move the caret.
     // (The tap lands on the square's left strip — later siblings paint over
@@ -1976,31 +1975,23 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // the square's own hit area.)
     const again = await page.evaluate(() => {
       const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
-        .find(x => x.querySelector('.cal-note-title').textContent === 'desktop note!');
-      const r = n.querySelector('.cal-note-title').getBoundingClientRect();
+        .find(x => x.querySelector('.cal-note-text').textContent === 'renew tags!');
+      const r = n.querySelector('.cal-note-text').getBoundingClientRect();
       return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
     });
     await page.mouse.click(again.x, again.y);
     await page.waitForTimeout(150);
     const stillArmed = await page.evaluate(() => {
-      const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
-        .find(x => x.querySelector('.cal-note-title').textContent === 'desktop note!');
       const ae = document.activeElement;
       return { editCount: document.querySelectorAll('.cal-day.today .cal-note [contenteditable]').length,
-               caretHeld: !!(ae && ae.classList.contains('cal-note-title') &&
-                 ae.textContent === 'desktop note!') };
+               caretHeld: !!(ae && ae.classList.contains('cal-note-text') &&
+                 ae.textContent === 'renew tags!') };
     });
     ok('a second tap inside the open editor does not re-arm — one editor, caret held (B81)',
-      stillArmed.editCount === 2 && stillArmed.caretHeld === true, JSON.stringify(stillArmed));
+      stillArmed.editCount === 1 && stillArmed.caretHeld === true, JSON.stringify(stillArmed));
 
-    // Enter in the band hands off to the body; typing there and Enter commits
-    // BOTH fields in one step (the blur writes rem and next together).
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(150);
-    ok('Enter in the band hands the caret to the darker body',
-      await page.evaluate(() =>
-        !!(document.activeElement && document.activeElement.classList.contains('cal-note-text'))));
-    await page.keyboard.type('bodies in');
+    // Enter ends the entry and commits (the blur writes `next`; `rem` is
+    // untouched on the record — stored-but-unread, #323).
     await page.keyboard.press('Enter');            // R6.4: Enter ends the entry
     await page.waitForTimeout(600);                // the commit re-renders
     const after = await page.evaluate(async (ids) => {
@@ -2010,37 +2001,50 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
                day: rec && rec.day,
                editorsLeft: document.querySelectorAll('.cal-note [contenteditable]').length };
     }, seeded);
-    ok('Enter commits: both fields persisted on the record, day field intact',
-      after.rem === 'desktop note!' && after.next === 'renew tagsbodies in' &&
+    ok('Enter commits: `next` persisted, `rem` untouched, day field intact',
+      after.rem === 'desktop note' && after.next === 'renew tags!' &&
       /^\d{4}-\d{2}-\d{2}$/.test(after.day), JSON.stringify(after));
     ok('the square left edit mode after the commit',
       after.editorsLeft === 0, JSON.stringify(after.editorsLeft));
 
-    // B8: an empty commit discards — clear both zones of the second square.
+    // B8: an empty commit discards — but only when BOTH fields are empty. The
+    // rem-bearing square (d24b, empty `next`) survives an empty commit; the
+    // truly-empty square (d24c) is discarded.
     const b2 = await page.evaluate(() => {
       const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
-        .find(x => x.querySelector('.cal-note-title').textContent === 'second note');
-      const r = n.querySelector('.cal-note-title').getBoundingClientRect();
+        .find(x => x.querySelector('.cal-note-text').textContent === '');
+      const r = n.querySelector('.cal-note-text').getBoundingClientRect();
       return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
     });
     await page.mouse.click(b2.x, b2.y);
     await page.waitForTimeout(150);
-    await page.keyboard.press('Control+a');
-    await page.keyboard.press('Delete');
-    await page.keyboard.press('Enter');            // hand-off to the body
-    await page.waitForTimeout(100);
-    await page.keyboard.press('Control+a');
-    await page.keyboard.press('Delete');
+    await page.keyboard.press('Enter');            // commit, `next` still empty
+    await page.waitForTimeout(600);
+    const survived = await page.evaluate(async (id) => {
+      const all = await idbGetAll();
+      return { recordKept: all.some(r => r.id === id),
+               remKept: (all.find(r => r.id === id) || {}).rem };
+    }, seeded[1]);
+    ok('an empty commit on a rem-bearing square keeps the record (issue #365: `rem` stored-but-unread counts for B8)',
+      survived.recordKept && survived.remKept === 'second note', JSON.stringify(survived));
+
+    const b3 = await page.evaluate(() => {
+      const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
+        .find(x => x.querySelector('.cal-note-text').textContent === '' &&
+                   (x.dataset.id === 'rem-d24c'));
+      const r = n.querySelector('.cal-note-text').getBoundingClientRect();
+      return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
+    });
+    await page.mouse.click(b3.x, b3.y);
+    await page.waitForTimeout(150);
     await page.keyboard.press('Enter');            // commit, both fields empty
     await page.waitForTimeout(600);
     const discarded = await page.evaluate(async (id) => {
       const all = await idbGetAll();
-      return { recordGone: !all.some(r => r.id === id),
-               blockGone: ![...document.querySelectorAll('.cal-note')]
-                 .some(n => n.querySelector('.cal-note-title').textContent === 'second note') };
-    }, seeded[1]);
-    ok('an empty commit discards the record AND the block (B8)',
-      discarded.recordGone && discarded.blockGone, JSON.stringify(discarded));
+      return { recordGone: !all.some(r => r.id === id) };
+    }, seeded[2]);
+    ok('an empty commit on a truly-empty square discards the record AND the block (B8)',
+      discarded.recordGone, JSON.stringify(discarded));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
@@ -2117,7 +2121,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     ok('no event line renders in the weekly stack — the board-side edit stays record-level (issue #363)',
        await page.evaluate(() =>
          document.querySelectorAll('.cal-line').length === 0 &&
-         ![...document.querySelectorAll('.cal-day .cal-note-title')]
+         ![...document.querySelectorAll('.cal-day .cal-note-text')]
            .some(b => b.textContent === 'mirror one EDITED')));
 
     // 2. Back on the board, delete the SECOND span line.
@@ -2240,13 +2244,11 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.waitForTimeout(200);
     ok('the day-note editor is in the DOM immediately under the add (paintCal synchronous)',
        await page.evaluate(() => {
-         const band = document.querySelector('.cal-day.today .cal-note-title[contenteditable]');
-         return !!band && band.textContent === '' && document.activeElement === band;
+         const zone = document.querySelector('.cal-day.today .cal-note-text[contenteditable]');
+         return !!zone && zone.textContent === '' && document.activeElement === zone;
        }));
     await page.keyboard.type('D25B square');
-    await page.keyboard.press('Enter');            // hand-off to the body
-    await page.waitForTimeout(100);
-    await page.keyboard.type('from the panel');
+    await page.keyboard.press('Enter');            // R6.4: Enter ends the entry
     await page.evaluate(() => document.activeElement && document.activeElement.blur());
     await page.waitForTimeout(800);
     // (The add path is the day-note record's only birthplace now; the anchor
@@ -2254,7 +2256,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     ok('the added day note persisted with the card\'s day field',
        await page.evaluate(async () => {
          const all = await idbGetAll();
-         return all.some(r => r.rem === 'D25B square' && r.next === 'from the panel' &&
+         return all.some(r => r.next === 'D25B square' && r.rem === '' &&
            r.day === calKey(new Date()));
        }));
     ok('the day-note add never touched the requirements anchor (record-level isolation)',
@@ -3040,27 +3042,23 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     });
     await page.mouse.click(at.x, at.y);
     await page.waitForTimeout(150);
-    ok('the add control opened a fresh square editor in the card, both zones empty',
+    ok('the add control opened a fresh square editor in the card, the one zone empty',
       await page.evaluate(() => {
         const card = document.querySelectorAll('.cal-day')[0];
-        const band = card.querySelector('.cal-note-title[contenteditable]');
-        const body = card.querySelector('.cal-note-text[contenteditable]');
-        return !!band && !!body && band.textContent === '' && body.textContent === '' &&
-          document.activeElement === band;
+        const zone = card.querySelector('.cal-note-text[contenteditable]');
+        return !!zone && zone.textContent === '' &&
+          document.activeElement === zone;
       }));
     await page.keyboard.type('created this session');
-    await page.keyboard.press('Enter');            // hands off to the body
-    await page.waitForTimeout(100);
-    await page.keyboard.type('the body line');
-    await page.keyboard.press('Enter');            // commits on blur
+    await page.keyboard.press('Enter');            // R6.4: Enter ends the entry
     await page.waitForTimeout(600);
     const rec = await page.evaluate(async () => {
       const all = await idbGetAll();
-      const r = all.find(r => r.rem === 'created this session') || null;
+      const r = all.find(r => r.next === 'created this session') || null;
       return { rec: r, dayOk: !!r && r.day === calKey(new Date()) };
     });
     ok('the commit persisted the day-note record with the card\'s day field',
-      !!rec.rec && rec.rec.next === 'the body line' && rec.dayOk, JSON.stringify(rec));
+      !!rec.rec && rec.rec.rem === '' && rec.dayOk, JSON.stringify(rec));
     // Tap away onto the day card's inert date column — a blur with no
     // editor consequence.
     const dc = await page.evaluate(() => {
@@ -3072,41 +3070,39 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     ok('after clicking away, no square is editing and the text stayed',
       await page.evaluate(() => {
         const n = [...document.querySelectorAll('.cal-note')]
-          .find(x => x.querySelector('.cal-note-title').textContent === 'created this session');
+          .find(x => x.querySelector('.cal-note-text').textContent === 'created this session');
         return !!n && n.querySelectorAll('[contenteditable]').length === 0 &&
-          n.querySelector('.cal-note-text').textContent === 'the body line';
+          n.querySelector('.cal-note-text').textContent === 'created this session';
       }));
     // THE regression: tap the created square again — it must reopen its
     // editor with the committed text intact.
     const lp = await page.evaluate(() => {
       const n = [...document.querySelectorAll('.cal-note')]
-        .find(x => x.querySelector('.cal-note-title').textContent === 'created this session');
-      const r = n.querySelector('.cal-note-title').getBoundingClientRect();
+        .find(x => x.querySelector('.cal-note-text').textContent === 'created this session');
+      const r = n.querySelector('.cal-note-text').getBoundingClientRect();
       return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
     });
     await page.mouse.click(lp.x, lp.y);
     await page.waitForTimeout(150);
     const reedit = await page.evaluate(() => {
       const n = [...document.querySelectorAll('.cal-note')]
-        .find(x => x.querySelector('.cal-note-title').textContent === 'created this session');
+        .find(x => x.querySelector('.cal-note-text').textContent === 'created this session');
       if (!n || !n.querySelector('[contenteditable]')) return null;
-      return { text: n.querySelector('.cal-note-title').textContent,
-               focused: document.activeElement === n.querySelector('.cal-note-title') };
+      return { text: n.querySelector('.cal-note-text').textContent,
+               focused: document.activeElement === n.querySelector('.cal-note-text') };
     });
     ok('tapping the created square re-opens its editor with the text intact (issue #304)',
       !!reedit && reedit.text === 'created this session' && reedit.focused,
       JSON.stringify(reedit));
-    // And the reopen is a real editor: a further edit commits too (Enter in
-    // the band hands off to the body; Enter in the body ends the entry).
+    // And the reopen is a real editor: a further edit commits too (Enter
+    // ends the entry; the blur commits `next`).
     await page.keyboard.type(' RE-EDITED');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(100);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(600);
     ok('the re-opened editor commits (the record carries the second edit)',
       await page.evaluate(async () => {
         const all = await idbGetAll();
-        return all.some(r => r.rem === 'created this session RE-EDITED');
+        return all.some(r => r.next === 'created this session RE-EDITED');
       }));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();

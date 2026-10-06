@@ -1961,9 +1961,9 @@ html.wide #cal-export { margin-left: auto; }
 /* Issue #363: the day-note squares, moved INTO the day cards — each card's
    zone is one row: the ‹/› pager (only when the day holds more than three),
    the day's squares (three shown, the .mo-nav grammar), and the card's "+"
-   rightmost. Tokens only — the ladder #cal-view already binds (B117): the
-   band var(--note) with --ink-dark via the band's own .on-light, the body
-   var(--water-bot) with --ink-light under the view's .on-dark, radius 4px. */
+   rightmost. Tokens only — the ladder #cal-view already binds (B117; one zone per
+   issue #365): the body var(--water-mid) with --ink-light under the view's
+   .on-dark, radius 4px. */
 .cal-notes {
   position: relative;
   padding: 4px 6px;
@@ -1985,16 +1985,17 @@ html.wide #cal-export { margin-left: auto; }
   min-width: 24px; min-height: 24px;    /* the .mo-nav pager grammar, on the card */
   padding: 0;
 }
+/* Issue #365: the squares center vertically in the card's notes row — the
+   grid's align-items moves from `start` to `center`. The width caveat below
+   still holds: stretch would recompute width from height and shove siblings
+   off the row (measured: a 52px column drawing a 117px square on desktop). */
 .cal-notes-grid {
   flex: 1;
   min-width: 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));   /* three squares, then the "+" */
   gap: 6px;
-  align-items: start;                   /* the square's width comes from its column; aspect-ratio
-                                           sets the height — stretch would recompute width from
-                                           height and shove siblings off the row (measured: a
-                                           52px column drawing a 117px square on desktop) */
+  align-items: center;                   /* issue #365: centered, not seated high */
 }
 .cal-notes-grid .cal-note { min-width: 0; }   /* a square never shoves the pager or the "+" off the row */
 
@@ -2027,28 +2028,25 @@ html.wide #cal-export { margin-left: auto; }
   background: transparent;              /* the view's ground shows through */
   color: var(--ink);
   border-radius: 4px;
-  overflow: hidden;                     /* the two fills clip to the 4px radius */
+  overflow: hidden;                     /* the fill clips to the 4px radius */
   display: flex; flex-direction: column;
-  gap: 0;                               /* the fills meet flush inside the frame — no gutter of the view's ground */
-  padding: 0;                           /* the inset re-seats onto the zones below */
+  gap: 0;                               /* the fill meets flush inside the frame — no gutter of the view's ground */
+  padding: 0;                           /* the inset re-seats onto the zone below */
 }
-.cal-note-title {
-  background: var(--note);              /* #e3c6aa — the lighter-orange title band (R2) */
-  color: var(--ink);                    /* --ink-dark #031019 via the node's own .on-light — 11.84:1 */
-  font-size: 13px; font-weight: 600; line-height: 1.3;   /* the title slot type */
-  padding: 4px 6px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;   /* the single-line read */
-}
+/* Issue #365: ONE zone — the title band is deleted, the fill is one large
+   body: var(--water-mid), the calendar ladder's rung at the SAME luminance as
+   the To-Do boards' deep blue (Y 0.0737 to 4dp, --ink-light at 7.75:1 — the
+   §2.2.2 rotation law), plain text type. `rem` renders nowhere (the #323
+   disposition, stored-but-unread). */
 .cal-note-text {
-  flex: 1 1 auto;                       /* the darker fill reaches the frame's bottom edge */
-  background: var(--water-bot);         /* #462d1a — the darker orange body (R3) */
-  color: var(--ink-light);              /* #f4f5f1 under #cal-view's .on-dark — 11.62:1 */
-  font-size: 12px; line-height: 1.4;
+  flex: 1 1 auto;                       /* the fill reaches the frame's bottom edge */
+  background: var(--water-mid);         /* #694432 — the ladder's mid rung, issue #365's deep orange */
+  color: var(--ink-light);              /* #f4f5f1 under #cal-view's .on-dark — 7.75:1 */
+  font-size: 12px; font-weight: 400; line-height: 1.4;   /* plain text (issue #365) */
   padding: 4px 6px;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
   overflow: hidden; overflow-wrap: break-word;   /* two lines read, a third never draws */
 }
-.cal-note-title[contenteditable],
 .cal-note-text[contenteditable] {
   outline: none;
   display: block; -webkit-line-clamp: unset;   /* the editor grows freely; the clamp is for the read, not the write */

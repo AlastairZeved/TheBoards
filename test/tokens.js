@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v125 — version bumped (the #363 B153 calendar-face rebuild pins this build)',
-    /const CACHE = 'zeved-boards-v125';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v125, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v125';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v126 — version bumped (the #365 B154 one-zone square pins this build)',
+    /const CACHE = 'zeved-boards-v126';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v126, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v126';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -880,15 +880,17 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /\.cal-note \{[^}]*border-radius: 4px;/.test(css));
   ok('the block\'s fills meet the frame — overflow hidden, gap: 0, padding: 0 (issue #329)',
     /\.cal-note \{[^}]*overflow: hidden;/.test(css) && /\n  gap: 0;/.test(css) && /\n  padding: 0;/.test(css));
-  ok('the band is the lighter orange var(--note) with --ink-dark ink at the title slot type (issue #329)',
-    /\.cal-note-title \{[^}]*background: var\(--note\);/.test(css) &&
-    /\.cal-note-title \{[^}]*color: var\(--ink\);/.test(css) &&
-    /\.cal-note-title \{[^}]*font-size: 13px; font-weight: 600; line-height: 1\.3;/.test(css));
-  ok('the body is the darker orange var(--water-bot) with --ink-light ink, flex-absorbed with the re-seated inset (issue #329)',
+  ok('the square is ONE zone (issue #365, B154) — the lighter title band is deleted, no .cal-note-title anywhere in the shipped sources',
+    !/.cal-note-title/.test(css) && !/.cal-note-title/.test(app));
+  ok('the square centers vertically in the card\'s notes row — the grid\'s align-items is center (issue #365)',
+    /\.cal-notes-grid \{[^}]*align-items: center;/.test(css));
+  ok('the one-zone fill is the ladder\'s mid rung var(--water-mid) — the same luminance as the To-Do boards\' deep blue (Y 0.0737 to 4dp, --ink-light at 7.75:1) — flex-absorbed with the re-seated inset (issue #365, the §2.2.2 rotation law)',
     /\.cal-note-text \{[^}]*flex: 1 1 auto;/.test(css) &&
-    /\.cal-note-text \{[^}]*background: var\(--water-bot\);/.test(css) &&
+    /\.cal-note-text \{[^}]*background: var\(--water-mid\);/.test(css) &&
     /\.cal-note-text \{[^}]*color: var\(--ink-light\);/.test(css) &&
     /\.cal-note-text \{[^}]*padding: 4px 6px;/.test(css));
+  ok('the fill\'s type is plain text — 12px, weight 400, line-height 1.4 (issue #365: the body\'s own type)',
+    /\.cal-note-text \{[^}]*font-size: 12px; font-weight: 400; line-height: 1\.4;/.test(css));
   ok('the card\'s "+" adds a DAY NOTE dated to the card — the record carries the new day field, the per-day filter renders the squares, nothing migrated (issue #363)',
     /day: dateKey \}/.test(app) && /r\.day === day\.key/.test(app) &&
     /function calNoteRecords\(all\)/.test(app) &&
@@ -998,12 +1000,12 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /note\.rw = frameUi\.LOGICAL_W_TRUE \|\| LOGICAL_W/.test(app));
   // --- Issue #152 / B97 on the #363 surface: the day-note squares are
   // --- editable in place (the event lines they replaced are gone) ---
-  ok('an existing day-note square opens its editor on tap, with the caret re-asserted to the end after the native placement (issue #152, B97; #363 moved the surface)',
-    /block\.addEventListener\('click', \(e\) => \{\s*\n\s*if \(band\.hasAttribute\('contenteditable'\) \|\| body\.hasAttribute\('contenteditable'\)\) return;\s*\n\s*e\.preventDefault\(\);\s*\n\s*const zone = e\.target === body \? 'body' : 'band';\s*\n\s*startCalNoteEdit\(block, rec, zone\);\s*\n\s*setTimeout\(\(\) => caretToEnd\(zone === 'body' \? body : band\), 0\);\s*\n\s*\}\)/.test(app));
+  ok('an existing day-note square opens its editor on tap, with the caret re-asserted to the end after the native placement (issue #152, B97; #363 moved the surface, #365 made it one zone)',
+    /block\.addEventListener\('click', \(e\) => \{\s*\n\s*if \(body\.hasAttribute\('contenteditable'\)\) return;\s*\n\s*e\.preventDefault\(\);\s*\n\s*startCalNoteEdit\(block, rec\);\s*\n\s*setTimeout\(\(\) => caretToEnd\(body\), 0\);\s*\n\s*\}\)/.test(app));
   ok('the editor always lands the caret at the end of the text (the issue expected behavior)',
-    /const target = seat === 'body' \? body : band;\s*\n\s*target\.focus\(\);\s*\n\s*caretToEnd\(target\);/.test(app));
+    /body\.focus\(\);\s*\n\s*caretToEnd\(body\);/.test(app));
   ok('the second tap while editing cannot re-arm a second editor (B81)',
-    /if \(band\.hasAttribute\('contenteditable'\) \|\| body\.hasAttribute\('contenteditable'\)\) return;/.test(app));
+    /if \(body\.hasAttribute\('contenteditable'\)\) return;/.test(app));
   const external = /https?:\/\//;
   ok('no CDN URL in styles.css', !external.test(css.replace(/http:\/\/www\.w3\.org/g, '')));
   // Social/AEO metadata (issue #244) carries absolute URLs by design — og:image,

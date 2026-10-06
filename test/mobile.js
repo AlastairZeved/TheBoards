@@ -2500,10 +2500,11 @@ async function openCat(page, cat) {
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(400);
     const open = await page.evaluate(() => !document.getElementById('cal-view').hidden);
-    ok('calendar opened with the seeded square rendered on today\'s card', open &&
+    ok('calendar opened with the seeded square rendered on today\'s card — the one zone shows `next` (issue #365)',
+      open &&
       (await page.evaluate(() =>
-        [...document.querySelectorAll('.cal-day.today .cal-note-title')]
-          .some(b => b.textContent === 'existing note title'))));
+        [...document.querySelectorAll('.cal-day.today .cal-note-text')]
+          .some(b => b.textContent === 'existing note body'))));
 
     // Blur by tapping the day head: it is inert title ground above the stack
     // (B153's seat). The old exit-row blur point now shares its row with the
@@ -2529,26 +2530,24 @@ async function openCat(page, cat) {
         .find(n => n.querySelector('[contenteditable]'));
       if (!n) return null;
       const ae = document.activeElement;
-      return { title: n.querySelector('.cal-note-title').textContent,
-               body: n.querySelector('.cal-note-text').textContent,
-               focused: ae && (ae.classList.contains('cal-note-title') ? 'band' :
-                        ae.classList.contains('cal-note-text') ? 'body' : null) };
+      return { body: n.querySelector('.cal-note-text').textContent,
+               focused: ae && (ae.classList.contains('cal-note-text') ? 'body' : null) };
     });
 
     // Flow 1: open, focus, caret at the END (the issue's expected behavior).
-    await tapZone('.cal-note-title', 'existing note title');
+    await tapZone('.cal-note-text', 'existing note body');
     await page.waitForTimeout(80);
     const editing = await editState();
     ok('the tap opens the existing editor on the square', !!editing, 'none found');
     ok('the tapped zone has focus (keyboard opens, inside the gesture)',
-      editing && editing.focused === 'band');
+      editing && editing.focused === 'body');
     // The caret-at-end contract is proven behaviorally (the B90 pattern):
     // typing a marker must append — an end-placed caret means the marker
     // lands after the existing text, never inside it.
     await page.keyboard.type('!');
     await page.waitForTimeout(80);
     ok('the caret sits at the end of the text (issue #152 expected behavior — typing appends)',
-      (await editState()).title === 'existing note title!');
+      (await editState()).body === 'existing note body!');
     await calBlur();
     await page.waitForTimeout(400);
 
@@ -2557,10 +2556,10 @@ async function openCat(page, cat) {
     // The guard must prevent that. Observable black-box: exactly one square
     // carries contenteditable across the second tap (issue #182 — module
     // scope no longer lets a test wrap the function itself).
-    await tapZone('.cal-note-title', 'existing note title!');   // opens the editor (arm 1)
+    await tapZone('.cal-note-text', 'existing note body!');   // opens the editor (arm 1)
     await page.waitForTimeout(80);
     const armed1 = await editingCount();
-    await tapZone('.cal-note-title', 'existing note title!');   // the second tap while editing
+    await tapZone('.cal-note-text', 'existing note body!');   // the second tap while editing
     await page.waitForTimeout(120);
     const armed2 = await editingCount();
     ok('a second tap while editing does not re-arm the editor (exactly one editor open)',
@@ -2569,7 +2568,7 @@ async function openCat(page, cat) {
     await page.waitForTimeout(400);
 
     // Flow 3: type the edit, blur, read back what persisted (the record).
-    await tapZone('.cal-note-title', 'existing note title!');
+    await tapZone('.cal-note-text', 'existing note body!');
     await page.waitForTimeout(80);
     await page.keyboard.type(' EDITED');
     await calBlur();
@@ -2579,21 +2578,21 @@ async function openCat(page, cat) {
       const rec = all.find(r => r.id === id);
       return { rem: rec && rec.rem, next: rec && rec.next, day: rec && rec.day };
     }, seeded.id);
-    ok('the edit persisted to the day-note record (the store re-synced on commit)',
-      after.rem === 'existing note title! EDITED' && after.next === 'existing note body'
+    ok('the edit persisted `next` to the day-note record — `rem` untouched (issue #365: one zone, one field)',
+      after.rem === 'existing note title' && after.next === 'existing note body! EDITED'
         && after.day === seeded.key, JSON.stringify(after));
 
-    // Flow 4: empty commit discards (B8) — seed a second record, clear its
-    // band, blur. Both fields empty = the discard.
+    // Flow 4: empty commit discards (B8) — seed a second record whose BOTH
+    // fields are empty, open its square, blur. Both empty = the discard.
     const doomed = await page.evaluate(async () => {
-      const r = { id: 'rem-25doom', rem: 'doomed', next: '', day: calKey(new Date()) };
+      const r = { id: 'rem-25doom', rem: '', next: '', day: calKey(new Date()) };
       await idbPut(r);
       renderCal();
       await new Promise(res => setTimeout(res, 300));
       return r.id;
     });
     await page.waitForTimeout(200);
-    await tapZone('.cal-note-title', 'doomed');
+    await tapZone('.cal-note-text', '');
     await page.waitForTimeout(80);
     await page.keyboard.press('Control+a');
     await page.keyboard.press('Backspace');
@@ -2601,21 +2600,17 @@ async function openCat(page, cat) {
     await page.waitForTimeout(400);
     const gone = await page.evaluate(async (id) => {
       const all = await idbGetAll();
-      return { record: all.some(r => r.id === id),
-               square: [...document.querySelectorAll('.cal-day.today .cal-note-title')]
-                 .some(b => b.textContent === 'doomed') };
+      return { record: all.some(r => r.id === id) };
     }, doomed);
     ok('an empty commit discards the day-note record and its square (B8)',
-      !gone.record && !gone.square, JSON.stringify(gone));
+      !gone.record, JSON.stringify(gone));
 
-    // Flow 5: the two zones are independent — a tap on the darker body seats
-    // the caret THERE, and the one-step commit writes BOTH fields (the
-    // band's text rides through untouched, as a completed event's state once
-    // rode through its edit). Flow 4's commit re-rendered the stack, so
-    // re-locate the square after the fresh render before tapping.
-    await tapZone('.cal-note-text', 'existing note body');
+    // Flow 5: the one zone seats the caret on a fresh tap (issue #365: the
+    // square's whole surface is the zone). Flow 4's commit re-rendered the
+    // stack, so re-locate the square after the fresh render before tapping.
+    await tapZone('.cal-note-text', 'existing note body! EDITED');
     await page.waitForTimeout(80);
-    ok('a tap on the darker body seats the caret in the body',
+    ok('a tap on the square seats the caret in its one zone',
       (await editState()).focused === 'body');
     await page.keyboard.type(' updated');
     await calBlur();
@@ -2624,9 +2619,9 @@ async function openCat(page, cat) {
       const rec = (await idbGetAll()).find(r => r.id === id);
       return { rem: rec.rem, next: rec.next };
     }, seeded.id);
-    ok('the body edit commits with the band carried through (both fields, one step)',
-      bodyAfter.rem === 'existing note title! EDITED' &&
-      bodyAfter.next === 'existing note body updated', JSON.stringify(bodyAfter));
+    ok('the zone edit commits `next` with `rem` carried through untouched',
+      bodyAfter.rem === 'existing note title' &&
+      bodyAfter.next === 'existing note body! EDITED updated', JSON.stringify(bodyAfter));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
@@ -2705,7 +2700,7 @@ async function openCat(page, cat) {
     // Create through the real add control on today's day card (index 0, the
     // same card the future-event suite addresses). addCalNote opens the
     // editor on arrival (capture precedes structure, §1.1) with the caret in
-    // the title band.
+    // the square's one zone (issue #365).
     const at = await page.evaluate(() => {
       const card = document.querySelectorAll('.cal-day')[0];
       const r = card.querySelector('.cal-add').getBoundingClientRect();
@@ -2713,26 +2708,23 @@ async function openCat(page, cat) {
     });
     await tap(page, at.x, at.y);
     await page.waitForTimeout(150);
-    ok('the add control opened a fresh square in edit, caret in the title band',
+    ok('the add control opened a fresh square in edit, caret in the square\'s one zone',
       await page.evaluate(() => {
         const card = document.querySelector('.cal-day.today');
         const n = [...card.querySelectorAll('.cal-note')]
           .find(n => n.querySelector('[contenteditable]'));
         if (!n) return false;
-        const band = n.querySelector('.cal-note-title');
-        return band.textContent === '' && document.activeElement === band;
+        const zone = n.querySelector('.cal-note-text');
+        return zone.textContent === '' && document.activeElement === zone;
       }));
     await page.keyboard.type('created on mobile');
-    await page.keyboard.press('Enter');            // R6.2: the band hands off to the body
-    await page.waitForTimeout(150);
-    await page.keyboard.type('and its body');
-    await page.keyboard.press('Enter');            // R6.4: Enter in the body ends the entry
+    await page.keyboard.press('Enter');            // R6.4: Enter ends the entry
     await page.waitForTimeout(400);
     ok('the commit persisted the day-note record, dated to the card (the `day` field)',
       await page.evaluate(async () => {
         const all = await idbGetAll();
-        return all.some(r => r.rem === 'created on mobile' &&
-          r.next === 'and its body' && r.day === calKey(new Date()));
+        return all.some(r => r.next === 'created on mobile' &&
+          r.rem === '' && r.day === calKey(new Date()));
       }));
     // Tap away on the day head's inert ground — the same clear-of-the-stack
     // blur point block 25 uses (the exit row now carries Today, B148).
@@ -2744,13 +2736,13 @@ async function openCat(page, cat) {
     ok('after tapping away, no square is editing and the text stayed',
       await page.evaluate(() => {
         const note = [...document.querySelectorAll('.cal-day.today .cal-note')]
-          .find(n => n.querySelector('.cal-note-title').textContent === 'created on mobile');
+          .find(n => n.querySelector('.cal-note-text').textContent === 'created on mobile');
         return !!note && !note.querySelector('[contenteditable]');
       }));
     // THE regression: tap the created square again — it must reopen its
     // editor with the committed text intact.
     const lp = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('.cal-day.today .cal-note-title')]
+      const b = [...document.querySelectorAll('.cal-day.today .cal-note-text')]
         .find(b => b.textContent === 'created on mobile');
       const r = b.getBoundingClientRect();
       return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
@@ -2761,23 +2753,22 @@ async function openCat(page, cat) {
       const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
         .find(n => n.querySelector('[contenteditable]'));
       if (!n) return null;
-      const band = n.querySelector('.cal-note-title');
-      return { text: band.textContent, focused: document.activeElement === band };
+      const zone = n.querySelector('.cal-note-text');
+      return { text: zone.textContent, focused: document.activeElement === zone };
     });
     ok('tapping the created square re-opens its editor with the text intact (issue #304)',
       !!reedit && reedit.text === 'created on mobile' && reedit.focused,
       JSON.stringify(reedit));
     // And the reopen is a real editor: a further edit commits too.
     await page.keyboard.type(' RE-EDITED');
-    await page.keyboard.press('Enter');            // R6.2: band hands off to the body…
-    await page.keyboard.press('Enter');            // …R6.4: Enter in the body ends the entry
+    await page.keyboard.press('Enter');            // R6.4: Enter ends the entry
     await page.waitForTimeout(400);
     const after = await page.evaluate(async () => {
-      const rec = (await idbGetAll()).find(r => r.rem === 'created on mobile RE-EDITED');
+      const rec = (await idbGetAll()).find(r => r.next === 'created on mobile RE-EDITED');
       return rec ? { rem: rec.rem, next: rec.next, day: rec.day, today: calKey(new Date()) } : null;
     });
-    ok('the re-opened editor commits (the record carries the second edit, body and day intact)',
-      !!after && after.next === 'and its body' && after.day === after.today,
+    ok('the re-opened editor commits (the record carries the second edit, `rem` and day intact)',
+      !!after && after.rem === '' && after.day === after.today,
       JSON.stringify(after));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
@@ -3147,12 +3138,12 @@ async function openCat(page, cat) {
     // board's mirror is not a day-note writer, so the hidden board has
     // nothing to repaint and nothing to fight hideCal over).
     await page.evaluate(async () => {
-      await idbPut({ id: 'rem-cov', rem: 'mobile seed note', next: '', day: calKey(new Date()) });
+      await idbPut({ id: 'rem-cov', rem: '', next: 'mobile seed note', day: calKey(new Date()) });
       renderCal();
     });
     await page.waitForTimeout(400);
     const noteBox = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('.cal-day.today .cal-note-title')]
+      const b = [...document.querySelectorAll('.cal-day.today .cal-note-text')]
         .find(b => b.textContent === 'mobile seed note');
       const r = b.getBoundingClientRect();
       return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
@@ -3160,7 +3151,7 @@ async function openCat(page, cat) {
     await tap(page, noteBox.x, noteBox.y);
     await page.waitForTimeout(150);
     await page.evaluate(() => {
-      const b = [...document.querySelectorAll('.cal-day.today .cal-note-title')]
+      const b = [...document.querySelectorAll('.cal-day.today .cal-note-text')]
         .find(b => b.hasAttribute('contenteditable'));
       b.textContent = 'mobile seed note VIA-CAL';
     });
@@ -3174,7 +3165,7 @@ async function openCat(page, cat) {
     ok('the day-note commit wrote the RECORD (the store is the durable thing now, not a rendered line)',
        await page.evaluate(async () =>
          (await idbGetAll()).some(r => r.id === 'rem-cov' &&
-           r.rem === 'mobile seed note VIA-CAL' && r.day === calKey(new Date()))),
+           r.rem === '' && r.next === 'mobile seed note VIA-CAL' && r.day === calKey(new Date()))),
        'records: ' + await page.evaluate(async () =>
          JSON.stringify((await idbGetAll()).filter(r => r.id === 'rem-cov'))));
 
