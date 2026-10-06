@@ -1999,28 +1999,6 @@ html.wide #cal-export { margin-left: auto; }
 }
 .cal-notes-grid .cal-note { min-width: 0; }   /* a square never shoves the pager or the "+" off the row */
 
-/* Issue #329: the section's OWN records as square orange one-zone blocks
-   (issue #365: the title band is deleted, the square is one large body),
-   three across, the left/right pager (the month view's .mo-nav grammar) and
-   the add "+" at the row's right. Tokens only — the ladder #cal-view already
-   binds (B117): the block the B72 inset frame (outline 2px --frame, interior
-   transparent), the body var(--water-mid) with --ink-light under the view's
-   .on-dark, radius 4px. */
-#cal-notes {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding-bottom: 6px;
-}
-#cal-notes-grid {
-  flex: 1;
-  min-width: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));   /* exactly three across at every phone width */
-  gap: 8px;
-  align-items: stretch;
-}
 .cal-note {
   aspect-ratio: 1 / 1;              /* the block is square — the owner's "square fucking box" */
   outline: 2px solid var(--frame);      /* the family's inset frame (B72) — the fill must not erase it */
