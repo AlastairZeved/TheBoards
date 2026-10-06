@@ -61,6 +61,12 @@ jobs:
       - name: records.js
         run: node test/records.js
 
+      # security.js is the third browserless suite: it guards the shipped
+      # security contract — the CSP meta's declared directives, zero inline
+      # scripts/handlers, no eval surface — issue #369. Also first, same reason.
+      - name: security.js
+        run: node test/security.js
+
       # sw-update.js serves its own throwaway copy on SW_TEST_PORT; it doesn't
       # use the server above.
       - name: mobile.js
