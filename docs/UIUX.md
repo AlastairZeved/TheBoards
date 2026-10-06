@@ -1009,25 +1009,34 @@ from now — today lit (the two-tone outline ring, full scale, `flex 1.6`),
 days with notes near, empty days far (`brightness .6`). Scale and luminance,
 never icons.
 
-**The day-note squares (issue #363).** The top day-note section
+**The day-note squares (issue #363; one zone, issue #365).** The top
+day-note section
 (`#cal-frame`, #329/#331/#336) is deleted on every tier. Its records render
-as the same two-zone orange square blocks INSIDE each day card: the band
-`var(--note)` with `--ink-dark` via the band's own `.on-light`, the body
-`var(--water-bot)` with `--ink-light`, the B72 inset frame (`outline: 2px
-solid var(--frame)`), radius 4px — three squares per day, the card's `+`
-rightmost, and a `‹`/`›` pager (the `.mo-nav` grammar) on the card when a day
-holds more than three. The band writes the record's `rem` field; the body
-writes `next` (a legacy calKey value there renders as an empty body —
-nothing is rewritten); the `+` writes a NEW `day` field on the record — the
+as ONE-zone orange square blocks INSIDE each day card (issue #365 — the
+lighter title band is deleted and the deep orange fill expands to the top of
+the square, the square one large body): the fill `var(--water-mid)` — the
+calendar ladder's rung at the SAME WCAG relative luminance as the To-Do
+boards' deep blue field (`--water-mid` #255265, Y 0.0737 to 4dp, `--ink-light`
+at 7.75:1; the §2.2.2 rotation law) — with `--ink-light` in plain-text type
+(12px, weight 400, line-height 1.4, the body's own type), the B72 inset frame
+(`outline: 2px solid var(--frame)`), radius 4px; the squares center
+vertically in the card's notes row (`align-items: center`). Three squares per
+day, the card's `+` rightmost, and a `‹`/`›` pager (the `.mo-nav` grammar) on
+the card when a day holds more than three. The zone writes the record's
+`next` field (a legacy calKey value there renders as an empty body — nothing
+is rewritten); `rem` is no longer rendered and stays stored-but-unread (the
+#323 disposition — nothing migrated, nothing destroyed); the `+` writes a NEW
+`day` field on the record — the
 card's calKey — so a square lands on its own day; records without `day` stay
-stored but unreachable. The band is a single line read (ellipsis); the body
-clamps to two lines. Calendar events never render in the weekly stack (the
+stored but unreachable. The zone clamps to two lines (issue #365: it is the
+square's whole read). Calendar events never render in the weekly stack (the
 cards show only day-note squares); the event records and their mirror sync
 with the linked To-Do boards continue untouched.
 
 **Capture.** Each day's zone carries the card's `+` — the calendar edition
-of §6.2: tap and type, the caret arrives with the tap, in the square's title
-band. Commit-on-blur writes the record; an empty commit discards (B8).
+of §6.2: tap and type, the caret arrives with the tap, in the square (issue
+#365: the square's one zone). Commit-on-blur writes the record; an empty
+commit discards (B8).
 
 ---
 

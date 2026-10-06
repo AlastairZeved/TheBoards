@@ -1251,8 +1251,9 @@ function paintCal(all) {
 /* --- The day-note squares (issue #363) -------------------------------------
    The top section (#cal-frame, #cal-notes, issues #329/#331/#336) is DELETED
    on every tier. Its stored records survive — the #323 disposition, nothing
-   migrated, nothing stripped — and re-render as the two-zone orange square
-   blocks INSIDE each day card of the weekly stack: up to three squares per
+   migrated, nothing stripped — and re-render as the one-zone deep-orange
+   square blocks (issue #365) INSIDE each day card of the weekly stack: up to
+   three squares per
    day, the card's own "+" to the right of the squares, and a ‹/› pager on the
    card when a day holds more than three.
 
@@ -1304,8 +1305,9 @@ function renderCalDayhead() {
   head.appendChild(label);
 }
 
-/* One day card's notes zone (issue #363): the day's own records as square
-   two-zone blocks — three shown, the card's "+" rightmost, the ‹/› pager on
+/* One day card's notes zone (issue #363; one-zone squares per issue #365):
+   the day's own records as square blocks — three shown, the card's "+" rightmost,
+   the ‹/› pager on
    the card when the day holds more than three (the .mo-nav grammar; page
    state is per day, render-time only, nothing stored). Calendar events are
    never read here. */
@@ -1369,7 +1371,8 @@ function renderCalDayNotes(zone, day, recs) {
 /* Add a day note to a date (the one consequence, under commitAction's guard):
    the record is written with the NEW `day` field — the date's calKey, the
    per-day binding the squares render from — and its editor opens on arrival,
-   the caret in the title band. Neither zone is pre-filled: nothing
+   the caret in the square's one zone (issue #365). The zone is not pre-filled:
+   no
    app-supplied ever enters the record (issues #329/#363). */
 async function addCalNote(dateKey) {
   commitAction(async () => {
@@ -1382,82 +1385,63 @@ async function addCalNote(dateKey) {
     calDayNotePage[dateKey] = Math.floor(Math.max(0, idx) / CAL_NOTE_PER_DAY);
     paintCal(all);                     // synchronous — the block is in the DOM now
     const block = [...document.querySelectorAll('.cal-notes-grid .cal-note')].find((b) => b.dataset.id === rec.id);
-    if (block) startCalNoteEdit(block, rec, 'band');   // the caret starts in the title band
+    if (block) startCalNoteEdit(block, rec);          // the caret starts in the square's one zone
   });
 }
 
-/* One square block: its own two zones, exactly as the ruling names them —
-   the lighter-orange title band over the darker body. */
+/* One square block: ONE zone now (issue #365) — the band is gone, the fill
+   is one large body showing `next`. */
 function makeCalNote(rec) {
   const block = document.createElement('div');
   block.className = 'cal-note';
   block.setAttribute('role', 'listitem');
   block.dataset.id = rec.id;
-  const band = document.createElement('div');
-  band.className = 'cal-note-title on-light';   // .on-light rebinds --ink to --ink-dark on the band
-  band.textContent = rec.rem || '';
   const body = document.createElement('div');
   body.className = 'cal-note-text';
   body.textContent = calNoteBody(rec);
-  block.append(band, body);
-  // A tap opens the entry's editor and seats the caret in the ZONE that was
-  // tapped — the band if the tap landed on it, the body if on the body
-  // (issue #329's re-entry rule; the deferred re-assert lands the caret at
-  // the end whichever order the native caret placement fires in, #304).
+  block.append(body);
+  // A tap opens the entry's editor in the square's one zone (issue #365;
+  // the deferred re-assert lands the caret at the end whichever order the
+  // native caret placement fires in, #304).
   block.addEventListener('click', (e) => {
-    if (band.hasAttribute('contenteditable') || body.hasAttribute('contenteditable')) return;
+    if (body.hasAttribute('contenteditable')) return;
     e.preventDefault();
-    const zone = e.target === body ? 'body' : 'band';
-    startCalNoteEdit(block, rec, zone);
-    setTimeout(() => caretToEnd(zone === 'body' ? body : band), 0);
+    startCalNoteEdit(block, rec);
+    setTimeout(() => caretToEnd(body), 0);
   });
   return block;
 }
 
-/* The two-zone editor. The commit is the blur and writes BOTH fields in one
-   step — `rem` from the band, `next` from the body — re-rendering the page
-   once (the mirror/roll paths are the calendar's, not this section's). A
-   commit that leaves both fields empty discards the record and the block
-   (B8's rule: the frame must earn its keep). */
-function startCalNoteEdit(block, rec, seat) {
-  const band = block.querySelector('.cal-note-title');
+/* The one-zone editor (issue #365). The commit is the blur and writes `next`
+   — `rem` is no longer rendered or edited and stays stored-but-unread (the
+   #323 disposition). A commit that leaves both fields empty discards the
+   record and the block (B8's rule: the frame must earn its keep). */
+function startCalNoteEdit(block, rec) {
   const body = block.querySelector('.cal-note-text');
-  band.setAttribute('contenteditable', CE);
   body.setAttribute('contenteditable', CE);
-  const target = seat === 'body' ? body : band;
-  target.focus();
-  caretToEnd(target);
-  const inside = (n) => n && (n === band || n === body || block.contains(n));
+  body.focus();
+  caretToEnd(body);
+  const inside = (n) => n && (n === body || block.contains(n));
   let committed = false;
   const commit = async () => {
     if (committed) return;
     committed = true;
-    band.removeAttribute('contenteditable');
     body.removeAttribute('contenteditable');
-    const rem = band.textContent.trim();
     const next = body.textContent.trim();
-    if (!rem && !next) {                            // B8: an empty commit discards
+    if (!rec.rem && !next) {                        // B8: an empty commit discards
       await idbDelete(rec.id);
       block.remove();
       renderCal();
       return;
     }
-    rec.rem = rem;
     rec.next = next;
     await idbPut(rec);
     renderCal();
     scheduleSave();
   };
   block.addEventListener('focusout', (e) => {
-    if (inside(e.relatedTarget)) return;    // moving band→body is a hand-off, not a commit
+    if (inside(e.relatedTarget)) return;
     commit();
-  });
-  band.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {                // R6.2: Enter in the title band hands off to the darker area
-      e.preventDefault();
-      body.focus();
-      caretToEnd(body);
-    }
   });
   body.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); body.blur(); }   // R6.4: Enter ends the entry
