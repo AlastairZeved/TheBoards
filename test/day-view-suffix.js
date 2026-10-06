@@ -274,6 +274,37 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     await ctx.close();
   }
 
+  console.log('\n[V6] The day-note squares wear the Today date card\'s own deep fill — every square\'s computed background equals the Today card\'s .cal-date compartment\'s computed background, var(--card) #251002 (issue #371, supersedes B154\'s fill clause only)');
+  {
+    const { ctx, page, errors } = await newPage(browser);
+    // Seed one day note so a square renders in the Today card's notes row
+    // (the suite's existing seeding mechanics — a `day`-bound record).
+    await page.evaluate(async () => {
+      await idbPut({ id: 'rem-v6', rem: 'DEEP FILL CHECK', next: '9-2', day: calKey(new Date()) });
+    });
+    await page.reload();
+    await page.waitForTimeout(500);
+    await page.evaluate(() => document.getElementById('action-calendar').click());
+    await page.waitForTimeout(900);
+
+    const fills = await page.evaluate(() => {
+      const squares = [...document.querySelectorAll('.cal-day.today .cal-note-text')];
+      const dateCard = document.querySelector('.cal-day.today .cal-date');
+      return {
+        squareBg: squares.map(s => getComputedStyle(s).backgroundColor),
+        dateCardBg: dateCard ? getComputedStyle(dateCard).backgroundColor : null,
+        count: squares.length,
+      };
+    });
+    ok('the seeded square renders in the Today card (a measured surface exists to compare)',
+      fills.count === 1, JSON.stringify(fills));
+    ok('every rendered day-note square\'s computed background equals the Today card\'s .cal-date compartment\'s computed background — both rgb(37, 16, 2), var(--card) #251002 (issue #371)',
+      fills.count > 0 && fills.dateCardBg === 'rgb(37, 16, 2)' &&
+      fills.squareBg.every(bg => bg === 'rgb(37, 16, 2)'), JSON.stringify(fills));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   console.log(`\n=== day-view-suffix: ${pass} passed, ${fail} failed ===`);
   await browser.close();
   process.exit(fail ? 1 : 0);

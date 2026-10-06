@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v128 — version bumped (the #363 B153 deletion pins this build)',
-    /const CACHE = 'zeved-boards-v128';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v128, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v128';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v129 — version bumped (the #371 B155 day-note fill re-pin pins this build)',
+    /const CACHE = 'zeved-boards-v129';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v129, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v129';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -885,9 +885,9 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     !/.cal-note-title/.test(css) && !/.cal-note-title/.test(app));
   ok('the square centers vertically in the card\'s notes row — the grid\'s align-items is center (issue #365)',
     /\.cal-notes-grid \{[^}]*align-items: center;/.test(css));
-  ok('the one-zone fill is the ladder\'s mid rung var(--water-mid) — the same luminance as the To-Do boards\' deep blue (Y 0.0737 to 4dp, --ink-light at 7.75:1) — flex-absorbed with the re-seated inset (issue #365, the §2.2.2 rotation law)',
+  ok('the one-zone fill is the Today date card\'s own deep fill var(--card) #251002 — the squares wear the same surface the Today card\'s date compartment samples (issue #371, supersedes B154\'s fill clause only) — flex-absorbed with the re-seated inset, --ink-light contrast unchanged',
     /\.cal-note-text \{[^}]*flex: 1 1 auto;/.test(css) &&
-    /\.cal-note-text \{[^}]*background: var\(--water-mid\);/.test(css) &&
+    /\.cal-note-text \{[^}]*background: var\(--card\);/.test(css) &&
     /\.cal-note-text \{[^}]*color: var\(--ink-light\);/.test(css) &&
     /\.cal-note-text \{[^}]*padding: 4px 6px;/.test(css));
   ok('the fill\'s type is plain text — 12px, weight 400, line-height 1.4 (issue #365: the body\'s own type)',
