@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v126 — version bumped (the #365 B154 one-zone square pins this build)',
-    /const CACHE = 'zeved-boards-v126';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v126, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v126';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v127 — version bumped (the #363 B153 deletion pins this build)',
+    /const CACHE = 'zeved-boards-v127';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v127, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v127';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -871,6 +871,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /function calOrdinal\(/.test(app) && /createElement\('sup'\)/.test(app));
   ok('the top day-note section is deleted — no #cal-frame, no #cal-notes, no .cal-notes-add anywhere in the shipped sources (issue #363: delete it, do not cram or resize)',
     !/id="cal-frame"/.test(html) && !/#cal-frame[ \{]/.test(css) && !/id="cal-notes"/.test(html) &&
+    !/#cal-notes[ \{]/.test(css) && !/#cal-notes-grid[ \{]/.test(css) &&
     !/\.cal-notes-add/.test(css) &&
     !/calNotesGrid|calNotesPrev|calNotesNext|calNotesAdd/.test(app));
   ok('the squares live in the day cards — the in-card row is a three-column grid, aspect-ratio 1/1, the inset frame, 4px radius (issue #363: the records re-render as the squares inside each card)',
