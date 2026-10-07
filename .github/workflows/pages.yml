@@ -77,3 +77,22 @@ jobs:
           done
           echo "::error::Pages is serving '${served:-<nothing>}', expected '$expected'"
           exit 1
+
+      # The CSP meta tag is the security posture of the served shell (issue
+      # #369/#374; B125's meta-CSP ceiling). test/security.js proves it in the
+      # tree before merge; this is the same check-on-delivery pattern as the
+      # step above — it proves the tag survived to the Pages artifact.
+      - name: Verify the deployed index.html still carries the CSP meta tag
+        run: |
+          url="${{ steps.deploy.outputs.page_url }}"
+          expected=$(sed -n 's/.*<meta http-equiv="Content-Security-Policy" content="\([^"]*\)".*/\1/p' index.html)
+          [ -n "$expected" ] || { echo "::error::index.html in this commit has no CSP meta tag to assert"; exit 1; }
+          echo "expecting the CSP meta at ${url}index.html"
+          for i in 1 2 3 4 5; do
+            served=$(curl -sf "${url}index.html" | sed -n 's/.*<meta http-equiv="Content-Security-Policy" content="\([^"]*\)".*/\1/p' || true)
+            [ "$served" = "$expected" ] && echo "serving the declared CSP" && exit 0
+            echo "attempt $i: serving '${served:-<nothing>}', retrying in 15s"
+            sleep 15
+          done
+          echo "::error::Pages is serving '${served:-<nothing>}', expected '$expected'"
+          exit 1
