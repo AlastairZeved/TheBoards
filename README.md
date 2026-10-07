@@ -76,7 +76,7 @@ Play around, discover it. Have fun taking notes.
 ## Design Philosophy
 
 The design is opinionated about cognition, and it states its own rules in
-[`docs/PRD.md`](docs/PRD.md) — every change to the interface is resolved
+[`The Docket/PRD.md`](The%20Docket/PRD.md) — every change to the interface is resolved
 against them. Five product principles govern every ruling in the repository:
 
 1. **Capture precedes structure.** A thought must reach the page in the time

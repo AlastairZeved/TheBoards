@@ -19,5 +19,5 @@ Form and function are intertwined at the seams, no decision is made in
 isolation to prioritize coherence and user cognitive load.
 Stack: Vanilla HTML/CSS/JS. No frameworks, no build step, no dependencies,
 no backend. All data lives client-side in IndexedDB.
-Design: The design system's authority is docs/UIUX.md; every interaction
-ruling is numbered and recorded in docs/DECISIONS.md.
+Design: The design system's authority is The Docket/UIUX.md; every interaction
+ruling is numbered and recorded in The Docket/DECISIONS.md.

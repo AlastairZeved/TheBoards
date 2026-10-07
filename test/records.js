@@ -1,5 +1,5 @@
 /* The ruling file's numbering contract, falsifiable (AGENTS.md, record law;
- * issue #272): `docs/DECISIONS.md` is append-only and its `### B<n>` headings
+ * issue #272): `The Docket/DECISIONS.md` is append-only and its `### B<n>` headings
  * are the citation space every other document cites by number. One number
  * shipped twice — the calendar-rail ruling (issue #248) and then the
  * reminder-glow ruling (issue #270, PR #271) — so every reader of the second
@@ -22,7 +22,7 @@ const ok = (n, c, extra) => {
     : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : '')));
 };
 
-const README = 'docs/DECISIONS.md';
+const README = 'The Docket/DECISIONS.md';
 let text = '';
 try { text = fs.readFileSync(path.join(ROOT, README), 'utf8'); } catch (e) { /* asserted below */ }
 const lines = text.split('\n');

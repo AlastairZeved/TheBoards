@@ -20,9 +20,9 @@ Three documents under `docs/` outrank code comments **and this file**:
 
 | File | Answers | Wins on | Cited as |
 |---|---|---|---|
-| `docs/PRD.md` | what the app is, who it is for, why | product intent | `PRD §x` |
-| `docs/UIUX.md` | what it renders, and in what values | **rendering** | `UIUX §x` |
-| `docs/DECISIONS.md` | every UI/interaction ruling, in order | the later ruling wins | `B<n>` |
+| `The Docket/PRD.md` | what the app is, who it is for, why | product intent | `PRD §x` |
+| `The Docket/UIUX.md` | what it renders, and in what values | **rendering** | `UIUX §x` |
+| `The Docket/DECISIONS.md` | every UI/interaction ruling, in order | the later ruling wins | `B<n>` |
 
 **Grep `DECISIONS.md` first.** A prior ruling has very likely already answered
 your question — often to forbid exactly what you're about to do (the band
@@ -35,8 +35,8 @@ numbering spaces overlap between records, and even within `styles.css`.
 
 `UIUX.md` is the rendering authority: every hex, contrast ratio, size, radius,
 duration, threshold, and ARIA contract lives there and nowhere else. The
-design system's rendered reference is `docs/proofs/proof-10-the-second-swap.html`
-(B58) — read the render before re-deriving the design from prose.
+design system's rendered specimen sheets (B58) were removed from the repo
+(B156) — `The Docket/UIUX.md`'s tables are the values' authority.
 
 ## Commands
 
@@ -130,7 +130,7 @@ is a PRD amendment and an owner ruling first, not code.
 
 ## Never do (record law — issue #207)
 
-`docs/DECISIONS.md` is law, and law is stated by the owner, never authored by
+`The Docket/DECISIONS.md` is law, and law is stated by the owner, never authored by
 an agent. Agents transcribe owner decisions; they do not make them. Every
 entry in DECISIONS.md must carry a `Source:` line quoting the owner's
 statement verbatim (issue, PR comment, or chat quote the owner confirmed)
