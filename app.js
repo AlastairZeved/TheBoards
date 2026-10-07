@@ -44,10 +44,12 @@ function frameGuard() {
    Created before boot(): boot's first render is the first sink write, and
    module imports evaluate without writing any sink. */
 if (window.trustedTypes) {
-  window.trustedTypes.createPolicy('default', {
-    createHTML: (s) => s,        // identity: only developer-owned GLYPH strings reach an HTML sink
-    createScriptURL: (s) => s,   // identity: the one script-URL sink is the dev-owned 'sw.js' registration
-  });
+  try {
+    window.trustedTypes.createPolicy('default', {
+      createHTML: (s) => s,        // identity: only developer-owned GLYPH strings reach an HTML sink
+      createScriptURL: (s) => s,   // identity: the one script-URL sink is the dev-owned 'sw.js' registration
+    });
+  } catch (_) { /* a default policy already exists: it governs, evaluation continues */ }
 }
 frameGuard();
 

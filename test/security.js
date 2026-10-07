@@ -86,7 +86,7 @@ const policySite = app.indexOf("trustedTypes.createPolicy('default'");
 const bootCall = app.indexOf('boot();');
 ok("the default Trusted Types policy is created in app.js", policySite !== -1);
 ok("the policy covers both sink kinds: createHTML (the GLYPH sinks) and createScriptURL (the 'sw.js' registration)",
-  policySite !== -1 && /createScriptURL/.test(app));
+  policySite !== -1 && /createHTML/.test(app) && /createScriptURL/.test(app));
 ok('the policy is created before boot() (the first sink write is boot\'s first render)',
   policySite !== -1 && bootCall !== -1 && policySite < bootCall);
 
