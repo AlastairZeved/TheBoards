@@ -41,13 +41,13 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # enablement: true switches the Pages source to Actions if it is still on
       # "deploy from a branch", so this workflow does not depend on someone
       # having flipped a setting by hand — the failure being fixed was itself a
       # settings change nobody saw.
-      - uses: actions/configure-pages@v6
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
         with:
           enablement: true
 
@@ -55,12 +55,12 @@ jobs:
       # styles.css, sw.js, manifest.json, icons/). This also ships test/ and the
       # markdown, which is harmless on a public repo — and cheaper than keeping
       # a second list of what the app consists of in sync with sw.js's ASSETS.
-      - uses: actions/upload-pages-artifact@v5
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
           path: '.'
 
       - id: deploy
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
 
       # The deployed cache name is the one string that says which build is live.
       # Asserting it here is the delivery check the local suites cannot make.
