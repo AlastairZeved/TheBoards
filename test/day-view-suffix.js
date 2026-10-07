@@ -243,12 +243,21 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     const seat = await page.evaluate(() => {
       const head = document.getElementById('cal-dayhead');
       const view = document.getElementById('cal-view');
+      const band = document.getElementById('cal-band');
+      const card = document.getElementById('cal-band-card');
+      const rule = document.getElementById('cal-band-rule');
       const firstRow = document.querySelector('#cal-stack .cal-day');
       const hr = head.getBoundingClientRect(), vr = view.getBoundingClientRect();
+      const br = band.getBoundingClientRect(), cr = card.getBoundingClientRect(), rr = rule.getBoundingClientRect();
       const fr = firstRow ? firstRow.getBoundingClientRect() : null;
       return {
-        parentIsStack: head.parentElement === document.getElementById('cal-stack'),
+        parentIsCard: head.parentElement === card,
         inFrame: !!head.closest('#cal-frame'),
+        bandFullWidth: Math.abs(br.width - vr.width) <= 1,
+        ruleFullWidth: Math.abs(rr.width - vr.width) <= 1,
+        cardBg: getComputedStyle(card).backgroundColor,
+        cardOverhang: rr.bottom ? cr.bottom - rr.bottom : null,
+        cardAboveRule: parseInt(getComputedStyle(card).zIndex, 10) > parseInt(getComputedStyle(rule).zIndex, 10),
         fontSize: getComputedStyle(head).fontSize,
         headCenterX: hr.x + hr.width / 2,
         viewCenterX: vr.x + vr.width / 2,
@@ -258,8 +267,14 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
         text: head.textContent,
       };
     });
-    ok('the head renders inside #cal-stack and no top frame exists anywhere (issue #363)',
-      seat.parentIsStack === true && seat.inFrame === false, JSON.stringify(seat));
+    ok('the head renders inside the title card (#cal-band-card) and no top frame exists anywhere (issues #363 + #382)',
+      seat.parentIsCard === true && seat.inFrame === false, JSON.stringify(seat));
+    ok('the header band runs the full width of the component — bar and rule both edge-to-edge (issue #382)',
+      seat.bandFullWidth === true && seat.ruleFullWidth === true, JSON.stringify(seat));
+    ok("the title card overhangs the rule — ~22px past it, above it in z — the boards' B38 anatomy (issue #382)",
+      seat.cardOverhang !== null && seat.cardOverhang > 21 && seat.cardOverhang < 23 && seat.cardAboveRule === true, JSON.stringify(seat));
+    ok("the title card wears the ladder's card rung — the calendar's deep orange, #251002 (issue #382, B155's surface)",
+      seat.cardBg === 'rgb(37, 16, 2)', JSON.stringify(seat));
     ok('the head is centered to the view horizontally (within 2px) (issue #343)',
       Math.abs(seat.headCenterX - seat.viewCenterX) <= 2, JSON.stringify(seat));
     ok("the head wears the palette's approved --ink-light on the view's ground (issue #343)",

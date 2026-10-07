@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v131 — version bumped (the #374 Trusted Types re-pin pins this build)',
-    /const CACHE = 'zeved-boards-v131';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v131, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v131';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v132 — version bumped (the #374 Trusted Types re-pin pins this build)',
+    /const CACHE = 'zeved-boards-v132';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v132, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v132';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -860,15 +860,33 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /\.mo-dot \{/.test(css) && /\.mo-dot \{[^}]*background: var\(--accent-page\);/.test(css));
   // --- Issue #363 (B153): the top section deleted — the day head above the
   // --- weekly stack, the day-note squares INSIDE the day cards ---
-  ok('the day head reads the weekday with the date and the ordinal suffix as superscript — "Friday, October 2nd" — a real element, centered on top of the weekly view, --ink-light ink at the display step 21px (issue #363: a header, the largest existing title token), no add control of its own (issues #341, #343, #363)',
+  ok('the day head reads the weekday with the date and the ordinal suffix as superscript — "Friday, October 2nd" — a real element, the title card\'s title, centred, --ink-light ink at the display step 21px (issue #363: a header, the largest existing title token), no add control of its own (issues #341, #343, #363, #382)',
     /id="cal-dayhead"/.test(html) &&
     html.indexOf('id="cal-dayhead"') < html.indexOf('id="cal-stack"') &&
     /calDayhead: document\.getElementById\('cal-dayhead'\)/.test(app) && /#cal-dayhead \{/.test(css) &&
-    /el\.calStack\.appendChild\(el\.calDayhead\)/.test(app) &&
     /#cal-dayhead \{[^}]*justify-content: center;/.test(css) &&
     /#cal-dayhead \{[^}]*font-size: 21px; font-weight: 600; line-height: 1\.3;/.test(css) &&
     /weekday: 'long', month: 'long', day: 'numeric'/.test(app) &&
     /function calOrdinal\(/.test(app) && /createElement\('sup'\)/.test(app));
+  // --- Issue #382 (B157): the face's header — the boards' top band in the
+  // --- calendar's own orange: bar, rule, overhanging title card ---
+  ok('the face\'s header is the boards\' top band in the calendar\'s own orange — full-width bar over the ladder\'s water fall, the 1px rule at its bottom edge, and the title card overhanging the rule by 22px and occluding it, three-sided with var(--card) fill (issue #382; the B38 anatomy, UIUX §3.1), no Components/Requirements zones and no band label',
+    /id="cal-band"/.test(html) && /#cal-band \{/.test(css) &&
+    /id="cal-band-rule"/.test(html) && /#cal-band-rule \{[^}]*height: 1px; background: var\(--frame\);/.test(css) &&
+    /id="cal-band-card"/.test(html) && /#cal-band-card \{/.test(css) &&
+    /#cal-band \{[^}]*linear-gradient\(180deg, var\(--water-top\) 0%, var\(--water-mid\) 46%, var\(--water-bot\) 100%\)/.test(css) &&
+    /#cal-band-card \{[^}]*min-height: calc\(61px \+ 22px\);/.test(css) &&
+    /#cal-band-card \{[^}]*border: 2px solid var\(--frame\);/.test(css) &&
+    /#cal-band-card \{[^}]*border-top: 0;/.test(css) &&
+    /#cal-band-card \{[^}]*background: var\(--card\);/.test(css) &&
+    /#cal-band-card \{[^}]*border-radius: 0 0 3px 3px;/.test(css) &&
+    /#cal-band \{[^}]*margin: -10px -12px 0;/.test(css) &&
+    /#cal-view\.panel #cal-band \{ margin: -12px -12px 0; \}/.test(css) &&
+    (() => { const m = html.slice(html.indexOf('id="cal-band"'), html.indexOf('id="cal-stack"'));
+      return !/zone/.test(m) && !/Components/.test(m) && !/Requirements/.test(m); })());
+  ok('the band is the expanded face only — the collapsed rail\'s hide list carries it (issue #382: the rail face untouched, B99)',
+    /#cal-view\.rail-open #cal-band,/.test(css) &&
+    /#cal-view\.rail-open #cal-band,\s*\n#cal-view\.rail-open #cal-top,\s*\n#cal-view\.rail-open #cal-stack,\s*\n#cal-view\.rail-open #cal-month \{ display: none; \}/.test(css));
   ok('the top day-note section is deleted — no #cal-frame, no #cal-notes, no .cal-notes-add anywhere in the shipped sources (issue #363: delete it, do not cram or resize)',
     !/id="cal-frame"/.test(html) && !/#cal-frame[ \{]/.test(css) && !/id="cal-notes"/.test(html) &&
     !/#cal-notes[ \{]/.test(css) && !/#cal-notes-grid[ \{]/.test(css) &&

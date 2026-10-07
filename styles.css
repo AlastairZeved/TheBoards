@@ -1937,26 +1937,74 @@ html.wide #cal-export { margin-left: auto; }
    the bottom-seated exit row. */
 #cal-stack { gap: 10px; }
 /* Issue #363: the top day-note section (#cal-frame, issues #329/#331/#336)
-   is DELETED on every tier — no frame, no fill, no upper line. The day head
-   below is the expanded face's first content. */
-/* Issue #343: the day head — today's date, the weekday with it and the
-   ordinal suffix as superscript ("Friday, October 2nd", issue #341) — is
-   seated OUT of the frame, in the gap underneath the section, right on top of
-   the weekly view: the head rides inside #cal-stack as its first child, and
-   the stack's bottom-anchor (issue #293/#334) seats it directly above the day
-   rows. Centered to the view horizontally (the owner's "anchor it centered").
-   Tokens only: the view's light ink on its own ground — #cal-view is .on-dark,
-   so var(--ink) resolves to --ink-light #f4f5f1, the palette's approved ink on
-   --chrome (UIUX §2.3). Issue #363: the head reads as a header — it renders
-   at the set's display step, 21px (UIUX §13.1; the .cat-head token, B63),
-   no new size invented. */
-#cal-dayhead {
+   is DELETED on every tier — no frame, no fill, no upper line. (Issue #382
+   moved the day head out of the stack: the header band below is the face's
+   first content now — see B157.) */
+/* Issue #382 (B157): the face's header — the boards' top band (§3) drawn in
+   the calendar's own orange ladder, no Components/Requirements zones and no
+   band label (the issue names neither): the full-width bar over the ladder's
+   water fall, the 1px full-width rule at the bar's bottom edge, and the
+   date's title card centred on the rule — the card overhangs it by 22px and
+   occludes it (B38's anatomy, UIUX §3.1), three-sided (the face's own top
+   edge is its fourth), 2px --frame border without the top, var(--card) deep
+   fill, bottom corners only. Sized by the type it holds (B37): the card
+   wraps the 21px head (width max-content, no orphan strip beside it), with
+   the boards' band floor (61px) and overhang (22px) kept verbatim. Static
+   furniture: nothing in the band is a target — the card carries
+   pointer-events:none (§7's recognizer rule; the bar and rule are inert
+   ground already). Edge-to-edge: the bar runs the component's FULL
+   width, so it spends the view's own padding on every tier. */
+#cal-band {
   flex: 0 0 auto;
+  position: relative;
+  height: 61px;                        /* --rule-y's two-line floor (UIUX §3.1) */
+  margin: -10px -12px 0;               /* the view's own padding, spent */
+  background:
+    radial-gradient(118% 76% at 50% 24%, rgb(0 0 0 / 0) 32%, rgb(var(--water-bot-a) / 0.72) 128%),
+    linear-gradient(180deg, var(--water-top) 0%, var(--water-mid) 46%, var(--water-bot) 100%);
+}
+#cal-view.panel #cal-band { margin: -12px -12px 0; }   /* the panel's 12px padding, spent the same way */
+#cal-band-rule {                       /* same weight and idiom as #band-rule (B61) */
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 1px; background: var(--frame);
+  z-index: 1;
+}
+#cal-band-card {
+  position: absolute;
+  top: 0; left: 50%; transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 24px);
+  min-height: calc(61px + 22px);       /* the B38 overhang: 22px past the rule, occluding it */
+  display: flex;
+  align-items: center; justify-content: center;
+  padding: 20px 12px 12px;             /* --band-top + 6 / 12 / 12 — the boards' own paddings */
+  border: 2px solid var(--frame);
+  border-top: 0;
+  border-radius: 0 0 3px 3px;          /* only the corners that exist */
+  background: var(--card);             /* #251002 — the ladder's card rung, the calendar's orange */
+  z-index: 2;                          /* DOM-latest over the rule — the card occludes it */
+  pointer-events: none;
+}
+/* The card's overhang spends downward into the stack's ground, so the stack
+   opens a row of clearance for it — the card hangs over whitespace, never
+   over a day card's frame. */
+#cal-stack { margin-top: 22px; }
+/* Issue #343: the day head — today's date, the weekday with it and the
+   ordinal suffix as superscript ("Friday, October 2nd", issue #341) — moved
+   INTO the title card by issue #382 (B157): the head is the card's title,
+   centred, render-only. Tokens only: light ink on the card's deep fill —
+   var(--ink) resolves to --ink-light #f4f5f1 under #cal-view's .on-dark, the
+   palette's approved ink on the ladder's card rung (UIUX §2.3, 16.62:1 on
+   #251002). The head renders at the set's display step, 21px (UIUX §13.1;
+   the .cat-head token, B63), per B153 — no new size invented. */
+#cal-dayhead {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--ink);              /* --ink-light #f4f5f1 under #cal-view's .on-dark — the approved pair on --chrome */
+  color: var(--ink);              /* --ink-light #f4f5f1 under #cal-view's .on-dark — the approved pair on the card's fill */
   font-size: 21px; font-weight: 600; line-height: 1.3;   /* the display step (UIUX §13.1, B63) — issue #363: it reads as a header */
+  text-align: center;
 }
 /* Issue #363: the day-note squares, moved INTO the day cards — each card's
    zone is one row: the ‹/› pager (only when the day holds more than three),
@@ -2191,9 +2239,10 @@ html.wide #cal-export { margin-left: auto; }
    expanded face keeps the owner's order for free — stack → month view →
    Collapse at the bottom. B124's `order: -1` row-on-top rule retires with the
    reseat (the row's own membership ruling stands). */
+#cal-view.rail-open #cal-band,
 #cal-view.rail-open #cal-top,
 #cal-view.rail-open #cal-stack,
-#cal-view.rail-open #cal-month { display: none; }   /* collapsed shows only the rail face (issue #248: the month view rode along; the day head and the in-card squares join the hide — the head rides inside #cal-stack since issue #343; the top section is gone since issue #363) */
+#cal-view.rail-open #cal-month { display: none; }   /* collapsed shows only the rail face (issue #248: the month view rode along; the day head and the in-card squares join the hide — the head rides inside #cal-band since issue #382; the top section is gone since issue #363) */
 #cal-rail {
   display: flex;
   flex-direction: column;

@@ -1007,6 +1007,27 @@ from now — today lit (the two-tone outline ring, full scale, `flex 1.6`),
 days with notes near, empty days far (`brightness .6`). Scale and luminance,
 never icons.
 
+**The face's header — the boards' top band in the calendar's own orange
+(issue #382, B157).** The expanded face opens with the boards' §3 band
+anatomy, no Components/Requirements zones and no band label: `#cal-band` —
+the full-width bar over the ladder's water fall (the `#band-fill`
+construction verbatim, `var(--water-top/mid/bot)` + `--water-bot-a` under
+`#cal-view`), 61px tall (the `--rule-y` two-line floor, UIUX §3.1) and
+edge-to-edge on every tier (mobile's 10/12 and the panel's 12 padding spent
+as negative margins); `#cal-band-rule` — the 1px full-width rule at the
+bar's bottom edge, `var(--frame)`; `#cal-band-card` — the title card centred
+on the rule, overhanging it 22px and occluding it (z 2 over the rule's
+z 1 — B38), three-sided (the face's own top edge is its fourth), 2px
+`--frame` border without the top, radius `0 0 3px 3px`, `var(--card)`
+#251002 fill, min-height `calc(61px + 22px)`, width `max-content` around the
+type (B37). The day head (`#cal-dayhead`, the B149 composition at the 21px
+display step, B153) renders inside the card as its title, `--ink-light` on
+the deep fill (16.62:1 on #251002, recomputed per §2.3's method), render-only;
+the card carries `pointer-events: none` (the bar and rule are inert ground
+already) `#cal-stack` opens 22px of clearance under the card.
+The collapsed rail's hide list carries the band — the rail face (B99) is
+untouched.
+
 **The day-note squares (issues #363 + #371; one zone, issue #365).** The top
 day-note section
 (`#cal-frame`, #329/#331/#336) is deleted on every tier. Its records render

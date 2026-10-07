@@ -1222,11 +1222,11 @@ export function renderCal() {
    async fetch. */
 function paintCal(all) {
   el.calStack.textContent = '';
-  // Issue #343: the day head rides inside #cal-stack as its first child,
-  // where the stack's bottom-anchor seats it directly above the day rows.
-  // Issue #363: with the top section deleted, the head is the expanded face's
-  // first content — the freed top space falls out ABOVE it as whitespace.
-  el.calStack.appendChild(el.calDayhead);
+  // Issue #343: the day head rode inside #cal-stack as its first child,
+  // where the stack's bottom-anchor seated it directly above the day rows.
+  // Issue #382 (B157): the head moved into the header band — a static child
+  // of #cal-band-card in index.html, above the stack; the stack is the day
+  // rows only, and the freed top space still falls out above the day list.
   renderCalDayhead();
   // §6/B7's collar on the exit row (issue #156, B98; retargeted by B134,
   // issue #259): the row's tab draws at the floor as a visible frame now, and

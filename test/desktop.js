@@ -3172,10 +3172,10 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       JSON.stringify(geo.pagerLabels));
     ok(`[${w}x${h}] the card's own add carries its "+" (issue #363 item b)`,
       geo.addText === '+', JSON.stringify(geo.addText));
-    ok(`[${w}x${h}] the day head is the 21px display step inside #cal-stack (issue #363 item d)`,
-      geo.headSize === '21px' && geo.headParent === 'cal-stack',
+    ok(`[${w}x${h}] the day head is the 21px display step inside the header band's title card (issues #363 + #382)`,
+      geo.headSize === '21px' && geo.headParent === 'cal-band-card',
       JSON.stringify([geo.headSize, geo.headParent]));
-    ok(`[${w}x${h}] the face flows from the TOP now — the head is the first content and the slack falls below the month view, not above the stack (issue #363 supersedes #293/#334's bottom-anchor)`,
+    ok(`[${w}x${h}] the face flows from the TOP now — the band is the first content and the slack falls below the month view, not above the stack (issues #363 + #382 supersede #293/#334's bottom-anchor)`,
       geo.headFromTop <= 30 && geo.slackBelowMonth >= 0 && geo.overflow === 0,
       JSON.stringify([geo.headFromTop, geo.slackBelowMonth, geo.overflow]));
     ok(`[${w}x${h}] the panel does not overflow — one bounded page, never a scroll`,

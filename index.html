@@ -182,14 +182,22 @@
       <span class="cdate" aria-hidden="true"></span>
     </button>
     <!-- Issue #363: the top day-note section (#cal-frame, issues
-         #329/#331/#336) is DELETED on every tier. The day head is the
-         expanded face's first content; the day-note squares render inside
-         the day cards of #cal-stack below. -->
-    <!-- Issue #343: the day head — today's date — is seated right on top of
-         the weekly view. renderCal() moves the node into #cal-stack, where
-         the stack's own bottom-anchor seats it directly above the day rows.
-         Filled by renderCalDayhead(). -->
-    <div id="cal-dayhead" role="group" aria-label="Today"></div>
+         #329/#331/#336) is DELETED on every tier. The header band below is
+         the expanded face's first content (the day head moved into it,
+         issue #382); the day-note squares render inside the day cards of
+         #cal-stack below. -->
+    <!-- Issue #382: the face's header — the boards' top band in the calendar's
+         own orange (B157): full-width bar, 1px rule, and the date's title card
+         centred on it, overhanging the rule 22px. No Components/Requirements
+         zones, no band label — the issue names neither. The day head
+         (issue #343/#341 composition) is the card's title; fill by
+         renderCalDayhead(). -->
+    <div id="cal-band">
+      <div id="cal-band-rule" aria-hidden="true"></div>
+      <div id="cal-band-card">
+        <div id="cal-dayhead" role="group" aria-label="Today"></div>
+      </div>
+    </div>
     <div id="cal-stack"></div>
     <div id="cal-month" role="group" aria-label="Month view"></div>
     <!-- B151 (issue #353): the exit control renders LAST — at the view's very
