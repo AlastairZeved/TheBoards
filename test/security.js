@@ -40,6 +40,7 @@ for (const directive of [
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
+  "require-trusted-types-for 'script'",   // issue #374: DOM XSS sinks throw without a TrustedHTML
 ]) {
   ok(`declares ${directive}`, csp.includes(directive));
 }
@@ -75,10 +76,24 @@ for (const file of shipped) {
 ok('no eval(), new Function(), or string-form timers in shipped JS', offenders.length === 0,
   offenders.join(' | '));
 
-// [4] The service worker's CACHE version stamp moves with shipped-byte changes
+// [4] The directive the meta declares is backed by the shipped JS: the default
+//     Trusted Types policy (issue #374) is created before boot(), whose first
+//     render is the first sink write. Without it every GLYPH innerHTML
+//     assignment throws on engines that enforce the directive.
+console.log('\n[4] app.js — the Trusted Types default policy');
+const app = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+const policySite = app.indexOf("trustedTypes.createPolicy('default'");
+const bootCall = app.indexOf('boot();');
+ok("the default Trusted Types policy is created in app.js", policySite !== -1);
+ok("the policy covers both sink kinds: createHTML (the GLYPH sinks) and createScriptURL (the 'sw.js' registration)",
+  policySite !== -1 && /createScriptURL/.test(app));
+ok('the policy is created before boot() (the first sink write is boot\'s first render)',
+  policySite !== -1 && bootCall !== -1 && policySite < bootCall);
+
+// [5] The service worker's CACHE version stamp moves with shipped-byte changes
 //     is asserted by sw-update.js's own discipline; here only that the stamp
 //     still names the zeved-boards prefix (B121's identity ruling).
-console.log('\n[4] sw.js — the cache namespace');
+console.log('\n[5] sw.js — the cache namespace');
 const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 ok("CACHE is version-stamped as zeved-boards-v*", /const CACHE = 'zeved-boards-v\d+'/.test(sw));
 

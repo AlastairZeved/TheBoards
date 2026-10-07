@@ -29,6 +29,26 @@ function frameGuard() {
   document.documentElement.textContent = '';              // blank, no redirect
   throw new Error('frame-guard: framing origin not allowed (B125)');
 }
+
+/* --- Trusted Types default policy (issue #374) ----------------------------
+   index.html's CSP meta declares require-trusted-types-for 'script', which
+   makes every DOM XSS sink (innerHTML, outerHTML, the eval family) and every
+   script-URL assignment throw unless the write carries a Trusted* value. The
+   HTML sinks — boards.js:89, 314, 728, menus.js:67, 147, render.js:292, 365,
+   386 — assign a static GLYPH.* constant: developer-owned SVG markup, never
+   user data. The one script-URL sink is the service-worker registration of
+   the developer-owned 'sw.js' (app.js). This default policy passes both
+   through unchanged, so the directive costs the sinks nothing and no
+   user-data path is touched. Engines without Trusted Types (Firefox, Safari)
+   ignore the directive entirely; the guard makes this a no-op there.
+   Created before boot(): boot's first render is the first sink write, and
+   module imports evaluate without writing any sink. */
+if (window.trustedTypes) {
+  window.trustedTypes.createPolicy('default', {
+    createHTML: (s) => s,        // identity: only developer-owned GLYPH strings reach an HTML sink
+    createScriptURL: (s) => s,   // identity: the one script-URL sink is the dev-owned 'sw.js' registration
+  });
+}
 frameGuard();
 
 // Test-observability bridge (issue #182): the black-box suites drive the page
@@ -376,7 +396,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v129';
+const OWN_BUILD = 'v130';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {
