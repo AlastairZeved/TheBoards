@@ -42,8 +42,8 @@ const html = read('index.html');
 // entry re-exporting each keeps load order = this order), so every pin matches
 // whichever module now holds the text it asserts.
 const app = [
-  'state.js', 'persistence.js', 'geometry.js', 'render.js',
-  'interactions.js', 'menus.js', 'export.js', 'boards.js', 'app.js',
+  'js/state.js', 'js/persistence.js', 'js/geometry.js', 'js/render.js',
+  'js/interactions.js', 'js/menus.js', 'js/export.js', 'js/boards.js', 'js/app.js',
 ].map(read).join('\n');
 const sw = read('sw.js');
 const swTest = read('test/sw-update.js');
@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v128 — version bumped (the #363 B153 deletion pins this build)',
-    /const CACHE = 'zeved-boards-v128';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v128, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v128';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v129 — version bumped (the #363 B153 deletion pins this build)',
+    /const CACHE = 'zeved-boards-v129';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v129, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v129';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&

@@ -33,9 +33,10 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++
 const DIR = fs.mkdtempSync(path.join(require('os').tmpdir(), 'sw-check-'));
 // issue #182: app.js is the module entry; its imports must ride along or
 // install()'s addAll fails on the first 404.
-for (const f of ['index.html', 'app.js', 'state.js', 'persistence.js', 'geometry.js',
-                 'render.js', 'interactions.js', 'menus.js', 'export.js', 'boards.js',
+for (const f of ['index.html', 'js/app.js', 'js/state.js', 'js/persistence.js', 'js/geometry.js',
+                 'js/render.js', 'js/interactions.js', 'js/menus.js', 'js/export.js', 'js/boards.js',
                  'styles.css', 'manifest.json', 'favicon.ico']) {
+  fs.mkdirSync(path.join(DIR, path.dirname(f)), { recursive: true });
   fs.copyFileSync(path.join(ROOT, f), path.join(DIR, f));
 }
 for (const dir of ['icons', 'fonts']) {
@@ -48,7 +49,7 @@ for (const dir of ['icons', 'fonts']) {
 // The pre-fix service worker, verbatim in the shape that caused this: version
 // v4 and an unconditional cache-first fetch with no revalidation.
 const OLD_SW = `const CACHE = 'todo-boards-v4';
-const ASSETS = ['.', 'index.html', 'styles.css', 'app.js', 'manifest.json',
+const ASSETS = ['.', 'index.html', 'styles.css', 'js/app.js', 'manifest.json',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

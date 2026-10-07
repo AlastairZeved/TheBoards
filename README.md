@@ -43,7 +43,7 @@ On desktop, use the left rail to switch boards; on phone, the calendar becomes a
 
 None. No frameworks, no bundler, no package manager, no
 runtime dependencies. Fonts (Montserrat Alternates) are self-hosted in
-`fonts/`, and the PDF exporter is hand-rolled in `export.js` rather than pulled
+`fonts/`, and the PDF exporter is hand-rolled in `js/export.js` rather than pulled
 from a library.
 
 ## Security
@@ -128,7 +128,7 @@ Pull requests are accepted. Requirements:ghjb
   the driving issue number(s) in parentheses, e.g.
   `Wrap note text at the sheet's right edge (issue #53)`.
 - The service worker's `CACHE` string is bumped on every shipped change to
-  `app.js` or `styles.css`.
+  `js/app.js` or `styles.css`.
 
 ## License
 

@@ -65,10 +65,10 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++
     ok('embed opens boards-db-embed', names.includes('boards-db-embed'), JSON.stringify(names));
     ok('embed never opens boards-db', !names.includes('boards-db'));
     // Seed the embed DB, reload, expect the seed to survive (B136).
-    await page.evaluate(() => import('/persistence.js').then((m) => m.idbPut({ id: 'seed-1' })));
+    await page.evaluate(() => import('/js/persistence.js').then((m) => m.idbPut({ id: 'seed-1' })));
     await page.reload();
     await page.waitForTimeout(600);
-    const after = await page.evaluate(() => import('/persistence.js').then((m) => m.idbGetAll()));
+    const after = await page.evaluate(() => import('/js/persistence.js').then((m) => m.idbGetAll()));
     ok('embed DB persists across reload (seed record still present)',
       after.some((r) => r.id === 'seed-1'), JSON.stringify(after.map((r) => r.id)));
     await ctx.close();
@@ -83,19 +83,19 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++
     await page.waitForTimeout(600);
     const len0 = await page.evaluate(() => history.length);
     // Open the All-Boards picker (push site) and come back (pop site).
-    await page.evaluate(() => import('/boards.js').then((m) => m.goToList()));
+    await page.evaluate(() => import('/js/boards.js').then((m) => m.goToList()));
     await page.waitForTimeout(300);
     const len1 = await page.evaluate(() => history.length);
-    await page.evaluate(() => import('/boards.js').then((m) => m.returnToBoard()));
+    await page.evaluate(() => import('/js/boards.js').then((m) => m.returnToBoard()));
     await page.waitForTimeout(300);
     ok('picker open+back adds no history entries', len1 === len0, `${len0} -> ${len1}`);
     ok('returnToBoard stays on the page (board visible again)',
       await page.evaluate(() => !document.querySelector('#list-view') || true));
     // Open the calendar (push site) and leave via its Back (pop site).
-    await page.evaluate(() => import('/menus.js').then(() => document.getElementById('action-calendar')?.click()));
+    await page.evaluate(() => import('/js/menus.js').then(() => document.getElementById('action-calendar')?.click()));
     await page.waitForTimeout(300);
     const len2 = await page.evaluate(() => history.length);
-    await page.evaluate(() => import('/boards.js').then((m) => m.goCalBack()));
+    await page.evaluate(() => import('/js/boards.js').then((m) => m.goCalBack()));
     await page.waitForTimeout(300);
     ok('calendar open+back adds no history entries', len2 === len1, `${len1} -> ${len2}`);
     ok('calendar Back did not navigate away (page still live)',

@@ -98,7 +98,7 @@ const server = http.createServer((req, res) => {
   //     it must compare full origins (indexOf on an exact-strings list) and
   //     must not use startsWith/includes/prefix logic on origins.
   {
-    const src = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+    const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
     const guard = src.slice(src.indexOf('function frameGuard'), src.indexOf('frameGuard();'));
     ok('allow-list contains the exact origin https://alastairzeved.com',
       guard.includes("'https://alastairzeved.com'") && !guard.includes('alastairzeved.com/'));

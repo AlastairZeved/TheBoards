@@ -34,9 +34,7 @@ or routing behavior without a `B<n>` entry will be asked to add one.
 numbering spaces overlap between records, and even within `styles.css`.
 
 `UIUX.md` is the rendering authority: every hex, contrast ratio, size, radius,
-duration, threshold, and ARIA contract lives there and nowhere else. The
-design system's rendered reference is `docs/proofs/proof-10-the-second-swap.html`
-(B58) — read the render before re-deriving the design from prose.
+duration, threshold, and ARIA contract lives there and nowhere else.
 
 ## Commands
 

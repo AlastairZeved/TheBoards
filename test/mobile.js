@@ -900,7 +900,7 @@ async function openCat(page, cat) {
                  document.querySelector('#zone-components .band-label')).fontSize };
     });
     // issue #182: EXPORT_GEO now lives in export.js — read the module, not the entry.
-    const src = fs.readFileSync(__dirname + '/../export.js', 'utf8');
+    const src = fs.readFileSync(__dirname + '/../js/export.js', 'utf8');
     const num = k => Number((src.match(new RegExp(k + ':\\s*(\\d+(?:\\.\\d+)?)')) || [])[1]);
     const [bandTop, bandGap, cardTop, cardOverhang, headLH, labelSize, labelLH, radius] =
       ['bandTop', 'bandGap', 'cardTop', 'cardOverhang',

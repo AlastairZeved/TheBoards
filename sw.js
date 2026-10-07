@@ -1,19 +1,19 @@
 /* Service worker — cache-first app shell, fully offline (PRD §3 / §6.8).
    Version-stamped cache; old caches are cleaned on activate. */
-const CACHE = 'zeved-boards-v128';       // bump on every shipped app.js/styles.css change
+const CACHE = 'zeved-boards-v129';       // bump on every shipped app.js/styles.css change
 const ASSETS = [
   '.',
   'index.html',
   'styles.css',
-  'app.js',
-  'state.js',
-  'persistence.js',
-  'geometry.js',
-  'render.js',
-  'interactions.js',
-  'menus.js',
-  'export.js',
-  'boards.js',
+  'js/app.js',
+  'js/state.js',
+  'js/persistence.js',
+  'js/geometry.js',
+  'js/render.js',
+  'js/interactions.js',
+  'js/menus.js',
+  'js/export.js',
+  'js/boards.js',
   'manifest.json',
   'fonts/MontserratAlternates-400.woff2',
   'fonts/MontserratAlternates-600.woff2',

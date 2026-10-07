@@ -51,7 +51,7 @@ jobs:
         with:
           enablement: true
 
-      # No build step: the repo root IS the site (index.html, app.js,
+      # No build step: the repo root IS the site (index.html, js/app.js,
       # styles.css, sw.js, manifest.json, icons/). This also ships test/ and the
       # markdown, which is harmless on a public repo — and cheaper than keeping
       # a second list of what the app consists of in sync with sw.js's ASSETS.

@@ -16,8 +16,7 @@ numbered §13 and up, so no existing citation moves.
 
 **The rendered reference.** This system was settled by rendered specimen sheets,
 not prose — seven proof rounds, run outside the repo. The final sheet, **proof
-sheet 7, "A Well, Swapped"**, is committed at
-`proofs/proof-7-a-well-swapped.html`; its own verification table records the
+sheet 7, "A Well, Swapped"** — its own verification table records the
 swap that ended the process (the band takes `#020812` and is the deepest surface
 on the page; the card takes `#08152c` and separates by its border — 5.39:1 on the
 card, 5.95:1 on the band). The three `fonts/` files are extracted from that
@@ -131,9 +130,8 @@ holds 3.32:1 behind its 0.40 hairline edge, and light ink reads at 18.33:1.
 and it is behind all four boards at once, so it keeps `#020812` — the To-Do
 deep's value — whichever board is open. Taken deliberately, the consequence is
 that a green board's OS chrome, menu, toast and board list are still the blue.
-Settled by proof rounds 8–9 (B52) and carried through the swap (B58); the
-rendered references are `proofs/proof-9-a-well-furnished.html` and
-`proofs/proof-10-the-second-swap.html`. **The platform edge is the same
+Settled by proof rounds 8–9 (B52) and carried through the swap (B58).
+**The platform edge is the same
 room** (B55): the one `theme-color` meta and `manifest.json`'s
 `background_color`/`theme_color` all wear `#020812`.
 
@@ -534,8 +532,7 @@ full stop.
 
 > **Ratified.** The whole family was re-derived against the deep-dusk grounds
 > in proof round 8 — candidates rendered beside the round-1 values, every
-> ratio against its worst extreme — and rendered whole in round 9
-> (`proofs/proof-9-a-well-furnished.html`). The round-1 restore and page
+> ratio against its worst extreme — and rendered whole in round 9. The round-1 restore and page
 > values were hue 177°, the retired teal's kin; the new values belong to the
 > note's and the field's families. `--danger` re-verified clean against every
 > ground it lands on and kept its value — re-chosen, not inherited. Recorded
@@ -1789,7 +1786,7 @@ x-height is 0.534em and cap height 0.700em at 1000 units per em.
 > measurement. The band is sized by the type it holds (B37), so the formula's
 > label term moves 15.6 → 16.9 and the band grows by exactly the pixel: 88 at
 > the floor, 107 at three lines (§3.1). Rendered at both sizes on proof sheet
-> 8; the ratified render is `proofs/proof-9-a-well-furnished.html`.
+> 8.
 
 **Superseded by B76 (issue #111):** the label no longer sits above the rule, so
 its `+ 16.9 + 10` term left the band budget — the band closes at **61 at the
@@ -2014,8 +2011,7 @@ token is retired (§2.2), the brightest-surface claim is reworded rather than
 defended (§2.2, `PRD §1.4`), the lot keeps its top rule in its own ink (§2.5),
 `--frame` is ratified (§2.5) — B46+ — and round 8's three, ruled B52–B54: the
 chrome family (§2.2, §2.6), the scratch-out's pair (§4.3), and the 13px band
-label (§3.1, §13.2), rendered whole in
-`proofs/proof-9-a-well-furnished.html`.
+label (§3.1, §13.2).
 
 ### §16.2 Retiring v1's tokens
 

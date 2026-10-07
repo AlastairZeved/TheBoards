@@ -60,8 +60,8 @@ ok('every script loads from a file (external, auditable)', scripts.length > 0 &&
 // [3] The shipped JS keeps the policy satisfiable: no eval, no new Function.
 //     (The strings below are detection regexes over shipped files, not calls.)
 console.log('\n[3] Shipped JS — no eval surface');
-const shipped = ['app.js', 'boards.js', 'export.js', 'geometry.js', 'interactions.js',
-  'menus.js', 'persistence.js', 'render.js', 'state.js', 'sw.js'];
+const shipped = ['js/app.js', 'js/boards.js', 'js/export.js', 'js/geometry.js', 'js/interactions.js',
+  'js/menus.js', 'js/persistence.js', 'js/render.js', 'js/state.js', 'sw.js'];
 const offenders = [];
 for (const file of shipped) {
   const raw = fs.readFileSync(path.join(ROOT, file), 'utf8');
