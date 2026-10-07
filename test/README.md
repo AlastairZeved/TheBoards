@@ -10,7 +10,7 @@ delivery; `tokens.js` needs no browser at all:
 | Script | Covers |
 |---|---|
 | `tokens.js` | The design contract: `UIUX §2`'s tables recomputed from the shipped hexes — plain Node, no browser |
-| `mobile.js` | Touch capture (§D of `docs/DECISIONS.md`): instant note creation, focus and caret, long-press on bare paper, touch slop, empty-frame sweeps, the keyboard-resize guard, menu dismissal, board-row export. Plus band/lot geometry (B32–B36), including the free canvas on a short sheet and `EXPORT_GEO`'s agreement with the `--band-h` ceiling. And the list view's categories (B44): touch-drag between sections, the pager, and all three readings of a press |
+| `mobile.js` | Touch capture (§D of `The Docket/DECISIONS.md`): instant note creation, focus and caret, long-press on bare paper, touch slop, empty-frame sweeps, the keyboard-resize guard, menu dismissal, board-row export. Plus band/lot geometry (B32–B36), including the free canvas on a short sheet and `EXPORT_GEO`'s agreement with the `--band-h` ceiling. And the list view's categories (B44): touch-drag between sections, the pager, and all three readings of a press |
 | `desktop.js` | Desktop grammar (B19–B26): instant capture and instant action commit (B81), click-to-select, double-click edit, rail create/swap, right-click menu, drag, PDF export (B34) — menu order, byte-accurate xref, and that a completed item's text is absent from the file. Plus the Copy selection button (B43) and the rail's categories, drag, and pager (B42) |
 | `sw-update.js` | **Delivery** (B36): that a shipped `styles.css`/`app.js` change actually reaches an installed PWA rather than sitting behind a stale service-worker cache |
 
