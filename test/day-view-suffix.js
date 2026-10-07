@@ -279,8 +279,8 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
       Math.abs(seat.headCenterX - seat.viewCenterX) <= 2, JSON.stringify(seat));
     ok("the head wears the palette's approved --ink-light on the view's ground (issue #343)",
       seat.color === 'rgb(244, 245, 241)', JSON.stringify(seat));
-    ok('the head renders at the display step — 21px, the largest existing title token (issue #363)',
-      seat.fontSize === '21px', JSON.stringify(seat));
+    ok("the head renders at the boards' title-card type — 15px/600, #anchor-title's very format, one line (issue #382, the owner's chat direction)",
+      seat.fontSize === '15px', JSON.stringify(seat));
     ok("the head sits directly above the weekly view's first day row — above it, never over it (issue #343)",
       seat.rowTop !== null && seat.headBottom <= seat.rowTop + 1, JSON.stringify(seat));
     ok('the head still carries the date wording (B149 composition intact)',

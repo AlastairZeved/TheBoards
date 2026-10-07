@@ -3112,12 +3112,12 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
   // the pager, and the seating (issues #334, re-pinned under #363/B153) -------
   // #363 deleted the top section (#cal-frame/#cal-notes) and moved the
   // squares INTO each day card: three per day, the card's own "+" to the
-  // right, a ‹/› pager beyond three, the day head at the 21px display step.
+  // right, a ‹/› pager beyond three, the day head at the 15px title-card type.
   // The #334 seating invariant is unchanged: the last day row's bottom sits
   // on the month view's top. Each viewport is a FRESH context —
   // scheduleEnvironment tears the expanded panel down on a width flip, so
   // resizing one page would not measure what a user sees.
-  console.log('\n[D34] The desktop panel carries the per-day squares, the pager, the 21px head, and the week view seated on the month view (issues #334, #363)');
+  console.log('\n[D34] The desktop panel carries the per-day squares, the pager, the 15px title-card head, and the week view seated on the month view (issues #334, #363)');
   for (const [w, h] of [[1440, 900], [1366, 768], [1280, 720]]) {
     const ctx = await browser.newContext({ viewport: { width: w, height: h } });
     const page = await ctx.newPage();
@@ -3172,11 +3172,11 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       JSON.stringify(geo.pagerLabels));
     ok(`[${w}x${h}] the card's own add carries its "+" (issue #363 item b)`,
       geo.addText === '+', JSON.stringify(geo.addText));
-    ok(`[${w}x${h}] the day head is the 21px display step inside the header band's title card (issues #363 + #382)`,
-      geo.headSize === '21px' && geo.headParent === 'cal-band-card',
+    ok(`[${w}x${h}] the day head is the boards' title-card type — 15px — inside the header band's title card (issues #363 + #382)`,
+      geo.headSize === '15px' && geo.headParent === 'cal-band-card',
       JSON.stringify([geo.headSize, geo.headParent]));
     ok(`[${w}x${h}] the face flows from the TOP now — the band is the first content and the slack falls below the month view, not above the stack (issues #363 + #382 supersede #293/#334's bottom-anchor)`,
-      geo.headFromTop <= 30 && geo.slackBelowMonth >= 0 && geo.overflow === 0,
+      geo.headFromTop <= 35 && geo.slackBelowMonth >= 0 && geo.overflow === 0,
       JSON.stringify([geo.headFromTop, geo.slackBelowMonth, geo.overflow]));
     ok(`[${w}x${h}] the panel does not overflow — one bounded page, never a scroll`,
       geo.overflow === 0, JSON.stringify(geo.overflow));

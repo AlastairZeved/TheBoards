@@ -1993,17 +1993,23 @@ html.wide #cal-export { margin-left: auto; }
 /* Issue #343: the day head — today's date, the weekday with it and the
    ordinal suffix as superscript ("Friday, October 2nd", issue #341) — moved
    INTO the title card by issue #382 (B157): the head is the card's title,
-   centred, render-only. Tokens only: light ink on the card's deep fill —
-   var(--ink) resolves to --ink-light #f4f5f1 under #cal-view's .on-dark, the
-   palette's approved ink on the ladder's card rung (UIUX §2.3, 16.62:1 on
-   #251002). The head renders at the set's display step, 21px (UIUX §13.1;
-   the .cat-head token, B63), per B153 — no new size invented. */
+   centred, render-only. Type is the boards' own title-card format (issue
+   #382, the owner's chat direction: "It's too large and wraps the page.
+   Today's date should fit on one line, and the title card should scale to
+   fit it in one line and it must use the same text formatting as a title
+   card on a board"): 15px/600/1.3, #anchor-title's very type (styles.css
+   §3), replacing B153's display step for THIS title — the card scales to
+   the line (width max-content), the date never wraps. Tokens only: light
+   ink on the card's deep fill — var(--ink) resolves to --ink-light #f4f5f1
+   under #cal-view's .on-dark, the palette's approved ink on the ladder's
+   card rung (UIUX §2.3, 16.62:1 on #251002). */
 #cal-dayhead {
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--ink);              /* --ink-light #f4f5f1 under #cal-view's .on-dark — the approved pair on the card's fill */
-  font-size: 21px; font-weight: 600; line-height: 1.3;   /* the display step (UIUX §13.1, B63) — issue #363: it reads as a header */
+  font-size: 15px; font-weight: 600; line-height: 1.3;   /* the boards' title-card type (§3 #anchor-title) — issue #382 */
+  white-space: nowrap;            /* one line, always — the card scales to it */
   text-align: center;
 }
 /* Issue #363: the day-note squares, moved INTO the day cards — each card's

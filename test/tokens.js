@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v132 — version bumped (the #374 Trusted Types re-pin pins this build)',
-    /const CACHE = 'zeved-boards-v132';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v132, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v132';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v133 — version bumped (the #374 Trusted Types re-pin pins this build)',
+    /const CACHE = 'zeved-boards-v133';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v133, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v133';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -860,12 +860,13 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /\.mo-dot \{/.test(css) && /\.mo-dot \{[^}]*background: var\(--accent-page\);/.test(css));
   // --- Issue #363 (B153): the top section deleted — the day head above the
   // --- weekly stack, the day-note squares INSIDE the day cards ---
-  ok('the day head reads the weekday with the date and the ordinal suffix as superscript — "Friday, October 2nd" — a real element, the title card\'s title, centred, --ink-light ink at the display step 21px (issue #363: a header, the largest existing title token), no add control of its own (issues #341, #343, #363, #382)',
+  ok('the day head reads the weekday with the date and the ordinal suffix as superscript — "Friday, October 2nd" — a real element, the title card\'s title, centred, --ink-light ink at the boards\' title-card type — 15px/600/1.3, #anchor-title\'s very format, one line, the card scaling to it (issue #382: the owner\'s chat direction; supersedes B153\'s 21px display step for this title), no add control of its own (issues #341, #343, #363, #382)',
     /id="cal-dayhead"/.test(html) &&
     html.indexOf('id="cal-dayhead"') < html.indexOf('id="cal-stack"') &&
     /calDayhead: document\.getElementById\('cal-dayhead'\)/.test(app) && /#cal-dayhead \{/.test(css) &&
     /#cal-dayhead \{[^}]*justify-content: center;/.test(css) &&
-    /#cal-dayhead \{[^}]*font-size: 21px; font-weight: 600; line-height: 1\.3;/.test(css) &&
+    /#cal-dayhead \{[^}]*font-size: 15px; font-weight: 600; line-height: 1\.3;/.test(css) &&
+    /#cal-dayhead \{[^}]*white-space: nowrap;/.test(css) &&
     /weekday: 'long', month: 'long', day: 'numeric'/.test(app) &&
     /function calOrdinal\(/.test(app) && /createElement\('sup'\)/.test(app));
   // --- Issue #382 (B157): the face's header — the boards' top band in the

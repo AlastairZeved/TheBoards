@@ -1020,8 +1020,11 @@ on the rule, overhanging it 22px and occluding it (z 2 over the rule's
 z 1 — B38), three-sided (the face's own top edge is its fourth), 2px
 `--frame` border without the top, radius `0 0 3px 3px`, `var(--card)`
 #251002 fill, min-height `calc(61px + 22px)`, width `max-content` around the
-type (B37). The day head (`#cal-dayhead`, the B149 composition at the 21px
-display step, B153) renders inside the card as its title, `--ink-light` on
+type (B37). The day head (`#cal-dayhead`, the B149 composition) renders
+inside the card as its title in the boards' title-card type — **15px/600/1.3,
+`#anchor-title`'s very format, one line** (`white-space: nowrap`), the card
+scaling to the line (issue #382, the owner's 2026-10-07 chat direction;
+supersedes B153's 21px display step for THIS title) — with `--ink-light` on
 the deep fill (16.62:1 on #251002, recomputed per §2.3's method), render-only;
 the card carries `pointer-events: none` (the bar and rule are inert ground
 already) `#cal-stack` opens 22px of clearance under the card.
