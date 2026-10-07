@@ -1009,15 +1009,15 @@ from now — today lit (the two-tone outline ring, full scale, `flex 1.6`),
 days with notes near, empty days far (`brightness .6`). Scale and luminance,
 never icons.
 
-**The day-note squares (issue #363; one zone, issue #365).** The top
+**The day-note squares (issues #363 + #371; one zone, issue #365).** The top
 day-note section
 (`#cal-frame`, #329/#331/#336) is deleted on every tier. Its records render
 as ONE-zone orange square blocks INSIDE each day card (issue #365 — the
 lighter title band is deleted and the deep orange fill expands to the top of
-the square, the square one large body): the fill `var(--water-mid)` — the
-calendar ladder's rung at the SAME WCAG relative luminance as the To-Do
-boards' deep blue field (`--water-mid` #255265, Y 0.0737 to 4dp, `--ink-light`
-at 7.75:1; the §2.2.2 rotation law) — with `--ink-light` in plain-text type
+the square, the square one large body): the fill `var(--card)` (#251002) —
+the Today date card's own deep fill, the exact surface the issue sampled;
+issue #371, supersedes ONLY B154's fill clause (the `--water-mid` ladder
+rung) — with `--ink-light` in plain-text type
 (12px, weight 400, line-height 1.4, the body's own type), the B72 inset frame
 (`outline: 2px solid var(--frame)`), radius 4px; the squares center
 vertically in the card's notes row (`align-items: center`). Three squares per

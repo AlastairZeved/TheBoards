@@ -1962,8 +1962,8 @@ html.wide #cal-export { margin-left: auto; }
    zone is one row: the ‹/› pager (only when the day holds more than three),
    the day's squares (three shown, the .mo-nav grammar), and the card's "+"
    rightmost. Tokens only — the ladder #cal-view already binds (B117; one zone per
-   issue #365): the body var(--water-mid) with --ink-light under the view's
-   .on-dark, radius 4px. */
+   issue #365): the body var(--card) — the Today date card's own deep fill
+   (issue #371, B155) — with --ink-light under the view's .on-dark, radius 4px. */
 .cal-notes {
   position: relative;
   padding: 4px 6px;
@@ -2011,14 +2011,14 @@ html.wide #cal-export { margin-left: auto; }
   gap: 0;                               /* the fill meets flush inside the frame — no gutter of the view's ground */
   padding: 0;                           /* the inset re-seats onto the zone below */
 }
-/* Issue #365: ONE zone — the title band is deleted, the fill is one large
-   body: var(--water-mid), the calendar ladder's rung at the SAME luminance as
-   the To-Do boards' deep blue (Y 0.0737 to 4dp, --ink-light at 7.75:1 — the
-   §2.2.2 rotation law), plain text type. `rem` renders nowhere (the #323
-   disposition, stored-but-unread). */
+/* Issues #365 + #371: ONE zone — the title band is deleted, the fill is one
+   large body. Issue #371's ruling moves the fill to var(--card) — the Today
+   date card's own deep fill (#251002), the calendar ladder's card rung, the
+   exact surface sampled in the issue; --ink-light contrast unchanged, plain
+   text type. `rem` renders nowhere (the #323 disposition, stored-but-unread). */
 .cal-note-text {
   flex: 1 1 auto;                       /* the fill reaches the frame's bottom edge */
-  background: var(--water-mid);         /* #694432 — the ladder's mid rung, issue #365's deep orange */
+  background: var(--card);              /* #251002 — the Today date card's deep fill (issue #371) */
   color: var(--ink-light);              /* #f4f5f1 under #cal-view's .on-dark — 7.75:1 */
   font-size: 12px; font-weight: 400; line-height: 1.4;   /* plain text (issue #365) */
   padding: 4px 6px;
