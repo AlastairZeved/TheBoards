@@ -1953,7 +1953,12 @@ html.wide #cal-export { margin-left: auto; }
    furniture: nothing in the band is a target — the card carries
    pointer-events:none (§7's recognizer rule; the bar and rule are inert
    ground already). Edge-to-edge: the bar runs the component's FULL
-   width, so it spends the view's own padding on every tier. */
+   width, so it spends the view's own padding on every tier.
+   Issue #384 adds ONE element to the band — the row's "+" (today's adder),
+   seated at the bar's right, to the right of the title card, per the owner's
+   "moved to the right side of the header bar, to the right of today's date
+   title card". It is the one target in the band (the .cal-add treatment
+   kept); the card's pointer-events:none stands. */
 #cal-band {
   flex: 0 0 auto;
   position: relative;
@@ -1986,9 +1991,48 @@ html.wide #cal-export { margin-left: auto; }
   z-index: 2;                          /* DOM-latest over the rule — the card occludes it */
   pointer-events: none;
 }
-/* The card's overhang spends downward into the stack's ground, so the stack
-   opens a row of clearance for it — the card hangs over whitespace, never
-   over a day card's frame. */
+#cal-band-add {                        /* issue #384: today's adder, CENTERED in the band's right-of-card section — the section's centre, set per paint (the card's width is max-content, so the centre is measured, not guessed) */
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);    /* the box's own centre lands on the section's centre */
+  left: var(--cal-add-x, 75%);
+  z-index: 3;                          /* above the card — it sits beside it, never under it */
+}
+/* Issue #384: the Today board body — the "today" field combined with the
+   header. Today's day card leaves the weekly stack and becomes this
+   full-width deep-orange body directly below the band: the title card's OWN
+   fill, var(--card) #251002 ("the background of the event note cards for
+   'today' needs to be the deep orange like the background of a to do board
+   but in this orange palette"), with NO grey border of its own ("the grey
+   border removed" — the body is the card's floor, not a second frame) and
+   EXTENDED UPWARD so the card's 22px overhang lands on it — band, card and
+   body read as one little board at the top (the owner's "becomes like a
+   little board at the top"). No fill runs past the body's own bottom edge;
+   the stack's 22px clearance below stays (the gap between the board and
+   tomorrow's card is untouched — the owner never asked for it to close).
+   Today's squares render here filling FROM THE LEFT at the weekly view's
+   own measure: the grid is capped to the weekly construction's arithmetic
+   (the 84px compartment + the 12px zone padding + the 26px add slot) and
+   anchored at the body's left edge — the owner's correction (issue #384):
+   they filled right-to-left off the old inset, and "the days in the today
+   view should also fill in from left to right, like the days in the weekly
+   view do." The ground behind them is the body's fill, not a per-square
+   background. */
+#cal-today-board {
+  flex: 0 0 auto;
+  position: relative;
+  margin: 0 -12px 0;                   /* the view's side padding, spent; top at the rule — the card's overhang lands on the body */
+  padding: 22px 6px 4px 6px;           /* the top clears the card's overhang; the squares fill FROM THE LEFT — the owner's correction (issue #384: they filled right-to-left off the old compartment inset) */
+  background: var(--card);             /* #251002 — the title card's own fill (issue #384) */
+  border-radius: 0 0 4px 4px;          /* only the corners that exist below */
+}
+#cal-view.panel #cal-today-board { margin: 0 -12px 0; }   /* the panel's 12px padding, spent the same way */
+/* The weekly construction's arithmetic — the 84px compartment + the 12px
+   zone padding + the 26px add slot — caps the body's grid, so today's
+   squares are the weekly squares' own size, filling from the body's left
+   edge (issue #384, the owner's correction). */
+#cal-today-board .cal-notes-grid { max-width: calc(100% - 122px); }
+/* The body's fill must not reach the stack: the 22px clearance stays. */
 #cal-stack { margin-top: 22px; }
 /* Issue #343: the day head — today's date, the weekday with it and the
    ordinal suffix as superscript ("Friday, October 2nd", issue #341) — moved
@@ -2015,9 +2059,13 @@ html.wide #cal-export { margin-left: auto; }
 /* Issue #363: the day-note squares, moved INTO the day cards — each card's
    zone is one row: the ‹/› pager (only when the day holds more than three),
    the day's squares (three shown, the .mo-nav grammar), and the card's "+"
-   rightmost. Tokens only — the ladder #cal-view already binds (B117; one zone per
-   issue #365): the body var(--card) — the Today date card's own deep fill
-   (issue #371, B155) — with --ink-light under the view's .on-dark, radius 4px. */
+   rightmost. (Issue #384: today's row renders in the body below the band —
+   no row "+" of its own; the band seats today's "+" at the bar's right.)
+   Tokens only — the ladder #cal-view already binds (B117; one zone per
+   issue #365): the body var(--note) — the calendar's note rung, #e3c6aa
+   (issue #384, superseding B155's fill clause) — with --ink-dark, radius
+   4px. The squares' own measure (aspect-ratio, radius, the row paddings) is
+   untouched — the owner's correction: the squares are not the target. */
 .cal-notes {
   position: relative;
   padding: 4px 6px;
@@ -2065,15 +2113,20 @@ html.wide #cal-export { margin-left: auto; }
   gap: 0;                               /* the fill meets flush inside the frame — no gutter of the view's ground */
   padding: 0;                           /* the inset re-seats onto the zone below */
 }
-/* Issues #365 + #371: ONE zone — the title band is deleted, the fill is one
-   large body. Issue #371's ruling moves the fill to var(--card) — the Today
-   date card's own deep fill (#251002), the calendar ladder's card rung, the
-   exact surface sampled in the issue; --ink-light contrast unchanged, plain
-   text type. `rem` renders nowhere (the #323 disposition, stored-but-unread). */
+/* Issues #365 + #371 + #384: ONE zone — the title band is deleted, the fill is one
+   large body. Issue #384's ruling moves the fill to var(--note) — the Calendar
+   ladder's own note rung, #e3c6aa, the pale orange derived from the four
+   boards' note-card fills (#a0d4da/#b9d2b2/#cec6ed/#e6c2c9) at their shared
+   rung, rotated into the calendar's hue (UIUX §2.2.2, issue #168) — the
+   owner's "a new color derived using its palette, deriving from the note
+   cards' fill" (the derivation was on record already; the owner's "I don't
+   believe we have a token" is answered by the §2.2.2 table). With it the ink
+   moves to the note rung's own pair: --ink-dark #031019, 11.84:1 (UIUX §2.3).
+   `rem` renders nowhere (the #323 disposition, stored-but-unread). */
 .cal-note-text {
   flex: 1 1 auto;                       /* the fill reaches the frame's bottom edge */
-  background: var(--card);              /* #251002 — the Today date card's deep fill (issue #371) */
-  color: var(--ink-light);              /* #f4f5f1 under #cal-view's .on-dark — 7.75:1 */
+  background: var(--note);              /* #e3c6aa under #cal-view — the calendar's note rung (issue #384) */
+  color: var(--ink-dark);               /* #031019 — the note rung's approved pair, 11.84:1 (UIUX §2.3) */
   font-size: 12px; font-weight: 400; line-height: 1.4;   /* plain text (issue #365) */
   padding: 4px 6px;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
@@ -2109,15 +2162,34 @@ html.wide #cal-export { margin-left: auto; }
 .cal-d1 { font-size: 12px; font-weight: 600; color: var(--ink-light); line-height: 1.2; }
 .cal-d2 { font-size: 9px; font-weight: 600; letter-spacing: .08em;
   color: var(--ink-light); opacity: .55; text-transform: uppercase; }
+/* Issue #384, the owner's correction: every "+" is a BOUNDED button — a
+   visible border drawing the click space around the glyph ("it also needs a
+   border around it, a visual click space that bounds the button. they all
+   need this treatment") — centered in its box, and centered VERTICALLY in
+   its row (align-self was flex-start; the glyph no longer sits high). */
 .cal-add {
-  align-self: flex-start;
-  border: none; border-radius: 3px;
+  align-self: center;
+  border: 2px solid var(--frame);       /* the bounded click space (issue #384) */
+  border-radius: 3px;
+  width: 28px; height: 28px;            /* one box, glyph centred in it */
+  display: flex; align-items: center; justify-content: center;
   background: transparent;
   color: var(--ink-light); opacity: .55;
   font: inherit; font-size: 14px; font-weight: 600; line-height: 1;
-  padding: 2px 8px;
+  padding: 0;
   cursor: pointer;
   transition: filter 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+/* Every day's "+" is pushed over to align WITH today's: its box's CENTRE
+   lands on the band button's centre (the section's centre, the same
+   --cal-add-x measurement), set per paint from the band's geometry — the
+   owner's correction: "move every + button in the weekly view over to align
+   with it". Absolute against the card's own zone (position:relative), so
+   the box rides the row's redraws. */
+.cal-notes-row .cal-add {
+  position: absolute;
+  right: var(--cal-add-right, 6px);
+  top: 50%; transform: translateY(-50%);
 }
 .cal-add:hover, .cal-add:focus-visible { opacity: 1; }
 /* Attention recedes with distance from now (the mockups' law): today lit,
@@ -2248,7 +2320,8 @@ html.wide #cal-export { margin-left: auto; }
 #cal-view.rail-open #cal-band,
 #cal-view.rail-open #cal-top,
 #cal-view.rail-open #cal-stack,
-#cal-view.rail-open #cal-month { display: none; }   /* collapsed shows only the rail face (issue #248: the month view rode along; the day head and the in-card squares join the hide — the head rides inside #cal-band since issue #382; the top section is gone since issue #363) */
+#cal-view.rail-open #cal-today-board,
+#cal-view.rail-open #cal-month { display: none; }   /* collapsed shows only the rail face (issue #248: the month view rode along; the day head and the in-card squares join the hide — the head rides inside #cal-band since issue #382, the Today board body joined by #384; the top section is gone since issue #363) */
 #cal-rail {
   display: flex;
   flex-direction: column;

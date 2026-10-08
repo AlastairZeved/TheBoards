@@ -449,7 +449,11 @@ export const el = {
   importFile: document.getElementById('import-file'),       // the import tab's file dialog
   calView: document.getElementById('cal-view'),             // calendar screen (issue #145)
   calRail: document.getElementById('cal-rail'),             // the standing rail face (issue #158, B99)
+  calBand: document.getElementById('cal-band'),             // the face's header band (issue #382, B157)
+  calBandCard: document.getElementById('cal-band-card'),    // the band's title card (issue #382, B157)
   calDayhead: document.getElementById('cal-dayhead'),       // the day head — the date alone (issue #329)
+  calBandAdd: document.getElementById('cal-band-add'),      // issue #384: today's "+", seated on the band's right
+  calTodayBoard: document.getElementById('cal-today-board'),// issue #384: the Today board body — today's squares, deep orange
   calStack: document.getElementById('cal-stack'),
   calTop: document.getElementById('cal-top'),
   calBack: document.getElementById('cal-back'),
