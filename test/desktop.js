@@ -1939,12 +1939,12 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.waitForTimeout(400);
     ok('calendar opened with the seeded square rendered in the day card — the zone shows `next`',
       await page.evaluate(() =>
-        [...document.querySelectorAll('.cal-day.today .cal-note-text')]
+        [...document.querySelectorAll('#cal-today-board .cal-note-text')]
           .some(b => b.textContent === 'renew tags')));
 
     // Tap through the real mouse grammar, on the square's one zone.
     const box = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('.cal-day.today .cal-note')]
+      const b = [...document.querySelectorAll('#cal-today-board .cal-note')]
         .find(n => n.querySelector('.cal-note-text').textContent === 'renew tags');
       const r = b.querySelector('.cal-note-text').getBoundingClientRect();
       return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
@@ -1952,7 +1952,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.mouse.click(box.x, box.y);
     await page.waitForTimeout(150);           // the caret re-assert lands on a setTimeout(0)
     const editing = await page.evaluate(() => {
-      const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
+      const n = [...document.querySelectorAll('#cal-today-board .cal-note')]
         .find(x => x.querySelector('.cal-note-text').textContent === 'renew tags');
       const body = n.querySelector('.cal-note-text');
       return { bodyEdit: body.hasAttribute('contenteditable'),
@@ -1965,7 +1965,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.waitForTimeout(80);
     ok('the caret sits at the end of the zone text (typing appends, B90 pattern)',
       await page.evaluate(() =>
-        [...document.querySelectorAll('.cal-day.today .cal-note')]
+        [...document.querySelectorAll('#cal-today-board .cal-note')]
           .find(n => n.querySelector('.cal-note-text').textContent === 'renew tags!')
           .querySelector('.cal-note-text').textContent === 'renew tags!'));
 
@@ -1974,7 +1974,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // the right part of a square on the desktop panel, so the left edge is
     // the square's own hit area.)
     const again = await page.evaluate(() => {
-      const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
+      const n = [...document.querySelectorAll('#cal-today-board .cal-note')]
         .find(x => x.querySelector('.cal-note-text').textContent === 'renew tags!');
       const r = n.querySelector('.cal-note-text').getBoundingClientRect();
       return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
@@ -1983,7 +1983,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.waitForTimeout(150);
     const stillArmed = await page.evaluate(() => {
       const ae = document.activeElement;
-      return { editCount: document.querySelectorAll('.cal-day.today .cal-note [contenteditable]').length,
+      return { editCount: document.querySelectorAll('#cal-today-board .cal-note [contenteditable]').length,
                caretHeld: !!(ae && ae.classList.contains('cal-note-text') &&
                  ae.textContent === 'renew tags!') };
     });
@@ -2011,7 +2011,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // rem-bearing square (d24b, empty `next`) survives an empty commit; the
     // truly-empty square (d24c) is discarded.
     const b2 = await page.evaluate(() => {
-      const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
+      const n = [...document.querySelectorAll('#cal-today-board .cal-note')]
         .find(x => x.querySelector('.cal-note-text').textContent === '');
       const r = n.querySelector('.cal-note-text').getBoundingClientRect();
       return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
@@ -2029,7 +2029,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       survived.recordKept && survived.remKept === 'second note', JSON.stringify(survived));
 
     const b3 = await page.evaluate(() => {
-      const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
+      const n = [...document.querySelectorAll('#cal-today-board .cal-note')]
         .find(x => x.querySelector('.cal-note-text').textContent === '' &&
                    (x.dataset.id === 'rem-d24c'));
       const r = n.querySelector('.cal-note-text').getBoundingClientRect();
@@ -2237,14 +2237,14 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // in the DOM immediately (paintCal is synchronous, issue #363) and the
     // board anchor is untouched — day notes never enter the Requirements span.
     const plus = await page.evaluate(() => {
-      const r = document.querySelector('.cal-day.today .cal-add').getBoundingClientRect();
+      const r = document.getElementById('cal-band-add').getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
     });
     await page.mouse.click(plus.x, plus.y);
     await page.waitForTimeout(200);
     ok('the day-note editor is in the DOM immediately under the add (paintCal synchronous)',
        await page.evaluate(() => {
-         const zone = document.querySelector('.cal-day.today .cal-note-text[contenteditable]');
+         const zone = document.querySelector('#cal-today-board .cal-note-text[contenteditable]');
          return !!zone && zone.textContent === '' && document.activeElement === zone;
        }));
     await page.keyboard.type('D25B square');
@@ -3036,16 +3036,14 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // same card future-event.js addresses). addCalNote paints synchronously
     // (capture precedes structure, §1.1): the editor is in the DOM on arrival.
     const at = await page.evaluate(() => {
-      const card = document.querySelectorAll('.cal-day')[0];
-      const r = card.querySelector('.cal-add').getBoundingClientRect();
+      const r = document.getElementById('cal-band-add').getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
     });
     await page.mouse.click(at.x, at.y);
     await page.waitForTimeout(150);
     ok('the add control opened a fresh square editor in the card, the one zone empty',
       await page.evaluate(() => {
-        const card = document.querySelectorAll('.cal-day')[0];
-        const zone = card.querySelector('.cal-note-text[contenteditable]');
+        const zone = document.querySelector('#cal-today-board .cal-note-text[contenteditable]');
         return !!zone && zone.textContent === '' &&
           document.activeElement === zone;
       }));
@@ -3138,7 +3136,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.evaluate(() => document.getElementById('cal-rail').click());
     await page.waitForTimeout(800);
     const geo = await page.evaluate(() => {
-      const card = document.querySelector('.cal-day.today');
+      const card = document.getElementById('cal-today-board');
       const blocks = [...card.querySelectorAll('.cal-note')];
       const view = document.getElementById('cal-view');
       const month = document.getElementById('cal-month').getBoundingClientRect();
@@ -3149,11 +3147,11 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
         html: document.documentElement.className,
         topSectionGone: !document.getElementById('cal-frame') && !document.getElementById('cal-notes') &&
           !document.getElementById('cal-notes-grid') && !document.getElementById('cal-notes-add'),
-        inCard: blocks.every(b => !!b.closest('.cal-day')),
+        inBody: blocks.every(b => !!b.closest('#cal-today-board')),
         blocks: blocks.length,
         pagerShown: navs.some(b => !b.hidden),
         pagerLabels: navs.map(b => b.textContent),
-        addText: card.querySelector('.cal-add').textContent.trim(),
+        addText: document.getElementById('cal-band-add').textContent.trim(),
         headSize: getComputedStyle(head).fontSize,
         headParent: head.parentElement && head.parentElement.id,
         headFromTop: +(head.getBoundingClientRect().top - vr.top).toFixed(1),
@@ -3165,12 +3163,12 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     ok(`[${w}x${h}] desktop tier active (html.desktop set)`, /desktop/.test(geo.html), geo.html);
     ok(`[${w}x${h}] the top day-note section is gone — no #cal-frame, #cal-notes, grid, or add control (issue #363 item a)`,
       geo.topSectionGone === true, JSON.stringify(geo.topSectionGone));
-    ok(`[${w}x${h}] three squares render INSIDE today's day card — the per-day cap, not six (issue #363 item b)`,
-      geo.inCard && geo.blocks === 3, JSON.stringify([geo.inCard, geo.blocks]));
-    ok(`[${w}x${h}] the ‹/› pager is on the card past three (issue #363 item b, supersedes B147's six)`,
+    ok(`[${w}x${h}] three squares render INSIDE the Today board body — the per-day cap, not six (issues #363 + #384)`,
+      geo.inBody && geo.blocks === 3, JSON.stringify([geo.inBody, geo.blocks]));
+    ok(`[${w}x${h}] the ‹/› pager is on the body past three (issue #363 item b, supersedes B147's six)`,
       geo.pagerShown === true && geo.pagerLabels.includes('‹') && geo.pagerLabels.includes('›'),
       JSON.stringify(geo.pagerLabels));
-    ok(`[${w}x${h}] the card's own add carries its "+" (issue #363 item b)`,
+    ok(`[${w}x${h}] the band's add carries its "+" — today's adder, seated at the bar's right (issues #363 + #384)`,
       geo.addText === '+', JSON.stringify(geo.addText));
     ok(`[${w}x${h}] the day head is the boards' title-card type — 15px — inside the header band's title card (issues #363 + #382)`,
       geo.headSize === '15px' && geo.headParent === 'cal-band-card',

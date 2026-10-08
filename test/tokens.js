@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v133 — version bumped (the #374 Trusted Types re-pin pins this build)',
-    /const CACHE = 'zeved-boards-v133';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v133, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v133';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v134 — version bumped (the #374 Trusted Types re-pin pins this build)',
+    /const CACHE = 'zeved-boards-v134';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v134, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v134';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -871,7 +871,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /function calOrdinal\(/.test(app) && /createElement\('sup'\)/.test(app));
   // --- Issue #382 (B157): the face's header — the boards' top band in the
   // --- calendar's own orange: bar, rule, overhanging title card ---
-  ok('the face\'s header is the boards\' top band in the calendar\'s own orange — full-width bar over the ladder\'s water fall, the 1px rule at its bottom edge, and the title card overhanging the rule by 22px and occluding it, three-sided with var(--card) fill (issue #382; the B38 anatomy, UIUX §3.1), no Components/Requirements zones and no band label',
+  ok('the face\'s header is the boards\' top band in the calendar\'s own orange — full-width bar over the ladder\'s water fall, the 1px rule at its bottom edge, and the title card overhanging the rule by 22px and occluding it, three-sided with var(--card) fill (issue #382; the B38 anatomy, UIUX §3.1 — kept verbatim by #384: the banner, the card\'s flanking sections, the overhang and the border never moved), no Components/Requirements zones and no band label',
     /id="cal-band"/.test(html) && /#cal-band \{/.test(css) &&
     /id="cal-band-rule"/.test(html) && /#cal-band-rule \{[^}]*height: 1px; background: var\(--frame\);/.test(css) &&
     /id="cal-band-card"/.test(html) && /#cal-band-card \{/.test(css) &&
@@ -885,9 +885,26 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /#cal-view\.panel #cal-band \{ margin: -12px -12px 0; \}/.test(css) &&
     (() => { const m = html.slice(html.indexOf('id="cal-band"'), html.indexOf('id="cal-stack"'));
       return !/zone/.test(m) && !/Components/.test(m) && !/Requirements/.test(m); })());
+  // --- Issue #384 (B158): the Today board body — the "+" on the band's right,
+  // --- today's squares in the deep-orange body below, at the day-card measure
+  ok('the band seats today\'s adder at its right — beside the title card, the .cal-add treatment, the one target in the band (issue #384: "moved to the right side of the header bar, to the right of today\'s date title card")',
+    /id="cal-band-add"/.test(html) && /#cal-band-add \{[^}]*position: absolute;/.test(css) &&
+    /#cal-band-add \{[^}]*z-index: 3;/.test(css));
+  ok('the Today board body is the full-width deep-orange body below the band — the title card\'s own var(--card) fill, no border of its own, pulled up 22px so the card\'s overhang lands on it, the fill never running past its own edge and the stack\'s 22px clearance staying (issue #384; B157 untouched, the owner\'s 2026-10-08 corrections: no downward fill, no closed gap)',
+    /id="cal-today-board"/.test(html) && /#cal-today-board \{/.test(css) &&
+    /#cal-today-board \{[^}]*background: var\(--card\);/.test(css) &&
+    /#cal-today-board \{[^}]*margin: 0 -12px 0;/.test(css) &&
+    /#cal-today-board \{[^}]*padding: 22px 6px 4px 90px;/.test(css) &&
+    !/#cal-today-board \{[^}]*border:/.test(css) &&
+    /#cal-view\.panel #cal-today-board \{ margin: 0 -12px 0; \}/.test(css) &&
+    /#cal-stack \{ margin-top: 22px; \}/.test(css));
+  ok('today\'s squares render in the body, inset to the day card\'s date-compartment measure — the row is the .cal-notes grammar, no row "+" of its own (issue #384: a color, not a size — the squares\' own measure untouched)',
+    /renderCalDayNotes\(zone, today, recs, \{ add: false \}\)/.test(app) &&
+    /el\.calTodayBoard\.appendChild\(zone\)/.test(app) &&
+    /#cal-today-board[^{]*\{[^}]*padding[^}]*90px/.test(css));
   ok('the band is the expanded face only — the collapsed rail\'s hide list carries it (issue #382: the rail face untouched, B99)',
     /#cal-view\.rail-open #cal-band,/.test(css) &&
-    /#cal-view\.rail-open #cal-band,\s*\n#cal-view\.rail-open #cal-top,\s*\n#cal-view\.rail-open #cal-stack,\s*\n#cal-view\.rail-open #cal-month \{ display: none; \}/.test(css));
+    /#cal-view\.rail-open #cal-band,\s*\n#cal-view\.rail-open #cal-top,\s*\n#cal-view\.rail-open #cal-stack,\s*\n#cal-view\.rail-open #cal-today-board,\s*\n#cal-view\.rail-open #cal-month \{ display: none; \}/.test(css));
   ok('the top day-note section is deleted — no #cal-frame, no #cal-notes, no .cal-notes-add anywhere in the shipped sources (issue #363: delete it, do not cram or resize)',
     !/id="cal-frame"/.test(html) && !/#cal-frame[ \{]/.test(css) && !/id="cal-notes"/.test(html) &&
     !/#cal-notes[ \{]/.test(css) && !/#cal-notes-grid[ \{]/.test(css) &&
@@ -904,10 +921,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     !/.cal-note-title/.test(css) && !/.cal-note-title/.test(app));
   ok('the square centers vertically in the card\'s notes row — the grid\'s align-items is center (issue #365)',
     /\.cal-notes-grid \{[^}]*align-items: center;/.test(css));
-  ok('the one-zone fill is the Today date card\'s own deep fill var(--card) #251002 — the squares wear the same surface the Today card\'s date compartment samples (issue #371, supersedes B154\'s fill clause only) — flex-absorbed with the re-seated inset, --ink-light contrast unchanged',
+  ok("the one-zone fill is the Calendar ladder's own note rung var(--note) #e3c6aa — the pale orange derived from the four boards' note-card fills at their shared rung, rotated into the calendar's hue (issue #384, supersedes B155's fill clause) — flex-absorbed with the re-seated inset, --ink-dark the note rung's approved pair",
     /\.cal-note-text \{[^}]*flex: 1 1 auto;/.test(css) &&
-    /\.cal-note-text \{[^}]*background: var\(--card\);/.test(css) &&
-    /\.cal-note-text \{[^}]*color: var\(--ink-light\);/.test(css) &&
+    /\.cal-note-text \{[^}]*background: var\(--note\);/.test(css) &&
+    /\.cal-note-text \{[^}]*color: var\(--ink-dark\);/.test(css) &&
     /\.cal-note-text \{[^}]*padding: 4px 6px;/.test(css));
   ok('the fill\'s type is plain text — 12px, weight 400, line-height 1.4 (issue #365: the body\'s own type)',
     /\.cal-note-text \{[^}]*font-size: 12px; font-weight: 400; line-height: 1\.4;/.test(css));
@@ -925,8 +942,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('the face moves up into the freed space — the bottom-anchor seating is superseded, the stack gap widened for the ruling\'s breathing room (issue #363)',
     !/#cal-stack \{ justify-content: flex-end; \}/.test(css) &&
     /#cal-stack \{ gap: 10px; \}/.test(css));
-  ok('the collapsed rail hides the day head and the stack too (issue #329, re-seated by #363)',
-    /#cal-view\.rail-open #cal-stack,/.test(css));
+  ok('the collapsed rail hides the band, the body and the stack too (issue #329, re-seated by #363; the body joined by #384)',
+    /#cal-view\.rail-open #cal-band,\s*\n#cal-view\.rail-open #cal-top,\s*\n#cal-view\.rail-open #cal-stack,\s*\n#cal-view\.rail-open #cal-month \{ display: none; \}/.test(css) ||
+    (/#cal-view\.rail-open #cal-band,/.test(css) && /#cal-view\.rail-open #cal-stack,/.test(css) &&
+     /#cal-view\.rail-open #cal-today-board,/.test(css)));
   ok('today wears the to-do boards\' water fall; the current week gets the pale ink-light band (issue #191)',
     /\.mo-cell\.today \{[^}]*linear-gradient\(180deg, var\(--water-top\) 0%, var\(--water-mid\) 46%, var\(--water-bot\) 100%\)/.test(css) &&
     /\.mo-cell\.wk \{ background: rgb\(244 245 241 \/ \.08\); \}/.test(css));

@@ -191,13 +191,24 @@
          centred on it, overhanging the rule 22px. No Components/Requirements
          zones, no band label — the issue names neither. The day head
          (issue #343/#341 composition) is the card's title; fill by
-         renderCalDayhead(). -->
+         renderCalDayhead(). Issue #384 adds the band's "+" — today's adder,
+         seated at the bar's right, to the right of the title card. -->
     <div id="cal-band">
       <div id="cal-band-rule" aria-hidden="true"></div>
       <div id="cal-band-card">
         <div id="cal-dayhead" role="group" aria-label="Today"></div>
       </div>
+      <button type="button" id="cal-band-add" class="cal-add" aria-label="Add a note"></button>
     </div>
+    <!-- Issue #384: the Today board body — the "today" field combined with the
+         header. Today's day card leaves the weekly stack and becomes this
+         full-width deep-orange body directly under the band (the title card's
+         own var(--card) fill), extended upward so the card's 22px overhang
+         lands on it — band, card and body read as one little board at the
+         top. Today's day-note squares render here at the day cards' own
+         measure (the + is on the band, not in this row); #cal-stack below
+         carries the remaining six days. -->
+    <div id="cal-today-board"></div>
     <div id="cal-stack"></div>
     <div id="cal-month" role="group" aria-label="Month view"></div>
     <!-- B151 (issue #353): the exit control renders LAST — at the view's very

@@ -996,16 +996,17 @@ to the view horizontally, in the view's own light ink (`--ink-light` on the
 (UIUX §13.1; the `.cat-head` token, B63) — a header, not a label (issue #363:
 "larger font size so it reads as a header").
 
-**The 7-day stack.** `#cal-stack` is a column of seven `#cal-day` cards,
-today first — computed at render (R4), never stored — flowing from the top of
+**The 7-day stack.** `#cal-stack` is a column of `#cal-day` cards — the six
+days after today (issue #384: today's card leaves the stack entirely; its
+content is the Today board body above) — computed at render (R4), never
+stored — flowing from the top of
 the view (issue #363 supersedes the bottom-anchor seating of #293/#334: the
 face moves up into the space the deleted top section freed, gap 10px, and
 whatever slack remains falls below the month view). A day card is a
 two-column grid: the date card (`--card`, the day's name over MM/DD) beside
 the day's notes zone on the water's fall. Attention recedes with distance
-from now — today lit (the two-tone outline ring, full scale, `flex 1.6`),
-days with notes near, empty days far (`brightness .6`). Scale and luminance,
-never icons.
+from now — days with notes near, empty days far (`brightness .6`). Scale and
+luminance, never icons.
 
 **The face's header — the boards' top band in the calendar's own orange
 (issue #382, B157).** The expanded face opens with the boards' §3 band
@@ -1027,24 +1028,56 @@ scaling to the line (issue #382, the owner's 2026-10-07 chat direction;
 supersedes B153's 21px display step for THIS title) — with `--ink-light` on
 the deep fill (16.62:1 on #251002, recomputed per §2.3's method), render-only;
 the card carries `pointer-events: none` (the bar and rule are inert ground
-already) `#cal-stack` opens 22px of clearance under the card.
-The collapsed rail's hide list carries the band — the rail face (B99) is
+already).
+Issue #384 adds ONE element to the band: the row's `+` (`#cal-band-add`,
+the `.cal-add` treatment) — today's adder, seated absolute at the bar's
+right, "to the right of today's date title card", above the card in z,
+writing the same `day`-field record (B153's binding; B153's per-card seat
+superseded for the today card — the other six day cards keep theirs).
+The band's own anatomy is otherwise untouched by #384.
+
+**The Today board body (issue #384, B158).** Today's day card leaves the
+weekly stack and becomes `#cal-today-board` — the full-width deep-orange
+body directly below the band, the title card's OWN fill (`var(--card)`
+#251002: "the background of the event note cards for 'today' needs to be
+the deep orange like the background of a to do board but in this orange
+palette"), no grey border of its own ("the grey border removed"), pulled
+up 22px so the card's overhang LANDS ON it — band, card and body read as
+one little board at the top (the owner's "becomes like a little board at
+the top"); the fill never runs past the body's own bottom edge and the
+stack's 22px clearance stays (the owner's 2026-10-08 corrections: the
+banner, the card's flanking sections, the overhang, the squares' size, the
+fill's downward reach and the gap to tomorrow's card were never in scope).
+The body's zone is the `.cal-notes` row grammar inset to the day card's
+date compartment (84px + the shared 6px), so today's squares sit and size
+exactly where a day card's squares sit. The collapsed rail's hide list
+carries the band and the body — the rail face (B99) is
 untouched.
 
-**The day-note squares (issues #363 + #371; one zone, issue #365).** The top
+**The day-note squares (issues #363 + #371 + #384; one zone, issue #365).**
+The top
 day-note section
 (`#cal-frame`, #329/#331/#336) is deleted on every tier. Its records render
-as ONE-zone orange square blocks INSIDE each day card (issue #365 — the
+as ONE-zone square blocks (issue #365 — the
 lighter title band is deleted and the deep orange fill expands to the top of
-the square, the square one large body): the fill `var(--card)` (#251002) —
-the Today date card's own deep fill, the exact surface the issue sampled;
-issue #371, supersedes ONLY B154's fill clause (the `--water-mid` ladder
-rung) — with `--ink-light` in plain-text type
+the square, the square one large body): the fill `var(--note)` — the
+Calendar ladder's own note rung, `#e3c6aa` (UIUX §2.2.2, issue #168): the
+owner's "a new color derived using its palette, deriving from the note
+cards' fill on to do boards, learning boards, Idea boards, and notes
+boards" — the four ladders' note rungs share the axis (luminance 0.5962),
+and the Calendar ladder carries that rung already rotated into the
+calendar's orange hue; the owner's "I don't believe we have a token for
+that color yet" is answered by measurement — the token exists, `var(--note)`
+under `#cal-view` — supersedes ONLY B155's fill clause (the `var(--card)`
+#251002 fill) — with `--ink-dark` #031019, the note rung's approved pair
+(11.84:1, §2.3) in plain-text type
 (12px, weight 400, line-height 1.4, the body's own type), the B72 inset frame
 (`outline: 2px solid var(--frame)`), radius 4px; the squares center
-vertically in the card's notes row (`align-items: center`). Three squares per
-day, the card's `+` rightmost, and a `‹`/`›` pager (the `.mo-nav` grammar) on
-the card when a day holds more than three. The zone writes the record's
+vertically in the notes row (`align-items: center`). Three squares per
+day, and a `‹`/`›` pager (the `.mo-nav` grammar) when a day holds more than
+three; each non-today day card's `+` rightmost (issue #384 seats today's `+`
+on the band's right). The squares' own measure is untouched (issue #384: a
+color, not a size). The zone writes the record's
 `next` field (a legacy calKey value there renders as an empty body — nothing
 is rewritten); `rem` is no longer rendered and stays stored-but-unread (the
 #323 disposition — nothing migrated, nothing destroyed); the `+` writes a NEW
@@ -1055,10 +1088,11 @@ square's whole read). Calendar events never render in the weekly stack (the
 cards show only day-note squares); the event records and their mirror sync
 with the linked To-Do boards continue untouched.
 
-**Capture.** Each day's zone carries the card's `+` — the calendar edition
+**Capture.** Each day's zone carries the day card's `+` — the calendar edition
 of §6.2: tap and type, the caret arrives with the tap, in the square (issue
-#365: the square's one zone). Commit-on-blur writes the record; an empty
-commit discards (B8).
+#365: the square's one zone). Today's `+` is seated on the band's right
+(issue #384); its squares render in the body below. Commit-on-blur writes
+the record; an empty commit discards (B8).
 
 ---
 
