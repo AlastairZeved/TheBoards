@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v134 — version bumped (the #374 Trusted Types re-pin pins this build)',
-    /const CACHE = 'zeved-boards-v134';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v134, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v134';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v135 — version bumped (issue #385/B159: the weekend cards)',
+    /const CACHE = 'zeved-boards-v135';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v135, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v135';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -945,6 +945,18 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     !/function makeCalLine/.test(app) && !/function addCalEvent/.test(app) &&
     !/function startCalLineEdit/.test(app) && !/cal-lines/.test(css) &&
     /export async function syncDateMirror/.test(app));
+  // --- Issue #385 / B159: the weekend cards (To Do boards' blue palette) ---
+  ok('makeCalDay stamps weekend on Saturday/Sunday cards alongside, never instead of, the near/far recede classes — today excluded by construction (issue #385, B159)',
+    /getDay\(\) === 0 \|\| day\.date\.getDay\(\) === 6 \? ' weekend' : ''/.test(app) &&
+    /dayNotes\.length \? ' near' : ' far'/.test(app));
+  ok("the weekend fill is the Parking Lot's own background fill — the #lot composite (radial vignette rgb(22 54 70 / 0.72) at 128% over the linear fall) drawn in the To Do ladder's blue water values, one surface edge to edge (issue #385, B159)",
+    /\.cal-day\.weekend::before \{\s*\n\s*background:\s*\n\s*radial-gradient\(118% 76% at 50% 24%, rgb\(0 0 0 \/ 0\) 32%, rgb\(22 54 70 \/ 0\.72\) 128%\),\s*\n\s*linear-gradient\(180deg, #34697f 0%, #255265 46%, #163646 100%\);/.test(css));
+  ok("the weekend date compartment's own --card fill drops (the gradient reaches both edges); the near/far dark overrides stand down with it, seated after theirs (issue #385, B159)",
+    /\.cal-day\.weekend \.cal-date \{ background: transparent; \}/.test(css) &&
+    css.indexOf('.cal-day.weekend .cal-date') > css.indexOf('.cal-day.far .cal-date'));
+  ok("the weekend squares take the blue ladder's title-card rung: #08152c fill, #698ebf inset frame, --ink-light ink (issue #385, B159)",
+    /\.cal-day\.weekend \.cal-note \{ outline-color: #698ebf; \}/.test(css) &&
+    /\.cal-day\.weekend \.cal-note-text \{ background: #08152c; color: var\(--ink-light\); \}/.test(css));
   ok('the face moves up into the freed space — the bottom-anchor seating is superseded, the stack gap widened for the ruling\'s breathing room (issue #363)',
     !/#cal-stack \{ justify-content: flex-end; \}/.test(css) &&
     /#cal-stack \{ gap: 10px; \}/.test(css));

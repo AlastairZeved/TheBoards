@@ -1058,6 +1058,29 @@ the old inset). The collapsed rail's hide list
 carries the band and the body — the rail face (B99) is
 untouched.
 
+**The weekend cards (issue #385, B159).** Saturday and Sunday day cards in
+the weekly stack take the To Do boards' blue palette (the To Do ladder,
+§2.2). The fill is the Parking Lot's own background fill (§3.2 `#lot`: the
+radial vignette, `rgb(22 54 70 / 0.72)` at 128%, over the linear water fall)
+drawn in the blue ladder's values — `#34697f` → `#255265` (46%) → `#163646`
+(the calendar view binds the orange ladder, so the blue rungs arrive as
+values, not tokens). The fill is ONE surface for the whole card, edge to
+edge: the date compartment's own `--card` fill drops on weekend cards (the
+gradient reaches the card's left and right edges, the date and the events
+all captured with the same background fill), the 1px `--hairline` divider
+between the date and the events stays, and the padding between days stays
+(the stack's own gap). The recede treatment keeps its grip: `near`/`far`'s
+brightness filters apply to the weekend fill exactly as to the others (the
+owner's ruling of 2026-10-08: the blue replaces the hue underneath). The
+date's `--ink-light` ink rides the water's own approved pairs on the blue
+ladder — 5.52:1 on the lightest stop, 11.62:1 on the darkest (§2.3). The
+squares switch to the blue ladder's title-card rung: fill `#08152c`
+(`--card`, To Do), inset frame `#698ebf` (`--frame`, To Do), ink
+`--ink-light` `#f4f5f1` (16.62:1 on #08152c, §2.3's approved pair) — the
+owner's "the little squares switch to the title card fill and border
+color". Today's card is excluded: it renders in the body above, its own
+component (B158).
+
 **The day-note squares (issues #363 + #371 + #384; one zone, issue #365).**
 The top
 day-note section
