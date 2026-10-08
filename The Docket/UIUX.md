@@ -1083,8 +1083,9 @@ three; each non-today day card's `+` rightmost (issue #384 seats today's `+`
 on the band's right). Every "+" is a BOUNDED button — a 2px `--frame` border
 drawing the click space, one 28px box with the glyph centered in it,
 vertically centered in its row (`align-self: center`); the day buttons are
-pushed over so their boxes' right edges land on the band button's right
-edge (the owner's correction of 2026-10-08: "centered in that upper right
+pushed over so their boxes' CENTRES align on the band button's centre — the
+right-of-card section's centre, measured per paint by `seatCalAdds()` (the
+card's width is `max-content`, so the centre is not a static offset)
 corner within its section. Not pushed to the right. It also needs a border
 around it, a visual click space that bounds the button. they all need this
 treatment, every single day should have it's button pushed over, aligned

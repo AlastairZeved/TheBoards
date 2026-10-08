@@ -1991,10 +1991,11 @@ html.wide #cal-export { margin-left: auto; }
   z-index: 2;                          /* DOM-latest over the rule — the card occludes it */
   pointer-events: none;
 }
-#cal-band-add {                        /* issue #384: today's adder, on the band's right */
+#cal-band-add {                        /* issue #384: today's adder, CENTERED in the band's right-of-card section — the section's centre, set per paint (the card's width is max-content, so the centre is measured, not guessed) */
   position: absolute;
-  right: 10px;
-  top: 50%; transform: translateY(-50%);
+  top: 50%;
+  transform: translate(-50%, -50%);    /* the box's own centre lands on the section's centre */
+  left: var(--cal-add-x, 75%);
   z-index: 3;                          /* above the card — it sits beside it, never under it */
 }
 /* Issue #384: the Today board body — the "today" field combined with the
@@ -2179,11 +2180,17 @@ html.wide #cal-export { margin-left: auto; }
   cursor: pointer;
   transition: filter 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-/* Every day's "+" is pushed over to where today's sits: its box's right
-   edge lands on the band button's right edge (the row's content edge is the
-   card's right minus the 6px zone padding, so -8px closes the card's own
-   12px view padding minus the band's 10px inset). */
-.cal-notes-row .cal-add { margin-right: -8px; }
+/* Every day's "+" is pushed over to align WITH today's: its box's CENTRE
+   lands on the band button's centre (the section's centre, the same
+   --cal-add-x measurement), set per paint from the band's geometry — the
+   owner's correction: "move every + button in the weekly view over to align
+   with it". Absolute against the card's own zone (position:relative), so
+   the box rides the row's redraws. */
+.cal-notes-row .cal-add {
+  position: absolute;
+  right: var(--cal-add-right, 6px);
+  top: 50%; transform: translateY(-50%);
+}
 .cal-add:hover, .cal-add:focus-visible { opacity: 1; }
 /* Attention recedes with distance from now (the mockups' law): today lit,
    the rest receded — scale and luminance, never icons. */

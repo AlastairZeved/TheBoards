@@ -1252,6 +1252,25 @@ function paintCal(all) {
     el.calStack.appendChild(makeCalDay(day, notes.filter((r) => r.day === day.key), board));
   }
   renderCalMonth(new Set(events.map((e) => e.date)));
+  seatCalAdds();                       // issue #384: the band's and every day's "+" — one measurement drives both
+}
+
+/* The "+" seats (issue #384, the owner's corrections): the band's button is
+   CENTERED in the band's right-of-card section, and every day card's button
+   is pushed over so its CENTRE aligns with the band button's centre. The
+   card's width is max-content (B37), so the section's centre is measured,
+   not guessed: one geometry read per paint sets both CSS vars, and the CSS
+   positions every box from them. The 14px is half the 28px box. */
+function seatCalAdds() {
+  const band = el.calBand.getBoundingClientRect();
+  const card = el.calBandCard.getBoundingClientRect();
+  const mid = (card.right + band.right) / 2;           // the right-of-card section's centre, band-relative below
+  el.calView.style.setProperty('--cal-add-x', (mid - band.left) + 'px');
+  const zone = document.querySelector('#cal-stack .cal-notes');
+  if (zone) {
+    const zr = zone.getBoundingClientRect();
+    el.calView.style.setProperty('--cal-add-right', (zr.right - mid - 14) + 'px');
+  }
 }
 
 /* --- The day-note squares (issue #363) -------------------------------------

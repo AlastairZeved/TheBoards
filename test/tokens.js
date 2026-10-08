@@ -893,7 +893,9 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /\.cal-add \{[^}]*border: 2px solid var\(--frame\);/.test(css) &&
     /\.cal-add \{[^}]*width: 28px; height: 28px;/.test(css) &&
     /\.cal-add \{[^}]*align-self: center;/.test(css) &&
-    /\.cal-notes-row \.cal-add \{ margin-right: -8px; \}/.test(css));
+    /\.cal-notes-row \.cal-add \{[^}]*right: var\(--cal-add-right, 6px\);/.test(css) &&
+    /#cal-band-add \{[^}]*left: var\(--cal-add-x, 75%\);/.test(css) &&
+    /seatCalAdds\(\)/.test(app) && /--cal-add-x/.test(app) && /--cal-add-right/.test(app));
   ok('the Today board body is the full-width deep-orange body below the band — the title card\'s own var(--card) fill, no border of its own, its top at the rule so the card\'s overhang lands on it, the fill never running past its own edge and the stack\'s 22px clearance staying (issue #384; B157 untouched, the owner\'s corrections: no downward fill, no closed gap)',
     /id="cal-today-board"/.test(html) && /#cal-today-board \{/.test(css) &&
     /#cal-today-board \{[^}]*background: var\(--card\);/.test(css) &&
