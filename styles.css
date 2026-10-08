@@ -1940,56 +1940,50 @@ html.wide #cal-export { margin-left: auto; }
    is DELETED on every tier — no frame, no fill, no upper line. (Issue #382
    moved the day head out of the stack: the header band below is the face's
    first content now — see B157.) */
-/* Issue #382 (B157): the face's header — the boards' top band (§3) drawn in
-   the calendar's own orange ladder, no Components/Requirements zones and no
-   band label (the issue names neither): the full-width bar over the ladder's
-   water fall, the 1px full-width rule at the bar's bottom edge, and the
-   date's title card centred on the rule — the card overhangs it by 22px and
-   occludes it (B38's anatomy, UIUX §3.1), three-sided (the face's own top
-   edge is its fourth), 2px --frame border without the top, var(--card) deep
-   fill, bottom corners only. Sized by the type it holds (B37): the card
-   wraps the 21px head (width max-content, no orphan strip beside it), with
-   the boards' band floor (61px) and overhang (22px) kept verbatim. Static
-   furniture: nothing in the band is a target — the card carries
-   pointer-events:none (§7's recognizer rule; the bar and rule are inert
-   ground already). Edge-to-edge: the bar runs the component's FULL
-   width, so it spends the view's own padding on every tier. */
+/* Issue #382 (B157), merged by issue #384 (B158): the face's header band IS
+   the Today board now — the boards' top band anatomy (§3) re-seated as one
+   element: the full-width title row (the date's title, the B149 head) with
+   the row's "+" seated at its right, the 1px rule at the title row's bottom
+   edge, and today's day-note squares in the row below. The whole board wears
+   the title card's own deep fill var(--card) #251002 — the owner's
+   correction: "the gradient background behind the little squares needs to
+   change to the deep orange fill like the title card's fill" — so the water
+   fall the bar carried is replaced by the card fill everywhere in the band.
+   The grey border is gone ("the grey border removed") — no --frame border on
+   the card; the board's own edges (the face's top edge, the rule) are its
+   borders. Edge-to-edge: the board runs the component's FULL width and
+   extends upward, so it spends the view's own padding on every tier. */
 #cal-band {
   flex: 0 0 auto;
   position: relative;
-  height: 61px;                        /* --rule-y's two-line floor (UIUX §3.1) */
+  background: var(--card);             /* #251002 — the deep orange fill (issue #384) */
   margin: -10px -12px 0;               /* the view's own padding, spent */
-  background:
-    radial-gradient(118% 76% at 50% 24%, rgb(0 0 0 / 0) 32%, rgb(var(--water-bot-a) / 0.72) 128%),
-    linear-gradient(180deg, var(--water-top) 0%, var(--water-mid) 46%, var(--water-bot) 100%);
 }
 #cal-view.panel #cal-band { margin: -12px -12px 0; }   /* the panel's 12px padding, spent the same way */
-#cal-band-rule {                       /* same weight and idiom as #band-rule (B61) */
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 1px; background: var(--frame);
-  z-index: 1;
-}
-#cal-band-card {
-  position: absolute;
-  top: 0; left: 50%; transform: translateX(-50%);
-  width: max-content;
-  max-width: calc(100% - 24px);
-  min-height: calc(61px + 22px);       /* the B38 overhang: 22px past the rule, occluding it */
+#cal-band-card {                       /* the title row: the full-width date card (issue #384) */
+  position: relative;
+  min-height: 61px;                    /* the boards' band floor (UIUX §3.1) kept */
   display: flex;
   align-items: center; justify-content: center;
-  padding: 20px 12px 12px;             /* --band-top + 6 / 12 / 12 — the boards' own paddings */
-  border: 2px solid var(--frame);
-  border-top: 0;
-  border-radius: 0 0 3px 3px;          /* only the corners that exist */
-  background: var(--card);             /* #251002 — the ladder's card rung, the calendar's orange */
-  z-index: 2;                          /* DOM-latest over the rule — the card occludes it */
-  pointer-events: none;
+  padding: 12px 44px;                  /* the right padding clears the seated "+" */
+  background: var(--card);             /* the same deep fill as the board (issue #384) */
 }
-/* The card's overhang spends downward into the stack's ground, so the stack
-   opens a row of clearance for it — the card hangs over whitespace, never
-   over a day card's frame. */
-#cal-stack { margin-top: 22px; }
+/* The "+" — today's adder (issue #384), seated at the title row's right,
+   right of the date title, per the owner's "moved to the right side of the
+   header bar, to the right of today's date title card". It is the one target
+   in the band (the row's ground is inert); the .cal-add treatment kept. */
+#cal-band-add {
+  position: absolute;
+  right: 12px;
+  top: 50%; transform: translateY(-50%);
+}
+#cal-band-rule {                       /* same weight and idiom as #band-rule (B61) — now the title row's bottom edge */
+  height: 1px; background: var(--frame);
+}
+/* Today's day-note squares render in the row below the rule (issue #384) —
+   the .cal-notes row grammar (three shown, ‹/› pager beyond three), on the
+   board's deep-orange ground. The band's own padding seats the row. */
+#cal-band-notes { padding: 10px 12px; }
 /* Issue #343: the day head — today's date, the weekday with it and the
    ordinal suffix as superscript ("Friday, October 2nd", issue #341) — moved
    INTO the title card by issue #382 (B157): the head is the card's title,
@@ -2015,9 +2009,11 @@ html.wide #cal-export { margin-left: auto; }
 /* Issue #363: the day-note squares, moved INTO the day cards — each card's
    zone is one row: the ‹/› pager (only when the day holds more than three),
    the day's squares (three shown, the .mo-nav grammar), and the card's "+"
-   rightmost. Tokens only — the ladder #cal-view already binds (B117; one zone per
-   issue #365): the body var(--card) — the Today date card's own deep fill
-   (issue #371, B155) — with --ink-light under the view's .on-dark, radius 4px. */
+   rightmost. (Issue #384: today's row renders in the band — no row "+" of
+   its own; the band seats today's "+" in the title row.) Tokens only — the
+   ladder #cal-view already binds (B117; one zone per issue #365): the body
+   var(--note) — the calendar's note rung, #e3c6aa (issue #384, superseding
+   B155's fill clause) — with --ink-dark, radius 4px. */
 .cal-notes {
   position: relative;
   padding: 4px 6px;
@@ -2065,15 +2061,20 @@ html.wide #cal-export { margin-left: auto; }
   gap: 0;                               /* the fill meets flush inside the frame — no gutter of the view's ground */
   padding: 0;                           /* the inset re-seats onto the zone below */
 }
-/* Issues #365 + #371: ONE zone — the title band is deleted, the fill is one
-   large body. Issue #371's ruling moves the fill to var(--card) — the Today
-   date card's own deep fill (#251002), the calendar ladder's card rung, the
-   exact surface sampled in the issue; --ink-light contrast unchanged, plain
-   text type. `rem` renders nowhere (the #323 disposition, stored-but-unread). */
+/* Issues #365 + #371 + #384: ONE zone — the title band is deleted, the fill is one
+   large body. Issue #384's ruling moves the fill to var(--note) — the Calendar
+   ladder's own note rung, #e3c6aa, the pale orange derived from the four
+   boards' note-card fills (#a0d4da/#b9d2b2/#cec6ed/#e6c2c9) at their shared
+   rung, rotated into the calendar's hue (UIUX §2.2.2, issue #168) — the
+   owner's "a new color derived using its palette, deriving from the note
+   cards' fill" (the derivation was on record already; the owner's "I don't
+   believe we have a token" is answered by the §2.2.2 table). With it the ink
+   moves to the note rung's own pair: --ink-dark #031019, 11.84:1 (UIUX §2.3).
+   `rem` renders nowhere (the #323 disposition, stored-but-unread). */
 .cal-note-text {
   flex: 1 1 auto;                       /* the fill reaches the frame's bottom edge */
-  background: var(--card);              /* #251002 — the Today date card's deep fill (issue #371) */
-  color: var(--ink-light);              /* #f4f5f1 under #cal-view's .on-dark — 7.75:1 */
+  background: var(--note);              /* #e3c6aa under #cal-view — the calendar's note rung (issue #384) */
+  color: var(--ink-dark);               /* #031019 — the note rung's approved pair, 11.84:1 (UIUX §2.3) */
   font-size: 12px; font-weight: 400; line-height: 1.4;   /* plain text (issue #365) */
   padding: 4px 6px;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
@@ -2120,11 +2121,10 @@ html.wide #cal-export { margin-left: auto; }
   transition: filter 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 .cal-add:hover, .cal-add:focus-visible { opacity: 1; }
-/* Attention recedes with distance from now (the mockups' law): today lit,
-   the rest receded — scale and luminance, never icons. */
-.cal-day.today { flex: 1.6 1 0; max-height: calc(21.05% - 9px); outline: 2px solid var(--ink-light); outline-offset: 1px;
-  box-shadow: 0 0 0 3px var(--ink-dark); }   /* #170: the cap is today's old flex share — 1.6/7.6 of the stack minus the gaps — so today's size survives the shrink verbatim; the leftovers it no longer absorbs render above the day list as intended whitespace (issue #293) */
-.cal-day.today .cal-d1 { font-size: 14px; }
+/* Attention recedes with distance from now (the mockups' law): days with
+   notes near, empty days far — scale and luminance, never icons.
+   (Issue #384: today's own lit treatment retired with its stack seat — the
+   band IS the lit surface now.) */
 .cal-day.near { opacity: .88; }
 .cal-day.near::before { filter: brightness(.8); }
 .cal-day.near .cal-date { background: #050b18; }

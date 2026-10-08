@@ -996,55 +996,72 @@ to the view horizontally, in the view's own light ink (`--ink-light` on the
 (UIUX §13.1; the `.cat-head` token, B63) — a header, not a label (issue #363:
 "larger font size so it reads as a header").
 
-**The 7-day stack.** `#cal-stack` is a column of seven `#cal-day` cards,
-today first — computed at render (R4), never stored — flowing from the top of
+**The 7-day stack.** `#cal-stack` is a column of `#cal-day` cards — the six
+days after today (issue #384: today's card leaves the stack entirely; its
+content is the band above) — computed at render (R4), never stored — flowing
+from the top of
 the view (issue #363 supersedes the bottom-anchor seating of #293/#334: the
 face moves up into the space the deleted top section freed, gap 10px, and
 whatever slack remains falls below the month view). A day card is a
 two-column grid: the date card (`--card`, the day's name over MM/DD) beside
 the day's notes zone on the water's fall. Attention recedes with distance
-from now — today lit (the two-tone outline ring, full scale, `flex 1.6`),
-days with notes near, empty days far (`brightness .6`). Scale and luminance,
-never icons.
+from now — days with notes near, empty days far (`brightness .6`). Scale and
+luminance, never icons.
 
-**The face's header — the boards' top band in the calendar's own orange
-(issue #382, B157).** The expanded face opens with the boards' §3 band
-anatomy, no Components/Requirements zones and no band label: `#cal-band` —
-the full-width bar over the ladder's water fall (the `#band-fill`
-construction verbatim, `var(--water-top/mid/bot)` + `--water-bot-a` under
-`#cal-view`), 61px tall (the `--rule-y` two-line floor, UIUX §3.1) and
-edge-to-edge on every tier (mobile's 10/12 and the panel's 12 padding spent
-as negative margins); `#cal-band-rule` — the 1px full-width rule at the
-bar's bottom edge, `var(--frame)`; `#cal-band-card` — the title card centred
-on the rule, overhanging it 22px and occluding it (z 2 over the rule's
-z 1 — B38), three-sided (the face's own top edge is its fourth), 2px
-`--frame` border without the top, radius `0 0 3px 3px`, `var(--card)`
-#251002 fill, min-height `calc(61px + 22px)`, width `max-content` around the
-type (B37). The day head (`#cal-dayhead`, the B149 composition) renders
-inside the card as its title in the boards' title-card type — **15px/600/1.3,
-`#anchor-title`'s very format, one line** (`white-space: nowrap`), the card
-scaling to the line (issue #382, the owner's 2026-10-07 chat direction;
-supersedes B153's 21px display step for THIS title) — with `--ink-light` on
-the deep fill (16.62:1 on #251002, recomputed per §2.3's method), render-only;
-the card carries `pointer-events: none` (the bar and rule are inert ground
-already) `#cal-stack` opens 22px of clearance under the card.
-The collapsed rail's hide list carries the band — the rail face (B99) is
+**The face's header — the Today board (issues #382 + #384; B157, merged by
+B158).** The expanded face opens with the boards' §3 band anatomy re-seated
+as ONE element — the Today board itself, the owner's request: "the 'Today'
+and Today's Date title and header bar need to be combined... the 'Today'
+date needs to extend both left and right to fill the page with the grey
+border removed, extended upwards so it becomes like a little board at the
+top." `#cal-band` — full-width, edge-to-edge on every tier (mobile's 10/12
+and the panel's 12 padding spent as negative margins), wearing the title
+card's own deep fill `var(--card)` #251002 everywhere: the owner's
+correction (2026-10-07) — "the gradient background behind the little squares
+needs to change to the deep orange fill like the title card's fill" — so
+the water fall the bar carried (B157) is replaced by the card fill, and the
+grey border is removed ("the grey border removed": no `--frame` border on
+the card; the board's own edges — the face's top edge and the rule — are its
+borders). Inside it, from the top: `#cal-band-card` — the full-width title
+row, min-height 61px (the boards' band floor, UIUX §3.1), the day head
+(`#cal-dayhead`, the B149 composition) centered in the boards' title-card
+type — **15px/600/1.3, `#anchor-title`'s very format, one line**
+(`white-space: nowrap`; issue #382, the owner's 2026-10-07 chat direction) —
+with `--ink-light` on the deep fill (16.62:1 on #251002, recomputed per
+§2.3's method); the row's `+` (`#cal-band-add`, the `.cal-add` treatment) —
+today's adder, seated at the title row's right, "to the right of today's
+date title card", writing the same `day`-field record (B153's binding; B153's
+per-card seat superseded for the today card — the other six day cards keep
+theirs); `#cal-band-rule` — the 1px full-width rule at the title row's
+bottom edge, `var(--frame)`, now a flow divider inside the board; and
+`#cal-band-notes` — today's day-note squares in the row below the rule
+(three shown, the ‹/› pager beyond three, no row `+` of its own). The
+collapsed rail's hide list carries the band — the rail face (B99) is
 untouched.
 
-**The day-note squares (issues #363 + #371; one zone, issue #365).** The top
+**The day-note squares (issues #363 + #371 + #384; one zone, issue #365).**
+The top
 day-note section
 (`#cal-frame`, #329/#331/#336) is deleted on every tier. Its records render
-as ONE-zone orange square blocks INSIDE each day card (issue #365 — the
+as ONE-zone square blocks (issue #365 — the
 lighter title band is deleted and the deep orange fill expands to the top of
-the square, the square one large body): the fill `var(--card)` (#251002) —
-the Today date card's own deep fill, the exact surface the issue sampled;
-issue #371, supersedes ONLY B154's fill clause (the `--water-mid` ladder
-rung) — with `--ink-light` in plain-text type
+the square, the square one large body): the fill `var(--note)` — the
+Calendar ladder's own note rung, `#e3c6aa` (UIUX §2.2.2, issue #168): the
+owner's "a new color derived using its palette, deriving from the note
+cards' fill on to do boards, learning boards, Idea boards, and notes
+boards" — the four ladders' note rungs share the axis (luminance 0.5962),
+and the Calendar ladder carries that rung already rotated into the
+calendar's orange hue; the owner's "I don't believe we have a token for
+that color yet" is answered by measurement — the token exists, `var(--note)`
+under `#cal-view` — supersedes ONLY B155's fill clause (the `var(--card)`
+#251002 fill) — with `--ink-dark` #031019, the note rung's approved pair
+(11.84:1, §2.3) in plain-text type
 (12px, weight 400, line-height 1.4, the body's own type), the B72 inset frame
 (`outline: 2px solid var(--frame)`), radius 4px; the squares center
-vertically in the card's notes row (`align-items: center`). Three squares per
-day, the card's `+` rightmost, and a `‹`/`›` pager (the `.mo-nav` grammar) on
-the card when a day holds more than three. The zone writes the record's
+vertically in the notes row (`align-items: center`). Three squares per
+day, and a `‹`/`›` pager (the `.mo-nav` grammar) when a day holds more than
+three; each non-today day card's `+` rightmost (issue #384 seats today's `+`
+in the band's title row). The zone writes the record's
 `next` field (a legacy calKey value there renders as an empty body — nothing
 is rewritten); `rem` is no longer rendered and stays stored-but-unread (the
 #323 disposition — nothing migrated, nothing destroyed); the `+` writes a NEW
@@ -1055,10 +1072,11 @@ square's whole read). Calendar events never render in the weekly stack (the
 cards show only day-note squares); the event records and their mirror sync
 with the linked To-Do boards continue untouched.
 
-**Capture.** Each day's zone carries the card's `+` — the calendar edition
+**Capture.** Each day's zone carries the day card's `+` — the calendar edition
 of §6.2: tap and type, the caret arrives with the tap, in the square (issue
-#365: the square's one zone). Commit-on-blur writes the record; an empty
-commit discards (B8).
+#365: the square's one zone). Today's `+` is seated in the band's title row
+(issue #384); the row's squares render under it. Commit-on-blur writes the
+record; an empty commit discards (B8).
 
 ---
 

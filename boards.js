@@ -1225,8 +1225,11 @@ function paintCal(all) {
   // Issue #343: the day head rode inside #cal-stack as its first child,
   // where the stack's bottom-anchor seated it directly above the day rows.
   // Issue #382 (B157): the head moved into the header band — a static child
-  // of #cal-band-card in index.html, above the stack; the stack is the day
-  // rows only, and the freed top space still falls out above the day list.
+  // of #cal-band-card in index.html, above the stack. Issue #384 (B158):
+  // the band IS the Today board — today's card leaves the stack entirely;
+  // its day-note squares render in the band (renderCalToday), the stack is
+  // the remaining six day rows, and the freed top space still falls out
+  // above the day list.
   renderCalDayhead();
   // §6/B7's collar on the exit row (issue #156, B98; retargeted by B134,
   // issue #259): the row's tab draws at the floor as a visible frame now, and
@@ -1241,7 +1244,10 @@ function paintCal(all) {
   const days = calWeekAnchor ? calWeekOf(calWeekAnchor) : calWindow();
   const events = eventsOf(all);      // event records ride the boards store (§1.7)
   const notes = calNoteRecords(all); // the day-note records (issue #363: per day)
+  const today = days.find((d) => d.today);
+  if (today) renderCalToday(today, notes.filter((r) => r.day === today.key));
   for (const day of days) {
+    if (day.today) continue;         // issue #384: today renders in the band, not the stack
     const board = calBoardOf(all, day.key);
     el.calStack.appendChild(makeCalDay(day, notes.filter((r) => r.day === day.key), board));
   }
@@ -1310,10 +1316,13 @@ function renderCalDayhead() {
    the ‹/› pager on
    the card when the day holds more than three (the .mo-nav grammar; page
    state is per day, render-time only, nothing stored). Calendar events are
-   never read here. */
+   never read here. opts.add === false omits the row's "+" — issue #384:
+   today's row renders inside the band, where the "+" is seated in the title
+   row (el.calBandAdd), not beside the squares. */
 const CAL_PAGER = { prev: '‹', next: '›' };
 
-function renderCalDayNotes(zone, day, recs) {
+function renderCalDayNotes(zone, day, recs, opts) {
+  const withAdd = !(opts && opts.add === false);
   const row = document.createElement('div');
   row.className = 'cal-notes-row';
   const pages = Math.max(1, Math.ceil(recs.length / CAL_NOTE_PER_DAY));
@@ -1355,17 +1364,38 @@ function renderCalDayNotes(zone, day, recs) {
     // The card's "+": right of the squares. It adds a DAY NOTE to this date —
     // the event-add chain it used to run (R5's linked-board trigger) retired
     // with the lines; the sync machinery itself keeps syncing without it.
-    const add = document.createElement('button');
-    add.type = 'button';
-    add.className = 'cal-add';
-    add.setAttribute('aria-label', 'Add a note ' + calMD(day.date));
-    add.textContent = '+';
-    add.addEventListener('click', () => addCalNote(day.key));
-    row.appendChild(add);
+    // Issue #384: today's row omits it — the band's title row seats today's
+    // "+" instead (renderCalToday).
+    if (withAdd) {
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'cal-add';
+      add.setAttribute('aria-label', 'Add a note ' + calMD(day.date));
+      add.textContent = '+';
+      add.addEventListener('click', () => addCalNote(day.key));
+      row.appendChild(add);
+    }
     zone.textContent = '';
     zone.appendChild(row);
   };
   draw();
+}
+
+/* Issue #384 (B158): the band IS the Today board. Today's card leaves the
+   weekly stack entirely; its date title (the B149 head composition, already
+   rendered in the title row by renderCalDayhead) sits over the band's
+   full-width deep-orange ground, the row's "+" (el.calBandAdd) seated at the
+   title row's right — today's adder, the same `day`-field binding — and
+   today's day-note squares render in the row below the 1px rule (the pager
+   and cap unchanged; no row "+" of their own). */
+function renderCalToday(today, recs) {
+  const add = el.calBandAdd;
+  add.setAttribute('aria-label', 'Add a note ' + calMD(today.date));
+  add.textContent = '+';
+  add.onclick = () => addCalNote(today.key);
+  const zone = el.calBandNotes;
+  zone.className = 'cal-notes on-dark';
+  renderCalDayNotes(zone, today, recs, { add: false });
 }
 
 /* Add a day note to a date (the one consequence, under commitAction's guard):

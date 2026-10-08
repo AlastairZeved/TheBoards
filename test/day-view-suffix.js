@@ -73,7 +73,7 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     const before = await page.evaluate(async () => {
       const tk = calKey(new Date());
       return {
-        texts: [...document.querySelectorAll('.cal-day.today .cal-note-text')].map(b => b.textContent),
+        texts: [...document.querySelectorAll('#cal-band .cal-note-text')].map(b => b.textContent),
         stored: (await idbGetAll()).filter(r => r.day === tk).map(r => r.next),
       };
     });
@@ -81,7 +81,7 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
       before.texts.length === 2 &&
       before.texts.every(l => l === '9-2' || l === '1-2'), JSON.stringify(before));
 
-    const addPos = await center(page, '.cal-day.today .cal-add');
+    const addPos = await center(page, '#cal-band-add');
     await tap(page, addPos.x, addPos.y);
     await page.waitForTimeout(300);
     await page.keyboard.type('NEW BLOCK ENTRY');
@@ -91,7 +91,7 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     const after = await page.evaluate(async () => {
       const tk = calKey(new Date());
       return {
-        texts: [...document.querySelectorAll('.cal-day.today .cal-note-text')].map(b => b.textContent),
+        texts: [...document.querySelectorAll('#cal-band .cal-note-text')].map(b => b.textContent),
         stored: (await idbGetAll()).filter(r => r.day === tk).map(r => r.next),
       };
     });
@@ -130,13 +130,13 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     //    empty (the legacy calKey date is not user text). The orphan record
     //    renders nowhere.
     const note = await page.evaluate(async () => {
-      const n = [...document.querySelectorAll('.cal-day.today .cal-note')][0] || null;
+      const n = [...document.querySelectorAll('#cal-band .cal-note')][0] || null;
       const s = n && n.querySelector('.cal-note-text');
       const orphan = [...document.querySelectorAll('.cal-note-text')].some(b => b.textContent === 'ORPHAN RECORD');
       const stored = (await idbGetAll()).find(r => r.id === 'rem-seed') || null;
       const r = n && n.getBoundingClientRect();
       return { text: s ? s.textContent : null,
-               inCard: n ? !!n.closest('.cal-day') : false,
+               inBand: n ? !!n.closest('#cal-band') : false,
                orphanRendered: orphan,
                square: r ? (r.width / r.height) : null,
                storedRem: stored && stored.rem,
@@ -144,14 +144,14 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     });
     ok("the seeded block's zone is empty byte-for-byte — a legacy calKey `next` is not body text (nothing migrated)",
       note.text === '', JSON.stringify(note));
-    ok('the block lives INSIDE a day card (issue #363) and is square, and its stored `rem` survives unread (issue #365: stored-but-unread, #323)',
-      note.inCard === true && note.square !== null && note.square >= 0.9 && note.square <= 1.15 &&
+    ok('the block lives INSIDE the band — the Today board (issue #384) — and is square, and its stored `rem` survives unread (issue #365: stored-but-unread, #323)',
+      note.inBand === true && note.square !== null && note.square >= 0.9 && note.square <= 1.15 &&
       note.storedRem === 'PAY THE RENT' && typeof note.storedNext === 'string' && note.storedNext.length === 10, JSON.stringify(note));
     ok('the orphan record (no `day` field) renders nowhere but stays stored — nothing migrated',
       note.orphanRendered === false, JSON.stringify(note));
 
     // 3. The card's "+" adds a square in edit, caret in the square's one zone.
-    const p = await center(page, '.cal-day.today .cal-add');
+    const p = await center(page, '#cal-band-add');
     await tap(page, p.x, p.y);
     await page.waitForTimeout(400);
     const addState = await page.evaluate(() => {
@@ -181,7 +181,7 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
       JSON.stringify(after));
 
     // 5. A tap on the darker body of an existing block seats the caret there too.
-    const tb = await page.$('.cal-day.today .cal-note-text');
+    const tb = await page.$('#cal-band .cal-note-text');
     const b2 = await tb.boundingBox();
     await tap(page, b2.x + b2.width / 2, b2.y + b2.height / 2);
     await page.waitForTimeout(400);
@@ -208,23 +208,23 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     await page.waitForTimeout(900);
 
     let got = await page.evaluate(() => {
-      const card = document.querySelector('.cal-day.today');
+      const card = document.getElementById('cal-band');
       const blocks = [...card.querySelectorAll('.cal-note')];
       return { count: blocks.length,
         pagerShown: [...card.querySelectorAll('.cal-notes-nav')].some(b => !b.hidden),
-        addText: card.querySelector('.cal-add').textContent.trim() };
+        addText: document.getElementById('cal-band-add').textContent.trim() };
     });
     ok('three squares render on the card and the pager is on (issue #363: up to 3 per day)',
       got.count === 3 && got.pagerShown === true, JSON.stringify(got));
-    ok("the add button carries a \"+\" (issue #331's grammar, on the card now)",
+    ok("the band's \"+\" carries a \"+\" (issue #384: the add control keeps its mark, seated in the title row)",
       got.addText === '+', JSON.stringify(got));
 
     // Paging back shows the first three.
-    await page.evaluate(() => [...document.querySelector('.cal-day.today').querySelectorAll('.cal-notes-nav')]
+    await page.evaluate(() => [...document.getElementById('cal-band').querySelectorAll('.cal-notes-nav')]
       .find(b => b.textContent === '‹').click());
     await page.waitForTimeout(400);
     got = await page.evaluate(() => {
-      const card = document.querySelector('.cal-day.today');
+      const card = document.getElementById('cal-band');
       return { texts: [...card.querySelectorAll('.cal-note-text')].map(b => b.textContent) };
     });
     ok('paging the card back shows its first three squares',
@@ -250,13 +250,15 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
       const hr = head.getBoundingClientRect(), vr = view.getBoundingClientRect();
       const br = band.getBoundingClientRect(), cr = card.getBoundingClientRect(), rr = rule.getBoundingClientRect();
       const fr = firstRow ? firstRow.getBoundingClientRect() : null;
+      const cb = getComputedStyle(card);
       return {
         parentIsCard: head.parentElement === card,
         inFrame: !!head.closest('#cal-frame'),
         bandFullWidth: Math.abs(br.width - vr.width) <= 1,
         ruleFullWidth: Math.abs(rr.width - vr.width) <= 1,
+        cardFullWidth: Math.abs(cr.width - br.width) <= 1,
+        cardBorder: cb.borderTopWidth + ' ' + cb.borderTopStyle,
         cardBg: getComputedStyle(card).backgroundColor,
-        cardOverhang: rr.bottom ? cr.bottom - rr.bottom : null,
         cardAboveRule: parseInt(getComputedStyle(card).zIndex, 10) > parseInt(getComputedStyle(rule).zIndex, 10),
         fontSize: getComputedStyle(head).fontSize,
         headCenterX: hr.x + hr.width / 2,
@@ -269,10 +271,10 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     });
     ok('the head renders inside the title card (#cal-band-card) and no top frame exists anywhere (issues #363 + #382)',
       seat.parentIsCard === true && seat.inFrame === false, JSON.stringify(seat));
-    ok('the header band runs the full width of the component — bar and rule both edge-to-edge (issue #382)',
+    ok('the band runs the full width of the component — band and rule both edge-to-edge (issues #382 + #384)',
       seat.bandFullWidth === true && seat.ruleFullWidth === true, JSON.stringify(seat));
-    ok("the title card overhangs the rule — ~22px past it, above it in z — the boards' B38 anatomy (issue #382)",
-      seat.cardOverhang !== null && seat.cardOverhang > 21 && seat.cardOverhang < 23 && seat.cardAboveRule === true, JSON.stringify(seat));
+    ok('the title row runs the full width of the band — the date extends both left and right to fill the page (issue #384: the grey border removed, no overhang)',
+      seat.cardFullWidth === true && seat.cardBorder === '0px none', JSON.stringify(seat));
     ok("the title card wears the ladder's card rung — the calendar's deep orange, #251002 (issue #382, B155's surface)",
       seat.cardBg === 'rgb(37, 16, 2)', JSON.stringify(seat));
     ok('the head is centered to the view horizontally (within 2px) (issue #343)',
@@ -289,7 +291,7 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     await ctx.close();
   }
 
-  console.log('\n[V6] The day-note squares wear the Today date card\'s own deep fill — every square\'s computed background equals the Today card\'s .cal-date compartment\'s computed background, var(--card) #251002 (issue #371, supersedes B154\'s fill clause only)');
+  console.log('\n[V6] The day-note squares wear the Calendar ladder\'s note rung — every square\'s computed background is var(--note) #e3c6aa on the board\'s deep-orange var(--card) #251002 ground, the ink the rung\'s --ink-dark pair (issue #384, supersedes B155\'s fill clause)');
   {
     const { ctx, page, errors } = await newPage(browser);
     // Seed one day note so a square renders in the Today card's notes row
@@ -303,19 +305,22 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     await page.waitForTimeout(900);
 
     const fills = await page.evaluate(() => {
-      const squares = [...document.querySelectorAll('.cal-day.today .cal-note-text')];
-      const dateCard = document.querySelector('.cal-day.today .cal-date');
+      const squares = [...document.querySelectorAll('#cal-band .cal-note-text')];
+      const board = document.getElementById('cal-band');
+      const ink = squares[0] && getComputedStyle(squares[0]).color;
       return {
         squareBg: squares.map(s => getComputedStyle(s).backgroundColor),
-        dateCardBg: dateCard ? getComputedStyle(dateCard).backgroundColor : null,
+        boardBg: getComputedStyle(board).backgroundColor,
+        ink,
         count: squares.length,
       };
     });
-    ok('the seeded square renders in the Today card (a measured surface exists to compare)',
+    ok('the seeded square renders in the band — the Today board (a measured surface exists to compare)',
       fills.count === 1, JSON.stringify(fills));
-    ok('every rendered day-note square\'s computed background equals the Today card\'s .cal-date compartment\'s computed background — both rgb(37, 16, 2), var(--card) #251002 (issue #371)',
-      fills.count > 0 && fills.dateCardBg === 'rgb(37, 16, 2)' &&
-      fills.squareBg.every(bg => bg === 'rgb(37, 16, 2)'), JSON.stringify(fills));
+    ok('every rendered day-note square\'s computed background is the Calendar ladder\'s note rung rgb(227, 198, 170), var(--note) #e3c6aa, on the board\'s deep-orange ground rgb(37, 16, 2), with the rung\'s --ink-dark ink rgb(3, 16, 25) (issue #384)',
+      fills.count > 0 && fills.boardBg === 'rgb(37, 16, 2)' &&
+      fills.squareBg.every(bg => bg === 'rgb(227, 198, 170)') &&
+      fills.ink === 'rgb(3, 16, 25)', JSON.stringify(fills));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }

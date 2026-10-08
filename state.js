@@ -450,6 +450,8 @@ export const el = {
   calView: document.getElementById('cal-view'),             // calendar screen (issue #145)
   calRail: document.getElementById('cal-rail'),             // the standing rail face (issue #158, B99)
   calDayhead: document.getElementById('cal-dayhead'),       // the day head — the date alone (issue #329)
+  calBandAdd: document.getElementById('cal-band-add'),      // issue #384: today's "+", seated right of the head in the title row
+  calBandNotes: document.getElementById('cal-band-notes'),  // issue #384: today's day-note squares, inside the band
   calStack: document.getElementById('cal-stack'),
   calTop: document.getElementById('cal-top'),
   calBack: document.getElementById('cal-back'),

@@ -2503,7 +2503,7 @@ async function openCat(page, cat) {
     ok('calendar opened with the seeded square rendered on today\'s card — the one zone shows `next` (issue #365)',
       open &&
       (await page.evaluate(() =>
-        [...document.querySelectorAll('.cal-day.today .cal-note-text')]
+        [...document.querySelectorAll('#cal-band .cal-note-text')]
           .some(b => b.textContent === 'existing note body'))));
 
     // Blur by tapping the day head: it is inert title ground above the stack
@@ -2515,7 +2515,7 @@ async function openCat(page, cat) {
     })));
     const tapZone = async (sel, text) => {
       const p = await page.evaluate(([s, t]) => {
-        const z = [...document.querySelectorAll('.cal-day.today ' + s)]
+        const z = [...document.querySelectorAll('#cal-band ' + s)]
           .find(z => z.textContent === t);
         const r = z.getBoundingClientRect();
         return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
@@ -2651,7 +2651,7 @@ async function openCat(page, cat) {
     const g = await page.evaluate(() => {
       const stack = document.getElementById('cal-stack').getBoundingClientRect();
       const days = [...document.querySelectorAll('.cal-day')];
-      const note = [...document.querySelectorAll('.cal-day.today .cal-note')]
+      const note = [...document.querySelectorAll('#cal-band .cal-note')]
         .find(n => n.querySelector('.cal-note-text').textContent.startsWith('a long body'));
       const nr = note && note.getBoundingClientRect();
       const month = document.getElementById('cal-month').getBoundingClientRect();
@@ -2660,7 +2660,7 @@ async function openCat(page, cat) {
         today: +days[0].getBoundingClientRect().height.toFixed(1),
         others: days.slice(1).map(d => +d.getBoundingClientRect().height.toFixed(1)),
         noteH: nr ? +nr.height.toFixed(1) : null,
-        noteInCard: note ? !!note.closest('.cal-day.today') : false,
+        noteInCard: note ? !!note.closest('#cal-band') : false,
         monthBottomGap: +(top.top - month.bottom).toFixed(1),
         monthBelowStack: +(month.top - stack.bottom).toFixed(1),
         vh: window.innerHeight,
@@ -2689,7 +2689,7 @@ async function openCat(page, cat) {
   // retired addCalEvent/makeCalLine with the lines; the card's "+" now
   // births a DAY NOTE through addCalNote, whose paintCal → makeCalNote path
   // IS the render path — one birthplace by construction. This block drives
-  // the real touch UI on today's card: tap .cal-day.today .cal-add, type the
+  // the real touch UI on today's card: tap #cal-band-add, type the
   // band, Enter to the body, commit, tap the square again — the editor must
   // reopen with the text intact, and the reopened editor must commit too.
   console.log('\n[30] Calendar: a day note created this session re-opens its editor (issue #304; re-pinned by B153)');
@@ -2697,20 +2697,19 @@ async function openCat(page, cat) {
     const { ctx, page, errors } = await newMobilePage(browser);
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(400);
-    // Create through the real add control on today's day card (index 0, the
-    // same card the future-event suite addresses). addCalNote opens the
-    // editor on arrival (capture precedes structure, §1.1) with the caret in
-    // the square's one zone (issue #365).
+    // Create through the band's add control — today's adder, seated in the
+    // title row (issue #384). addCalNote opens the editor on arrival
+    // (capture precedes structure, §1.1) with the caret in the square's one
+    // zone (issue #365).
     const at = await page.evaluate(() => {
-      const card = document.querySelectorAll('.cal-day')[0];
-      const r = card.querySelector('.cal-add').getBoundingClientRect();
+      const r = document.getElementById('cal-band-add').getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
     });
     await tap(page, at.x, at.y);
     await page.waitForTimeout(150);
     ok('the add control opened a fresh square in edit, caret in the square\'s one zone',
       await page.evaluate(() => {
-        const card = document.querySelector('.cal-day.today');
+        const card = document.getElementById('cal-band');
         const n = [...card.querySelectorAll('.cal-note')]
           .find(n => n.querySelector('[contenteditable]'));
         if (!n) return false;
@@ -2735,14 +2734,14 @@ async function openCat(page, cat) {
     await page.waitForTimeout(400);
     ok('after tapping away, no square is editing and the text stayed',
       await page.evaluate(() => {
-        const note = [...document.querySelectorAll('.cal-day.today .cal-note')]
+        const note = [...document.querySelectorAll('#cal-band .cal-note')]
           .find(n => n.querySelector('.cal-note-text').textContent === 'created on mobile');
         return !!note && !note.querySelector('[contenteditable]');
       }));
     // THE regression: tap the created square again — it must reopen its
     // editor with the committed text intact.
     const lp = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('.cal-day.today .cal-note-text')]
+      const b = [...document.querySelectorAll('#cal-band .cal-note-text')]
         .find(b => b.textContent === 'created on mobile');
       const r = b.getBoundingClientRect();
       return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
@@ -2750,7 +2749,7 @@ async function openCat(page, cat) {
     await tap(page, lp.x, lp.y);
     await page.waitForTimeout(150);
     const reedit = await page.evaluate(() => {
-      const n = [...document.querySelectorAll('.cal-day.today .cal-note')]
+      const n = [...document.querySelectorAll('#cal-band .cal-note')]
         .find(n => n.querySelector('[contenteditable]'));
       if (!n) return null;
       const zone = n.querySelector('.cal-note-text');
@@ -3143,7 +3142,7 @@ async function openCat(page, cat) {
     });
     await page.waitForTimeout(400);
     const noteBox = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('.cal-day.today .cal-note-text')]
+      const b = [...document.querySelectorAll('#cal-band .cal-note-text')]
         .find(b => b.textContent === 'mobile seed note');
       const r = b.getBoundingClientRect();
       return { x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
@@ -3151,7 +3150,7 @@ async function openCat(page, cat) {
     await tap(page, noteBox.x, noteBox.y);
     await page.waitForTimeout(150);
     await page.evaluate(() => {
-      const b = [...document.querySelectorAll('.cal-day.today .cal-note-text')]
+      const b = [...document.querySelectorAll('#cal-band .cal-note-text')]
         .find(b => b.hasAttribute('contenteditable'));
       b.textContent = 'mobile seed note VIA-CAL';
     });
@@ -3229,14 +3228,14 @@ async function openCat(page, cat) {
     // tomorrow's card forward first so the reset's pager clause is
     // observable: the pager must come back to its first page.
     const notesBefore = await page.evaluate(() =>
-      document.querySelectorAll('.cal-day.today .cal-note').length);
+      document.querySelectorAll('#cal-band .cal-note').length);
     await page.evaluate(() => {
-      const tm = document.querySelectorAll('#cal-stack .cal-day')[1];
+      const tm = document.querySelectorAll('#cal-stack .cal-day')[0];   // issue #384: the stack's first card is tomorrow
       [...tm.querySelectorAll('.cal-notes-nav')].find(b => b.textContent === '\u203a').click();
     });
     await page.waitForTimeout(300);
     const paged = await page.evaluate(() => {
-      const tm = document.querySelectorAll('#cal-stack .cal-day')[1];
+      const tm = document.querySelectorAll('#cal-stack .cal-day')[0];
       return { shown: tm.querySelectorAll('.cal-note').length,
                prevShown: [...tm.querySelectorAll('.cal-notes-nav')]
                  .some(b => b.textContent === '\u2039' && !b.hidden) };
@@ -3257,12 +3256,15 @@ async function openCat(page, cat) {
       c.click();
     });
     await page.waitForTimeout(300);
-    const drifted = await page.evaluate(() => ({
-      label: document.querySelector('#cal-month .mo-label').textContent,
-      firstIsToday: !!document.querySelector('#cal-stack .cal-day.today:first-child'),
-    }));
+    const drifted = await page.evaluate(() => {
+      const now = new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+      return {
+        label: document.querySelector('#cal-month .mo-label').textContent,
+        monthOffToday: document.querySelector('#cal-month .mo-label').textContent !== now,
+      };
+    });
     ok('precondition: the anchors drifted (month off today, week off the window)',
-      !drifted.firstIsToday, JSON.stringify(drifted));
+      drifted.monthOffToday, JSON.stringify(drifted));
 
     // Today resets both, in one act.
     await page.evaluate(() => document.getElementById('cal-today').click());
@@ -3274,29 +3276,29 @@ async function openCat(page, cat) {
         document.querySelector('#cal-month .mo-label').textContent)) === thisMonth,
       'label: ' + await page.evaluate(() =>
         document.querySelector('#cal-month .mo-label').textContent));
-    ok('Today restores the weekly stack — today first, six days after, seven cards (issue #342, B148)',
+    ok('Today restores the weekly stack — the six days after today, one row per day (issue #342, B148; the window reshaped by #384)',
       await page.evaluate(() => {
         const days = [...document.querySelectorAll('#cal-stack .cal-day')];
-        if (days.length !== 7) return false;
-        if (!days[0].classList.contains('today')) return false;
-        if (days[0].querySelector('.cal-d1').textContent !== 'Today') return false;
-        // Consecutive keys: each card's date label advances one day.
+        if (days.length !== 6) return false;
+        if (days.some(d => d.classList.contains('today'))) return false;
+        // Consecutive keys: the first card is tomorrow; each label advances one day.
         const md = (d) => String(d.getMonth() + 1).padStart(2, '0') + '/' +
                          String(d.getDate()).padStart(2, '0');
         let prev = new Date(); prev.setHours(12, 0, 0, 0);
-        for (let i = 1; i < 7; i++) {
-          prev = new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1);
+        prev = new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1);
+        for (let i = 0; i < 6; i++) {
           const got = days[i].querySelector('.cal-d2').textContent;
           if (got !== md(prev)) return false;
+          prev = new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1);
         }
         return true;
       }));
     ok('the in-card day-note squares are untouched by the reset (issue #342: not impacted; B153 seats them in the cards)',
       (await page.evaluate(() =>
-        document.querySelectorAll('.cal-day.today .cal-note').length)) === notesBefore);
+        document.querySelectorAll('#cal-band .cal-note').length)) === notesBefore);
     ok("the per-day pager returns to its first page with the anchors (B153: a reset shows every card's first page)",
       await page.evaluate(() => {
-        const tm = document.querySelectorAll('#cal-stack .cal-day')[1];
+        const tm = document.querySelectorAll('#cal-stack .cal-day')[0];   // issue #384: the stack's first card is tomorrow
         return tm.querySelectorAll('.cal-note').length === 3 &&
           [...tm.querySelectorAll('.cal-notes-nav')]
             .every(b => b.textContent === '\u2039' ? b.hidden : true);
