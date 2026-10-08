@@ -2009,19 +2009,28 @@ html.wide #cal-export { margin-left: auto; }
    little board at the top"). No fill runs past the body's own bottom edge;
    the stack's 22px clearance below stays (the gap between the board and
    tomorrow's card is untouched — the owner never asked for it to close).
-   Today's squares render here at the day cards' own measure: the row is
-   inset to a day card's date compartment (84px) + the shared 6px gutter, so
-   the squares sit exactly where a day card's squares sit — the owner's
-   correction: the squares are NOT the target, only the ground behind them. */
+   Today's squares render here filling FROM THE LEFT at the weekly view's
+   own measure: the grid is capped to the weekly construction's arithmetic
+   (the 84px compartment + the 12px zone padding + the 26px add slot) and
+   anchored at the body's left edge — the owner's correction (issue #384):
+   they filled right-to-left off the old inset, and "the days in the today
+   view should also fill in from left to right, like the days in the weekly
+   view do." The ground behind them is the body's fill, not a per-square
+   background. */
 #cal-today-board {
   flex: 0 0 auto;
   position: relative;
   margin: 0 -12px 0;                   /* the view's side padding, spent; top at the rule — the card's overhang lands on the body */
-  padding: 22px 6px 4px 90px;          /* the top clears the card's overhang; left = the 84px compartment + 6 */
+  padding: 22px 6px 4px 6px;           /* the top clears the card's overhang; the squares fill FROM THE LEFT — the owner's correction (issue #384: they filled right-to-left off the old compartment inset) */
   background: var(--card);             /* #251002 — the title card's own fill (issue #384) */
   border-radius: 0 0 4px 4px;          /* only the corners that exist below */
 }
 #cal-view.panel #cal-today-board { margin: 0 -12px 0; }   /* the panel's 12px padding, spent the same way */
+/* The weekly construction's arithmetic — the 84px compartment + the 12px
+   zone padding + the 26px add slot — caps the body's grid, so today's
+   squares are the weekly squares' own size, filling from the body's left
+   edge (issue #384, the owner's correction). */
+#cal-today-board .cal-notes-grid { max-width: calc(100% - 122px); }
 /* The body's fill must not reach the stack: the 22px clearance stays. */
 #cal-stack { margin-top: 22px; }
 /* Issue #343: the day head — today's date, the weekday with it and the
@@ -2152,16 +2161,29 @@ html.wide #cal-export { margin-left: auto; }
 .cal-d1 { font-size: 12px; font-weight: 600; color: var(--ink-light); line-height: 1.2; }
 .cal-d2 { font-size: 9px; font-weight: 600; letter-spacing: .08em;
   color: var(--ink-light); opacity: .55; text-transform: uppercase; }
+/* Issue #384, the owner's correction: every "+" is a BOUNDED button — a
+   visible border drawing the click space around the glyph ("it also needs a
+   border around it, a visual click space that bounds the button. they all
+   need this treatment") — centered in its box, and centered VERTICALLY in
+   its row (align-self was flex-start; the glyph no longer sits high). */
 .cal-add {
-  align-self: flex-start;
-  border: none; border-radius: 3px;
+  align-self: center;
+  border: 2px solid var(--frame);       /* the bounded click space (issue #384) */
+  border-radius: 3px;
+  width: 28px; height: 28px;            /* one box, glyph centred in it */
+  display: flex; align-items: center; justify-content: center;
   background: transparent;
   color: var(--ink-light); opacity: .55;
   font: inherit; font-size: 14px; font-weight: 600; line-height: 1;
-  padding: 2px 8px;
+  padding: 0;
   cursor: pointer;
   transition: filter 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
+/* Every day's "+" is pushed over to where today's sits: its box's right
+   edge lands on the band button's right edge (the row's content edge is the
+   card's right minus the 6px zone padding, so -8px closes the card's own
+   12px view padding minus the band's 10px inset). */
+.cal-notes-row .cal-add { margin-right: -8px; }
 .cal-add:hover, .cal-add:focus-visible { opacity: 1; }
 /* Attention recedes with distance from now (the mockups' law): today lit,
    the rest receded — scale and luminance, never icons. */

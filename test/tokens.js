@@ -887,21 +887,25 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
       return !/zone/.test(m) && !/Components/.test(m) && !/Requirements/.test(m); })());
   // --- Issue #384 (B158): the Today board body — the "+" on the band's right,
   // --- today's squares in the deep-orange body below, at the day-card measure
-  ok('the band seats today\'s adder at its right — beside the title card, the .cal-add treatment, the one target in the band (issue #384: "moved to the right side of the header bar, to the right of today\'s date title card")',
+  ok('the band seats today\'s adder at its right — beside the title card, the one target in the band, a BOUNDED button: the 2px frame border draws the click space, the glyph centered in its 28px box, the box\'s right edge 10px off the panel edge (issue #384: "moved to the right side of the header bar, to the right of today\'s date title card"; the owner\'s correction: "centered in that upper right corner within its section... a border around it, a visual click space that bounds the button")',
     /id="cal-band-add"/.test(html) && /#cal-band-add \{[^}]*position: absolute;/.test(css) &&
-    /#cal-band-add \{[^}]*z-index: 3;/.test(css));
-  ok('the Today board body is the full-width deep-orange body below the band — the title card\'s own var(--card) fill, no border of its own, pulled up 22px so the card\'s overhang lands on it, the fill never running past its own edge and the stack\'s 22px clearance staying (issue #384; B157 untouched, the owner\'s 2026-10-08 corrections: no downward fill, no closed gap)',
+    /#cal-band-add \{[^}]*z-index: 3;/.test(css) &&
+    /\.cal-add \{[^}]*border: 2px solid var\(--frame\);/.test(css) &&
+    /\.cal-add \{[^}]*width: 28px; height: 28px;/.test(css) &&
+    /\.cal-add \{[^}]*align-self: center;/.test(css) &&
+    /\.cal-notes-row \.cal-add \{ margin-right: -8px; \}/.test(css));
+  ok('the Today board body is the full-width deep-orange body below the band — the title card\'s own var(--card) fill, no border of its own, its top at the rule so the card\'s overhang lands on it, the fill never running past its own edge and the stack\'s 22px clearance staying (issue #384; B157 untouched, the owner\'s corrections: no downward fill, no closed gap)',
     /id="cal-today-board"/.test(html) && /#cal-today-board \{/.test(css) &&
     /#cal-today-board \{[^}]*background: var\(--card\);/.test(css) &&
     /#cal-today-board \{[^}]*margin: 0 -12px 0;/.test(css) &&
-    /#cal-today-board \{[^}]*padding: 22px 6px 4px 90px;/.test(css) &&
+    /#cal-today-board \{[^}]*padding: 22px 6px 4px 6px;/.test(css) &&
     !/#cal-today-board \{[^}]*border:/.test(css) &&
     /#cal-view\.panel #cal-today-board \{ margin: 0 -12px 0; \}/.test(css) &&
     /#cal-stack \{ margin-top: 22px; \}/.test(css));
-  ok('today\'s squares render in the body, inset to the day card\'s date-compartment measure — the row is the .cal-notes grammar, no row "+" of its own (issue #384: a color, not a size — the squares\' own measure untouched)',
+  ok('today\'s squares fill FROM THE LEFT at the weekly view\'s own measure — the body\'s grid capped to the weekly construction\'s arithmetic (the 84px compartment + the 12px zone padding + the 26px add slot), anchored at the body\'s left edge, no row "+" of its own (issue #384: the squares fill left to right like the weekly view\'s, at the weekly square size, not stretched)',
     /renderCalDayNotes\(zone, today, recs, \{ add: false \}\)/.test(app) &&
     /el\.calTodayBoard\.appendChild\(zone\)/.test(app) &&
-    /#cal-today-board[^{]*\{[^}]*padding[^}]*90px/.test(css));
+    /#cal-today-board \.cal-notes-grid \{ max-width: calc\(100% - 122px\); \}/.test(css));
   ok('the band is the expanded face only — the collapsed rail\'s hide list carries it (issue #382: the rail face untouched, B99)',
     /#cal-view\.rail-open #cal-band,/.test(css) &&
     /#cal-view\.rail-open #cal-band,\s*\n#cal-view\.rail-open #cal-top,\s*\n#cal-view\.rail-open #cal-stack,\s*\n#cal-view\.rail-open #cal-today-board,\s*\n#cal-view\.rail-open #cal-month \{ display: none; \}/.test(css));

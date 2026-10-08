@@ -1048,9 +1048,13 @@ the top"); the fill never runs past the body's own bottom edge and the
 stack's 22px clearance stays (the owner's 2026-10-08 corrections: the
 banner, the card's flanking sections, the overhang, the squares' size, the
 fill's downward reach and the gap to tomorrow's card were never in scope).
-The body's zone is the `.cal-notes` row grammar inset to the day card's
-date compartment (84px + the shared 6px), so today's squares sit and size
-exactly where a day card's squares sit. The collapsed rail's hide list
+The body's zone is the `.cal-notes` row grammar: today's squares fill FROM
+THE LEFT at the weekly view's own square size — the grid capped to the
+weekly construction's arithmetic (the 84px compartment + the 12px zone
+padding + the 26px add slot) and anchored at the body's left edge, so the
+squares are the weekly squares' box, filling left to right as notes are
+added (the owner's correction of 2026-10-08: they filled right-to-left off
+the old inset). The collapsed rail's hide list
 carries the band and the body — the rail face (B99) is
 untouched.
 
@@ -1076,7 +1080,16 @@ under `#cal-view` — supersedes ONLY B155's fill clause (the `var(--card)`
 vertically in the notes row (`align-items: center`). Three squares per
 day, and a `‹`/`›` pager (the `.mo-nav` grammar) when a day holds more than
 three; each non-today day card's `+` rightmost (issue #384 seats today's `+`
-on the band's right). The squares' own measure is untouched (issue #384: a
+on the band's right). Every "+" is a BOUNDED button — a 2px `--frame` border
+drawing the click space, one 28px box with the glyph centered in it,
+vertically centered in its row (`align-self: center`); the day buttons are
+pushed over so their boxes' right edges land on the band button's right
+edge (the owner's correction of 2026-10-08: "centered in that upper right
+corner within its section. Not pushed to the right. It also needs a border
+around it, a visual click space that bounds the button. they all need this
+treatment, every single day should have it's button pushed over, aligned
+with where the today's '+' is being pushed to and centered vertically.").
+The squares' own measure is untouched (issue #384: a
 color, not a size). The zone writes the record's
 `next` field (a legacy calKey value there renders as an empty body — nothing
 is rewritten); `rem` is no longer rendered and stays stored-but-unread (the
