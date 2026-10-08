@@ -1853,7 +1853,9 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
    The third screen, on the room's own ground (B52). Full-screen on phone
    (html:not(.wide) — the mobile path); on a wide screen it is
    the right-side panel (b6 builds that grammar; this block draws the shared
-   day card). The stack never scrolls: seven day cards, one bounded page. */
+   day card). The stack never scrolls: seven day cards, one bounded page —
+   EXCEPT the stack's own vertical scroll on overflow (issue #391, B161: the
+   exception to the rule; the view itself stays a fixed, bounded page). */
 #cal-view {
   position: fixed;
   inset: 0;
@@ -1928,6 +1930,27 @@ html.wide #cal-export { margin-left: auto; }
   flex-direction: column;
   gap: 7px;
   min-height: 0;
+  /* Issue #391 (B161): the stack's own vertical scroll on overflow — the
+     exception to the one-bounded-page law. Vertical only, horizontal never;
+     the bar is styled thin in the Calendar ladder's palette. The Today board
+     body, the band, the month view and the exit row sit outside the stack
+     and stay fixed. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* B160's full-bleed idiom, spent the other way: the scroll container spans
+     the view's full width (its own 12px side padding restores the inset) so
+     the weekend cards' margin: 0 -12px still reaches the screen edges and
+     the overflow clip never cuts the fill short. */
+  margin: 0 -12px;
+  padding: 0 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--frame) transparent;
+}
+#cal-stack::-webkit-scrollbar { width: 6px; }
+#cal-stack::-webkit-scrollbar-track { background: transparent; }
+#cal-stack::-webkit-scrollbar-thumb {
+  background: var(--frame);
+  border-radius: 3px;
 }
 /* Issue #363: the top section is gone, and the face moves UP into the space
    it freed — the bottom-anchor (#293 + #334, seated to leave slack above) is
