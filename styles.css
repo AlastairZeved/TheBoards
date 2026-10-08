@@ -2203,6 +2203,27 @@ html.wide #cal-export { margin-left: auto; }
 .cal-day.far  { opacity: .74; }
 .cal-day.far::before { filter: brightness(.6); }
 .cal-day.far .cal-date { background: #030813; }
+/* Issue #385 (B159, redrawn by B160): the weekend cards. Saturday and Sunday
+   keep the Calendar ladder's own palette — no blue — with the title card's
+   deep orange fill as the card's flat fill (the owner's ruling: "use title
+   card's deep orange fill as the fill color for saturday/sunday"). The fill
+   stretches ALL the way across: the view's own 12px side padding is spent
+   (margin 0 -12px, the #cal-band/#cal-today-board idiom) — "There also
+   shouldn't be any padding on the left or right side - the fill should
+   stretch all the way across the screen. The only padding is above and below
+   each date, not left and right." The date compartment's own --card fill
+   drops so one surface reads edge to edge (the near/far dark overrides stand
+   down with it — the weekend rule is seated after theirs); the divider
+   between date and events stays (the 1px --hairline, §2.5), and the padding
+   between days stays (the stack's own gap). The recede treatment keeps its
+   grip: .near/.far's brightness filters apply to the weekend ::before
+   exactly as to the others. The squares keep the day cards' own grammar
+   (var(--note), --ink-dark, --frame) — the ruling changed the card's fill
+   only. Today's card is excluded: it renders in the body above, its own
+   component (B158). */
+.cal-day.weekend { margin-left: -12px; margin-right: -12px; }
+.cal-day.weekend::before { background: var(--card); }
+.cal-day.weekend .cal-date { background: transparent; }
 
 /* --- §3.5 The month view (issue #191) -------------------------------------
    The compact month grid in the ground #170 freed below the day stack. Pure

@@ -1058,6 +1058,28 @@ the old inset). The collapsed rail's hide list
 carries the band and the body — the rail face (B99) is
 untouched.
 
+**The weekend cards (issue #385, B159 redrawn by B160).** Saturday and
+Sunday day cards in the weekly stack keep the Calendar ladder's own palette
+— no blue — with the title card's deep orange fill as the card's FLAT fill
+(`var(--card)` #251002, the owner's ruling of 2026-10-08: "use title card's
+deep orange fill as the fill color for saturday/sunday" — the owner's
+verdict on the first render: the blue was "too offputting in all that
+orange"). The fill stretches ALL the way across: the view's own 12px side
+padding is spent (`margin: 0 -12px`, the `#cal-band`/`#cal-today-board`
+idiom) — "There also shouldn't be any padding on the left or right side -
+the fill should stretch all the way across the screen. The only padding is
+above and below each date, not left and right." The fill is ONE surface:
+the date compartment's own `--card` fill drops (the `near`/`far` dark
+overrides stand down with it — the weekend rule is seated after theirs),
+the 1px `--hairline` divider between the date and the events stays (B159's
+clause, not superseded), and the padding between days stays (the stack's
+own gap). The recede treatment keeps its grip: `near`/`far`'s brightness
+filters apply to the weekend fill exactly as to the others (B159's
+ruling). The squares keep the day cards' own grammar — `var(--note)`,
+`--ink-dark`, `var(--frame)` — the ruling changed the card's fill only.
+Today's card is excluded: it renders in the body above, its own component
+(B158).
+
 **The day-note squares (issues #363 + #371 + #384; one zone, issue #365).**
 The top
 day-note section

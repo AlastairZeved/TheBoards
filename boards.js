@@ -1027,7 +1027,12 @@ export function calMD(d) {
 
 export function makeCalDay(day, dayNotes, board) {
   const card = document.createElement('div');
-  card.className = 'cal-day' + (day.today ? ' today' : dayNotes.length ? ' near' : ' far');
+  // Issue #385 (B159): Saturday and Sunday cards carry the weekend class —
+  // the blue Parking Lot fill and the blue title-card squares. Today's card
+  // never renders in the stack (B158), so it is excluded by construction.
+  card.className = 'cal-day' + (day.today ? ' today'
+    : (day.date.getDay() === 0 || day.date.getDay() === 6 ? ' weekend' : '')
+      + (dayNotes.length ? ' near' : ' far'));
   const dc = document.createElement('div');
   dc.className = 'cal-date on-dark';
   const d1 = document.createElement('div'); d1.className = 'cal-d1';
