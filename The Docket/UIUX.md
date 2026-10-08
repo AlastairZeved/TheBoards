@@ -1002,7 +1002,17 @@ content is the Today board body above) — computed at render (R4), never
 stored — flowing from the top of
 the view (issue #363 supersedes the bottom-anchor seating of #293/#334: the
 face moves up into the space the deleted top section freed, gap 10px, and
-whatever slack remains falls below the month view). A day card is a
+whatever slack remains falls below the month view).
+**Overflow (issue #391, B161): the stack scrolls vertically when its content
+overflows — the exception to the one-bounded-page law.** `overflow-y: auto`
+with `overflow-x: hidden` (horizontal scrollbars are never included); the
+bar itself is styled thin in the Calendar ladder's palette — 6px webkit
+width, `scrollbar-width: thin`, thumb `var(--frame)` (#b48158, the ladder's
+frame rung) at radius 3px over a transparent track (`scrollbar-color`
+carries the same pair for Firefox). The scrollbar belongs to the stack
+alone: the band, the Today board body, the month view and the bottom-seated
+exit row sit outside `#cal-stack` and never move; `#cal-view` itself stays
+a fixed, bounded page. A day card is a
 two-column grid: the date card (`--card`, the day's name over MM/DD) beside
 the day's notes zone on the water's fall. Attention recedes with distance
 from now — days with notes near, empty days far (`brightness .6`). Scale and
