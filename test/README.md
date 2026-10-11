@@ -31,9 +31,11 @@ node test/morning.js               # B108 morning lifecycle (needs the server)
 node test/future-event.js          # B131 future-dated events (needs the server)
 ```
 
-All suites exit non-zero on failure. The four CI suites (tokens, mobile,
-desktop, sw-update) run in CI (`.github/workflows/ci.yml`); the behavioral
-suites — boot-order, carried, day-roll, embed, frame-guard, month, morning,
+All suites exit non-zero on failure. The CI suites run in CI
+(`.github/workflows/ci.yml`) — tokens, records, security, mobile, overflow,
+desktop, month (added with issue #401, after the suite sat red on main
+unnoticed because nothing ran it), and sw-update. The remaining behavioral
+suites — boot-order, carried, day-roll, embed, frame-guard, morning,
 reminder, future-event — run locally/QA against the server.
 
 - `BOARDS_URL` overrides the served URL (default `http://localhost:8000/index.html`).
