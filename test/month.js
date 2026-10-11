@@ -188,7 +188,14 @@ async function monthReady(page, minCells = 1) {
     ok('the week runs Sun..Sat in order', w.d2s.every((s, i) => s === p(new Date(target.want.getFullYear(), target.want.getMonth(), target.want.getDate() + i))), JSON.stringify(w.d2s));
     ok('the swapped week has no today card (today is not in it)', w.todays === 0, String(w.todays));
     ok('the month view survives the swap', w.monthCells >= 28, String(w.monthCells));
-    // Back to this month, then tapping today's cell restores today's card.
+    // Back to this month, then tapping today's cell swaps the stack to
+    // today's Sunday-first week. B158 (issue #384) moved today's day card
+    // out of the stack — it renders as #cal-today-board, the full-width
+    // body below the band — so a .cal-day.today in the stack can never
+    // resolve again (issue #401). The B158 surface: the stack holds the
+    // week's six NON-today days, and today renders in the body below the
+    // band. Expectations computed in-page: the six days are the tapped
+    // week's Sunday..Saturday minus today, wherever today sits in its week.
     await page.evaluate((w) => document.querySelector(`.mo-nav[aria-label="${w}"]`).click(), 'Previous month');
     await page.waitForSelector('.mo-cell.today');
     const todayCell = await page.evaluate(() => {
@@ -197,12 +204,40 @@ async function monthReady(page, minCells = 1) {
       return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     });
     await page.mouse.click(todayCell.x, todayCell.y);
-    await page.waitForFunction(() =>
-      [...document.querySelectorAll('.cal-day')].some(d => d.classList.contains('today')));
+    await page.waitForFunction(() => {
+      const days = [...document.querySelectorAll('.cal-day')];
+      const board = document.getElementById('cal-today-board');
+      const band = document.getElementById('cal-band');
+      return days.length === 6 && !days.some(d => d.classList.contains('today')) &&
+        board && board.querySelector('.cal-notes') &&
+        board.getBoundingClientRect().top >= band.getBoundingClientRect().bottom - 1;
+    });
     await page.waitForTimeout(200);
-    const back = await page.evaluate(() =>
-      [...document.querySelectorAll('.cal-day')].filter(d => d.classList.contains('today')).length);
-    ok('tapping today\'s cell restores a today card in the stack', back === 1, String(back));
+    const back = await page.evaluate(() => {
+      const now = new Date();
+      const tk = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      const want = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + i);
+        const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        if (k !== tk) want.push(d);
+      }
+      const days = [...document.querySelectorAll('.cal-day')];
+      const p = (x) => String(x.getMonth() + 1).padStart(2, '0') + '/' + String(x.getDate()).padStart(2, '0');
+      const board = document.getElementById('cal-today-board');
+      const band = document.getElementById('cal-band');
+      return {
+        n: days.length,
+        todays: days.filter(d => d.classList.contains('today')).length,
+        d2s: days.map(d => d.querySelector('.cal-d2').textContent),
+        wantD2s: want.map(p),
+        boardNotes: !!board.querySelector('.cal-notes'),
+        boardBelowBand: board.getBoundingClientRect().top >= band.getBoundingClientRect().bottom - 1,
+      };
+    });
+    ok('tapping today\'s cell keeps today out of the stack (B158: it renders in the body below the band)', back.todays === 0, String(back.todays));
+    ok('the stack shows today\'s week minus today — the six non-today days, Sunday-first', back.d2s.length === 6 && back.d2s.join() === back.wantD2s.join(), JSON.stringify(back.d2s) + ' vs ' + JSON.stringify(back.wantD2s));
+    ok('today\'s body renders below the band, populated (#cal-today-board, B158)', back.n === 6 && back.boardNotes && back.boardBelowBand, JSON.stringify(back));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }

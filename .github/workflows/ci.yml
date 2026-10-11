@@ -79,5 +79,13 @@ jobs:
       - name: desktop.js
         run: node test/desktop.js
 
+      # month.js joined CI with issue #401: the suite was red on main for
+      # weeks without anyone noticing, because nothing ran it. [M3]'s pins
+      # follow B158's surface (today renders in #cal-today-board, not the
+      # stack), so a band/stack change that breaks the month-view swap
+      # fails here now. The other un-CI'd suites are a separate owner call.
+      - name: month.js
+        run: node test/month.js
+
       - name: sw-update.js
         run: node test/sw-update.js
