@@ -3182,6 +3182,126 @@ async function openCat(page, cat) {
     await ctx.close();
   }
 
+  // ---- 29b. issue #393: the linked board's mirrored Requirements lines render
+  // as the calendar-species squares in read state; hand lines stay plain text;
+  // edit entry restores the plain \n-text mode, blur returns the squares.
+  console.log('\n[29b] Mobile: the linked board\'s mirrored Requirements lines render as calendar-species squares (issue #393)');
+  {
+    const { ctx, page, errors } = await newMobilePage(browser);
+    await page.evaluate(async () => {
+      for (const r of await idbGetAll()) await idbDelete(r.id);
+      const key = calKey(new Date());
+      const b = newBoardRecord();
+      b.title = '09/02/26 To Do'; b.cal = key; b.calReq = 2;
+      b.requirements = 'mirror one\nmirror two\nhand line';
+      const now = Date.now();
+      const ev1 = newCalEvent(key, 'mirror one'); ev1.createdAt = now - 1000;
+      const ev2 = newCalEvent(key, 'mirror two'); ev2.createdAt = now;
+      await idbPut(b); await idbPut(ev1); await idbPut(ev2);
+    });
+    await page.reload();
+    await page.waitForFunction(() =>
+      state.current && state.current.title === '09/02/26 To Do' &&
+      document.querySelectorAll('#anchor-requirements .req-square').length === 2,
+      null, { timeout: 10000 });
+
+    // The read state (B164): every rendered chip carries the calendar's orange
+    // fill (#e3c6aa -> rgb(227, 198, 170)) and the note rung's ink pair
+    // (#031019 -> rgb(3, 16, 25)), at the species' own type (12px/400), and at
+    // the phone tier each chip takes up ONE line of the section — the
+    // section's full width, one text line tall (~25px), never a square.
+    const squares = await page.evaluate(() => {
+      const anchor = document.getElementById('anchor-requirements');
+      const a = anchor.getBoundingClientRect();
+      return [...document.querySelectorAll('#anchor-requirements .req-square')].map(n => {
+        const r = n.getBoundingClientRect(); const cs = getComputedStyle(n);
+        return { text: n.textContent, w: r.width, h: r.height, aw: a.width,
+                 bg: cs.backgroundColor, ink: cs.color, frame: cs.outlineColor,
+                 fs: cs.fontSize, fw: cs.fontWeight };
+      });
+    });
+    ok('two mirrored lines render as chips, in event order',
+      squares.length === 2 && squares[0].text === 'mirror one' && squares[1].text === 'mirror two',
+      JSON.stringify(squares));
+    ok('every chip fills with the calendar\'s orange #e3c6aa, inks #031019 and frames #b48158 — the LITERAL calendar palette, not the board\'s own ladder (the blue-frame defect the owner caught on review)',
+      squares.every(s => s.bg === 'rgb(227, 198, 170)' && s.ink === 'rgb(3, 16, 25)' && s.frame === 'rgb(180, 129, 88)'),
+      JSON.stringify(squares));
+    ok('every chip takes up ONE line of the section: the section\'s full width (w == the anchor\'s own width), one text line tall — not a square (B164)',
+      squares.every(s => Math.abs(s.w - s.aw) < 3 &&
+        s.h > 15 && s.h < 30 && Math.abs(s.w - s.h) > 20),
+      JSON.stringify(squares));
+    ok('the chip\'s type is the species\' own 12px/400 — not the anchor\'s 15px/600',
+      squares.every(s => s.fs === '12px' && s.fw === '400'),
+      JSON.stringify(squares));
+    // B164's overflow ruling: a name too long for the phone column is cut off
+    // with "…" and the chip stays one line — nowrap + ellipsis computed, and a
+    // seeded name that genuinely overflows (scrollWidth > clientWidth) still
+    // renders one line tall.
+    const cut = await page.evaluate(() => {
+      const n = document.querySelector('#anchor-requirements .req-square');
+      const cs = getComputedStyle(n);
+      const long = n.cloneNode(true);
+      long.textContent = 'a calendar event name far too long for the phone column';
+      n.parentNode.appendChild(long);
+      const out = { ws: cs.whiteSpace, to: cs.textOverflow,
+                    overflows: long.scrollWidth > long.clientWidth,
+                    h: long.getBoundingClientRect().height, h0: n.getBoundingClientRect().height };
+      long.remove();
+      return out;
+    });
+    ok('a long name is cut off with an ellipsis and the chip stays exactly one line tall (B164)',
+      cut.ws === 'nowrap' && cut.to === 'ellipsis' && cut.overflows && Math.abs(cut.h - cut.h0) < 1,
+      JSON.stringify(cut));
+    // The hand line rides AFTER the grid, in the anchor's own plain pre-wrap
+    // grammar — outside any square.
+    const hand = await page.evaluate(() => {
+      const anchor = document.getElementById('anchor-requirements');
+      const last = [...anchor.childNodes]
+        .filter(n => n.nodeType === 3 || !n.classList || !n.classList.contains('req-squares'))
+        .pop();
+      return { text: last.textContent, insideSquare: !!(last.closest && last.closest('.req-square')) };
+    });
+    ok('the hand line renders as plain text outside any square',
+      hand.text === 'hand line' && !hand.insideSquare, JSON.stringify(hand));
+
+    // The editing grammar is unchanged: tapping the anchor enters the editor
+    // on the PLAIN \n-string (text mode restored before focus), and the blur
+    // commit returns the squares.
+    const aim = await page.evaluate(() => {
+      const r = document.getElementById('anchor-requirements').getBoundingClientRect();
+      return { x: r.x + 20, y: r.y + 20 };
+    });
+    await tap(page, aim.x, aim.y);
+    await page.waitForTimeout(200);
+    const editMode = await page.evaluate(() => {
+      const n = document.getElementById('anchor-requirements');
+      return { ce: n.hasAttribute('contenteditable'),
+               flag: n.classList.contains('req-mirrored'),
+               text: n.textContent,
+               squares: n.querySelectorAll('.req-square').length };
+    });
+    ok('tap enters the editor on the plain \\n-string — no squares, the flag cleared (the grammar is unchanged)',
+      editMode.ce && !editMode.flag && editMode.squares === 0 &&
+      editMode.text === 'mirror one\nmirror two\nhand line',
+      JSON.stringify(editMode));
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(800);           // the write-through + the read-state repaint
+    const after = await page.evaluate(() => {
+      const n = document.getElementById('anchor-requirements');
+      return { squares: n.querySelectorAll('.req-square').length,
+               flag: n.classList.contains('req-mirrored'),
+               ce: n.hasAttribute('contenteditable'),
+               req: state.current.requirements };
+    });
+    ok('blur commits through the write-through and the squares return',
+      after.squares === 2 && after.flag && !after.ce &&
+      after.req === 'mirror one\nmirror two\nhand line',
+      JSON.stringify(after));
+
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   console.log('\n[30] The Today control resets the month and week views (issue #342, B148)');
   {
     const { ctx, page, errors } = await newMobilePage(browser);

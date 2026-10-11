@@ -98,6 +98,57 @@ export function syncViewTitle() {
   }
 }
 
+/* Issue #393 (the owner's ruling of 2026-10-11): ONLY the linked To Do
+   board's MIRRORED Requirements lines render in read state as square blocks —
+   the calendar's .cal-note species, board-scoped (.req-squares/.req-square,
+   styles.css §3) — in the calendar ladder's own orange, deliberately apart
+   from this board's blue. The span is mirrorEventsOf's own law (state.js):
+   the first `calReq` lines are the mirror's, everything after them is the
+   reader's hand and stays plain pre-wrap text. A board that has never synced
+   carries no `calReq`, and `typeof !== 'number'` renders no squares — safe,
+   because syncMirror writes the span on its first run and the next render
+   converges (B21's read-site-default idiom, no migration). Non-linked boards
+   have no span and are untouched by this function entirely.
+
+   The string stays the single source of truth: this is READ-state rendering
+   only. The `.req-mirrored` flag it leaves on the anchor is what lets
+   enableEditing (interactions.js, the one edit funnel) restore the plain
+   \n-text mode before focus lands, so the editing grammar is unchanged — one
+   contenteditable anchor — and commitAnchor's plain-text read stays true. */
+export function paintRequirementsRead(node, board) {
+  const lines = (board.requirements || '').length ? board.requirements.split('\n') : [];
+  // A live editor takes the plain paint: no path renders squares under a
+  // focused anchor today (every gesture/navigation path blurs and commits
+  // first), but if one ever does, the next onInput would write the squares'
+  // concatenated text into the string the mirror's diff reads — this
+  // guard makes that invariant structural, not incidental. A negative calReq
+  // (only a hand-edited import can carry one; export.js admits any finite
+  // number) is clamped with it, so the read paint degrades to exactly the
+  // plain paint instead of dropping leading lines.
+  const editing = node.hasAttribute && node.hasAttribute('contenteditable');
+  const span = (!editing && board.cal && typeof board.calReq === 'number')
+    ? Math.max(0, Math.min(board.calReq, lines.length)) : 0;
+  node.classList.toggle('req-mirrored', span > 0);
+  if (span === 0) {
+    node.textContent = board.requirements || '';   // exactly the plain paint
+    return;
+  }
+  node.textContent = '';
+  const grid = document.createElement('div');
+  grid.className = 'req-squares';                 // the wrapping read-state row
+  for (let i = 0; i < span; i++) {
+    const sq = document.createElement('div');     // one square per mirrored line
+    sq.className = 'req-square';
+    sq.textContent = lines[i];
+    grid.appendChild(sq);
+  }
+  node.appendChild(grid);
+  // The hand lines ride AFTER the grid in the anchor's own pre-wrap grammar:
+  // the grid is block-level, so they land beneath the squares, \n and all.
+  const hand = lines.slice(span);
+  if (hand.length) node.appendChild(document.createTextNode(hand.join('\n')));
+}
+
 export function renderBoard() {
   clearSelection();                  // note DOM is about to be rebuilt
   applyBoardCat();
@@ -123,7 +174,12 @@ export function renderBoard() {
       node.removeAttribute('tabindex'); node.removeAttribute('contenteditable');
       continue;
     }
-    node.textContent = state.current[key] || '';
+    // Issue #393: the Requirements anchor's READ state is the mirror's
+    // squares on a linked board (paintRequirementsRead above); the .filled
+    // flag still reads the string, because squares or not it is the same
+    // one string that is filled or empty.
+    if (key === 'requirements') paintRequirementsRead(node, state.current);
+    else node.textContent = state.current[key] || '';
     node.classList.toggle('filled', !!(state.current[key] && state.current[key].length));
     if (key === 'title') {
       node.setAttribute('role', 'textbox');

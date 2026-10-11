@@ -1,11 +1,12 @@
 /* --- 7. Gesture recognizer ----------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { ACTION_DELAY, CE, COPY, DBLCLICK_MS, LEAVE_MS, LONGPRESS_MS, MAX_SCALE, MIN_SCALE, MOVE_THRESHOLD } from './state.js';
-import { NOTE_MIN_W, TOAST_HIDE_MS, UNDO_MS, el, state, uuid, KB_HIDE_SLOP } from './state.js';
+import { NOTE_MIN_W, TOAST_HIDE_MS, UNDO_MS, anchorEls, el, state, uuid, KB_HIDE_SLOP } from './state.js';
 import { saveNow, scheduleSave } from './persistence.js';
 import { LOGICAL_H, LOGICAL_W, applyLayout, applyNoteWidth, caretToEnd, effScale, noteMaxW, placeCaretAtPoint } from './geometry.js';
 import { rebaseNote, renderX, renderY, setHitInset, toLogical, updateBoardGeometry } from './geometry.js';
 import { applyCompleteA11y, boardLinks, clearLink, linkSource, lotEls, makeLotEl, makeNoteEl, noteEls } from './render.js';
+import { paintRequirementsRead } from './render.js';
 import { runClockAction } from './render.js';
 import { reflectToolbarSeat, removeLinksForNote, runNoteToolbarAction, setCarriedUi, setReminderUi, syncViewTitle, toggleLink, updateLinks, updateNoteToolbar, ensureNoteTitleEl } from './render.js';
 import { menuOpen, menuReturnFocus, openMenuFor } from './menus.js';
@@ -432,6 +433,19 @@ function enableEditing(textNode) {
   if (textNode.classList && textNode.classList.contains('anchor') &&
       textNode.dataset.anchor === 'requirements') {
     reqBefore = state.current.requirements || '';
+    /* Issue #393: the read state renders the mirror's span lines as squares,
+       but the editor edits the STRING — restore the plain \n-text mode before
+       focus lands. reqBefore above already snapshotted the string (the
+       pre-edit text the write-through needs), and this restore writes the
+       same string back, so the snapshot order is intact. The
+       contenteditable guard keeps a re-entry (focusin follows the tap's own
+       focus()) from wiping the live editor — the funnel runs twice per
+       entry, only the first is the restore. */
+    if (textNode.classList.contains('req-mirrored') &&
+        textNode.getAttribute('contenteditable') !== CE) {
+      textNode.classList.remove('req-mirrored');
+      textNode.textContent = state.current.requirements || '';
+    }
   }
   textNode.setAttribute('contenteditable', CE);
   return true;
@@ -570,6 +584,14 @@ function commitAnchor(node) {
     // pay for a repaint hideCal will supersede.
     writeThroughRequirements(state.current, reqBefore).then(() => {
       if (state.calOpen || state.calExpanded) renderCal();
+      /* Issue #393: blur returns the mirror's squares — the store is settled
+         now, so repaint the Requirements anchor's read state from it. The
+         plain-text read above already ran, before any repaint, so the commit
+         read the \n-string, not the squares. Geometry re-measures AFTER the
+         repaint: the squares change the anchor's height and the band follows
+         its zones (B47, bandRuleY reads scrollHeight). */
+      paintRequirementsRead(anchorEls.requirements, state.current);
+      updateBoardGeometry();
     });
     reqBefore = null;
   }
