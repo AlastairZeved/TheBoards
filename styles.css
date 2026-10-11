@@ -447,6 +447,54 @@ body {
   pointer-events: auto;
   font-size: 15px; font-weight: 600;
 }
+
+/* Issue #393 (the owner's ruling of 2026-10-11): the linked To Do board's
+   MIRRORED Requirements lines render in read state as square blocks — the
+   calendar's .cal-note species (§3.4's family) as board-scoped classes —
+   while hand lines below the mirror's span stay the anchor's own plain
+   pre-wrap text. The square's fill is the CALENDAR ladder's --note rung
+   #e3c6aa (UIUX §2.2.2's derivation is the authority; the literal hex,
+   because var(--note) under #board[data-cat=todo] is this board's blue
+   #a0d4da — the orange on the blue board is the point, deliberately apart),
+   carrying the note rung's approved ink pair --ink-dark #031019 (UIUX §2.3,
+   11.84:1) — NOT the anchor's --ink, which rebinds to --ink-light here. The
+   outline frame is this zone's own var(--frame) (the ruling opened only the
+   background colour). The squares are read state only: not individually
+   editable or tappable (pointer-events: none — the anchor is one surface),
+   and the edit funnel restores the plain \n-text mode before focus lands
+   (interactions.js, enableEditing), so the editing grammar is unchanged. */
+.req-squares {
+  display: grid;
+  /* The calendar's own square measure: 75px at the phone tier (the 384px
+     viewport's today-body tracks, B158's record); no pager — the span is
+     unbounded, so the row wraps. */
+  grid-template-columns: repeat(auto-fill, 75px);
+  gap: 6px;                            /* .cal-notes' own gap */
+  pointer-events: none;
+}
+html.desktop .req-squares {
+  /* Measured against the calendar's own squares at the desktop tier
+     (1440px viewport): the today-body grid (capped to calc(100% - 122px))
+     draws 53.3px tracks — the calendar's square measure at this tier, so the
+     board's squares match it. */
+  grid-template-columns: repeat(auto-fill, 53px);
+}
+.req-square {
+  aspect-ratio: 1 / 1;                /* the .cal-note species — the block is square */
+  outline: 2px solid var(--frame);    /* the family's inset frame (B72) — the fill must not erase it */
+  outline-offset: -2px;
+  border-radius: 4px;
+  overflow: hidden;                   /* the fill clips to the 4px radius */
+  background: #e3c6aa;                /* the Calendar ladder's --note rung (UIUX §2.2.2) */
+  color: #031019;                     /* the note rung's approved ink pair (UIUX §2.3) */
+  /* Plain text (issue #365's species): does NOT inherit the anchor's
+     15px/600 — the calendar's square reads at its own measure. */
+  font-size: 12px; font-weight: 400; line-height: 1.4;
+  padding: 4px 6px;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow-wrap: break-word;          /* two lines read, a third never draws */
+  pointer-events: none;
+}
 /* The header hangs BELOW the rule as a tight tab in the rule's own ink (issue
    #111, B76; supersedes B47/B54's "label above the rule"): its top edge lands
    ON the rule (top:100%), so the full-width rule reads as the tab's top border

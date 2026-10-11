@@ -3182,6 +3182,101 @@ async function openCat(page, cat) {
     await ctx.close();
   }
 
+  // ---- 29b. issue #393: the linked board's mirrored Requirements lines render
+  // as the calendar-species squares in read state; hand lines stay plain text;
+  // edit entry restores the plain \n-text mode, blur returns the squares.
+  console.log('\n[29b] Mobile: the linked board\'s mirrored Requirements lines render as calendar-species squares (issue #393)');
+  {
+    const { ctx, page, errors } = await newMobilePage(browser);
+    await page.evaluate(async () => {
+      for (const r of await idbGetAll()) await idbDelete(r.id);
+      const key = calKey(new Date());
+      const b = newBoardRecord();
+      b.title = '09/02/26 To Do'; b.cal = key; b.calReq = 2;
+      b.requirements = 'mirror one\nmirror two\nhand line';
+      const now = Date.now();
+      const ev1 = newCalEvent(key, 'mirror one'); ev1.createdAt = now - 1000;
+      const ev2 = newCalEvent(key, 'mirror two'); ev2.createdAt = now;
+      await idbPut(b); await idbPut(ev1); await idbPut(ev2);
+    });
+    await page.reload();
+    await page.waitForFunction(() =>
+      state.current && state.current.title === '09/02/26 To Do' &&
+      document.querySelectorAll('#anchor-requirements .req-square').length === 2,
+      null, { timeout: 10000 });
+
+    // The read state: every rendered square carries the calendar's orange
+    // fill (#e3c6aa -> rgb(227, 198, 170)) and the note rung's ink pair
+    // (#031019 -> rgb(3, 16, 25)), at the species' own type (12px/400), and
+    // measures square (aspect 1:1) at this suite's 384px viewport.
+    const squares = await page.evaluate(() =>
+      [...document.querySelectorAll('#anchor-requirements .req-square')].map(n => {
+        const r = n.getBoundingClientRect(); const cs = getComputedStyle(n);
+        return { text: n.textContent, w: r.width, h: r.height,
+                 bg: cs.backgroundColor, ink: cs.color, fs: cs.fontSize, fw: cs.fontWeight };
+      }));
+    ok('two mirrored lines render as squares, in event order',
+      squares.length === 2 && squares[0].text === 'mirror one' && squares[1].text === 'mirror two',
+      JSON.stringify(squares));
+    ok('every square fills with the calendar\'s orange #e3c6aa and inks #031019 — not the board\'s own ladder',
+      squares.every(s => s.bg === 'rgb(227, 198, 170)' && s.ink === 'rgb(3, 16, 25)'),
+      JSON.stringify(squares));
+    ok('every square measures square (aspect 1:1) at this viewport',
+      squares.every(s => Math.abs(s.w - s.h) < 1 && s.w > 40),
+      JSON.stringify(squares));
+    ok('the square\'s type is the species\' own 12px/400 — not the anchor\'s 15px/600',
+      squares.every(s => s.fs === '12px' && s.fw === '400'),
+      JSON.stringify(squares));
+    // The hand line rides AFTER the grid, in the anchor's own plain pre-wrap
+    // grammar — outside any square.
+    const hand = await page.evaluate(() => {
+      const anchor = document.getElementById('anchor-requirements');
+      const last = [...anchor.childNodes]
+        .filter(n => n.nodeType === 3 || !n.classList || !n.classList.contains('req-squares'))
+        .pop();
+      return { text: last.textContent, insideSquare: !!(last.closest && last.closest('.req-square')) };
+    });
+    ok('the hand line renders as plain text outside any square',
+      hand.text === 'hand line' && !hand.insideSquare, JSON.stringify(hand));
+
+    // The editing grammar is unchanged: tapping the anchor enters the editor
+    // on the PLAIN \n-string (text mode restored before focus), and the blur
+    // commit returns the squares.
+    const aim = await page.evaluate(() => {
+      const r = document.getElementById('anchor-requirements').getBoundingClientRect();
+      return { x: r.x + 20, y: r.y + 20 };
+    });
+    await tap(page, aim.x, aim.y);
+    await page.waitForTimeout(200);
+    const editMode = await page.evaluate(() => {
+      const n = document.getElementById('anchor-requirements');
+      return { ce: n.hasAttribute('contenteditable'),
+               flag: n.classList.contains('req-mirrored'),
+               text: n.textContent,
+               squares: n.querySelectorAll('.req-square').length };
+    });
+    ok('tap enters the editor on the plain \\n-string — no squares, the flag cleared (the grammar is unchanged)',
+      editMode.ce && !editMode.flag && editMode.squares === 0 &&
+      editMode.text === 'mirror one\nmirror two\nhand line',
+      JSON.stringify(editMode));
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(800);           // the write-through + the read-state repaint
+    const after = await page.evaluate(() => {
+      const n = document.getElementById('anchor-requirements');
+      return { squares: n.querySelectorAll('.req-square').length,
+               flag: n.classList.contains('req-mirrored'),
+               ce: n.hasAttribute('contenteditable'),
+               req: state.current.requirements };
+    });
+    ok('blur commits through the write-through and the squares return',
+      after.squares === 2 && after.flag && !after.ce &&
+      after.req === 'mirror one\nmirror two\nhand line',
+      JSON.stringify(after));
+
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   console.log('\n[30] The Today control resets the month and week views (issue #342, B148)');
   {
     const { ctx, page, errors } = await newMobilePage(browser);

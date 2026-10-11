@@ -2082,12 +2082,18 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     // board already open its swapBoard early-returns — nothing re-renders
     // after it. Wait for the landed state instead of a fixed 600ms, so the
     // race fails loud (timeout) instead of editing mid-lifecycle.
+    // Re-pinned deliberately for issue #393: the anchor's READ state renders
+    // the mirror's span lines as squares (paintRequirementsRead), so the plain
+    // textContent pin could no longer hold. The read state now pins the
+    // squares themselves (the record-level write-through pins below are
+    // unchanged: they read the store, not the DOM).
     await page.waitForFunction(() =>
       state.current && state.current.title === '09/02/26 To Do' &&
       state.current.cal && state.current.requirements ===
         'mirror one\nmirror two\nhand line' &&
-      document.getElementById('anchor-requirements').textContent ===
-        state.current.requirements,
+      document.querySelectorAll('#anchor-requirements .req-square').length === 2 &&
+      [...document.querySelectorAll('#anchor-requirements .req-square')]
+        .every(n => n.textContent === state.current.requirements.split('\n')[[...document.querySelectorAll('#anchor-requirements .req-square')].indexOf(n)]),
       null, { timeout: 10000 });
 
     // 1. Edit the FIRST span line on the board, commit on blur.
@@ -2196,10 +2202,15 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       await idbPut(b); await idbPut(ev1); await idbPut(ev2);
     });
     await page.reload();
+    // Re-pinned deliberately for issue #393 (same as D25): the anchor's read
+    // state renders the mirror's span as squares, so the plain textContent
+    // pin could no longer hold — pin the squares instead.
     await page.waitForFunction(() =>
       state.current && state.current.title === '09/02/26 To Do' &&
-      document.getElementById('anchor-requirements').textContent ===
-        state.current.requirements, null, { timeout: 10000 });
+      state.current.cal && state.current.requirements ===
+        'mirror one\nmirror two\nhand line' &&
+      document.querySelectorAll('#anchor-requirements .req-square').length === 2,
+      null, { timeout: 10000 });
 
     // Expand the calendar panel — BOTH surfaces are now on screen together.
     await page.click('#cal-rail');
@@ -2259,12 +2270,21 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
          return all.some(r => r.next === 'D25B square' && r.rem === '' &&
            r.day === calKey(new Date()));
        }));
+    // Re-pinned deliberately for issue #393: the anchor's READ state renders
+    // the mirror's span as squares now (repainted in place after the block-1
+    // commit), so the plain textContent pin could no longer hold — pin the
+    // squares' own texts and the hand line instead (the day-note add never
+    // touched the span either way).
+    const anchorRead = await page.evaluate(() => {
+      const anchor = document.getElementById('anchor-requirements');
+      const sqs = [...anchor.querySelectorAll('.req-square')].map(n => n.textContent);
+      const hand = [...anchor.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent);
+      return { sqs, hand };
+    });
     ok('the day-note add never touched the requirements anchor (record-level isolation)',
-       await page.evaluate(() =>
-         document.getElementById('anchor-requirements').textContent ===
-           'mirror one D25B\nmirror two\nhand line'),
-       'anchor: ' + await page.evaluate(() =>
-         JSON.stringify(document.getElementById('anchor-requirements').textContent)));
+       JSON.stringify(anchorRead.sqs) === JSON.stringify(['mirror one D25B', 'mirror two']) &&
+       JSON.stringify(anchorRead.hand) === JSON.stringify(['hand line']),
+       JSON.stringify(anchorRead));
     ok('the B133 filled class survives the repaint',
        await page.evaluate(() =>
          document.getElementById('anchor-requirements').classList.contains('filled')));

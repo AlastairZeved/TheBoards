@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v138 — version bumped (issue #394/B162: the total day-roll launch)',
-    /const CACHE = 'zeved-boards-v138';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v138, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v138';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v139 — version bumped (issue #393: the mirrored Requirements lines render as calendar-species squares)',
+    /const CACHE = 'zeved-boards-v139';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v139, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v139';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -1072,6 +1072,40 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   const headMeta = /<meta (?:property="og:(?:url|image)"|name="twitter:image")[^>]*>|<link rel="canonical"[^>]*>/g;
   ok('no CDN URL in index.html', !external.test(html.replace(headMeta, '')));
   ok('no CDN URL in sw.js or manifest.json', !external.test(sw) && !external.test(read('manifest.json')));
+}
+
+console.log('\n[10c] Issue #393: the linked board\'s mirrored Requirements squares — read-state species, board-scoped (UIUX §2.2.2/§2.3, §3.4\'s family)');
+{
+  ok('the read-state row is a wrapping grid at the calendar square\'s own phone measure (75px, B158) with the .cal-notes gap (6px) and no pager',
+    /\.req-squares \{[^}]*display: grid;/.test(css) &&
+    /\.req-squares \{[^}]*grid-template-columns: repeat\(auto-fill, 75px\);/.test(css) &&
+    /\.req-squares \{[^}]*gap: 6px;/.test(css));
+  ok('the desktop tier matches the calendar\'s own measured square track (53px at the 1440 viewport — the today-body grid capped to calc(100% - 122px) draws 53.3px)',
+    /html\.desktop \.req-squares \{[^}]*grid-template-columns: repeat\(auto-fill, 53px\);/.test(css));
+  ok('each square is the .cal-note species: aspect 1:1, the zone\'s own var(--frame) outline inset, 4px radius, overflow hidden',
+    /\.req-square \{[^}]*aspect-ratio: 1 \/ 1;/.test(css) &&
+    /\.req-square \{[^}]*outline: 2px solid var\(--frame\);/.test(css) &&
+    /\.req-square \{[^}]*outline-offset: -2px;/.test(css) &&
+    /\.req-square \{[^}]*border-radius: 4px;/.test(css) &&
+    /\.req-square \{[^}]*overflow: hidden;/.test(css));
+  ok('the fill is the Calendar ladder\'s --note rung as the LITERAL #e3c6aa (var(--note) under #board[data-cat=todo] is the board\'s blue #a0d4da; UIUX §2.2.2 is the authority)',
+    /\.req-square \{[^}]*background: #e3c6aa;/.test(css) &&
+    !/\.req-square \{[^}]*background: var\(--note\)/.test(css));
+  ok('the ink is the note rung\'s approved pair, the LITERAL #031019 (UIUX §2.3) — not the anchor\'s --ink, which rebinds to --ink-light under the band',
+    /\.req-square \{[^}]*color: #031019;/.test(css) &&
+    !/\.req-square \{[^}]*color: var\(--ink\)/.test(css));
+  ok('the square\'s type is the species\' own 12px/400/1.4 with the 4px 6px inset and the 2-line clamp — never the anchor\'s 15px/600',
+    /\.req-square \{[^}]*font-size: 12px; font-weight: 400; line-height: 1\.4;/.test(css) &&
+    /\.req-square \{[^}]*padding: 4px 6px;/.test(css) &&
+    /\.req-square \{[^}]*-webkit-line-clamp: 2;/.test(css) &&
+    /\.req-square \{[^}]*overflow-wrap: break-word;/.test(css));
+  ok('the squares are read state, not interactive grammar: pointer-events none on row and square — the anchor stays one surface',
+    /\.req-squares \{[^}]*pointer-events: none;/.test(css) &&
+    /\.req-square \{[^}]*pointer-events: none;/.test(css));
+  ok('the paint is read-state only: renderBoard routes the requirements anchor through the square painter, and the edit funnel restores the plain text mode before focus',
+    /if \(key === 'requirements'\) paintRequirementsRead\(node, state\.current\);/.test(app) &&
+    /classList\.contains\('req-mirrored'\)/.test(app) &&
+    /paintRequirementsRead\(anchorEls\.requirements, state\.current\);/.test(app));
 }
 
 console.log('\n[11] The delivery marker pair (UIUX §16.3)');
