@@ -831,7 +831,11 @@ against the calendar's own squares at the 1440 viewport. The fill and ink are
 **literals on both tiers, not the board's own rungs**: `#e3c6aa` — the
 Calendar ladder's `--note` rung (§2.2.2) — with `#031019` ink (§2.3), the
 calendar's orange on the To Do blue *on purpose* (the owner: "visually
-distinct and attract the user's eye to today's required events"). The hand
+distinct and attract the user's eye to today's required events"),
+and so is the **frame**: `#b48158` — the Calendar ladder's `--frame` rung
+(§2.2.2) — the whole block in the calendar's orange palette on both tiers (the
+owner's correction of 2026-10-11: on the To Do board `var(--frame)` is the
+board's blue `#698ebf`). The hand
 lines after the span stay plain pre-wrap text beneath the grid; a non-linked
 board or an empty span paints exactly the plain text it always did. The
 blocks are a read state, not a surface: `pointer-events: none`, no per-block

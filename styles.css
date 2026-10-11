@@ -479,7 +479,7 @@ body {
 .req-square {
   /* The chip (phone tier, B164): the .cal-note species in every value EXCEPT
      the box — one line tall, the section's full width, no aspect ratio. */
-  outline: 2px solid var(--frame);    /* the family's inset frame (B72) — the fill must not erase it */
+  outline: 2px solid #b48158;          /* the LITERAL Calendar --frame rung (UIUX §2.2.2) — the owner's correction of 2026-10-11: the whole chip renders in the orange palette, and var(--frame) here is the To Do blue #698ebf */
   outline-offset: -2px;
   border-radius: 4px;
   overflow: hidden;                   /* the fill clips to the 4px radius */

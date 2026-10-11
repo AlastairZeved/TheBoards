@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v140 — version bumped (issue #393 + B164: the phone tier renders the mirrored lines as one-line chips)',
-    /const CACHE = 'zeved-boards-v140';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v140, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v140';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v141 — version bumped (issue #393 + B164: the chips render fully in the calendar orange palette)',
+    /const CACHE = 'zeved-boards-v141';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v141, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v141';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -1083,10 +1083,11 @@ console.log('\n[10c] Issue #393 (B163 squares + B164 phone chips): the linked bo
     /\.req-squares \{[^}]*gap: 6px;/.test(css));
   ok('the desktop tier keeps B163\'s square row: the calendar\'s own measured track (53px at the 1440 viewport — the today-body grid capped to calc(100% - 122px) draws 53.3px)',
     /html\.desktop \.req-squares \{[^}]*grid-template-columns: repeat\(auto-fill, 53px\);/.test(css));
-  ok('the base (phone) species is the CHIP: the .cal-note species\' values — the zone\'s own var(--frame) outline inset, 4px radius, overflow hidden — with NO aspect ratio (one line tall, the section\'s full width)',
+  ok('the base (phone) species is the CHIP: the .cal-note species\' values — the LITERAL Calendar --frame #b48158 outline inset (the owner\'s correction: the whole chip in the orange palette; var(--frame) here is the board\'s blue #698ebf), 4px radius, overflow hidden — with NO aspect ratio (one line tall, the section\'s full width)',
     (() => { const base = (css.match(/(^|[{}\n])\.req-square \{[^}]*\}/) || [''])[0];
       return !!base && !/aspect-ratio:/.test(base) &&
-        /outline: 2px solid var\(--frame\);/.test(base) &&
+        /outline: 2px solid #b48158;/.test(base) &&
+        !/outline: 2px solid var\(--frame\);/.test(base) &&
         /outline-offset: -2px;/.test(base) &&
         /border-radius: 4px;/.test(base) &&
         /overflow: hidden;/.test(base); })()),

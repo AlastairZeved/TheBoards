@@ -3216,14 +3216,15 @@ async function openCat(page, cat) {
       return [...document.querySelectorAll('#anchor-requirements .req-square')].map(n => {
         const r = n.getBoundingClientRect(); const cs = getComputedStyle(n);
         return { text: n.textContent, w: r.width, h: r.height, aw: a.width,
-                 bg: cs.backgroundColor, ink: cs.color, fs: cs.fontSize, fw: cs.fontWeight };
+                 bg: cs.backgroundColor, ink: cs.color, frame: cs.outlineColor,
+                 fs: cs.fontSize, fw: cs.fontWeight };
       });
     });
     ok('two mirrored lines render as chips, in event order',
       squares.length === 2 && squares[0].text === 'mirror one' && squares[1].text === 'mirror two',
       JSON.stringify(squares));
-    ok('every chip fills with the calendar\'s orange #e3c6aa and inks #031019 — not the board\'s own ladder',
-      squares.every(s => s.bg === 'rgb(227, 198, 170)' && s.ink === 'rgb(3, 16, 25)'),
+    ok('every chip fills with the calendar\'s orange #e3c6aa, inks #031019 and frames #b48158 — the LITERAL calendar palette, not the board\'s own ladder (the blue-frame defect the owner caught on review)',
+      squares.every(s => s.bg === 'rgb(227, 198, 170)' && s.ink === 'rgb(3, 16, 25)' && s.frame === 'rgb(180, 129, 88)'),
       JSON.stringify(squares));
     ok('every chip takes up ONE line of the section: the section\'s full width (w == the anchor\'s own width), one text line tall — not a square (B164)',
       squares.every(s => Math.abs(s.w - s.aw) < 3 &&
