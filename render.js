@@ -117,8 +117,17 @@ export function syncViewTitle() {
    contenteditable anchor — and commitAnchor's plain-text read stays true. */
 export function paintRequirementsRead(node, board) {
   const lines = (board.requirements || '').length ? board.requirements.split('\n') : [];
-  const span = (board.cal && typeof board.calReq === 'number')
-    ? Math.min(board.calReq, lines.length) : 0;
+  // A live editor takes the plain paint: no path renders squares under a
+  // focused anchor today (every gesture/navigation path blurs and commits
+  // first), but if one ever does, the next onInput would write the squares'
+  // concatenated text into the string the mirror's diff reads — this
+  // guard makes that invariant structural, not incidental. A negative calReq
+  // (only a hand-edited import can carry one; export.js admits any finite
+  // number) is clamped with it, so the read paint degrades to exactly the
+  // plain paint instead of dropping leading lines.
+  const editing = node.hasAttribute && node.hasAttribute('contenteditable');
+  const span = (!editing && board.cal && typeof board.calReq === 'number')
+    ? Math.max(0, Math.min(board.calReq, lines.length)) : 0;
   node.classList.toggle('req-mirrored', span > 0);
   if (span === 0) {
     node.textContent = board.requirements || '';   // exactly the plain paint
