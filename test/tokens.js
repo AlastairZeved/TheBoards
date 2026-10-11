@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v141 — version bumped (issue #393 + B164: the chips render fully in the calendar orange palette)',
-    /const CACHE = 'zeved-boards-v141';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v141, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v141';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v142 — version bumped (issue #397 + B165: the weekly view\'s day "+" seats under the day/date)',
+    /const CACHE = 'zeved-boards-v142';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v142, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v142';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -885,17 +885,21 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /#cal-view\.panel #cal-band \{ margin: -12px -12px 0; \}/.test(css) &&
     (() => { const m = html.slice(html.indexOf('id="cal-band"'), html.indexOf('id="cal-stack"'));
       return !/zone/.test(m) && !/Components/.test(m) && !/Requirements/.test(m); })());
-  // --- Issue #384 (B158): the Today board body — the "+" on the band's right,
-  // --- today's squares in the deep-orange body below, at the day-card measure
-  ok('the band seats today\'s adder at its right — beside the title card, the one target in the band, a BOUNDED button: the 2px frame border draws the click space, the glyph centered in its 28px box, the box\'s right edge 10px off the panel edge (issue #384: "moved to the right side of the header bar, to the right of today\'s date title card"; the owner\'s correction: "centered in that upper right corner within its section... a border around it, a visual click space that bounds the button")',
+  // --- Issue #397 (B165): the day "+" seats UNDER the day/date — the row's
+  // --- right end is the third square's now; the band's own "+" keeps #384's seat
+  ok('the band seats today\'s adder at its right — beside the title card, the one target in the band, a BOUNDED button: the 2px frame border draws the click space, the glyph centered in its 28px box, the box\'s centre on the right-of-card section\'s centre (issue #384: "moved to the right side of the header bar, to the right of today\'s date title card"; the owner\'s correction: "centered in that upper right corner within its section... a border around it, a visual click space that bounds the button")',
     /id="cal-band-add"/.test(html) && /#cal-band-add \{[^}]*position: absolute;/.test(css) &&
     /#cal-band-add \{[^}]*z-index: 3;/.test(css) &&
     /\.cal-add \{[^}]*border: 2px solid var\(--frame\);/.test(css) &&
     /\.cal-add \{[^}]*width: 28px; height: 28px;/.test(css) &&
     /\.cal-add \{[^}]*align-self: center;/.test(css) &&
-    /\.cal-notes-row \.cal-add \{[^}]*right: var\(--cal-add-right, 6px\);/.test(css) &&
     /#cal-band-add \{[^}]*left: var\(--cal-add-x, 75%\);/.test(css) &&
-    /seatCalAdds\(\)/.test(app) && /--cal-add-x/.test(app) && /--cal-add-right/.test(app));
+    /seatCalAdds\(\)/.test(app) && /--cal-add-x/.test(app));
+  ok('issue #397: every day card\'s "+" seats UNDER the day/date in the date compartment — the .cal-add bounded box beneath the date lines, the row\'s right end carrying no adder, the --cal-add-right push-over alignment and its measurement gone (issue #397: "moved to underneath the day/date, no longer on the right-most side of the event bar... That empty space can be used for a third event card to fit before pagination")',
+    /\.cal-date \.cal-add \{ margin-top: 4px; \}/.test(css) &&
+    !/\.cal-notes-row \.cal-add/.test(css) &&
+    !/--cal-add-right/.test(css) && !/--cal-add-right/.test(app) &&
+    /dc\.append\(add\);/.test(app) && !/\{ add: false \}/.test(app));
   ok('the Today board body is the full-width deep-orange body below the band — the title card\'s own var(--card) fill, no border of its own, its top at the rule so the card\'s overhang lands on it, the fill never running past its own edge and the stack\'s 22px clearance staying (issue #384; B157 untouched, the owner\'s corrections: no downward fill, no closed gap)',
     /id="cal-today-board"/.test(html) && /#cal-today-board \{/.test(css) &&
     /#cal-today-board \{[^}]*background: var\(--card\);/.test(css) &&
@@ -905,7 +909,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /#cal-view\.panel #cal-today-board \{ margin: 0 -12px 0; \}/.test(css) &&
     /#cal-stack \{ margin-top: 22px; \}/.test(css));
   ok('today\'s squares fill FROM THE LEFT at the weekly view\'s own measure — the body\'s grid capped to the weekly construction\'s arithmetic (the 84px compartment + the 12px zone padding + the 26px add slot), anchored at the body\'s left edge, no row "+" of its own (issue #384: the squares fill left to right like the weekly view\'s, at the weekly square size, not stretched)',
-    /renderCalDayNotes\(zone, today, recs, \{ add: false \}\)/.test(app) &&
+    /renderCalDayNotes\(zone, today, recs\)/.test(app) &&
     /el\.calTodayBoard\.appendChild\(zone\)/.test(app) &&
     /#cal-today-board \.cal-notes-grid \{ max-width: calc\(100% - 122px\); \}/.test(css));
   ok('the band is the expanded face only — the collapsed rail\'s hide list carries it (issue #382: the rail face untouched, B99)',

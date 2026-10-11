@@ -3078,10 +3078,12 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     ok('the commit persisted the day-note record with the card\'s day field',
       !!rec.rec && rec.rec.rem === '' && rec.dayOk, JSON.stringify(rec));
     // Tap away onto the day card's inert date column — a blur with no
-    // editor consequence.
+    // editor consequence. Issue #397 (B165) seats the day's "+" at the
+    // BOTTOM of that column, under the date lines, so the tap aims at the
+    // date text above it — the column's centre is the button's now.
     const dc = await page.evaluate(() => {
       const r = document.querySelector('.cal-day .cal-date').getBoundingClientRect();
-      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      return { x: r.x + r.width / 2, y: r.y + 8 };
     });
     await page.mouse.click(dc.x, dc.y);
     await page.waitForTimeout(200);

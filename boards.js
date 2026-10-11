@@ -1040,6 +1040,20 @@ export function makeCalDay(day, dayNotes, board) {
   const d2 = document.createElement('div'); d2.className = 'cal-d2';
   d2.textContent = calMD(day.date);
   dc.append(d1, d2);
+  // Issue #397 (B165): the day's "+" seats UNDER the day/date, in the card's
+  // date compartment — no longer on the event bar's right-most side. The
+  // .cal-add treatment (the 28px bounded box, B158's correction) stands; only
+  // the seat moves. The freed row space holds the day's third square before
+  // the pager. Issue #384's row-side seat ("+" rightmost) retires here —
+  // renderCalDayNotes no longer builds an add button; today's own "+"
+  // stays on the band (el.calBandAdd, B158's seat, untouched).
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'cal-add';
+  add.setAttribute('aria-label', 'Add a note ' + calMD(day.date));
+  add.textContent = '+';
+  add.addEventListener('click', () => addCalNote(day.key));
+  dc.append(add);
   // Issue #363: the day's own zone is its day-note squares — the calendar
   // events that used to render as text lines here no longer render at all;
   // the sync machinery keeps syncing, the card shows only the squares.
@@ -1277,25 +1291,22 @@ function paintCal(all) {
     el.calStack.appendChild(makeCalDay(day, notes.filter((r) => r.day === day.key), board));
   }
   renderCalMonth(new Set(events.map((e) => e.date)));
-  seatCalAdds();                       // issue #384: the band's and every day's "+" — one measurement drives both
+  seatCalAdds();                       // issue #384/#397: the band's "+" seat — the day "+" seats under the date, nothing to align
 }
 
-/* The "+" seats (issue #384, the owner's corrections): the band's button is
-   CENTERED in the band's right-of-card section, and every day card's button
-   is pushed over so its CENTRE aligns with the band button's centre. The
-   card's width is max-content (B37), so the section's centre is measured,
-   not guessed: one geometry read per paint sets both CSS vars, and the CSS
-   positions every box from them. The 14px is half the 28px box. */
+/* The band "+" seat (issue #384, the owner's corrections): the button is
+   CENTERED in the band's right-of-card section. The card's width is
+   max-content (B37), so the section's centre is measured, not guessed: one
+   geometry read per paint sets the CSS var, and the CSS positions the box
+   from it. Issue #397 (B165) retires the second half of this measurement —
+   the day cards' push-over alignment (the retired row-side variable): the
+   day "+" seats under the date now, in the compartment's own centred
+   column, so nothing left to measure but the band. */
 function seatCalAdds() {
   const band = el.calBand.getBoundingClientRect();
   const card = el.calBandCard.getBoundingClientRect();
   const mid = (card.right + band.right) / 2;           // the right-of-card section's centre, band-relative below
   el.calView.style.setProperty('--cal-add-x', (mid - band.left) + 'px');
-  const zone = document.querySelector('#cal-stack .cal-notes');
-  if (zone) {
-    const zr = zone.getBoundingClientRect();
-    el.calView.style.setProperty('--cal-add-right', (zr.right - mid - 14) + 'px');
-  }
 }
 
 /* --- The day-note squares (issue #363) -------------------------------------
@@ -1356,17 +1367,17 @@ function renderCalDayhead() {
 }
 
 /* One day card's notes zone (issue #363; one-zone squares per issue #365):
-   the day's own records as square blocks — three shown, the card's "+" rightmost,
-   the ‹/› pager on
+   the day's own records as square blocks — three shown (issue #397: the
+   row's right end no longer seats the "+"; it sits under the date in
+   makeCalDay, and the third square takes the space), the ‹/› pager on
    the card when the day holds more than three (the .mo-nav grammar; page
    state is per day, render-time only, nothing stored). Calendar events are
-   never read here. opts.add === false omits the row's "+" — issue #384:
-   today's squares render in the body below the band, where the "+" is
-   seated on the band's right (el.calBandAdd), not beside the squares. */
+   never read here. No add button is built here — issue #384's band seat
+   (today, el.calBandAdd) and issue #397's date-compartment seat (the six
+   day cards, makeCalDay) own the adders now. */
 const CAL_PAGER = { prev: '‹', next: '›' };
 
-function renderCalDayNotes(zone, day, recs, opts) {
-  const withAdd = !(opts && opts.add === false);
+function renderCalDayNotes(zone, day, recs) {
   const row = document.createElement('div');
   row.className = 'cal-notes-row';
   const pages = Math.max(1, Math.ceil(recs.length / CAL_NOTE_PER_DAY));
@@ -1405,19 +1416,9 @@ function renderCalDayNotes(zone, day, recs, opts) {
       next.addEventListener('click', () => { page++; calDayNotePage[day.key] = page; draw(); });
       row.appendChild(next);
     }
-    // The card's "+": right of the squares. It adds a DAY NOTE to this date —
-    // the event-add chain it used to run (R5's linked-board trigger) retired
-    // with the lines; the sync machinery itself keeps syncing without it.
-    // Issue #384: today's row omits it — the band seats today's "+" instead.
-    if (withAdd) {
-      const add = document.createElement('button');
-      add.type = 'button';
-      add.className = 'cal-add';
-      add.setAttribute('aria-label', 'Add a note ' + calMD(day.date));
-      add.textContent = '+';
-      add.addEventListener('click', () => addCalNote(day.key));
-      row.appendChild(add);
-    }
+    // Issue #397: no add button here — the day card's "+" seats under the
+    // date in makeCalDay (the row's right end is the third square's now),
+    // and today's "+" is the band's (el.calBandAdd, issue #384).
     zone.textContent = '';
     zone.appendChild(row);
   };
@@ -1433,7 +1434,8 @@ function renderCalDayNotes(zone, day, recs, opts) {
    cards' own measure (the row is inset to the day card's date-compartment
    width, 84px + the shared 6px, so the squares sit exactly where a day
    card's squares sit), the ‹/› pager beyond three, and NO row "+": today's
-   adder is seated on the band's right (seated below). */
+   adder is seated on the band's right (seated above). Issue #397 changed
+   nothing here — today's "+" keeps its B158 band seat. */
 function renderCalToday(today, recs) {
   const add = el.calBandAdd;
   add.setAttribute('aria-label', 'Add a note ' + calMD(today.date));
@@ -1441,7 +1443,7 @@ function renderCalToday(today, recs) {
   add.onclick = () => addCalNote(today.key);
   const zone = document.createElement('div');
   zone.className = 'cal-notes on-dark';
-  renderCalDayNotes(zone, today, recs, { add: false });
+  renderCalDayNotes(zone, today, recs);
   el.calTodayBoard.textContent = '';
   el.calTodayBoard.appendChild(zone);
 }
