@@ -76,9 +76,108 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++
     await ctx.close();
   }
 
-  // The open-past-midnight case (renderCal's key-changed check) needs a fake
-  // clock — calKey reads new Date() at the call site — and is left to QA's
-  // manual pass; the guard itself is two lines on `rollDay`.
+  // R3/R4 (B162, issue #394): the open-past-midnight case, previously left to
+  // QA's manual pass, is now driven through Playwright's clock — calKey reads
+  // new Date() at the call site, so the day key only changes under a faked
+  // clock. renderCal() is the surface's lawful trigger (checkDayRoll rides it).
+
+  console.log('\n[R3] Open past midnight, 0 events: the mid-session roll does the FULL morning routine (B162 — board created, yesterday\'s incompletes carried, landed)');
+  {
+    const ctx = await browser.newContext({ serviceWorkers: 'block' });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(String(e)));
+    await page.goto(URL);
+    await page.waitForTimeout(1500);             // boot: today's board exists (B107)
+    const base = await page.evaluate(() => Date.now());
+    // Today's board (yesterday once midnight passes) gets one incomplete and
+    // one completed note — only the incomplete may move. Seeded through the
+    // LIVE state.current (boot landed on it), memory and IDB kept in agreement
+    // — a bare idbPut behind the app's back is clobbered by flushSave() on the
+    // next launch (its snapshot of the in-memory board wins the write race).
+    await page.evaluate(async () => {
+      const b = state.current;
+      b.notes = [
+        { id: 'r1', text: 'midnight carry one', x: 42, y: 60, rw: 900, rh: 900, scale: 1.0, state: 'active' },
+        { id: 'r2', text: 'stays behind', x: 120, y: 200, rw: 900, rh: 900, scale: 1.0, state: 'complete' },
+      ];
+      await idbPut(b);
+    });
+    await page.clock.install({ time: base });
+    await page.clock.setFixedTime(base + 24 * 3600 * 1000);   // midnight passes under the open page
+    await page.evaluate(() => renderCal());      // the key-changed check: the mid-session roll
+    await page.waitForTimeout(300);             // the launch's native IDB awaits resolve
+    await page.clock.runFor(3000);               // SWAP_MS + the debounced saves (faked timers)
+    await page.waitForTimeout(300);             // the saves' own native awaits resolve
+    const got = await page.evaluate(async () => {
+      const key = calKey(new Date());
+      const all = await idbGetAll();
+      const t = all.find(r => r.cal === key);
+      const yb = all.find(r => r.cal !== key && (r.notes || []).some(n => n.id === 'r2'));
+      return { curCal: state.current && state.current.cal,
+               title: t && t.title,
+               tNotes: t && t.notes.map(n => ({ id: n.id, x: n.x, y: n.y, carriedOn: n.carriedOn })),
+               yNotes: yb && yb.notes.map(n => n.id) };
+    });
+    const nextKey = await page.evaluate(() => calKey(new Date()));
+    ok('the mid-session roll created the new day\'s board, 0 events', !!got.title, JSON.stringify(got));
+    ok('the app landed on it', got.curCal === nextKey, JSON.stringify(got.curCal) + ' want ' + nextKey);
+    ok('title is the MM/DD/YY To Do species', /\/\d\d\/\d\d To Do$/.test(got.title || ''), got.title);
+    ok('yesterday\'s incomplete note carried, same x/y, carriedOn = the new day',
+      JSON.stringify(got.tNotes) === JSON.stringify([{ id: 'r1', x: 42, y: 60, carriedOn: nextKey }]),
+      JSON.stringify(got.tNotes));
+    ok('the completed note stayed on yesterday\'s board',
+      JSON.stringify(got.yNotes) === JSON.stringify(['r2']), JSON.stringify(got.yNotes));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  console.log('\n[R4] A dropped launch retries at the next check (B162): busy commitAction drops the roll, the next renderCal lands it');
+  {
+    const ctx = await browser.newContext({ serviceWorkers: 'block' });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(String(e)));
+    await page.goto(URL);
+    await page.waitForTimeout(1500);             // boot: today stamped, board exists
+    const base = await page.evaluate(() => Date.now());
+    await page.clock.install({ time: base });
+    await page.clock.setFixedTime(base + 24 * 3600 * 1000);
+    const calKeyStr = await page.evaluate(() => calKey(new Date()));
+    // A busy app: commitAction's re-fire drop-guard is held (B81), then the
+    // roll fires — and is dropped. Under the old code the day was stamped
+    // before the drop, so no later check could ever retry it (issue #394).
+    await page.evaluate(() => { commitAction(() => {}); renderCal(); });
+    await page.waitForTimeout(300);               // the dropped launch resolves to nothing
+    const afterDrop = await page.evaluate(async () => {
+      const key = calKey(new Date());
+      const all = await idbGetAll();
+      return { board: !!all.find(r => r.cal === key), curCal: state.current && state.current.cal };
+    });
+    ok('the dropped launch created nothing yet', !afterDrop.board && afterDrop.curCal !== calKeyStr, JSON.stringify(afterDrop));
+    await page.clock.runFor(600);                 // the drop-guard window passes (faked timer)
+    await page.waitForTimeout(100);
+    await page.evaluate(() => renderCal());       // the next check: the retry
+    await page.waitForTimeout(300);               // the launch's native IDB awaits resolve
+    await page.clock.runFor(3000);                // SWAP_MS + the debounced saves
+    await page.waitForTimeout(300);
+    const got = await page.evaluate(async () => {
+      const key = calKey(new Date());
+      const all = await idbGetAll();
+      return { board: !!all.find(r => r.cal === key), curCal: state.current && state.current.cal };
+    });
+    ok('the retry created the new day\'s board', got.board, JSON.stringify(got));
+    ok('the app landed on it', got.curCal === calKeyStr, JSON.stringify(got.curCal) + ' want ' + calKeyStr);
+    await page.evaluate(() => renderCal());       // idempotence: no second launch
+    await page.clock.runFor(1500);
+    const boards = await page.evaluate(async () => {
+      const key = calKey(new Date());
+      return (await idbGetAll()).filter(r => r.cal === key).length;
+    });
+    ok('exactly one board for the day — no duplicate on re-check', boards === 1, String(boards));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
 
   await browser.close();
   console.log('\n=== day-roll: ' + pass + ' passed, ' + fail + ' failed ===');
