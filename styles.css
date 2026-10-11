@@ -2114,6 +2114,7 @@ html.wide #cal-export { margin-left: auto; }
   margin: 0 -12px 0;                   /* the view's side padding, spent; top at the rule — the card's overhang lands on the body */
   padding: 22px 6px 4px 6px;           /* the top clears the card's overhang; the squares fill FROM THE LEFT — the owner's correction (issue #384: they filled right-to-left off the old compartment inset) */
   background: var(--card);             /* #251002 — the title card's own fill (issue #384) */
+  border-bottom: 2px solid var(--frame); /* the card's own 2px --frame border at the bottom (issue #396) */
   border-radius: 0 0 4px 4px;          /* only the corners that exist below */
 }
 #cal-view.panel #cal-today-board { margin: 0 -12px 0; }   /* the panel's 12px padding, spent the same way */

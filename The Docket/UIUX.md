@@ -1077,12 +1077,13 @@ writing the same `day`-field record (B153's binding; B153's per-card seat
 superseded for the today card — the other six day cards keep theirs).
 The band's own anatomy is otherwise untouched by #384.
 
-**The Today board body (issue #384, B158).** Today's day card leaves the
+**The Today board body (issue #384, B158; bottom border B167, issue #396).** Today's day card leaves the
 weekly stack and becomes `#cal-today-board` — the full-width deep-orange
 body directly below the band, the title card's OWN fill (`var(--card)`
 #251002: "the background of the event note cards for 'today' needs to be
 the deep orange like the background of a to do board but in this orange
-palette"), no grey border of its own ("the grey border removed"), pulled
+palette"), a 2px `--frame` bottom border (B167: "Use the border that wraps
+the 'Today's Date' title card with the thicker weight"), pulled
 up 22px so the card's overhang LANDS ON it — band, card and body read as
 one little board at the top (the owner's "becomes like a little board at
 the top"); the fill never runs past the body's own bottom edge and the
