@@ -1043,8 +1043,9 @@ carries the same pair for Firefox). The scrollbar belongs to the stack
 alone: the band, the Today board body, the month view and the bottom-seated
 exit row sit outside `#cal-stack` and never move; `#cal-view` itself stays
 a fixed, bounded page. A day card is a
-two-column grid: the date card (`--card`, the day's name over MM/DD) beside
-the day's notes zone on the water's fall. Attention recedes with distance
+two-column grid: the date card (`--card`, the day's name over MM/DD — with
+the card's `+` seated UNDER the date lines, centered in the compartment's
+own column, issue #397) beside the day's notes zone on the water's fall. Attention recedes with distance
 from now — days with notes near, empty days far (`brightness .6`). Scale and
 luminance, never icons.
 
@@ -1141,17 +1142,19 @@ under `#cal-view` — supersedes ONLY B155's fill clause (the `var(--card)`
 (`outline: 2px solid var(--frame)`), radius 4px; the squares center
 vertically in the notes row (`align-items: center`). Three squares per
 day, and a `‹`/`›` pager (the `.mo-nav` grammar) when a day holds more than
-three; each non-today day card's `+` rightmost (issue #384 seats today's `+`
-on the band's right). Every "+" is a BOUNDED button — a 2px `--frame` border
-drawing the click space, one 28px box with the glyph centered in it,
-vertically centered in its row (`align-self: center`); the day buttons are
-pushed over so their boxes' CENTRES align on the band button's centre — the
-right-of-card section's centre, measured per paint by `seatCalAdds()` (the
-card's width is `max-content`, so the centre is not a static offset)
-corner within its section. Not pushed to the right. It also needs a border
-around it, a visual click space that bounds the button. they all need this
-treatment, every single day should have it's button pushed over, aligned
-with where the today's '+' is being pushed to and centered vertically.").
+three. **Each non-today day card's `+` seats UNDER the day/date, inside the
+date compartment's own centered column (issue #397, superseding issue
+#384's rightmost row seat for the six day cards; today's `+` keeps its
+#384 seat on the band's right).** Every `+` is a BOUNDED button — a 2px
+`--frame` border drawing the click space, one 28px box with the glyph
+centered in it (issue #384's treatment, unchanged by the seat move). The
+day buttons seat in the compartment's column, 4px beneath the date lines —
+the push-over alignment onto the band button's centre is superseded with
+the old seat, and `seatCalAdds()` measures the band's button alone (the
+card's width is `max-content`, so the band centre is measured, not
+guessed); the row's right end carries no adder, and the third square takes
+the space before the pager (issue #397: "That empty space can be used for a
+third event card to fit before pagination").
 The squares' own measure is untouched (issue #384: a
 color, not a size). The zone writes the record's
 `next` field (a legacy calKey value there renders as an empty body — nothing
@@ -1164,9 +1167,11 @@ square's whole read). Calendar events never render in the weekly stack (the
 cards show only day-note squares); the event records and their mirror sync
 with the linked To-Do boards continue untouched.
 
-**Capture.** Each day's zone carries the day card's `+` — the calendar edition
+**Capture.** Each day card's date compartment carries the card's `+`, under
+the date — the calendar edition
 of §6.2: tap and type, the caret arrives with the tap, in the square (issue
-#365: the square's one zone). Today's `+` is seated on the band's right
+#365: the square's one zone; issue #397: the seat). Today's `+` is seated on
+the band's right
 (issue #384); its squares render in the body below. Commit-on-blur writes
 the record; an empty commit discards (B8).
 

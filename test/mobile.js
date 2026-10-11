@@ -2672,7 +2672,12 @@ async function openCat(page, cat) {
     ok("the long day-note body renders inside the Today board's row, wrapped and readable, unclipped",
       g.noteInCard && g.noteH >= 30, 'inCard=' + g.noteInCard + ' h=' + g.noteH);
     ok('the six day cards shrink to their content (the empty cards at the row\'s floor, the square-bearing card fit to its square)',
-      g.others.every(h => h >= 40 && h <= 110) && g.others.some(h => h < 60), JSON.stringify(g.others));
+      // Issue #397 (B165) re-pins the empty-card floor: every card's date
+      // compartment now carries the "+" beneath the date lines (28px box +
+      // 4px), so the empty card's floor moved ~57 → ~65px. The card is still
+      // content-sized — the empty floor sits well under the square-bearing
+      // card's 92 and the 110 cap.
+      g.others.every(h => h >= 40 && h <= 110) && g.others.some(h => h < 70), JSON.stringify(g.others));
     ok('the face flows from the top: the month view follows the stack and the slack falls below it, above the exit row (B153 re-seats #293)',
       g.monthBelowStack >= -1 && g.monthBottomGap > 0 && g.fits, JSON.stringify(g));
     ok('no page errors', errors.length === 0, errors.join(' | '));

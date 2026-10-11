@@ -2147,10 +2147,13 @@ html.wide #cal-export { margin-left: auto; }
   text-align: center;
 }
 /* Issue #363: the day-note squares, moved INTO the day cards — each card's
-   zone is one row: the ‹/› pager (only when the day holds more than three),
-   the day's squares (three shown, the .mo-nav grammar), and the card's "+"
-   rightmost. (Issue #384: today's row renders in the body below the band —
-   no row "+" of its own; the band seats today's "+" at the bar's right.)
+   zone is one row: the ‹/› pager (only when the day holds more than three)
+   and the day's squares (three shown, the .mo-nav grammar). Issue #397: the
+   card's "+" no longer seats rightmost on this row — it seats under the
+   date in the card's date compartment (makeCalDay), and the third square
+   takes the freed space before the pager. (Issue #384: today's row renders
+   in the body below the band — no row "+" of its own; the band seats
+   today's "+" at the bar's right.)
    Tokens only — the ladder #cal-view already binds (B117; one zone per
    issue #365): the body var(--note) — the calendar's note rung, #e3c6aa
    (issue #384, superseding B155's fill clause) — with --ink-dark, radius
@@ -2185,7 +2188,7 @@ html.wide #cal-export { margin-left: auto; }
   flex: 1;
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));   /* three squares, then the "+" */
+  grid-template-columns: repeat(3, minmax(0, 1fr));   /* three squares (issue #397: the "+" seats under the date, so all three fit) */
   gap: 6px;
   align-items: center;                   /* issue #365: centered, not seated high */
 }
@@ -2270,17 +2273,14 @@ html.wide #cal-export { margin-left: auto; }
   cursor: pointer;
   transition: filter 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-/* Every day's "+" is pushed over to align WITH today's: its box's CENTRE
-   lands on the band button's centre (the section's centre, the same
-   --cal-add-x measurement), set per paint from the band's geometry — the
-   owner's correction: "move every + button in the weekly view over to align
-   with it". Absolute against the card's own zone (position:relative), so
-   the box rides the row's redraws. */
-.cal-notes-row .cal-add {
-  position: absolute;
-  right: var(--cal-add-right, 6px);
-  top: 50%; transform: translateY(-50%);
-}
+/* Issue #397 (B165): the day card's "+" seats UNDER the day/date, inside the
+   date compartment's own centred column — no longer on the event bar's
+   right-most side. The B158 bounded-box treatment stands (the 2px --frame
+   border, the 28px box, the glyph centered); only the seat moves, and the
+   freed row space holds the day's third square before the pager. The
+   push-over alignment (the retired row-side absolute seat and its variable)
+   is superseded; the band's own "+" keeps its --cal-add-x measurement. */
+.cal-date .cal-add { margin-top: 4px; }
 .cal-add:hover, .cal-add:focus-visible { opacity: 1; }
 /* Attention recedes with distance from now (the mockups' law): today lit,
    the rest receded — scale and luminance, never icons. */
