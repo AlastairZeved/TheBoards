@@ -814,23 +814,30 @@ the ordinary editable title, unchanged — the placeholder, the ink and the
 `15px/600` set above all stand.
 
 **On the linked board the mirrored Requirements lines render in read state as
-the calendar's squares (B163, issue #393).** The mirror's span — the first
-`calReq` lines, B106's own law — paints one square block per line in a
-wrapping `.req-squares` grid beneath the band's top edge: the day-note
-species (§3.4) verbatim in geometry — `aspect-ratio: 1/1`, `border-radius:
-4px`, the 2px `--frame` inset outline (`outline-offset: -2px`), `overflow:
-hidden`, `12px/400/1.4` on `4px 6px` padding, the two-line clamp — on
-`75px` tracks at the phone tier (`repeat(auto-fill, 75px)`) and `53px` on
-desktop, `6px` gap. The fill and ink are **literals, not the board's own
-rungs**: `#e3c6aa` — the Calendar ladder's `--note` rung (§2.2.2) — with
-`#031019` ink (§2.3), the calendar's orange on the To Do blue *on purpose*
-(the owner: "visually distinct and attract the user's eye to today's
-required events"). The hand lines after the span stay plain pre-wrap text
-beneath the grid; a non-linked board or an empty span paints exactly the
-plain text it always did. The squares are a read state, not a surface:
-`pointer-events: none`, no per-square editing — the anchor stays the one
-contenteditable surface, entering edit restores the plain `\n`-string and
-blur repaints the squares after the B106 write-through commits.
+the calendar's squares on desktop, one-line chips on the phone (B163/B164,
+issue #393).** The mirror's span — the first `calReq` lines, B106's own law —
+paints one block per line in a `.req-squares` grid beneath the band's top edge.
+**The tier splits the shape (B164):** on the **phone** tier each block is a
+*chip* — one line of the section, full-width (`grid-template-columns: 1fr`),
+one text line tall (`white-space: nowrap`), a name too long for the
+phone's ~101px column cut off with an ellipsis (`text-overflow: ellipsis`) so
+the chip stays exactly one line, stacked
+down the section at the `.cal-notes` gap (`6px`); on **desktop**
+(`html.desktop`) each block is B163's *square* — the day-note species
+(§3.4) verbatim in geometry: `aspect-ratio: 1/1`, `border-radius: 4px`, the
+2px `--frame` inset outline (`outline-offset: -2px`), `overflow: hidden`,
+the two-line clamp — on `53px` tracks (`repeat(auto-fill, 53px)`), measured
+against the calendar's own squares at the 1440 viewport. The fill and ink are
+**literals on both tiers, not the board's own rungs**: `#e3c6aa` — the
+Calendar ladder's `--note` rung (§2.2.2) — with `#031019` ink (§2.3), the
+calendar's orange on the To Do blue *on purpose* (the owner: "visually
+distinct and attract the user's eye to today's required events"). The hand
+lines after the span stay plain pre-wrap text beneath the grid; a non-linked
+board or an empty span paints exactly the plain text it always did. The
+blocks are a read state, not a surface: `pointer-events: none`, no per-block
+editing — the anchor stays the one contenteditable surface, entering edit
+restores the plain `\n`-string and blur repaints after the B106 write-through
+commits.
 
 ### §3.2 The Parking Lot is a section, not a box
 

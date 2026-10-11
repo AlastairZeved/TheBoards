@@ -3205,28 +3205,52 @@ async function openCat(page, cat) {
       document.querySelectorAll('#anchor-requirements .req-square').length === 2,
       null, { timeout: 10000 });
 
-    // The read state: every rendered square carries the calendar's orange
+    // The read state (B164): every rendered chip carries the calendar's orange
     // fill (#e3c6aa -> rgb(227, 198, 170)) and the note rung's ink pair
-    // (#031019 -> rgb(3, 16, 25)), at the species' own type (12px/400), and
-    // measures square (aspect 1:1) at this suite's 384px viewport.
-    const squares = await page.evaluate(() =>
-      [...document.querySelectorAll('#anchor-requirements .req-square')].map(n => {
+    // (#031019 -> rgb(3, 16, 25)), at the species' own type (12px/400), and at
+    // the phone tier each chip takes up ONE line of the section — the
+    // section's full width, one text line tall (~25px), never a square.
+    const squares = await page.evaluate(() => {
+      const anchor = document.getElementById('anchor-requirements');
+      const a = anchor.getBoundingClientRect();
+      return [...document.querySelectorAll('#anchor-requirements .req-square')].map(n => {
         const r = n.getBoundingClientRect(); const cs = getComputedStyle(n);
-        return { text: n.textContent, w: r.width, h: r.height,
+        return { text: n.textContent, w: r.width, h: r.height, aw: a.width,
                  bg: cs.backgroundColor, ink: cs.color, fs: cs.fontSize, fw: cs.fontWeight };
-      }));
-    ok('two mirrored lines render as squares, in event order',
+      });
+    });
+    ok('two mirrored lines render as chips, in event order',
       squares.length === 2 && squares[0].text === 'mirror one' && squares[1].text === 'mirror two',
       JSON.stringify(squares));
-    ok('every square fills with the calendar\'s orange #e3c6aa and inks #031019 — not the board\'s own ladder',
+    ok('every chip fills with the calendar\'s orange #e3c6aa and inks #031019 — not the board\'s own ladder',
       squares.every(s => s.bg === 'rgb(227, 198, 170)' && s.ink === 'rgb(3, 16, 25)'),
       JSON.stringify(squares));
-    ok('every square measures square (aspect 1:1) at this viewport',
-      squares.every(s => Math.abs(s.w - s.h) < 1 && s.w > 40),
+    ok('every chip takes up ONE line of the section: the section\'s full width (w == the anchor\'s own width), one text line tall — not a square (B164)',
+      squares.every(s => Math.abs(s.w - s.aw) < 3 &&
+        s.h > 15 && s.h < 30 && Math.abs(s.w - s.h) > 20),
       JSON.stringify(squares));
-    ok('the square\'s type is the species\' own 12px/400 — not the anchor\'s 15px/600',
+    ok('the chip\'s type is the species\' own 12px/400 — not the anchor\'s 15px/600',
       squares.every(s => s.fs === '12px' && s.fw === '400'),
       JSON.stringify(squares));
+    // B164's overflow ruling: a name too long for the phone column is cut off
+    // with "…" and the chip stays one line — nowrap + ellipsis computed, and a
+    // seeded name that genuinely overflows (scrollWidth > clientWidth) still
+    // renders one line tall.
+    const cut = await page.evaluate(() => {
+      const n = document.querySelector('#anchor-requirements .req-square');
+      const cs = getComputedStyle(n);
+      const long = n.cloneNode(true);
+      long.textContent = 'a calendar event name far too long for the phone column';
+      n.parentNode.appendChild(long);
+      const out = { ws: cs.whiteSpace, to: cs.textOverflow,
+                    overflows: long.scrollWidth > long.clientWidth,
+                    h: long.getBoundingClientRect().height, h0: n.getBoundingClientRect().height };
+      long.remove();
+      return out;
+    });
+    ok('a long name is cut off with an ellipsis and the chip stays exactly one line tall (B164)',
+      cut.ws === 'nowrap' && cut.to === 'ellipsis' && cut.overflows && Math.abs(cut.h - cut.h0) < 1,
+      JSON.stringify(cut));
     // The hand line rides AFTER the grid, in the anchor's own plain pre-wrap
     // grammar — outside any square.
     const hand = await page.evaluate(() => {

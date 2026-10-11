@@ -465,11 +465,37 @@ body {
    (interactions.js, enableEditing), so the editing grammar is unchanged. */
 .req-squares {
   display: grid;
-  /* The calendar's own square measure: 75px at the phone tier (the 384px
-     viewport's today-body tracks, B158's record); no pager — the span is
-     unbounded, so the row wraps. */
-  grid-template-columns: repeat(auto-fill, 75px);
+  /* Issue #393, B164: on the PHONE tier each mirrored line is a CHIP that
+     takes up ONE line of the section — a single 1fr column at the zone's
+     own full width, stacked down the section. The squares the owner kept
+     live at the desktop tier below (the B163 rendering, HTML-keyed the same
+     axis the .cal-notes row itself uses). The .cal-notes gap (6px) stands
+     on both tiers; no pager — the span is unbounded, so the column just
+     grows. */
+  grid-template-columns: 1fr;
   gap: 6px;                            /* .cal-notes' own gap */
+  pointer-events: none;
+}
+.req-square {
+  /* The chip (phone tier, B164): the .cal-note species in every value EXCEPT
+     the box — one line tall, the section's full width, no aspect ratio. */
+  outline: 2px solid var(--frame);    /* the family's inset frame (B72) — the fill must not erase it */
+  outline-offset: -2px;
+  border-radius: 4px;
+  overflow: hidden;                   /* the fill clips to the 4px radius */
+  background: #e3c6aa;                /* the Calendar ladder's --note rung (UIUX §2.2.2) — the literal: var(--note) here is the board's own blue */
+  color: #031019;                     /* the note rung's approved ink pair (UIUX §2.3) */
+  /* Plain text (issue #365's species): does NOT inherit the anchor's
+     15px/600 — the calendar's square reads at its own measure. */
+  font-size: 12px; font-weight: 400; line-height: 1.4;
+  padding: 4px 6px;
+  /* B164: the chip IS one line — a name too long for the phone's ~101px
+     column is cut off with "…" (the owner's ruling: "Cut it off with '…' so
+     each chip stays exactly one line tall"); the whole name reads in the
+     editor, which restores the plain string on tap. */
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   pointer-events: none;
 }
 html.desktop .req-squares {
@@ -479,21 +505,14 @@ html.desktop .req-squares {
      board's squares match it. */
   grid-template-columns: repeat(auto-fill, 53px);
 }
-.req-square {
-  aspect-ratio: 1 / 1;                /* the .cal-note species — the block is square */
-  outline: 2px solid var(--frame);    /* the family's inset frame (B72) — the fill must not erase it */
-  outline-offset: -2px;
-  border-radius: 4px;
-  overflow: hidden;                   /* the fill clips to the 4px radius */
-  background: #e3c6aa;                /* the Calendar ladder's --note rung (UIUX §2.2.2) */
-  color: #031019;                     /* the note rung's approved ink pair (UIUX §2.3) */
-  /* Plain text (issue #365's species): does NOT inherit the anchor's
-     15px/600 — the calendar's square reads at its own measure. */
-  font-size: 12px; font-weight: 400; line-height: 1.4;
-  padding: 4px 6px;
+html.desktop .req-square {
+  /* The desktop tier keeps B163's square: the .cal-note species verbatim,
+     aspect 1/1 in its 53px track, two lines read, a third never draws. */
+  aspect-ratio: 1 / 1;
+  white-space: normal;
+  text-overflow: clip;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
-  overflow-wrap: break-word;          /* two lines read, a third never draws */
-  pointer-events: none;
+  overflow-wrap: break-word;
 }
 /* The header hangs BELOW the rule as a tight tab in the rule's own ink (issue
    #111, B76; supersedes B47/B54's "label above the rule"): its top edge lands
