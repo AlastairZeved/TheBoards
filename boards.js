@@ -1123,43 +1123,60 @@ export function eventsOf(all) {
   return all.filter(r => typeof r.date === 'string' && typeof r.text === 'string' && r.title === undefined);
 }
 
-/* --- The day-roll launch (issue #153, B105) + the morning lifecycle (B108) -
+/* --- The day-roll launch (issue #153, B105) + the morning lifecycle (B108) --
    Each morning's first load, TODAY's linked To-Do board exists — created by
    `ensureLinkedBoard` even with zero events (B107's unconditional landing,
    superseding B105's events-exist-only morning condition) — and boot lands
    on it, carrying forward yesterday's incomplete notes (below). The check
    still runs ONCE PER DAY KEY: at boot, and at renderCal only when the
    today key changed since the last check (the open-past-midnight case) —
-   never per render, so it cannot steal focus mid-interaction. The
-   MID-SESSION roll keeps B105 exactly as shipped: it navigates only when
-   the day carries events and carries nothing forward; the morning work is
-   boot's alone, keyed by the same once-per-day guard. */
+   never per render, so it cannot steal focus mid-interaction.
+   B162 (issue #394) makes the MID-SESSION roll the full morning routine in
+   both cases — the day's board is ensured, yesterday's incompletes carry,
+   and the app lands on the new day, eventless or not — superseding
+   B105/B108's "navigates only when the day carries events and carries
+   nothing forward" mid-session clause; and the day key is STAMPED INSIDE
+   the consequence, so a launch dropped by commitAction's guard (B81) is
+   retried at the next check instead of losing the day. */
 let rollDay = null;                     // the day key the roll check last ran for
 
 export function checkDayRoll() {
   const today = calKey(new Date());
   if (rollDay === today) return;
-  const morning = rollDay === null;     // first check of a page load = boot's
-  rollDay = today;
-  launchTodayBoard(today, morning);
+  launchTodayBoard(today);
 }
 
-async function launchTodayBoard(today, morning) {
+async function launchTodayBoard(today) {
   commitAction(async () => {            // creating the board is a consequence
                                         // (ensureLinkedBoard's contract, B81) —
                                         // same wrap as the retired event-add chain's
-    // B131: the boot pick can BE a ghost (the most-recent record is often a
-    // future board the pre-fix build created). Detach it BEFORE flushSave —
-    // persist() early-returns on no current, so the ghost's snapshot never
-    // lands behind the sweep's delete and resurrects it.
-    if (state.current && state.current.cal > today &&
-        !(state.current.notes || []).length) state.current = null;
-    flushSave();
-    const all = await idbGetAll();
-    if (!morning && !calEventsOf(eventsOf(all), today).length) return;
-    const boards = all.filter(b => b.title !== undefined);
-    const { board } = ensureLinkedBoard(boards, today);
-    if (morning) {
+    // B162 (issue #394): the day is stamped HERE, inside the consequence —
+    // not at the check. A stamp before this point was lost with a dropped
+    // launch (commitAction's guard is a hard silent drop), and the
+    // once-per-day guard then refused every later retry, stranding the day
+    // until the OS restarted the page. Stamped here, a dropped launch
+    // leaves the day unstamped and the next check retries it whole.
+    // The stamp RESETS on a throw: an IDB rejection mid-consequence
+    // (idbGetAll, the sweep's deletes, the carry's put) must not strand the
+    // day either — rollDay returns to null so the next keyed check retries
+    // the routine whole, the same promise the drop path makes.
+    rollDay = today;
+    // The guarded body: everything after the stamp, unwound on failure.
+    try {
+      // B131: the boot pick can BE a ghost (the most-recent record is often a
+      // future board the pre-fix build created). Detach it BEFORE flushSave —
+      // persist() early-returns on no current, so the ghost's snapshot never
+      // lands behind the sweep's delete and resurrects it.
+      if (state.current && state.current.cal > today &&
+          !(state.current.notes || []).length) state.current = null;
+      flushSave();
+      const all = await idbGetAll();
+      const boards = all.filter(b => b.title !== undefined);
+      const { board } = ensureLinkedBoard(boards, today);
+      // B162: this block is no longer the morning's alone — the mid-session
+      // roll (the open-past-midnight case) runs the same routine: the mirror
+      // span defaults, the B131 sweep, and the carry, then the landing below.
+      // The old mid-session early-return for an eventless day is gone.
       if (board.calReq === undefined) {
         // B131 (issue #250): the first sync (the retired event-add's job) no longer does for a
         // future-dated event's board — the span is the events it already had.
@@ -1169,24 +1186,27 @@ async function launchTodayBoard(today, morning) {
       // by the pre-fix build are derived empty state — delete them once (the
       // event records survive; they live in the store separately).
       for (const b of boards.slice()) {
-        // No current-board guard: at the morning boot the sweep runs before
-        // the landing swaps current to today's board, and the most-recent
-        // pick could BE a ghost — skipping it would defeat the sweep.
+        // No current-board guard: the sweep runs before the landing swaps
+        // current to today's board, and the most-recent pick could BE a ghost
+        // — skipping it would defeat the sweep.
         if (b !== board && b.cal > today && !(b.notes || []).length) {
           boards.splice(boards.indexOf(b), 1);
           await idbDelete(b.id);
         }
       }
       await carryForward(boards, board, today);
-    }
-    if (state.current && state.current.id === board.id) persist();
-    else await idbPut(board);
-    await syncDateMirror(today);
-    // Step off the calendar first — mobile pops the pushed {v:'cal'} (B9),
-    // wide collapses the expanded panel to its rail — then the plain swap.
-    if (state.calOpen) goCalBack();
-    else if (state.calExpanded) collapseCalRail();
-    swapBoard(board.id);
+      if (state.current && state.current.id === board.id) persist();
+      else await idbPut(board);
+      await syncDateMirror(today);
+      // Step off the calendar first — mobile pops the pushed {v:'cal'} (B9),
+      // wide collapses the expanded panel to its rail — then the plain swap.
+      if (state.calOpen) goCalBack();
+      else if (state.calExpanded) collapseCalRail();
+      swapBoard(board.id);
+    } catch (e) {
+      rollDay = null;                 // un-stamp: the day is not yet served
+      throw e;                        // fire-and-forget per file idiom — the
+    }                                 // next keyed check retries it whole
   });
 }
 
