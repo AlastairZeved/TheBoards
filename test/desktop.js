@@ -3219,6 +3219,54 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await ctx.close();
   }
 
+  console.log('\\n[D35] A dropped Undo tap still auto-hides — clearing the finalize timer only on a real commit (issue #408)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    // One note, captured and committed.
+    await page.mouse.click(500, 200);
+    await page.waitForTimeout(500);
+    await page.keyboard.type('swallowed');
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(150);
+
+    // Select it, then delete via the toolbar (this commits through the B81 guard).
+    const n = await page.evaluate(() => {
+      const el = [...document.querySelectorAll('.note')].find(x => x.querySelector('.note-text').textContent === 'swallowed');
+      const r = el.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await page.mouse.click(n.x, n.y);
+    await page.waitForTimeout(150);
+    const db = await page.evaluate(() => {
+      const b = document.querySelector('.note.selected .note-tb-delete');
+      const r = b.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await page.mouse.click(db.x, db.y);
+    await page.waitForTimeout(100);
+    ok('the Undo toast is up', await page.evaluate(() =>
+      document.querySelector('#toast').classList.contains('show') &&
+      document.querySelector('#toast .msg').textContent === 'Deleted'));
+
+    // Tap Undo immediately — inside ACTION_DELAY (400ms) of the delete, so
+    // commitAction's drop-guard (B81) swallows it. The dropped tap must leave
+    // the finalize timer running, not clear it.
+    await page.evaluate(() => document.querySelector('#toast button').click());
+
+    // Past UNDO_MS (5s) + the 210ms fade + slack: the toast must be gone and
+    // the note still deleted (first tap wins — the Undo never fired).
+    await page.waitForTimeout(5600);
+    const toast = await page.evaluate(() => ({
+      hidden: document.querySelector('#toast').hidden,
+      shown: document.querySelector('#toast').classList.contains('show'),
+    }));
+    ok('the dropped Undo tap leaves the note deleted (B81: first tap wins)', (await noteCount(page)) === 0,
+       'count=' + await noteCount(page));
+    ok('the toast still auto-hides by UNDO_MS', toast.hidden === true && toast.shown === false, JSON.stringify(toast));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   await browser.close();
   console.log('\n=== desktop: ' + pass + ' passed, ' + fail + ' failed ===');
   process.exit(fail ? 1 : 0);
