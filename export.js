@@ -836,6 +836,16 @@ export async function exportAllJson() {
    unknown cats, rather than being rejected wholesale. */
 const IMPORT_CATS = new Set(['todo', 'idea', 'unsorted', 'learning']);
 
+/* Note fields that survive a backup round-trip. This list is the single source
+   of truth for which note properties are preserved on export and accepted on
+   import. New note fields must be added here AND validated in the normalizers
+   below. The fields are: text, position (x,y), size (rw,rh), scale, state,
+   highlighted, title, reminder, carriedOn. */
+const NOTE_FIELDS = [
+  'text', 'x', 'y', 'rw', 'rh', 'scale', 'state', 'highlighted',
+  'title', 'reminder', 'carriedOn'
+];
+
 /* One imported board, normalized to this app's record shape. Every field is
    coerced, not trusted: a backup is data that has been OUT of the device, and
    the import must not hand a hostile or hand-edited file a live record. ids
@@ -860,6 +870,9 @@ function normalizeImportedBoard(raw) {
       scale: Number.isFinite(n.scale) && n.scale > 0 ? n.scale : 1.0,
       state: n.state === 'complete' ? 'complete' : 'active',
       highlighted: n.highlighted === true,
+      title: text(n.title),
+      reminder: n.reminder === true,
+      carriedOn: /^\d{4}-\d{2}-\d{2}$/.test(n.carriedOn) ? n.carriedOn : undefined,
     } : null)
     .filter((n) => n && keep(n));
   const parkingLot = (Array.isArray(raw.parkingLot) ? raw.parkingLot : [])
@@ -904,8 +917,9 @@ function normalizeImportedBoard(raw) {
 /* One imported calendar event, normalized like a board (B123): coerced, not
    trusted. ids re-stamped when absent, `date` must be a calKey-form
    YYYY-MM-DD or the event is dropped, `text` is trimmed, `state` reads as
-   active unless the file says complete (newCalEvent's own default). Returns
-   null for a record that cannot survive as an event. */
+   active unless the file says complete (newCalEvent's own default). `time`
+   is accepted as a string (B142) and defaults to empty. Returns null for a
+   record that cannot survive as an event. */
 function normalizeImportedEvent(raw) {
   if (!raw || typeof raw !== 'object') return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(raw.date)) return null;
@@ -914,6 +928,7 @@ function normalizeImportedEvent(raw) {
     date: raw.date,
     text: typeof raw.text === 'string' ? raw.text.trim() : '',
     state: raw.state === 'complete' ? 'complete' : 'active',
+    time: typeof raw.time === 'string' ? raw.time : '',
     createdAt: Number.isFinite(raw.createdAt) ? raw.createdAt : Date.now(),
   };
 }
