@@ -779,11 +779,17 @@ export async function exportBoardPdf(board) {
     // than filtering in place matters: `src` may be `current`, and mutating
     // live state from an export is exactly the silent write B21 forbids.
     const keep = (r) => (r.text || '').trim().length > 0;
+    const notes = (src.notes || []).filter(keep);
     const rec = {
       title: src.title, requirements: src.requirements, components: src.components,
       createdAt: src.createdAt || board.createdAt,
-      notes: (src.notes || []).filter(keep),
+      notes,
       parkingLot: (src.parkingLot || []).filter(keep),
+      // B91's links must reach the PDF (issue #407): carry them, but only a link
+      // whose two pinned notes both survive the sweep — a line to a dropped
+      // empty note would draw to nowhere (exportLinks skips the dangling ones).
+      links: (src.links || []).filter((l) =>
+        notes.some((n) => n.id === l.a) && notes.some((n) => n.id === l.b)),
     };
     pdfUi.pdfLossy = false;
     const bytes = buildBoardPdf(rec);

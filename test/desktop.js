@@ -1794,18 +1794,33 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     ok('the link persists across reload', (await links()) === 1, 'links=' + await links());
     ok('and its line redraws', (await lines()) === 1, 'lines=' + await lines());
 
-    // The PDF carries the link: one extra stroke op vs the same board unlinked,
-    // and the file stays structurally valid (%PDF-…%%EOF, every xref resolves).
-    const pdf = await page.evaluate(() => {
+    // The link reaches the PDF through the REAL export path (issue #407): the
+    // menu → PDF leaf → download, and the page-1 stream carries one more stroke
+    // than the same board unlinked. This drives exportBoardPdf — which builds
+    // the cleaned `rec` the bug dropped links from — not buildBoardPdf directly,
+    // so the assertion covers the rec, not just the render.
+    const strokes = (s) => (s.match(/[\n ]S[\n ]/g) || []).length;
+    const unlinked = await page.evaluate(() => {
       const dec = (o) => typeof o === 'string' ? o : new TextDecoder('latin1').decode(o);
-      const withLink = dec(buildBoardPdf(state.current));
       const saved = state.current.links.slice();
       state.current.links = [];
-      const without = dec(buildBoardPdf(state.current));
+      const s = dec(buildBoardPdf(state.current));
       state.current.links = saved;
-      const strokes = (s) => (s.match(/[\n ]S[\n ]/g) || []).length;
-      return { withLink, sWith: strokes(withLink), sWithout: strokes(without) };
+      return (s.match(/[\n ]S[\n ]/g) || []).length;
     });
+    const exp = await page.evaluate(() => {
+      const r = document.querySelector('#action-export').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await page.mouse.click(exp.x, exp.y);
+    await page.waitForTimeout(250);
+    const pdfBtn = await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#menu button')].find(x => /PDF/.test(x.textContent));
+      const r = b.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    const [pdl] = await Promise.all([page.waitForEvent('download'), page.mouse.click(pdfBtn.x, pdfBtn.y)]);
+    const ps = fs.readFileSync(await pdl.path()).toString('latin1');
     const pdfValid = (s) => {
       if (!s.startsWith('%PDF-') || !s.trimEnd().endsWith('%%EOF')) return 'head/tail';
       const m = /startxref\s+(\d+)/.exec(s); if (!m) return 'no startxref';
@@ -1820,9 +1835,9 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       }
       return '';
     };
-    ok('the linked board still exports a well-formed PDF', pdfValid(pdf.withLink) === '', pdfValid(pdf.withLink));
-    ok('the link adds exactly one stroke to the PDF', pdf.sWith === pdf.sWithout + 1,
-       'with=' + pdf.sWith + ' without=' + pdf.sWithout);
+    ok('the linked board exports a well-formed PDF through the menu', pdfValid(ps) === '', pdfValid(ps));
+    ok('the link adds exactly one stroke through the export menu', strokes(ps) === unlinked + 1,
+       'real=' + strokes(ps) + ' unlinked=' + unlinked);
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
