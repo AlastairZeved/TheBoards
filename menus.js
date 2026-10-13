@@ -247,8 +247,8 @@ export function registerMenus() {
   el.actionExport.addEventListener('click', (e) => {
     const r = e.currentTarget.getBoundingClientRect();
     buildMenu([
-      { label: COPY.exportPdf, glyph: GLYPH.export, action: () => commitAction(() => exportBoardPdf(state.current)) },
-      { label: COPY.exportJson, glyph: GLYPH.boards, action: () => commitAction(exportAllJson) },
+      { label: COPY.exportPdf, glyph: GLYPH.export, action: () => exportBoardPdf(state.current) },
+      { label: COPY.exportJson, glyph: GLYPH.boards, action: exportAllJson },
     ], r.left, r.bottom);
   });
 

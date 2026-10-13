@@ -267,6 +267,16 @@ export const EMBED_MODE = EMBED &&
    iframe entries, so pushes become replaceState and pops are no-ops (the push
    sites pair with pops — see boards.js returnToBoard/goCalBack). */
 export function histPush(s) { history[EMBED ? 'replaceState' : 'pushState'](s, ''); }
+/* The arrangement tier, derived in ONE place (issue #409): boot's state-init
+   flags read it, and applyEnvironment reads it again on every flip. The two
+   sites must never disagree about what `tablet` means — the definition is
+   `!desktop && TABLET_MQ.matches`, so a ≥1024px desktop reads desktop-only,
+   never desktop-and-tablet together. */
+export function readTier() {
+  const desktop = EMBED_MODE ? EMBED_MODE === 'desktop' : DESKTOP_MQ.matches;
+  const tablet = EMBED_MODE ? false : !desktop && TABLET_MQ.matches;
+  return { desktop, tablet, wide: EMBED_MODE ? EMBED_MODE === 'desktop' : desktop || tablet };
+}
 // Shared geometry constants (issue #182): BAND_TOP/LINE/GAP drive both the screen's
 // bandRuleY (geometry) and the export's bandRuleYFor (export); LOT_HEAD/ROW/FLOOR/
 // MAX_FRAC drive the lot on screen and in the PDF. Both modules read them, so they
@@ -468,6 +478,7 @@ export const anchorEls = {
 };
 
 /* The shared mutable state carrier (moved here at the cut, issue #182): the graph root imports nothing. */
+const bootTier = readTier();    // issue #409: seed the arrangement flags from the one derivation
 export const state = {
   current: null,          // the open board record (in memory)
   dirty: false,           // `current` holds an edit the debounce hasn't written
@@ -475,10 +486,9 @@ export const state = {
   // media-query orchestrator) WRITES these and every region READS them — a
   // cross-module write, so they ride the carrier. A module entry cannot write a
   // bare `let` (imported bindings are read-only); state members it can.
-  isTablet: EMBED_MODE ? false : TABLET_MQ.matches,    // forced view in embed (B124); else load, like isDesktop below
-  isDesktop: EMBED_MODE ? EMBED_MODE === 'desktop' : DESKTOP_MQ.matches,
-  isWide: EMBED_MODE ? EMBED_MODE === 'desktop'
-                     : DESKTOP_MQ.matches || TABLET_MQ.matches,  // desktop ∪ tablet — the arrangement tier
+  isTablet: bootTier.tablet,        // arrangement tier — seeded from readTier(), written by the environment pass
+  isDesktop: bootTier.desktop,
+  isWide: bootTier.wide,
   editVVFloor: Infinity,  // smallest visual-viewport height seen this edit (keyboard fully up)
   editVVWidth: 0,         // the width of the PREVIOUS resize of this edit (issue #281): a fold
                           // changes width, the keyboard never does — the blur's second gate

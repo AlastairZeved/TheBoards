@@ -99,6 +99,7 @@ export async function idbDelete(id) {
     tx.objectStore(STORE).delete(id);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
   });
 }
 export async function idbGet(id) {
