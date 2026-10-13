@@ -1235,11 +1235,13 @@ export function showUndo(undoFn, scope, label) {
   // The caption defaults to "Deleted"; link create/toggle pass "Linked"/"Unlinked" (B91).
   const msg = document.createElement('span'); msg.className = 'msg'; msg.textContent = label || COPY.deleted;
   const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = COPY.undo;
-  // Clear the finalize timer on the click itself, not at the end of the action
-  // window, so a late Undo (≈4.6s+) can't be finalized out from under it.
+  // Clear the finalize timer only when the Undo actually commits — inside
+  // commitAction's drop-guard (B81), not before it — so a tap dropped within
+  // ACTION_DELAY of the delete leaves the timer running and the toast still
+  // auto-hides by UNDO_MS (issue #408). A late Undo (≈4.6s+) that commits
+  // still clears on the click, so it can't be finalized out from under it.
   btn.addEventListener('click', () => {
-    clearTimeout(undoTimer);
-    commitAction(() => { hideToast(); undoFn(); });
+    commitAction(() => { clearTimeout(undoTimer); hideToast(); undoFn(); });
   });
   el.toast.appendChild(msg); el.toast.appendChild(btn);
   el.toast.hidden = false;
