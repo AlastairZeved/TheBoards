@@ -1628,25 +1628,9 @@ function renderCalMonth(evDays) {
   el.calMonth.appendChild(grid);
 }
 
-/* The exit row's acts (R1; one control since B124, renamed Collapse by B134,
-   issue #259, renamed Go Back by B151, issue #353). Go Back pops the pushed state. All Boards opens
-   the picker; the calendar shrinks to fit it rather than being overlaid (the
-   B74 grid draws over the lot at its current height — same reading here, the
-   calendar's stack compresses, nothing is covered). Export opens the B92
-   choice menu anchored at the pressed control — PDF's leaf is the 7-day
-   reference sheet (b8's exporter), JSON the whole-library backup. */
-
-/* The back gesture drives the three levels now (B9, never shadowed): {v:'cal'}
-   the calendar, {v:'cat'} a drilled category, {v:'list'} the picker, no state
-   the board. Popping from a drill to the picker re-opens it on the surface the
-   mode uses — the mobile grid or the desktop screen. The calendar's own branch
-   comes FIRST: it can sit beneath a list state (All Boards from the calendar),
-   so the state alone decides, not calOpen — landing on a non-cal state while
-   the calendar is open hides it (Collapse from the calendar, or the picker's
-   return re-entering the board).
-   drilled category, {v:'list'} the picker, no state the board. Popping from a
-   drill to the picker re-opens it on the surface the mode uses — the mobile
-   grid or the desktop screen. */
+/* The back gesture drives the calendar, category drill, list and board states
+   via the History API (B9). The calendar state is checked first because it can
+   sit beneath the list when the picker is opened from the calendar. */
 
 
 /* Region init (issue #182): top-level side effects, explicit register()
