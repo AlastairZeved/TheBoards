@@ -1,4 +1,4 @@
-import { ACTION_DELAY, DESKTOP_MQ, EMBED, EMBED_MODE, LONGPRESS_MS, MOVE_THRESHOLD, TABLET_MQ, calKey, el, newBoardRecord, newCalEvent, state } from './state.js';
+import { ACTION_DELAY, DESKTOP_MQ, EMBED, EMBED_MODE, LONGPRESS_MS, MOVE_THRESHOLD, TABLET_MQ, calKey, el, newBoardRecord, newCalEvent, readTier, state } from './state.js';
 import { idbDelete, idbGet, idbGetAll, idbPut, migrateLegacyBoards, persist, saveNow } from './persistence.js';
 import { LEGACY_H, LOGICAL_H, LOGICAL_W, applyLayout, calSqueeze, effScale, inEnvironmentPass, lotH, onViewportResize, rebaseNote, renderScale } from './geometry.js';
 import { renderX, renderY, setCalSqueeze } from './geometry.js';
@@ -88,9 +88,7 @@ function applyEnvironment() {
   // B124 embed: a forced view pins the tier — the MQs say nothing. (The change
   // listeners below are unregistered when EMBED_MODE is set, so this guard is
   // for the resize path only.)
-  const desktop = EMBED_MODE ? EMBED_MODE === 'desktop' : DESKTOP_MQ.matches;
-  const tablet = EMBED_MODE ? false : !desktop && TABLET_MQ.matches;
-  const wide = EMBED_MODE ? EMBED_MODE === 'desktop' : desktop || tablet;
+  const { desktop, tablet, wide } = readTier();   // issue #409: one derivation, boot or flip
   const tierChanged = wide !== state.isWide;
   // B152 (issue #360): a focusout hold armed the pass — the keyboard-up
   // resizes were consumed by the editing guard, so the retraction can read
@@ -398,7 +396,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its own five files; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v146';
+const OWN_BUILD = 'v147';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

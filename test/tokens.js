@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v146 — version bumped (issue #408: a dropped Undo tap leaves the toast stuck)',
-   /const CACHE = 'zeved-boards-v146';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v146, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-   /const OWN_BUILD = 'v146';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v147 — version bumped (issue #409: minor correctness batch)',
+   /const CACHE = 'zeved-boards-v147';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v147, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+   /const OWN_BUILD = 'v147';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -824,9 +824,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('Export opens the PDF · JSON choice, leaves anchored at the tab',
     /actionExport\.addEventListener\('click'[\s\S]*?buildMenu\(/.test(app) &&
     /COPY\.exportPdf/.test(app) && /COPY\.exportJson/.test(app));
-  ok('each export leaf commits; the choice itself runs raw (B81)',
-    /action: \(\) => commitAction\(\(\) => exportBoardPdf\(state\.current\)\)/.test(app) &&
-    /action: \(\) => commitAction\(exportAllJson\)/.test(app));
+  ok('each export leaf commits through buildMenu\'s wrapper, not a second self-wrap (B81, issue #409); the choice itself runs raw',
+    /action: \(\) => exportBoardPdf\(state\.current\)/.test(app) &&
+    /action: exportAllJson/.test(app) &&
+    !/commitAction\(\(\) => exportBoardPdf/.test(app) && !/commitAction\(exportAllJson\)/.test(app));
   ok('exportAllJson flushes the debounce and backs up every record under the app tag (B123: events in their own calendarEvents array)',
     /async function exportAllJson/.test(app) && /flushSave\(\);\s*\n\s*const all = await idbGetAll\(\)/.test(app) &&
     /calendarEvents/.test(app) && /app: 'the-boards'/.test(app) && /boards-backup-/.test(app));

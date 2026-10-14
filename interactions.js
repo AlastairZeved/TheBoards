@@ -1133,7 +1133,7 @@ function deleteLot(node) {
   const index = state.current.parkingLot.indexOf(item);
   const snapshot = JSON.parse(JSON.stringify(item));
   state.current.parkingLot.splice(index, 1);
-  leave(node, () => { node.remove(); lotEls.delete(item.id); updateBoardGeometry(); });
+  leave(node, () => { node.remove(); if (lotEls.get(item.id) === node) lotEls.delete(item.id); updateBoardGeometry(); });
   saveNow();
   showUndo(() => {
     state.current.parkingLot.splice(index, 0, snapshot);
@@ -1168,7 +1168,7 @@ export function deleteNotes(ids) {
     const s = snap[i];
     state.current.notes.splice(s.index, 1);
     const node = noteEls.get(s.note.id);
-    if (node) leave(node, () => { node.remove(); noteEls.delete(s.note.id); });
+    if (node) leave(node, () => { node.remove(); if (noteEls.get(s.note.id) === node) noteEls.delete(s.note.id); });
   }
   if (removedLinks.length) updateLinks();            // drop the lines to the leaving notes
   saveNow();

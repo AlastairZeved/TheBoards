@@ -688,6 +688,7 @@ export async function exportCalPdf() {
     const all = await idbGetAll();
     const events = eventsOf(all);
     const L = PDF_MARGIN, R = A4_W - PDF_MARGIN, W = R - L;
+    pdfUi.pdfLossy = false;                       // report lossy substitution, as exportBoardPdf does (B34)
     const stream = (() => {
       const p = pdfCanvas();
       p.q().flip(A4_H);
@@ -730,6 +731,7 @@ export async function exportCalPdf() {
     const pad = (n) => (n < 10 ? '0' : '') + n;
     downloadBlob(new Blob([bytes], { type: 'application/pdf' }),
       'calendar-' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + '.pdf');
+    if (pdfUi.pdfLossy) showNotice(COPY.exportLossy, 'export', UNDO_MS);
   } catch (e) {
     showNotice(COPY.exportError, 'export', UNDO_MS);
   }
