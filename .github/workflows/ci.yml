@@ -1,11 +1,7 @@
 # Run the existing regression suite before merge.
 #
-# test/mobile.js, test/desktop.js, and test/sw-update.js exist specifically to
-# catch the class of bugs this project has been bitten by before (touch-gesture
-# handling, stale service-worker caching — see test/README.md), but until now
-# nothing ran them automatically: only a human remembering to, locally, after
-# the fact. This runs them on every PR and on push to main, before a bad change
-# can reach the Pages deploy in pages.yml.
+# The CI inventory is documented in test/README.md. Run each listed CI suite
+# on every PR and push to main, before a bad change can reach the Pages deploy.
 name: CI
 
 on:
@@ -68,8 +64,6 @@ jobs:
       - name: security.js
         run: node test/security.js
 
-      # sw-update.js serves its own throwaway copy on SW_TEST_PORT; it doesn't
-      # use the server above.
       - name: mobile.js
         run: node test/mobile.js
 
@@ -87,5 +81,10 @@ jobs:
       - name: month.js
         run: node test/month.js
 
+      - name: day-view-suffix.js
+        run: node test/day-view-suffix.js
+
+      # sw-update.js serves its own throwaway copy on SW_TEST_PORT; it doesn't
+      # use the server above.
       - name: sw-update.js
         run: node test/sw-update.js

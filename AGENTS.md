@@ -98,10 +98,13 @@ table of contents.
 ## Shipping discipline (every shipped app-code change)
 
 Bump `sw.js`'s `CACHE` constant (`zeved-boards-v<N>`) when shipped app code
-changes — it is the one string that says which build is live. The service
-worker precaches `app.js`, `styles.css`, and all eight modules, so a change to
-any of those files requires the bump. `test/tokens.js` pins it, and
-`.github/workflows/pages.yml` curls the deployed `sw.js` to assert it matches
+changes — it is the one string that says which build is live. `app.js`'s
+`OWN_BUILD` stamp must match the `CACHE` version suffix. The service worker
+precaches `app.js`, `styles.css`, and all eight modules, so a change to any
+of those files requires the bump. `test/tokens.js` checks that every root
+JavaScript file except `sw.js` is in `ASSETS` and that `OWN_BUILD` matches
+`CACHE`; `.github/workflows/pages.yml` curls the deployed `sw.js` to assert
+it matches
 the commit: a silent deploy failure is treated as a shipped bug, not a
 non-event. Docs-only changes deliberately do not redeploy
 (`paths-ignore: '**/*.md'`).
