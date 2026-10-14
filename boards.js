@@ -2,14 +2,14 @@
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { CAT_SEC_GAP, CE, COPY, GLYPH, LEAVE_MS, LIST_CARD_COLS, LIST_CARD_H, LIST_CAT_ROW } from './state.js';
 import { LONGPRESS_MS, MOVE_THRESHOLD, PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP, SWAP_MS, calBoardOf } from './state.js';
-import { calEventsOf, calKey, calWindow, el, ensureLinkedBoard, EMBED, histPush, newBoardRecord, newCalEvent, state } from './state.js';
+import { calEventsOf, calKey, calWindow, el, ensureLinkedBoard, EMBED, histPush, newBoardRecord, state } from './state.js';
 import { syncMirror, mirrorEventsOf } from './state.js';
-import { flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, saveTimer, scheduleSave } from './persistence.js';
+import { cancelPendingSave, flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, scheduleSave } from './persistence.js';
 import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze, setPaneCollapsed } from './geometry.js';
 import { applyBoardCat, linkedDate, LINKED_TITLE, renderBoard, seatAllNotes, syncViewTitle } from './render.js';
-import { commitAction, g, hideToast, leave, showUndo, undoTimer } from './interactions.js';
+import { commitAction, hideToast, leave, showUndo, undoTimer } from './interactions.js';
 import { buildMenu, closeMenu, syncBoardActions } from './menus.js';
-import { exportAllJson, exportBoardPdf, exportCalPdf } from './export.js';
+import { exportBoardPdf } from './export.js';
 
 /* Two-level navigation since issue #112 / B74. `listOpen` is true for either
    level; `catView` names the drilled category (level 2) or is null at the
@@ -843,7 +843,7 @@ async function ensureCurrentValid() {
   // with it, or the timer would fire against its successor and stamp a board
   // nobody edited — which under B69 would move that card (§3's `dirty` rides
   // whatever `current` is, so it is cleared wherever `current` is replaced).
-  clearTimeout(saveTimer); state.dirty = false;
+  cancelPendingSave(); state.dirty = false;
   const all = await idbGetAll();
   // Events ride the boards store (B105) with no `updatedAt` — same reduce
   // hazard as boot's most-recent pick: an event-first store would open an
@@ -908,7 +908,7 @@ export function goCalBack() {
    issue #353) returns the rail. The rail commits
    nothing (B81: navigation runs raw); no history is pushed on wide, the rail
    is never "off". */
-export function renderCalRail() {
+function renderCalRail() {
   if (!state.isWide) return;
   el.calView.hidden = false;          // the rail is standing furniture: never hidden on wide
   const today = new Date();
@@ -968,7 +968,7 @@ function collapseCalRail() {
    history is pushed, nothing is committed. The board reflows through the
    frame: the collapsed face frees the sheet, the expanded pane reserves it
    (R6's discipline, mirrored in setPaneCollapsed). */
-export function expandPane() {
+function expandPane() {
   el.pane.classList.remove('rail-open');
   el.paneRail.hidden = true;
   el.paneRail.setAttribute('aria-expanded', 'true');

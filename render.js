@@ -306,7 +306,7 @@ export function runClockAction(btn) {
 export const surfacedMap = new Map();      // note.id -> { boardId } — the echoes on screen
 let surfacedToken = 0;                     // stale-async guard across re-renders
 
-export function clearSurfaced() {
+function clearSurfaced() {
   surfacedMap.clear();
   for (const n of [...el.board.querySelectorAll('.note.surfaced')]) n.remove();
 }
@@ -505,7 +505,7 @@ export function ensureNoteTitleEl(node) {
 }
 /* The render path: an empty title (the B21 read-site default) renders nothing —
    no tab, no reserved space; a non-empty one renders (or updates) the tab. */
-export function renderNoteTitle(node, note) {
+function renderNoteTitle(node, note) {
   const t = note.title || '';
   if (!t) { const tab = node.querySelector('.note-title'); if (tab) tab.remove(); return; }
   ensureNoteTitleEl(node).textContent = t;

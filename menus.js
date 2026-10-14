@@ -2,11 +2,12 @@
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { COPY, GLYPH, el, histPush, state } from './state.js';
 import { beginLink, completeSurfaced, copyNoteTexts, linkSource, surfacedMap } from './render.js';
-import { commitAction, editNoteTitle, g, isEditing } from './interactions.js';
+import { commitAction, editNoteTitle, isEditing } from './interactions.js';
 import { exportAllJson, exportBoardPdf, importBoardsJson } from './export.js';
 import { goToList, listOpen, lotMenuOpen, returnToBoard, showCal, swapBoard } from './boards.js';
 
-export let menuOpen = false, menuKeyHandler = null, menuOutsideHandler = null;
+export let menuOpen = false;
+let menuKeyHandler = null, menuOutsideHandler = null;
 export let menuReturnFocus = false;         // true only inside closeMenu's synchronous focus return
 
 /* One menu opens here now (B91): a note's single Link item. The anchor's own

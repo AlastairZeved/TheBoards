@@ -130,8 +130,9 @@ export async function idbGet(id) {
    read-site idiom, and changing it would cost a migration and a version bump. */
 
 // Single-flight persist with exponential backoff; capture is never blocked.
-export let saveTimer = null, persisting = false, dirtyAgain = false, retryDelay = 1000;
+let saveTimer = null, persisting = false, dirtyAgain = false, retryDelay = 1000;
 export function scheduleSave() { state.dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, SAVE_DEBOUNCE); }
+export function cancelPendingSave() { clearTimeout(saveTimer); }
 export function saveNow() {
   clearTimeout(saveTimer);
   if (!state.current) return;
