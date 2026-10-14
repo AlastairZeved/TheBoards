@@ -79,6 +79,10 @@ const server = http.createServer((req, res) => {
     await page.waitForTimeout(1200);
     ok('cross-origin embed: boot never reaches its first step (no boot: markers)',
       markers.length === 0, JSON.stringify(markers));
+    const frame = page.frames().find(f => f !== page.mainFrame());
+    const databases = await frame.evaluate(() => indexedDB.databases().then((dbs) => dbs.map((db) => db.name)));
+    ok('cross-origin embed: neither IndexedDB database was opened',
+      !databases.includes('boards-db') && !databases.includes('boards-db-embed'), JSON.stringify(databases));
     await ctx.close();
   }
 
