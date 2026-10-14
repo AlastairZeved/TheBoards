@@ -1,6 +1,6 @@
 /* --- 4. Layout / scale-to-fit -------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { HIT_FLOOR, HIT_FLOOR_DESKTOP, KB_HIDE_SLOP, LIST_PANEL_FRAC, NOTE_MIN_W, PANE_W, anchorEls, el, BAND_GAP, BAND_LINE, BAND_TOP, LOT_FLOOR, LOT_HEAD, LOT_MAX_FRAC, LOT_ROW } from './state.js';
+import { HIT_FLOOR, HIT_FLOOR_DESKTOP, KB_HIDE_SLOP, LIST_PANEL_FRAC, NOTE_MIN_W, PANE_W, anchorEls, el, BAND_GAP, BAND_LINE, BAND_TOP, LOT_FLOOR, LOT_HEAD, LOT_MAX_FRAC } from './state.js';
 import { state } from './state.js';
 import { lotEls, noteEls, updateLinks } from './render.js';
 import { selected, updateSelectionUI } from './interactions.js';
@@ -15,9 +15,10 @@ export let LEGACY_H = 1000;                 // the LOGICAL_H the pre-B32 build w
                                      // (B93): the render path no longer branches on it —
                                      // boot adopts every rh-less note onto the single
                                      // B64 path before first paint.
-export let renderScale = 1, offX = 0, offY = 0;
+export let renderScale = 1;
+let offX = 0, offY = 0;
 export let calSqueeze = false;
-export let paneCollapsed = false;   // the All-Boards rail's collapsed face (issue #211, B118)
+let paneCollapsed = false;   // the All-Boards rail's collapsed face (issue #211, B118)
 const frameUi = {
   LOGICAL_W_TRUE: null,               // set only while squeezed
 

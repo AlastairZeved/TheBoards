@@ -18,7 +18,6 @@
     12. Boot + service worker
    ========================================================================== */
 
-'use strict';
 
 /* --- 1. Constants & copy ------------------------------------------------- */
 export const NOTE_MIN_W = 132;              // real minimum rendered note width (UIUX §4.5, B84):
@@ -44,7 +43,6 @@ export const PANE_PAGER_H = 32;             // .cat-pager row, desktop (issue #5
 // card issue #97 asks for is bought out of exactly this furniture. The
 // constant covers the whole row, so catPageCap()'s budget stays exact.
 export const LIST_CAT_ROW = 44;             // .board-cat head/pager rows, mobile (issues #74, #88, #97)
-export const PANE_ROW_H = 44;               // the §6 floor rung — the single-line list row keeps it (the rail card rose to LIST_CARD_H, issue #254)
 // Two gaps, because they say two things (B68): card to card inside a section,
 // and section to section. The first tightens to buy the fourth card; the
 // second is what keeps three categories reading as three, and it holds at 8.
@@ -329,7 +327,6 @@ export function calKey(d) {
   const p = (n) => String(n).padStart(2, '0');
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
 }
-function calKeyOf(dateKey) { return dateKey; }   // identity — reads clear at call sites
 
 /* The 7 rolling days: today + 6 future, today first (R7.4 — no past cards;
    mockup 6's "yesterday deepest" line is dead). Each entry is

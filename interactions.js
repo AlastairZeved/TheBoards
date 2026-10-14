@@ -254,7 +254,7 @@ function handleTap(target, x, y, shift) {
     case 'sel-frame': break;           // a motionless click on the ring does nothing
     case 'canvas': tapCanvas(x, y); break;
     case 'lot': tapLot(x, y); break;
-    case 'note': tapNote(target, x, y, shift); break;
+    case 'note': tapNote(target, shift); break;
     case 'lot-item': tapLotItem(target, x, y); break;
     case 'anchor': tapAnchor(target, x, y); break;       // edit-entry is instant on both (B27, B81)
   }
@@ -337,7 +337,7 @@ function tapLot(x, y) {
    tap on the already-engaged active note EDITS, synchronously inside
    pointerup so the keyboard rises (B27a), caret at the END. A completed
    note never edits (§4.3), so it only ever engages. */
-function tapNote(target, x, y, shift) {
+function tapNote(target, shift) {
   const node = target.node;
   const note = state.current.notes.find(n => n.id === node.dataset.id);
   if (!note) return;
@@ -606,7 +606,7 @@ function commitAnchor(node) {
    the others keep their z-order; every member wears .pressed. Grabbing a
    non-member falls through to the single path, which collapses the set
    (selectNote below) — today's behavior. */
-function collectGroupMembers(note, startLogical) {
+function collectGroupMembers(startLogical) {
   g.group = [];
   for (const id of selectedNoteIds()) {
     const n = state.current.notes.find(m => m.id === id);
@@ -645,7 +645,7 @@ function startDrag() {
   // non-member falls through to the single path, which collapses the set
   // (selectNote below) — today's behavior.
   if (state.isDesktop && multiSel.size > 1 && multiSel.has(note.id)) {
-    collectGroupMembers(note, startLogical);
+    collectGroupMembers(startLogical);
     return;
   }
   rebaseNote(note);                  // grab math runs in current-frame units (issue #15)

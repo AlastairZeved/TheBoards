@@ -19,10 +19,10 @@
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { COPY, NOTE_MIN_W, UNDO_MS, calEventsOf, calWindow, state, uuid } from './state.js';
 import { flushSave, idbGet, idbGetAll, idbPut } from './persistence.js';
-import { LOGICAL_H, LOGICAL_W, bandRuleYFor, lotH, noteKFor, noteMaxW } from './geometry.js';
+import { LOGICAL_H, LOGICAL_W, bandRuleYFor, noteKFor, noteMaxW } from './geometry.js';
 import { LOT_HEAD, LOT_MAX_FRAC, LOT_ROW } from './state.js';
 import { renderBoard } from './render.js';
-import { g, showNotice } from './interactions.js';
+import { showNotice } from './interactions.js';
 import { calMD, eventsOf, formatDate, listOpen, renderListSurface, renderPane } from './boards.js';
 
 const A4_W = 595.28, A4_H = 841.89;  // pt; the fit is one constant either way
