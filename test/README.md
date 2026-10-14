@@ -3,9 +3,11 @@
 Dev-only tooling. **The app itself still has no dependencies and no build step** —
 nothing here is served, bundled, or shipped to the device.
 
-Four scripts: three drive a real Chromium through Playwright and assert the
-behaviour of the gesture recognizer, the capture path, the layout guard, and
-delivery; `tokens.js` needs no browser at all:
+The primary regression table lists four scripts: three drive a real Chromium
+through Playwright and assert the behaviour of the gesture recognizer, the
+capture path, the layout guard, and delivery; `tokens.js` needs no browser at
+all. The `test/` directory contains 17 scripts; the commands and remaining
+coverage are listed below:
 
 | Script | Covers |
 |---|---|

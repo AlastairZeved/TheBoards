@@ -1,5 +1,5 @@
 /* ============================================================================
-   Zeved Boards — app.js  (vanilla, no dependencies, no build step)
+   Zeved Boards — state.js  (vanilla, no dependencies, no build step)
 
    Sections:
      1. Constants & copy
