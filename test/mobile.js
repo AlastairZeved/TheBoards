@@ -3401,17 +3401,17 @@ async function openCat(page, cat) {
         document.querySelector('#cal-month .mo-label').textContent)) === thisMonth,
       'label: ' + await page.evaluate(() =>
         document.querySelector('#cal-month .mo-label').textContent));
-    ok('Today restores the weekly stack — the six days after today, one row per day (issue #342, B148; the window reshaped by #384)',
+    ok('Today restores the rolling stack — the 30 days after today, one row per day (issues #342/#398)',
       await page.evaluate(() => {
         const days = [...document.querySelectorAll('#cal-stack .cal-day')];
-        if (days.length !== 6) return false;
+        if (days.length !== 30) return false;
         if (days.some(d => d.classList.contains('today'))) return false;
         // Consecutive keys: the first card is tomorrow; each label advances one day.
         const md = (d) => String(d.getMonth() + 1).padStart(2, '0') + '/' +
                          String(d.getDate()).padStart(2, '0');
         let prev = new Date(); prev.setHours(12, 0, 0, 0);
         prev = new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1);
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 30; i++) {
           const got = days[i].querySelector('.cal-d2').textContent;
           if (got !== md(prev)) return false;
           prev = new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1);

@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v150 — version bumped (issue #412: lazy IndexedDB open)',
-   /const CACHE = 'zeved-boards-v150';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v150, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-   /const OWN_BUILD = 'v150';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v151 — version bumped (issue #398: calendar window and Sunday dividers)',
+   /const CACHE = 'zeved-boards-v151';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v151, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+   /const OWN_BUILD = 'v151';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -973,10 +973,13 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('today wears the to-do boards\' water fall; the current week gets the pale ink-light band (issue #191)',
     /\.mo-cell\.today \{[^}]*linear-gradient\(180deg, var\(--water-top\) 0%, var\(--water-mid\) 46%, var\(--water-bot\) 100%\)/.test(css) &&
     /\.mo-cell\.wk \{ background: rgb\(244 245 241 \/ \.08\); \}/.test(css));
-  ok('the tap swaps the week view to the tapped date\'s Sunday-first week; the shipped today+6 window stays the default (issue #191)',
+  ok('the tap swaps the week view to the tapped date\'s Sunday-first week; the rolling window stays the default (issues #191, #398)',
     /function calWeekOf\(anchor\)/.test(app) &&
-    /const days = calWeekAnchor \? calWeekOf\(calWeekAnchor\) : calWindow\(\);/.test(app) &&
+    /const days = calWeekAnchor \? calWeekOf\(calWeekAnchor\) : calWindow\(CAL_FUTURE_DAYS \+ 1\);/.test(app) &&
     /anchor\.getDate\(\) - anchor\.getDay\(\)/.test(app));
+  ok('every Sunday day card carries the 2px Calendar-orange bottom divider (issue #398)',
+    /day\.date\.getDay\(\) === 0 \? ' sunday'/.test(read('boards.js')) &&
+    /\.cal-day\.sunday \{ border-bottom: 2px solid var\(--frame\); \}/.test(css));
   // --- Issue #170: the calendar card shrink ---
   ok('non-today day cards are their content\'s size; the freed height leaves the stack (issue #170)',
     /\.cal-day \{[^}]*flex: 0 0 auto;/.test(css) && !/\.cal-day \{[^}]*flex: 1 1 0/.test(css));
@@ -1044,11 +1047,13 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('Back is the visible exit and pops the pushed state (R1: never gesture-only)',
     /el\.calBack\.addEventListener\('click'[\s\S]*?goCalBack/.test(app) &&
     /function goCalBack[\s\S]*?history\.back\(\)/.test(app));
-  ok('the 7-day window is computed at render — no midnight write, no stored rolling array (R4)',
-    /function calWindow\(\)/.test(app) && /for \(let i = 0; i < 7; i\+\+\)/.test(app) &&
+  ok('the rolling window is computed at render — no midnight write, no stored array (R4)',
+    /function calWindow\(count = 7\)/.test(read('state.js')) && /for \(let i = 0; i < count; i\+\+\)/.test(read('state.js')) &&
     !/calRoll|rollWindow|midnightTimer/.test(app));
-  ok('the 7-day window is today + 6 future, no past cards (R7.4)',
-    /function calWindow[\s\S]*?new Date\(now\.getFullYear\(\), now\.getMonth\(\), now\.getDate\(\) \+ i\)/.test(app));
+  ok('the default stack window is today plus the next 30 dates, with no past cards (issue #398)',
+    /const CAL_FUTURE_DAYS = 30;/.test(read('boards.js')) &&
+    /calWindow\(CAL_FUTURE_DAYS \+ 1\)/.test(read('boards.js')) &&
+    /function calWindow\(count = 7\)[\s\S]*?new Date\(now\.getFullYear\(\), now\.getMonth\(\), now\.getDate\(\) \+ i\)/.test(read('state.js')));
   ok('the mirror has one writer and a self-recorded span (R5\'s line identity)',
     /function syncMirror\(board, events\)/.test(app) && /board\.calReq = mirrored\.length/.test(app));
   ok('the linked board\u2019s title seat is derived at render, pinned: "Today\u2019s To Do" + the date line off the cal key (B133, issue #273)',

@@ -1028,10 +1028,11 @@ export function calMD(d) {
 export function makeCalDay(day, dayNotes, board) {
   const card = document.createElement('div');
   // Issue #385 (B159): Saturday and Sunday cards carry the weekend class —
-  // the blue Parking Lot fill and the blue title-card squares. Today's card
-  // never renders in the stack (B158), so it is excluded by construction.
+  // the Calendar palette and title-card squares. Issue #398 adds a distinct
+  // Sunday marker for the divider; today's card never renders in the stack.
   card.className = 'cal-day' + (day.today ? ' today'
     : (day.date.getDay() === 0 || day.date.getDay() === 6 ? ' weekend' : '')
+      + (day.date.getDay() === 0 ? ' sunday' : '')
       + (dayNotes.length ? ' near' : ' far'));
   const dc = document.createElement('div');
   dc.className = 'cal-date on-dark';
@@ -1267,8 +1268,8 @@ function paintCal(all) {
   // of #cal-band-card in index.html, above the stack. Issue #384: the band
   // keeps B157's anatomy verbatim (bar, rule, overhanging card); today's day
   // card leaves the stack and becomes the deep-orange body BELOW the band
-  // (#cal-today-board, renderCalToday), and the stack is the remaining six
-  // day rows.
+  // (#cal-today-board, renderCalToday), and the rolling window's future dates
+  // render in the stack (issue #398: the next 30 days).
   renderCalDayhead();
   // §6/B7's collar on the exit row (issue #156, B98; retargeted by B134,
   // issue #259): the row's tab draws at the floor as a visible frame now, and
@@ -1280,7 +1281,7 @@ function paintCal(all) {
   // 44px touch floor vs the 24px pointer floor, so B96's tablet tier
   // inherits the right one. Half-pixel headroom, per the board row's note.
   el.calTop.style.setProperty('--hit', (hitInset(el.calTop, 1) + 0.5) + 'px');
-  const days = calWeekAnchor ? calWeekOf(calWeekAnchor) : calWindow();
+  const days = calWeekAnchor ? calWeekOf(calWeekAnchor) : calWindow(CAL_FUTURE_DAYS + 1);
   const events = eventsOf(all);      // event records ride the boards store (§1.7)
   const notes = calNoteRecords(all); // the day-note records (issue #363: per day)
   const today = days.find((d) => d.today);
@@ -1330,6 +1331,7 @@ function seatCalAdds() {
 let calDayNotePage = {};             // per-day pager position: day.key -> page
 
 const CAL_NOTE_PER_DAY = 3;          // the owner's cap: three squares per day
+const CAL_FUTURE_DAYS = 30;           // issue #398: rolling stack beyond today's separate body
 const CALKEY_DATE = /^\d{4}-\d{2}-\d{2}$/;   // a calKey date (the `day` field; also a legacy next-occurrence calKey, not body text)
 
 function calNoteRecords(all) {
@@ -1535,8 +1537,8 @@ function startCalNoteEdit(block, rec) {
    (navigation commits nothing, B81's rail precedent). Two anchors, both
    render-time state, nothing stored (R4's law): the month on show
    (calMonthAnchor, starts at today's month) and the week the stack shows
-   (calWeekAnchor — null means the shipped today+6 window; a tap replaces it
-   with the tapped date's Sunday-first week). */
+   (calWeekAnchor — null means the shipped rolling 30-future-day window; a tap
+   replaces it with the tapped date's Sunday-first week). */
 let calMonthAnchor = null;
 let calWeekAnchor = null;
 
@@ -1662,7 +1664,7 @@ export function registerBoards() {
   el.calToday.addEventListener('click', () => {
     // B148 (issue #342): Today resets both render-time anchors in one act —
     // `calMonthAnchor = null` puts the month view back on the current month
-    // and `calWeekAnchor = null` returns the stack to the shipped today+6
+    // and `calWeekAnchor = null` returns the stack to its rolling 30-future-day
     // window (R4) — then re-renders. Issue #363: the day-note squares ride
     // the day cards renderCal re-draws, their per-day page positions
     // (calDayNotePage) unmodified.

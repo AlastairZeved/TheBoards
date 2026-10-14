@@ -2315,6 +2315,8 @@ html.wide #cal-export { margin-left: auto; }
 .cal-day.weekend { margin-left: -12px; margin-right: -12px; }
 .cal-day.weekend::before { background: var(--card); }
 .cal-day.weekend .cal-date { background: transparent; }
+/* Issue #398: a Sunday closes each visual week in the expanded rolling view. */
+.cal-day.sunday { border-bottom: 2px solid var(--frame); }
 
 /* --- §3.5 The month view (issue #191) -------------------------------------
    The compact month grid in the ground #170 freed below the day stack. Pure
