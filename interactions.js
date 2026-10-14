@@ -1,7 +1,7 @@
 /* --- 7. Gesture recognizer ----------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { ACTION_DELAY, CE, COPY, DBLCLICK_MS, LEAVE_MS, LONGPRESS_MS, MAX_SCALE, MIN_SCALE, MOVE_THRESHOLD } from './state.js';
-import { NOTE_MIN_W, TOAST_HIDE_MS, UNDO_MS, anchorEls, el, state, uuid, KB_HIDE_SLOP } from './state.js';
+import { NOTE_MIN_W, TOAST_HIDE_MS, UNDO_MS, anchorEls, el, makeRecord, state, uuid, KB_HIDE_SLOP } from './state.js';
 import { saveNow, scheduleSave } from './persistence.js';
 import { LOGICAL_H, LOGICAL_W, applyLayout, applyNoteWidth, caretToEnd, effScale, noteMaxW, placeCaretAtPoint } from './geometry.js';
 import { rebaseNote, renderX, renderY, setHitInset, toLogical, updateBoardGeometry } from './geometry.js';
@@ -474,9 +474,9 @@ function createNote(clientX, clientY) {
   // x is floored NOTE_MIN_W back from the right edge (B84): a new note is at
   // least a toolbar wide, so its left edge must leave that much room or the
   // frame would spill off the sheet. y keeps its 4px keep-on-page clamp.
-  const note = { id: uuid(), text: '', x: clamp(pt.x, 0, Math.max(0, LOGICAL_W - NOTE_MIN_W)),
-                 y: clamp(pt.y, 0, LOGICAL_H - 4), rw: LOGICAL_W, rh: LOGICAL_H,
-                 scale: 1.0, state: 'active' };
+  const note = makeRecord('note', { id: uuid(), text: '', x: clamp(pt.x, 0, Math.max(0, LOGICAL_W - NOTE_MIN_W)),
+    y: clamp(pt.y, 0, LOGICAL_H - 4), rw: LOGICAL_W, rh: LOGICAL_H, scale: 1.0, state: 'active' },
+    { logicalW: LOGICAL_W, logicalH: LOGICAL_H });
   state.current.notes.push(note);                          // top of z-order
   const node = makeNoteEl(note);
   el.board.appendChild(node);
@@ -486,7 +486,7 @@ function createNote(clientX, clientY) {
 }
 
 function createLotItem() {
-  const item = { id: uuid(), text: '', state: 'active' };
+  const item = makeRecord('lot', { id: uuid(), text: '', state: 'active' });
   state.current.parkingLot.push(item);
   const node = makeLotEl(item);
   el.lotItems.appendChild(node);

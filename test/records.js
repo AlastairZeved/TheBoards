@@ -67,5 +67,18 @@ console.log('\n[3] The reminder-glow ruling is B132 (issue #272) and still cites
     source ? source.slice(0, 60) : 'no Source line in the entry');
 }
 
+console.log('\n[4] Issue #424 schema ruling is recorded with its owner source');
+{
+  const at = lines.findIndex(l => l.startsWith('### B169. JSON backup separates calendar day-notes'));
+  const end = lines.findIndex((l, i) => i > at && l.startsWith('### B'));
+  const block = at < 0 ? [] : lines.slice(at, end < 0 ? lines.length : end);
+  const source = block.find(l => l.startsWith('**Source:** ')) || '';
+  ok('B169 records the approved issue #424 schema ruling', at >= 0 &&
+    /day-notes into `dayNotes`/.test(lines[at]));
+  ok('B169 Source links issue #424 and quotes the owner approval',
+    source.includes('https://github.com/AlastairZeved/TheBoards/issues/424') &&
+    source.includes('Approve the issue proposal as written:'));
+}
+
 console.log(`\n=== records: ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);
