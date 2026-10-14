@@ -776,10 +776,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /font-family:\s*['"]Montserrat Alternates['"],\s*system-ui/.test(css));
   ok('the icon generator defaults to the deep — the note on the canvas (B60)',
     /--ground=deep/.test(iconScript));
-  ok('CACHE is zeved-boards-v152 — version bumped (issue #423: titled-note accessibility)',
-    /const CACHE = 'zeved-boards-v152';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
-  ok('the build handshake ships: OWN_BUILD stamped v152, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
-    /const OWN_BUILD = 'v152';/.test(app) && /cache: 'reload'/.test(app) &&
+  ok('CACHE is zeved-boards-v153 — version bumped (issue #424: JSON record backup fidelity)',
+    /const CACHE = 'zeved-boards-v153';/.test(sw), (sw.match(/zeved-boards-v\d+/) || [])[0]);
+  ok('the build handshake ships: OWN_BUILD stamped v153, cache-busted sw.js check, two-strike self-heal, updateViaCache none',
+    /const OWN_BUILD = 'v153';/.test(app) && /cache: 'reload'/.test(app) &&
     /boards-build-mismatch/.test(app) && /updateViaCache: 'none'/.test(app));
   ok('the self-heal deletes both cache lineages: the handshake regex reads the live name, the deletion filter keeps the retired todo-boards prefix',
     /match\(\/zeved-boards-v\(\\d\+\)\/\)/.test(app) &&
@@ -830,7 +830,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     !/commitAction\(\(\) => exportBoardPdf/.test(app) && !/commitAction\(exportAllJson\)/.test(app));
   ok('exportAllJson flushes the debounce and backs up every record under the app tag (B123: events in their own calendarEvents array)',
     /async function exportAllJson/.test(app) && /flushSave\(\);\s*\n\s*const all = await idbGetAll\(\)/.test(app) &&
-    /calendarEvents/.test(app) && /app: 'the-boards'/.test(app) && /boards-backup-/.test(app));
+    /calendarEvents/.test(app) && /dayNotes/.test(app) && /app: 'the-boards'/.test(app) && /boards-backup-/.test(app));
   ok('import is a merge: overwrite by id, add new (the owner\'s ruling)',
     /async function importBoardsJson/.test(app) && /normalizeImportedBoard/.test(app));
   ok('import sweeps husks at the door and rejects files that are not the app\'s shape',
@@ -940,7 +940,8 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('the fill\'s type is plain text — 12px, weight 400, line-height 1.4 (issue #365: the body\'s own type)',
     /\.cal-note-text \{[^}]*font-size: 12px; font-weight: 400; line-height: 1\.4;/.test(css));
   ok('the card\'s "+" adds a DAY NOTE dated to the card — the record carries the new day field, the per-day filter renders the squares, nothing migrated (issue #363)',
-    /day: dateKey \}/.test(app) && /r\.day === day\.key/.test(app) &&
+    /makeDayNoteRecord\(dateKey\)/.test(app) && /day: \(v\) => isDateKey\(v\)/.test(app) &&
+    /r\.day === day\.key/.test(app) &&
     /function calNoteRecords\(all\)/.test(app) &&
     /typeof r\.day === 'string'/.test(app));
   ok('the per-day pager pages a day beyond three squares and the "+" sits rightmost in the row (issue #363)',
@@ -1062,7 +1063,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /className = 'title-date'/.test(app) && /anchor === 'title'[\s\S]{0,80}state\.current\.cal/.test(app) &&
     /#anchor-title \.title-date \{/.test(css));
   ok('import coercion carries the calendar link (cal strict key, calReq finite)',
-    /\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$/.test(app) && /calReq: Number\.isFinite/.test(app));
+    /\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$/.test(app) && /calReq: \(v\) => Number\.isFinite\(v\)/.test(app) && /catStamp: \(v\) => Number\.isFinite\(v\)/.test(app));
   ok('the squeeze is render-time state: true frame kept, nothing stored (R6)',
     /let calSqueeze = false/.test(app) && /frameUi\.LOGICAL_W_TRUE/.test(app) &&
     /note\.rw = frameUi\.LOGICAL_W_TRUE \|\| LOGICAL_W/.test(app));

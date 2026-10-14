@@ -17,7 +17,7 @@
    ---------------------------------------------------------------------- */
 
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { COPY, NOTE_MIN_W, UNDO_MS, calEventsOf, calWindow, state, uuid } from './state.js';
+import { COPY, NOTE_MIN_W, UNDO_MS, calEventsOf, calWindow, copyRecordFields, makeRecord, state, uuid } from './state.js';
 import { flushSave, idbGet, idbGetAll, idbPut } from './persistence.js';
 import { LOGICAL_H, LOGICAL_W, bandRuleYFor, noteKFor, noteMaxW } from './geometry.js';
 import { LOT_HEAD, LOT_MAX_FRAC, LOT_ROW } from './state.js';
@@ -781,18 +781,19 @@ export async function exportBoardPdf(board) {
     // than filtering in place matters: `src` may be `current`, and mutating
     // live state from an export is exactly the silent write B21 forbids.
     const keep = (r) => (r.text || '').trim().length > 0;
-    const notes = (src.notes || []).filter(keep);
-    const rec = {
-      title: src.title, requirements: src.requirements, components: src.components,
+    const notes = (src.notes || []).filter(keep).map((note) => copyRecordFields('note', note));
+    const rec = copyRecordFields('board', {
+      ...src,
       createdAt: src.createdAt || board.createdAt,
       notes,
-      parkingLot: (src.parkingLot || []).filter(keep),
+      parkingLot: (src.parkingLot || []).filter(keep)
+        .map((item) => copyRecordFields('lot', item)),
       // B91's links must reach the PDF (issue #407): carry them, but only a link
       // whose two pinned notes both survive the sweep — a line to a dropped
       // empty note would draw to nowhere (exportLinks skips the dangling ones).
       links: (src.links || []).filter((l) =>
         notes.some((n) => n.id === l.a) && notes.some((n) => n.id === l.b)),
-    };
+    });
     pdfUi.pdfLossy = false;
     const bytes = buildBoardPdf(rec);
     downloadBlob(new Blob([bytes], { type: 'application/pdf' }), pdfFilename(rec));
@@ -805,28 +806,33 @@ export async function exportBoardPdf(board) {
 /* --- 10.6 JSON backup: export all, import merged (issue #140, B92; payload
    v2 per B123 — issue #231) ---------------------------------------------- */
 
-/* The whole library leaves as one file. PDF is a sheet ABOUT a board; JSON is
-   the record set itself, so this is full fidelity: links (B91) ride along and
-   calendar events ride in their own top-level `calendarEvents` array (B123 —
-   v1 files swept them into `boards`, where the importer's board normalization
-   silently dropped every one; the FILE now separates what the STORE mixes).
-   `boards` carries board records only — `eventsOf` over it is empty by
-   construction. flushSave() first — saves are debounced by SAVE_DEBOUNCE, so
-   idbGetAll() alone could read the open board some keystrokes stale (the same
-   staleness exportBoardPdf's `current` rule answers, one board wide). The
-   stamp lands only if an edit is pending, so exporting does not reorder the
-   list (B69's law, flushSave's own reading). */
+/* A calendar day-note record is identified by its historical rem- id and day
+   key. This recognizes the v2 files that placed these records in `boards`. */
+function isDayNoteRecord(raw) {
+  return !!raw && typeof raw === 'object' && typeof raw.id === 'string' &&
+    raw.id.startsWith('rem-') && typeof raw.day === 'string';
+}
+
+/* The whole library leaves as one file. Each stored record kind has its own
+   top-level array; day notes are separated while their legacy v2 location in
+   `boards` remains importable. */
+/* flushSave() first — saves are debounced by SAVE_DEBOUNCE, so idbGetAll()
+   alone could read the open board some keystrokes stale. The stamp lands only
+   if an edit is pending, so exporting does not reorder the list (B69). */
 export async function exportAllJson() {
   try {
     flushSave();
     const all = await idbGetAll();
     const calendarEvents = eventsOf(all);
+    const dayNotes = all.filter(isDayNoteRecord);
+    const excluded = new Set([...calendarEvents, ...dayNotes]);
     const payload = {
       app: 'the-boards',
       version: 2,
       exportedAt: new Date().toISOString(),
-      boards: all.filter(r => !calendarEvents.includes(r)),
+      boards: all.filter((r) => !excluded.has(r)),
       calendarEvents,
+      dayNotes,
     };
     const d = new Date();
     const pad = (n) => (n < 10 ? '0' : '') + n;
@@ -844,16 +850,6 @@ export async function exportAllJson() {
    unknown cats, rather than being rejected wholesale. */
 const IMPORT_CATS = new Set(['todo', 'idea', 'unsorted', 'learning']);
 
-/* Note fields that survive a backup round-trip. This list is the single source
-   of truth for which note properties are preserved on export and accepted on
-   import. New note fields must be added here AND validated in the normalizers
-   below. The fields are: text, position (x,y), size (rw,rh), scale, state,
-   highlighted, title, reminder, carriedOn. */
-const NOTE_FIELDS = [
-  'text', 'x', 'y', 'rw', 'rh', 'scale', 'state', 'highlighted',
-  'title', 'reminder', 'carriedOn'
-];
-
 /* One imported board, normalized to this app's record shape. Every field is
    coerced, not trusted: a backup is data that has been OUT of the device, and
    the import must not hand a hostile or hand-edited file a live record. ids
@@ -864,35 +860,17 @@ const NOTE_FIELDS = [
    content — an empty shell has nothing to restore. */
 function normalizeImportedBoard(raw) {
   if (!raw || typeof raw !== 'object') return null;
-  const now = Date.now();
-  const text = (v) => (typeof v === 'string' ? v : '');
-  const keep = (r) => r.text.trim().length > 0;
+  const text = (v) => typeof v === 'string' ? v : '';
   const notes = (Array.isArray(raw.notes) ? raw.notes : [])
-    .map((n) => (n && typeof n === 'object') ? {
-      id: typeof n.id === 'string' && n.id ? n.id : uuid(),
-      text: text(n.text).trimEnd(),
-      x: Number.isFinite(n.x) ? n.x : 0,
-      y: Number.isFinite(n.y) ? n.y : 0,
-      rw: Number.isFinite(n.rw) ? n.rw : LOGICAL_W,
-      rh: Number.isFinite(n.rh) ? n.rh : LOGICAL_H,
-      scale: Number.isFinite(n.scale) && n.scale > 0 ? n.scale : 1.0,
-      state: n.state === 'complete' ? 'complete' : 'active',
-      highlighted: n.highlighted === true,
-      title: text(n.title),
-      reminder: n.reminder === true,
-      carriedOn: /^\d{4}-\d{2}-\d{2}$/.test(n.carriedOn) ? n.carriedOn : undefined,
-    } : null)
-    .filter((n) => n && keep(n));
+    .map((n) => n && typeof n === 'object'
+      ? makeRecord('note', n, { logicalW: LOGICAL_W, logicalH: LOGICAL_H }) : null)
+    .filter((n) => n && n.text.trim().length > 0);
   const parkingLot = (Array.isArray(raw.parkingLot) ? raw.parkingLot : [])
-    .map((r) => (r && typeof r === 'object') ? {
-      id: typeof r.id === 'string' && r.id ? r.id : uuid(),
-      text: text(r.text).trimEnd(),
-      state: r.state === 'complete' ? 'complete' : 'active',
-    } : null)
-    .filter((r) => r && keep(r));
+    .map((r) => r && typeof r === 'object' ? makeRecord('lot', r) : null)
+    .filter((r) => r && r.text.trim().length > 0);
   if (!notes.length && !parkingLot.length &&
       !text(raw.title).trim() && !text(raw.requirements).trim() && !text(raw.components).trim()) {
-    return null;                       // nothing survived; nothing to restore
+    return null;
   }
   const noteIds = new Set(notes.map((n) => n.id));
   const links = (Array.isArray(raw.links) ? raw.links : [])
@@ -900,26 +878,9 @@ function normalizeImportedBoard(raw) {
       typeof l.a === 'string' && typeof l.b === 'string' &&
       noteIds.has(l.a) && noteIds.has(l.b) && l.a !== l.b)
     .map((l) => ({ id: typeof l.id === 'string' && l.id ? l.id : uuid(), a: l.a, b: l.b }));
-  const createdAt = Number.isFinite(raw.createdAt) ? raw.createdAt : now;
-  return {
-    id: typeof raw.id === 'string' && raw.id ? raw.id : uuid(),
-    createdAt,
-    updatedAt: Number.isFinite(raw.updatedAt) ? raw.updatedAt : createdAt,
-    category: IMPORT_CATS.has(raw.category) ? raw.category : 'unsorted',
-    title: text(raw.title),
-    requirements: text(raw.requirements),
-    components: text(raw.components),
-    notes,
-    parkingLot,
-    links,
-    // The calendar link (issue #145): coerced like every other field. cal must
-    // be a YYYY-MM-DD key or the link is dropped; calReq rides only when finite.
-    // An OLD build importing a NEW backup keeps these extra fields verbatim in
-    // the payload object — read-site defaulting means it simply ignores them,
-    // and a re-export carries them on (PRD §4.1's idiom, both directions).
-    cal: /^\d{4}-\d{2}-\d{2}$/.test(raw.cal) ? raw.cal : undefined,
-    calReq: Number.isFinite(raw.calReq) ? raw.calReq : undefined,
-  };
+  return makeRecord('board', { ...raw, notes, parkingLot, links }, {
+    categories: IMPORT_CATS, defaultCategory: 'unsorted',
+  });
 }
 
 /* One imported calendar event, normalized like a board (B123): coerced, not
@@ -930,15 +891,14 @@ function normalizeImportedBoard(raw) {
    record that cannot survive as an event. */
 function normalizeImportedEvent(raw) {
   if (!raw || typeof raw !== 'object') return null;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw.date)) return null;
-  return {
-    id: typeof raw.id === 'string' && raw.id ? raw.id : uuid(),
-    date: raw.date,
-    text: typeof raw.text === 'string' ? raw.text.trim() : '',
-    state: raw.state === 'complete' ? 'complete' : 'active',
-    time: typeof raw.time === 'string' ? raw.time : '',
-    createdAt: Number.isFinite(raw.createdAt) ? raw.createdAt : Date.now(),
-  };
+  const event = makeRecord('event', raw);
+  return event.date ? event : null;
+}
+
+function normalizeImportedDayNote(raw) {
+  if (!isDayNoteRecord(raw)) return null;
+  const note = makeRecord('dayNote', raw);
+  return note.day ? note : null;
 }
 
 /* Merge-import (the owner's ruling, issue #140): a board whose id already
@@ -967,13 +927,21 @@ export async function importBoardsJson(file) {
   const rawEvents = Array.isArray(payload.calendarEvents)
     ? payload.calendarEvents              // v2: events ride their own array
     : eventsOf(payload.boards);           // v1 salvage: events rode `boards`
+  const rawDayNotes = [
+    ...(Array.isArray(payload.dayNotes) ? payload.dayNotes : []),
+    ...payload.boards.filter(isDayNoteRecord), // legacy v2 backups misplaced these in boards
+  ];
   const incoming = payload.boards
+    .filter((raw) => !isDayNoteRecord(raw) && !eventsOf([raw]).length)
     .map(normalizeImportedBoard)
     .filter(Boolean);
   const incomingEvents = rawEvents
     .map(normalizeImportedEvent)
     .filter(Boolean);
-  if (!incoming.length && !incomingEvents.length) {
+  const dayNotesById = new Map(rawDayNotes.map(normalizeImportedDayNote)
+    .filter(Boolean).map((note) => [note.id, note]));
+  const incomingDayNotes = [...dayNotesById.values()];
+  if (!incoming.length && !incomingEvents.length && !incomingDayNotes.length) {
     showNotice(COPY.importError, 'import', UNDO_MS);
     return;
   }
@@ -987,6 +955,7 @@ export async function importBoardsJson(file) {
     }
   }
   for (const ev of incomingEvents) await idbPut(ev);
+  for (const note of incomingDayNotes) await idbPut(note);
   if (overwrittenCurrent) {
     state.dirty = false;                      // current was replaced wholesale, exactly ensureCurrentValid's reading
     renderBoard();

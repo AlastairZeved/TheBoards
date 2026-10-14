@@ -291,6 +291,65 @@ export const uuid = () =>
         return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
       }));
 
+/* Every persisted record shape, in one place. Each field maps to its coercer;
+   construction, PDF projection, and backup import all use this table. */
+const isDateKey = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+const isString = (v) => typeof v === 'string' ? v : '';
+const isId = (v) => typeof v === 'string' && v ? v : uuid();
+const isFiniteNumber = (v, fallback) => Number.isFinite(v) ? v : fallback;
+const isState = (v) => v === 'complete' ? 'complete' : 'active';
+export const RECORD_FIELDS = {
+  board: {
+    id: (v) => isId(v), createdAt: (v, r, c) => isFiniteNumber(v, c.now),
+    updatedAt: (v, r, c) => isFiniteNumber(v, c.createdAt),
+    title: isString, requirements: isString, components: isString,
+    notes: (v) => Array.isArray(v) ? v : [],
+    parkingLot: (v) => Array.isArray(v) ? v : [],
+    links: (v) => Array.isArray(v) ? v : [],
+    category: (v, r, c) => c.categories && c.categories.has(v) ? v : (c.defaultCategory || 'unsorted'),
+    catStamp: (v) => Number.isFinite(v) ? v : undefined,
+    cal: (v) => isDateKey(v) ? v : undefined,
+    calReq: (v) => Number.isFinite(v) ? v : undefined,
+  },
+  note: {
+    id: isId, text: (v) => isString(v).trimEnd(),
+    x: (v) => isFiniteNumber(v, 0), y: (v) => isFiniteNumber(v, 0),
+    rw: (v, r, c) => isFiniteNumber(v, c.logicalW), rh: (v, r, c) => isFiniteNumber(v, c.logicalH),
+    scale: (v) => Number.isFinite(v) && v > 0 ? v : 1,
+    state: isState, highlighted: (v) => v === true,
+    title: isString, reminder: (v) => v === true,
+    carriedOn: (v) => isDateKey(v) ? v : undefined,
+  },
+  lot: { id: isId, text: (v) => isString(v).trimEnd(), state: isState },
+  event: {
+    id: isId, date: (v) => isDateKey(v) ? v : undefined,
+    text: (v) => isString(v).trim(), state: isState, time: isString,
+    createdAt: (v, r, c) => isFiniteNumber(v, c.now),
+  },
+  dayNote: { id: isId, rem: isString, next: isString, day: (v) => isDateKey(v) ? v : undefined },
+};
+export function makeRecord(kind, raw = {}, context = {}) {
+  const fields = RECORD_FIELDS[kind];
+  if (!fields) throw new Error('Unknown record kind: ' + kind);
+  const now = context.now === undefined ? Date.now() : context.now;
+  const createdAt = Number.isFinite(raw.createdAt) ? raw.createdAt : now;
+  const ctx = { ...context, now, createdAt };
+  return Object.fromEntries(Object.entries(fields).map(([key, coerce]) =>
+    [key, coerce(raw[key], raw, ctx)]));
+}
+export function copyRecordFields(kind, raw) {
+  const fields = RECORD_FIELDS[kind];
+  if (!fields) throw new Error('Unknown record kind: ' + kind);
+  return Object.fromEntries(Object.keys(fields).filter((key) => raw[key] !== undefined)
+    .map((key) => [key, raw[key]]));
+}
+
+export const makeDayNoteRecord = (day) => makeRecord('dayNote', {
+  id: 'rem-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+  rem: '', next: '', day,
+});
+
+
 /* --- 1.7 The rolling temporal calendar (RTCB, issue #145) -----------------
 
    The calendar is not a record of its own — it is a VIEW over the To-Do
@@ -349,8 +408,7 @@ export function calWindow(count = 7) {
    `text`, which stays the mirror's positional line (R7 — the mirror carries
    only `text`, never `time`, per the owner's ruling of record). */
 export function newCalEvent(dateKey, text) {
-  return { id: uuid(), date: dateKey, text: text || '', time: '', state: 'active',
-           createdAt: Date.now() };
+  return makeRecord('event', { id: uuid(), date: dateKey, text: text || '', time: '', state: 'active' });
 }
 
 /* The linked board for a date, if it exists. The link is the board's `cal`
@@ -506,6 +564,6 @@ export const state = {
 
 export function newBoardRecord() {
   const now = Date.now();
-  return { id: uuid(), createdAt: now, updatedAt: now, category: 'todo',
-           title: '', requirements: '', components: '', notes: [], parkingLot: [], links: [] };
+  return makeRecord('board', { id: uuid(), createdAt: now, updatedAt: now, category: 'todo' },
+    { now, defaultCategory: 'todo' });
 }

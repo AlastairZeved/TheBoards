@@ -243,6 +243,10 @@ shaped
 no `title`; the 7-day window is computed from today's date at render, so no
 rolling array is stored and midnight writes nothing.
 
+Calendar day-notes are records shaped `{ id, rem, next, day }`, with ids
+prefixed `rem-` and `day` holding the date key they belong to. They are a
+separate record kind in the same store, not boards or calendar events.
+
 `state` is `active` or `complete`. `text` is a plain string in every case.
 
 Two structural facts carry product meaning:
@@ -619,6 +623,11 @@ Rules:
 - Export is reachable from the anchor menu, the board-row menu and the rail card
   menu — the board you are looking at, or any other, with no detour through the
   list.
+
+The whole-library JSON backup keeps payload version 2. It separates board
+records, calendar events (`calendarEvents`) and calendar day-notes (`dayNotes`)
+into their own arrays. Import recovers day-notes from existing v2 backups where
+they were carried inside `boards`, and restores board `catStamp` values.
 
 > B34 marks the `EXPORT_GEO` duplication *impermanent*: the exporter restates
 > `styles.css`'s geometry by hand, and splitting §10.5 into its own file is

@@ -2,7 +2,7 @@
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { CAT_SEC_GAP, CE, COPY, GLYPH, LEAVE_MS, LIST_CARD_COLS, LIST_CARD_H, LIST_CAT_ROW } from './state.js';
 import { LONGPRESS_MS, MOVE_THRESHOLD, PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP, SWAP_MS, calBoardOf } from './state.js';
-import { calEventsOf, calKey, calWindow, el, ensureLinkedBoard, EMBED, histPush, newBoardRecord, state } from './state.js';
+import { calEventsOf, calKey, calWindow, el, ensureLinkedBoard, EMBED, histPush, makeDayNoteRecord, newBoardRecord, state } from './state.js';
 import { syncMirror, mirrorEventsOf } from './state.js';
 import { cancelPendingSave, flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, scheduleSave } from './persistence.js';
 import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze, setPaneCollapsed } from './geometry.js';
@@ -1458,8 +1458,7 @@ function renderCalToday(today, recs) {
    app-supplied ever enters the record (issues #329/#363). */
 async function addCalNote(dateKey) {
   commitAction(async () => {
-    const rec = { id: 'rem-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-                  rem: '', next: '', day: dateKey };
+    const rec = makeDayNoteRecord(dateKey);
     await idbPut(rec);
     const all = await idbGetAll();
     const recs = calNoteRecords(all).filter((r) => r.day === dateKey);
