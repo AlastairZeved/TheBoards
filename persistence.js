@@ -21,20 +21,24 @@ function openDB() {
     req.onerror = () => reject(req.error);
   });
 }
-const dbPromise = openDB();
+let dbPromise;
+function db() {
+  if (!dbPromise) dbPromise = openDB();
+  return dbPromise;
+}
 
 export async function idbGetAll() {
-  const db = await dbPromise;
+  const database = await db();
   return new Promise((resolve, reject) => {
-    const rq = db.transaction(STORE, 'readonly').objectStore(STORE).getAll();
+    const rq = database.transaction(STORE, 'readonly').objectStore(STORE).getAll();
     rq.onsuccess = () => resolve(rq.result);
     rq.onerror = () => reject(rq.error);
   });
 }
 export async function idbPut(rec) {
-  const db = await dbPromise;
+  const database = await db();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readwrite');
+    const tx = database.transaction(STORE, 'readwrite');
     tx.objectStore(STORE).put(rec);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
@@ -93,9 +97,9 @@ export async function migrateLegacyBoards(all) {
   return adopted;
 }
 export async function idbDelete(id) {
-  const db = await dbPromise;
+  const database = await db();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readwrite');
+    const tx = database.transaction(STORE, 'readwrite');
     tx.objectStore(STORE).delete(id);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
@@ -103,9 +107,9 @@ export async function idbDelete(id) {
   });
 }
 export async function idbGet(id) {
-  const db = await dbPromise;
+  const database = await db();
   return new Promise((resolve, reject) => {
-    const rq = db.transaction(STORE, 'readonly').objectStore(STORE).get(id);
+    const rq = database.transaction(STORE, 'readonly').objectStore(STORE).get(id);
     rq.onsuccess = () => resolve(rq.result);
     rq.onerror = () => reject(rq.error);
   });
