@@ -99,8 +99,8 @@ table of contents.
 
 Bump `sw.js`'s `CACHE` constant (`zeved-boards-v<N>`) when shipped app code
 changes — it is the one string that says which build is live. The service
-worker precaches `app.js` and all eight modules, so a change to any of those
-files requires the bump. `test/tokens.js` pins it, and
+worker precaches `app.js`, `styles.css`, and all eight modules, so a change to
+any of those files requires the bump. `test/tokens.js` pins it, and
 `.github/workflows/pages.yml` curls the deployed `sw.js` to assert it matches
 the commit: a silent deploy failure is treated as a shipped bug, not a
 non-event. Docs-only changes deliberately do not redeploy
