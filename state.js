@@ -328,13 +328,14 @@ export function calKey(d) {
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
 }
 
-/* The 7 rolling days: today + 6 future, today first (R7.4 — no past cards;
-   mockup 6's "yesterday deepest" line is dead). Each entry is
-   { key, date: Date, today: bool }. */
-export function calWindow() {
+/* The rolling calendar window, today first (R7.4 — no past cards; mockup 6's
+   "yesterday deepest" line is dead). `count` is the number of dates, including
+   today; the weekly stack requests today + the next 30, while PDF export keeps
+   its existing seven-day window. Each entry is { key, date: Date, today: bool }. */
+export function calWindow(count = 7) {
   const days = [];
   const now = new Date();
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < count; i++) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
     days.push({ key: calKey(d), date: d, today: i === 0 });
   }

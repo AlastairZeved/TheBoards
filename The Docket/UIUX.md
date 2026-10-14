@@ -1122,6 +1122,13 @@ ruling). The squares keep the day cards' own grammar — `var(--note)`,
 Today's card is excluded: it renders in the body above, its own component
 (B158).
 
+**The rolling weekly stack (issue #398, B168).** The default stack shows the
+next 30 dates after today; today remains in its separate body above. A date
+whose weekday is Sunday carries a 2px full-card-width bottom rule in the
+Calendar ladder's `--frame` orange, separating the weekly groups while
+scrolling. Month-selected Sunday-first weeks retain their existing seven-day
+window; the Today control restores the rolling window.
+
 **The day-note squares (issues #363 + #371 + #384; one zone, issue #365).**
 The top
 day-note section

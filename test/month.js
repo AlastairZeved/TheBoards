@@ -242,7 +242,44 @@ async function monthReady(page, minCells = 1) {
     await ctx.close();
   }
 
-  console.log('\n[M4] The month view fits the wide panel (desktop)');
+  console.log('\n[M4] The default weekly stack shows 30 future dates with Sunday dividers (mobile)');
+  {
+    const { ctx, page, errors } = await newPage(browser);
+    await page.evaluate(() => renderCal());
+    await page.waitForFunction(() => document.querySelectorAll('#cal-stack .cal-day').length === 30);
+    const rolling = await page.evaluate(() => {
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const cards = [...document.querySelectorAll('#cal-stack .cal-day')];
+      const label = d => `${pad(d.getMonth() + 1)}/${pad(d.getDate())}`;
+      const expected = Array.from({ length: 30 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i + 1);
+        return { label: label(d), sunday: d.getDay() === 0 };
+      });
+      const actual = cards.map(card => {
+        const style = getComputedStyle(card);
+        return { label: card.querySelector('.cal-d2').textContent, sunday: card.classList.contains('sunday'),
+          width: card.getBoundingClientRect().width, borderWidth: style.borderBottomWidth,
+          borderColor: style.borderBottomColor, borderStyle: style.borderBottomStyle };
+      });
+      const stack = document.getElementById('cal-stack');
+      return { actual, expected, todayInStack: cards.some(c => c.classList.contains('today')),
+        stackScrollable: stack.scrollHeight > stack.clientHeight && getComputedStyle(stack).overflowY === 'auto' };
+    });
+    ok('the default stack renders exactly the next 30 dates, tomorrow through today + 30',
+      rolling.actual.length === 30 && rolling.actual.every((d, i) => d.label === rolling.expected[i].label), JSON.stringify(rolling.actual.map(d => d.label)));
+    ok('today remains in its separate body, not duplicated in the stack', !rolling.todayInStack);
+    ok('the expanded rolling list remains vertically scrollable', rolling.stackScrollable);
+    const sundays = rolling.actual.filter((d, i) => rolling.expected[i].sunday);
+    ok('only Sundays receive the full-card-width 2px --frame divider',
+      sundays.length > 0 && rolling.actual.every((d, i) => d.sunday === rolling.expected[i].sunday) &&
+        sundays.every(d => d.borderWidth === '2px' && d.borderColor === 'rgb(180, 129, 88)' && d.borderStyle === 'solid' && d.width > 0),
+      JSON.stringify(sundays));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  console.log('\n[M5] The month view fits the wide panel (desktop)');
   {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await ctx.newPage();
