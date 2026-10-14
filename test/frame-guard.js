@@ -6,7 +6,7 @@
 //
 // Run: NODE_PATH=<playwright> node test/frame-guard.js
 //      (serve the repo root on 8000; the suite serves its own cross-origin
-//       parent page on 9999)
+//       parent page on FRAME_GUARD_PORT (default 9999)
 
 const { chromium } = require('playwright');
 const http = require('http');
@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 
 const BASE = process.env.BOARDS_URL || 'http://localhost:8000/index.html';
-const GUARD_PORT = 9999;
+const GUARD_PORT = Number(process.env.FRAME_GUARD_PORT) || 9999;
 
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };

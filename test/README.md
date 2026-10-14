@@ -3,18 +3,30 @@
 Dev-only tooling. **The app itself still has no dependencies and no build step** —
 nothing here is served, bundled, or shipped to the device.
 
-The primary regression table lists four scripts: three drive a real Chromium
-through Playwright and assert the behaviour of the gesture recognizer, the
-capture path, the layout guard, and delivery; `tokens.js` needs no browser at
-all. The `test/` directory contains 17 scripts; the commands and remaining
-coverage are listed below:
+This table is the complete inventory of the 17 standalone scripts in `test/`.
+The CI column identifies the suites `.github/workflows/ci.yml` runs on every
+pull request and push to `main`; the other suites are available for local/QA
+runs.
 
-| Script | Covers |
-|---|---|
-| `tokens.js` | The design contract: `UIUX §2`'s tables recomputed from the shipped hexes — plain Node, no browser |
-| `mobile.js` | Touch capture (§D of `The Docket/DECISIONS.md`): instant note creation, focus and caret, long-press on bare paper, touch slop, empty-frame sweeps, the keyboard-resize guard, menu dismissal, board-row export. Plus band/lot geometry (B32–B36), including the free canvas on a short sheet and `EXPORT_GEO`'s agreement with the `--band-h` ceiling. And the list view's categories (B44): touch-drag between sections, the pager, and all three readings of a press |
-| `desktop.js` | Desktop grammar (B19–B26): instant capture and instant action commit (B81), click-to-select, double-click edit, rail create/swap, right-click menu, drag, PDF export (B34) — menu order, byte-accurate xref, and that a completed item's text is absent from the file. Plus the Copy selection button (B43) and the rail's categories, drag, and pager (B42) |
-| `sw-update.js` | **Delivery** (B36): that a shipped `styles.css`/`app.js` change actually reaches an installed PWA rather than sitting behind a stale service-worker cache |
+| Script | Covers | Runs in CI |
+|---|---|---|
+| `boot-order.js` | Preserves the ordered boot sequence across native-module imports | No |
+| `carried.js` | Carried-note frame and glow on the current day | No |
+| `day-roll.js` | Day-roll launch and retry behavior | No |
+| `day-view-suffix.js` | Calendar day-note rendering, labels, pager, and day-view behavior | Yes |
+| `desktop.js` | Desktop grammar, rail, actions, and PDF export | Yes |
+| `embed.js` | Embed mode, persistence namespace, and history behavior | No |
+| `frame-guard.js` | Allowed and denied iframe origins; starts its own parent-page server | No |
+| `future-event.js` | Future-dated events and linked-board lifecycle | No |
+| `mobile.js` | Touch capture, gesture, layout, list, and board behavior | Yes |
+| `month.js` | Calendar month grid, navigation, and week selection | Yes |
+| `morning.js` | Morning board creation, landing, and carry-forward | No |
+| `overflow.js` | Narrow-embed overflow across mobile and desktop layouts | Yes |
+| `records.js` | Append-only, unique, ascending `DECISIONS.md` numbering | Yes |
+| `reminder.js` | Reminder toggle, glow, and surfaced echoes | No |
+| `security.js` | Content Security Policy and absence of inline/eval execution surfaces | Yes |
+| `sw-update.js` | Installed-PWA service-worker update delivery (serves a throwaway copy) | Yes |
+| `tokens.js` | Design-token contract, asset precache, and build-stamp agreement | Yes |
 
 Taps are dispatched as genuine touch events over CDP rather than synthesised
 clicks, because the bug they exist to catch lived in the browser's
@@ -22,31 +34,39 @@ touch-to-mouse compatibility events (B27b) — synthetic clicks would not see it
 
 ## Running
 
-```
-python3 -m http.server 8000        # serve the repo root
+Serve the repository root when running browser suites that load the app from
+`BOARDS_URL` (default `http://localhost:8000/index.html`):
+
+```sh
+python3 -m http.server 8000
 npm install playwright             # somewhere on NODE_PATH; not committed
-node test/tokens.js                # no server, no browser
+node test/tokens.js                # no server or browser
+node test/records.js               # no server or browser
+node test/security.js              # no server or browser
 node test/mobile.js
+node test/overflow.js
 node test/desktop.js
-node test/sw-update.js             # serves its own throwaway copy; no server needed
-node test/morning.js               # B108 morning lifecycle (needs the server)
-node test/future-event.js          # B131 future-dated events (needs the server)
+node test/month.js
+node test/day-view-suffix.js
+node test/sw-update.js             # own throwaway copy; no repo-root server needed
+node test/boot-order.js
+node test/carried.js
+node test/day-roll.js
+node test/embed.js
+node test/frame-guard.js
+node test/future-event.js
+node test/morning.js
+node test/reminder.js
 ```
 
-All suites exit non-zero on failure. The CI suites run in CI
-(`.github/workflows/ci.yml`) — tokens, records, security, mobile, overflow,
-desktop, month (added with issue #401, after the suite sat red on main
-unnoticed because nothing ran it), and sw-update. The remaining behavioral
-suites — boot-order, carried, day-roll, embed, frame-guard, morning,
-reminder, future-event — run locally/QA against the server.
+All suites exit non-zero on failure. `sw-update.js` serves its own mutable copy
+of the app because it changes files under a live service worker.
 
 - `BOARDS_URL` overrides the served URL (default `http://localhost:8000/index.html`).
 - `CHROMIUM_PATH` points at a specific Chromium binary; otherwise Playwright's own
   download is used.
-
-- `SW_TEST_PORT` moves `sw-update.js`'s throwaway server off `8199`. It serves its
-  own mutable copy of the app rather than the repo root, because it has to change
-  files under a live service worker.
+- `SW_TEST_PORT` moves `sw-update.js`'s throwaway server off `8199`.
+- `FRAME_GUARD_PORT` moves `frame-guard.js`'s parent-page server off `9999`.
 
 Run against the commit *before* the §D fixes and the mobile suite reproduces the
 original capture-session failure in full, including the `TypeError` from a
