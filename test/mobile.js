@@ -2964,6 +2964,27 @@ async function openCat(page, cat) {
        reSeat.flush && reSeat.noTextOverlap && reSeat.withinSheet && !reSeat.flip, JSON.stringify(reSeat));
     await page.setViewportSize({ width: 384, height: 846 });
     await page.waitForTimeout(400);
+    const noteCenter = await page.evaluate(() => {
+      const r = document.querySelector('.note').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await tap(page, noteCenter.x, noteCenter.y);
+    await page.waitForTimeout(200);
+    const completeButton = await page.evaluate(() => {
+      const r = document.querySelector('.note-tb-complete').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await tap(page, completeButton.x, completeButton.y);
+    await page.waitForTimeout(150);
+    const completionA11y = await page.evaluate(() => {
+      const note = document.querySelector('.note');
+      return { complete: note.classList.contains('complete'),
+        textHidden: note.querySelector('.note-text').getAttribute('aria-hidden'),
+        titleHidden: note.querySelector('.note-title').getAttribute('aria-hidden'),
+        title: note.querySelector('.note-title').textContent };
+    });
+    ok('completion hides note text, not its title tab', completionA11y.complete &&
+      completionA11y.textHidden === 'true' && completionA11y.titleHidden !== 'true', JSON.stringify(completionA11y));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }

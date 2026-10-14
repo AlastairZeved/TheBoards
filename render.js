@@ -592,7 +592,7 @@ export function makeLotEl(item) {
 }
 
 export function applyCompleteA11y(node, complete) {
-  const text = node.firstChild;
+  const text = node.querySelector('.note-text, .lot-text');
   if (complete) {
     node.setAttribute('aria-label', 'completed note');
     text.setAttribute('aria-hidden', 'true');

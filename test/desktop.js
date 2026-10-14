@@ -106,6 +106,13 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     await page.keyboard.type('to complete');
     await page.evaluate(() => document.activeElement.blur());
     await page.waitForTimeout(200);
+    // Reproduce B120's DOM order: the title tab precedes the note text.
+    await page.evaluate(() => {
+      const title = document.createElement('div');
+      title.className = 'note-title';
+      title.textContent = 'A titled note';
+      document.querySelector('.note').prepend(title);
+    });
     const box = await page.evaluate(() => {
       const r = document.querySelector('.note').getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
@@ -125,6 +132,11 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       await page.mouse.click(btn.x, btn.y);
       await page.waitForTimeout(100);
       ok('complete lands at once (B81)', await page.evaluate(() => !!document.querySelector('.note.complete')));
+      ok('completion hides note text, not its title tab', await page.evaluate(() => {
+        const note = document.querySelector('.note');
+        return note.querySelector('.note-text').getAttribute('aria-hidden') === 'true' &&
+          note.querySelector('.note-title').getAttribute('aria-hidden') !== 'true';
+      }));
       ok('and the tab flips its label to Restore', await page.evaluate(() =>
         document.querySelector('.note-tb-complete').getAttribute('aria-label') === 'Restore'));
       // Keyboard operability (B84, UIUX §12): focus the tab and press Enter — it
@@ -137,6 +149,8 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
       ok('Enter on a focused tab activates it (restores), never edits', await page.evaluate(() =>
         !document.querySelector('.note.complete') &&
         (!document.activeElement || !document.activeElement.classList.contains('note-text'))));
+      ok('restore exposes the note text to assistive technology', await page.evaluate(() =>
+        !document.querySelector('.note .note-text').hasAttribute('aria-hidden')));
     }
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
