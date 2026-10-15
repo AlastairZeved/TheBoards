@@ -241,7 +241,7 @@ function editingInBoard() {
    floor — the smallest height seen since focus — tells the two apart: any
    growth past it by KB_HIDE_SLOP is the keyboard leaving while the note still
    holds focus, and blur() runs the commit-on-blur path (focusout) that commits,
-   deselects, and lands the deferred layout. editVVFloor only ever drops within
+   deselects, and lands the deferred layout. state.editVP.floor only ever drops within
    an edit (reset to Infinity on focusout), so retraction measured against it
    crosses the threshold even when the browser animates the return in steps.
 
@@ -257,7 +257,7 @@ function editingInBoard() {
    retraction": defer, never blur. The comparison is against the width of the
    PREVIOUS resize of this edit, not against the floor's — folding back lands
    on the cover width the keyboard was up at, so a floor-relative compare
-   would read the fold-back as a retraction (measured). editVVWidth is
+   would read the fold-back as a retraction (measured). state.editVP.width is
    cleared with the floor on focusout so an edit never inherits the last one's
    width. */
 function keyboardStillUp() {
@@ -267,7 +267,7 @@ function keyboardStillUp() {
 
 /* The resize TRIGGER (issue #281 item 3): this owns the keyboard laws above and
    reports whether it CONSUMED the resize — a consumed resize holds the frame
-   itself (layoutDeferred) or blurs, and never schedules a pass; anything else
+   itself (state.editVP.deferred) or blurs, and never schedules a pass; anything else
    (desktop, or no editor in the board) is handed to the environment pass. */
 export function onViewportResize() {
   const vv = window.visualViewport;
