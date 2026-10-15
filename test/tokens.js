@@ -1006,7 +1006,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('expand re-enters the R6 squeeze; collapse lifts it — the board reflows beside the panel',
     /function expandCalRail[\s\S]*?setCalSqueeze\(true\)/.test(app) &&
     /function collapseCalRail[\s\S]*?setCalSqueeze\(false\)/.test(app));
-  ok('the Calendar tab retires on wide; the row is three tabs there (B99)',
+  ok('the Calendar tab retires on wide; the row is two tabs there (B99/B119)',
     /html\.wide #action-calendar \{ display: none; \}/.test(css));
   ok('the rail\'s expand/collapse commits nothing and pushes no history (B81: navigation runs raw)',
     /el\.calRail\.addEventListener\('click'[\s\S]*?expandCalRail\(\);/.test(app) &&

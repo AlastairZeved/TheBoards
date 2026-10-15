@@ -10,12 +10,11 @@ export let menuOpen = false;
 let menuKeyHandler = null, menuOutsideHandler = null;
 export let menuReturnFocus = false;         // true only inside closeMenu's synchronous focus return
 
-/* One menu opens here now (B91): a note's single Link item. The anchor's own
-   menu (All boards · Export) is gone (issue #140, B92) — both of its actions
-   had long since been declared on the board-action row (B83), and the row is
-   now the only route to them: a hidden menu whose every item sits on a visible
-   tab one gesture away is chrome without a job. The lot still has none. All
-   items are non-destructive, so no separator — same rule as everywhere else. */
+/* A regular note's menu carries Copy, Title, and Link; a surfaced echo has its
+   own Complete / Go to Board menu. The anchor menu (All boards · Export) is gone
+   (issue #140, B92), and the lot still has none. The note toolbar carries its
+   state actions, while Link remains the relational action. These menu items are
+   non-destructive, so no separator is needed. */
 export function openMenuFor(target, clientX, clientY) {
   if (target.type !== 'note') return;   // anchors lost their menu (B92); lot / canvas have none
   const id = target.node.dataset.id;
@@ -54,7 +53,7 @@ export function openMenuFor(target, clientX, clientY) {
   buildMenu(items, clientX, clientY);
 }
 
-/* The board-action row (issue #126, B83; three tabs since issue #140, B92): the
+/* The board-action row (issue #126, B83; four tabs since B95): the
    board-level actions declared as flat tabs above the Parking Lot instead of
    hidden behind a gesture. This is the door B65 opened with the `Menu` handle,
    re-homed onto controls that state their own act. The anchor long-press /
@@ -69,19 +68,12 @@ export function fillBoardAction(btn, glyph, label) {
   const l = document.createElement('span'); l.className = 'label'; l.textContent = label;
   btn.append(g, l);
 }
-/* The calendar's exit row (issue #156, B98; reseated and renamed by B134,
-   issue #259; renamed again by B151, issue #353): the same fill, rendered
-   `Go Back` — text alone, no arrow glyph (B134/B135's marks retire, B151).
-   Filling at boot is what makes the row controls at all — the issue's
-   "untappable / invisible" report was empty <button>s rendering as blank
-   squares. */
-
 /* The toggle wears the act it will perform (B43/B71's grammar, not a fixed
    noun): on the board it offers All boards; while the All-Boards surface is up
    — the desktop list overlay, or the mobile lot-grid — it offers the way back
    to this one. One mark (GLYPH.boards, the boards domain), the label alone
    flips, so state is never colour (UIUX §1). Called from renderBoard and every
-   list-state transition. R7.2's re-grammar shortens the resting label to "All"
+   list-state transition. B95's re-grammar shortens the resting label to "All"
    (the four-tab row's fit); the toggle's other face keeps the full "This
    board" — the one word that states the return, unchanged from B83. */
 export function syncBoardActions() {
@@ -89,50 +81,6 @@ export function syncBoardActions() {
   const l = el.actionBoards.querySelector('.label');
   if (l) l.textContent = away ? COPY.thisBoard : COPY.calBoardTab;
 }
-
-/* All Boards is pure navigation: it commits nothing a stray tap could
-   duplicate, so it runs raw, no commitAction (B81). goToList opens the list /
-   lot-grid; returnToBoard pops back however deep. */
-/* Export is now a CHOICE (issue #140, B92): the tab opens the app's one menu
-   species — buildMenu, the same popup the note's Link item wears, anchored at
-   the pressed tab — with PDF · JSON as its two leaves. The choice itself is
-   navigation ("to what?"), so it runs raw; each LEAF commits (a file leaves
-   the device) and takes the drop-guard itself, exactly where the anchor menu's
-   Export item and the old tab used to hold it (B81). PDF reads `current`, the
-   one board you're looking at (issue #43); JSON backs up every board.
-   Anchored at the button, not the pointer: the menu is the tab's own next
-   state, not a context menu that happens to be nearby. */
-/* Import commits too — boards can be overwritten — so its one step (opening
-   the file dialog) runs under the same drop-guard. The dialog itself is the
-   hidden input's mechanism (issue #140): the visible control is the tab, the
-   platform's own picker does the choosing, and nothing is named twice. The
-   input is reset before each open so picking the SAME file twice still fires
-   change — a browser fires it only when the value changes. */
-
-/* Calendar (issue #145): the fourth board-level tab. Navigation, like All
-   boards — it commits nothing a stray tap could duplicate (B81), so it runs
-   raw. The calendar view is a third screen, so it pushes its own history
-   state { v: 'cal' }: the OS back gesture returns from it (B9, unshadowed),
-   and its OWN Collapse control is the always-visible route (R1; renamed by
-   B134, issue #259). */
-/* The tabs are focusable things inside #board, and the desktop keyboard grammar
-   (Enter edits the selection, Delete destroys it) listens on document and keys
-   off `selected` alone, not focus — so a tab focused over a selected note would
-   otherwise let Delete reach that note. The row swallows the grammar's keys;
-   Enter's native default (the first press) still fires the tab's own click, and
-   Escape passes through so deselect-from-anywhere still works. This is B65's
-   guard, re-homed — including its auto-repeat drop: the native click fires per
-   Enter keydown, so a held key would fire the tab's action (an export!) over
-   and over, since commitAction only rate-limits to ACTION_DELAY. preventDefault
-   on the repeats suppresses the synthesized click, so a held Enter acts once. */
-
-/* Desktop right-click on a note opens its Link menu (issue #142, B91) — the
-   desktop parallel to the mobile long-press, and the note's one relational
-   action. B84 had removed the note's desktop contextmenu (its Complete/Copy/
-   Delete moved to the on-select toolbar); B91 re-adds one scoped to a single
-   Link item. A right-click on the canvas, an anchor, the lot, or an editing note
-   still falls through to the browser's own menu, as before; the board card's own
-   contextmenu listener (its delete menu, B24) is a different element, untouched. */
 
 export function buildMenu(items, clientX, clientY) {
   closeMenu();
@@ -150,7 +98,7 @@ export function buildMenu(items, clientX, clientY) {
     b.appendChild(g1); b.appendChild(lb);
     // The menu closes and acts on release, with a drop-guard so a double-tap
     // fires once. One site covers every menu action, board rows included — except
-    // an item flagged `raw` (Link, B91): arming a mode is navigation, not a
+    // an item flagged `raw` (Link or Title): entering those modes is navigation, not a
     // consequence (B81), so it must NOT hold the 400ms guard, or a quick tap on
     // the link target inside that window would be dropped by the same guard.
     b.addEventListener('click', () => {
@@ -231,8 +179,9 @@ export function registerMenus() {
   fillBoardAction(el.actionImport, GLYPH.import, COPY.import);
   fillBoardAction(el.actionCalendar, GLYPH.calendar, COPY.calendar);
 
-  // B151 (issue #353): the exit control reads `Go Back`, no arrow glyph —
-  // the label alone renders, the same text-only treatment B148 gave Today.
+  /* The calendar exit row (issue #156, B98; reseated by B134, issue #259;
+     renamed by B151, issue #353) reads `Go Back`, text alone. Filling it at
+     boot gives the empty button its visible label and makes it operable. */
   fillBoardAction(el.calBack, '', COPY.calBack);
   // B148 (issue #342): Today wears no mark — the owner ruled a text-only
   // control ("one anchored to the right side that says 'Today'"), so its
@@ -240,11 +189,18 @@ export function registerMenus() {
   fillBoardAction(el.calToday, '', COPY.calToday);
   fillBoardAction(el.paneCollapse, '', COPY.paneCollapse);  // B151 (issue #353): `Go Back`, text alone
 
+  /* All Boards is pure navigation: it commits nothing a stray tap could
+     duplicate, so it runs raw, without commitAction (B81). goToList opens the
+     list / lot-grid; returnToBoard pops back however deep. */
   el.actionBoards.addEventListener('click', () => {
     if (listOpen || lotMenuOpen) returnToBoard();
     else goToList();
   });
 
+  /* Export is a choice (issue #140, B92): the tab opens the app's one menu
+     species, anchored at the pressed tab, with PDF and JSON as its two leaves.
+     The choice is navigation; each file-producing leaf takes the drop-guard
+     (B81). PDF reads `current`; JSON backs up every board. */
   el.actionExport.addEventListener('click', (e) => {
     const r = e.currentTarget.getBoundingClientRect();
     buildMenu([
@@ -253,6 +209,8 @@ export function registerMenus() {
     ], r.left, r.bottom);
   });
 
+  /* Import opens the platform file picker through the hidden input. The input
+     is reset before each open so choosing the same file fires `change` again. */
   el.actionImport.addEventListener('click', () => {
     commitAction(() => {
       el.importFile.value = '';
@@ -264,22 +222,31 @@ export function registerMenus() {
     if (file) importBoardsJson(file);
   });
 
+  /* Calendar is the fourth mobile board-action tab (B95). It commits nothing,
+     pushes its own history state on mobile (B9), and exits through Go Back
+     (B151, issue #353); wide screens enter through the standing rail. */
   el.actionCalendar.addEventListener('click', () => {
     if (state.calOpen) return;
     // The rail is wide's entry (B99); the tab is mobile's and pushes its own
-    // history state { v: 'cal' }: the OS back gesture returns from it (B9,
-    // unshadowed), and its OWN Back button is the always-visible route (R1).
+    // history state { v: 'cal' }: the OS back gesture returns from it (B9),
+    // and Go Back is the always-visible in-view route (B151).
     if (state.isWide) { showCal(); return; }
     histPush({ v: 'cal' });            // B124 embed: replaceState — no parent-history entries
     showCal();
   });
 
+  /* The tabs are focusable inside #board, while the desktop keyboard grammar
+     keys off `selected` rather than focus. Swallow those keys on the row so
+     Delete cannot reach a selected note; Enter's first press still clicks the
+     tab, while preventing repeats stops a held key from firing repeatedly. */
   el.boardActions.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== 'Delete' && e.key !== 'Backspace') return;
     e.stopPropagation();
     if (e.repeat) e.preventDefault();
   });
 
+  /* Desktop right-click opens the note menu (Copy, Title, Link); anchors,
+     canvas, lot rows, and editing notes retain the browser's native menu. */
   el.board.addEventListener('contextmenu', (ev) => {
     if (!state.isDesktop) return;                           // mobile arms Link by long-press
     if (linkSource) { ev.preventDefault(); return; }  // already arming: left-click a note to finish

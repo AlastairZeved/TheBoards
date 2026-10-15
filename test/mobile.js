@@ -2810,7 +2810,7 @@ async function openCat(page, cat) {
     }
     // The collar: --hit set on #cal-top; a tap BELOW the visual box (inside the
     // collar, which spends edge-ward now the row sits at the view's bottom —
-    // B134, issue #259) still fires Collapse.
+    // B134, issue #259) still fires Go Back.
     const hit = await page.evaluate(() =>
       parseFloat(getComputedStyle(document.getElementById('cal-top')).getPropertyValue('--hit')) || 0);
     ok('the exit row carries its §6 hit collar (--hit set)', hit > 0, String(hit));
@@ -3346,7 +3346,7 @@ async function openCat(page, cat) {
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(400);
 
-    // The row: Collapse anchored left, Today anchored right, same species.
+    // The row: Go Back anchored left, Today anchored right, same species.
     const row = await page.evaluate(() => {
       const ids = ['cal-back', 'cal-today'];
       const top = document.getElementById('cal-top').getBoundingClientRect();

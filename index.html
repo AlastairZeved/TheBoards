@@ -49,14 +49,13 @@
 <body>
   <!-- Board view: the single scaled page. Zero chrome (UIUX §1). -->
   <div id="board-view">
-    <!-- Desktop-only board rail (issues #9/#10): a sunken, always-visible pane.
-         Sits outside #board, so the gesture recognizer never sees its events.
-         display:none unless html.desktop; hidden from AT off-desktop too. -->
+    <!-- Wide-only board rail (B96): a sunken, always-visible pane. Sits outside
+         #board, so the gesture recognizer never sees its events; hidden from AT
+         off-wide too. -->
     <aside id="pane" class="on-dark" aria-label="Boards">
       <!-- B118 (issue #211): the collapsed All-Boards face — B99's rail grammar
            on the pane. One tap expands; the pane's own name reads vertically.
-           #pane-collapse is the expanded pane's arrow: the pane has no Back,
-           the arrow IS the collapse affordance. -->
+           The expanded pane's Go Back control returns to this collapsed face. -->
       <button type="button" id="pane-rail" aria-label="All Boards" aria-expanded="false"
               hidden>
         <span class="cdot" aria-hidden="true"></span>
@@ -107,8 +106,8 @@
            role="textbox" aria-multiline="true" aria-label="Title"></div>
 
       <!-- The board's own actions, declared where a gesture used to hide them
-           (issue #126, B83; three tabs since issue #140, B92 — two on desktop
-           since issue #157, B100, where "All Boards" retires: the left rail
+           (issue #126, B83; four tabs since B95 — two on wide since B119, where
+           "All Boards" retires: the left rail
            already lists every category with every board). A flat-tab row
            hovering just above the Parking Lot — the mirror, at the sheet's
            other end, of the band's header tabs. "All Boards" toggles the list
@@ -118,9 +117,9 @@
            onPointerDown passthrough (the #lot-menu precedent), so it earns no
            classifyTarget branch. The container is pointer-events:none like a
            .band-zone, so bare canvas beside the tabs still captures a note;
-           only the tabs (and their §6 hit collars) are live. Glyph + label are
-           filled from app.js's GLYPH/COPY, and the toggle's label is re-stated
-           by syncBoardActions. .on-light rebinds the ink to --ink-dark on the
+           only the tabs (and their UIUX §6 hit collars) are live. Glyph + label
+           are filled from state.js's GLYPH/COPY; render.js re-states the
+           toggle's label. .on-light rebinds the ink to --ink-dark on the
            --frame fill. The import input is the mechanism, never a control:
            display:none by nature of its work, driven only by the Import tab. -->
       <div id="board-actions" role="group" aria-label="Board actions">
@@ -152,24 +151,24 @@
   </div>
 
   <!-- Board list view (PRD §6.7 / UIUX §10): the only other screen, on the
-       room's own ground (B52). No visible page heading — the three category
+       room's own ground (B52). No visible page heading — the four category
        heads say where you are, and the screen's own name is carried by this
        section's aria-label, for the readers that need one (issue #95, B66). -->
   <section id="list-view" class="on-dark" hidden aria-label="Boards">
     <div id="list-rows" role="list"></div>
   </section>
 
-  <!-- Calendar view (issue #145): the 7-day rolling stack, the third screen.
-       The owner's exit control (R1, renamed and reseated by B134, issue #259;
-       renamed again by B151, issue #353) is its visible way off — Go Back
+  <!-- Calendar view (issue #145): the rolling 30-day stack, the third screen.
+       The owner's exit control, renamed and reseated by B134 (issue #259) and
+       renamed Go Back by B151 (issue #353), is its visible way off — Go Back
        alone, rendered at the very BOTTOM of
        the view, below the month view, anchored left, reading `Go Back`;
        Export remains reachable elsewhere and All Boards via the picker/rail.
-       The stack renders one day card per
-       rolling date, today first (R4 computes the window; nothing stored).
+       The stack renders one day card per rolling date; the window is computed
+       at render and nothing is stored.
        Wide (issue #158, B99): the calendar is the mockup-6 standing RAIL —
        always visible at the viewport's right edge, its label reading
-       vertically; tapping it expands the panel (the squeeze, R6). The rail
+       vertically; tapping it expands the panel. The rail
        chrome lives inside #cal-view so one element carries both states:
        #cal-rail is the collapsed face, #cal-top+#cal-stack the expanded
        panel's; on mobile both rail chrome pieces are inert (display:none)
@@ -207,7 +206,7 @@
          lands on it — band, card and body read as one little board at the
          top. Today's day-note squares render here at the day cards' own
          measure (the + is on the band, not in this row); #cal-stack below
-         carries the remaining six days. -->
+         carries the remaining rolling dates. -->
     <div id="cal-today-board"></div>
     <div id="cal-stack"></div>
     <div id="cal-month" role="group" aria-label="Month view"></div>
@@ -218,7 +217,7 @@
       <button type="button" class="cal-act on-light" id="cal-back"></button>
       <!-- B148 (issue #342): the Today control joins the row, anchored right —
            resets both anchors (month to the current month, the stack to the
-           shipped today+6 window). -->
+           rolling 30-day window). -->
       <button type="button" class="cal-act on-light" id="cal-today"></button>
     </div>
   </section>
