@@ -12,11 +12,8 @@
 //
 // Run: NODE_PATH=<playwright> node test/overflow.js  (serve the repo root on 8000)
 
-const { chromium } = require('playwright');
-const BASE = process.env.BOARDS_URL || 'http://localhost:8000/index.html';
+const { URL, ok, summary, launch, tap, tapWithMove, touchDragTo, newMobilePage, newDesktopPage, waitBoard, withErrors, run } = require('./lib');
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
 // Every element, measured like the bug was: getBoundingClientRect against
 // clientWidth. Tolerance 0.5px for subpixel rounding.
@@ -30,15 +27,14 @@ const overflowing = () => {
   return out;
 };
 
-(async () => {
-  const launchOpts = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {};
-  const browser = await chromium.launch(launchOpts);
+run(async () => {
+  const browser = await launch();
 
   // 1. Zero overflow at the narrow embed viewports, mobile.
   for (const [w, h] of [[260, 549], [286, 604], [320, 700], [380, 740]]) {
     const ctx = await browser.newContext({ viewport: { width: w, height: h } });
     const page = await ctx.newPage();
-    await page.goto(BASE + '?embed=1&mode=mobile');
+    await page.goto(URL + '?embed=1&mode=mobile');
     await page.waitForTimeout(600);
     const bad = await page.evaluate(overflowing);
     ok(`embed mobile ${w}x${h}: no element exceeds clientWidth`, bad.length === 0, bad.join(' | '));
@@ -50,7 +46,7 @@ const overflowing = () => {
   {
     const ctx = await browser.newContext({ viewport: { width: 320, height: 700 } });
     const page = await ctx.newPage();
-    await page.goto(BASE + '?embed=1&mode=desktop');
+    await page.goto(URL + '?embed=1&mode=desktop');
     await page.waitForTimeout(600);
     const tops = await page.evaluate(() =>
       [...document.querySelectorAll('#board-actions .board-action')].map(b => b.offsetTop));
@@ -60,6 +56,5 @@ const overflowing = () => {
   }
 
   await browser.close();
-  console.log(`\noverflow.js: ${pass} pass, ${fail} fail`);
-  process.exit(fail ? 1 : 0);
-})().catch((e) => { console.error('CRASH', e); process.exit(1); });
+
+});

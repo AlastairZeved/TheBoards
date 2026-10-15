@@ -1,3 +1,5 @@
+
+const { ok, summary } = require('./lib');
 /* The shipped security contract, falsifiable (issue #369; audit #246 finding 1
  * is the origin of the shipped CSP): the policy lives in index.html's
  * <meta http-equiv="Content-Security-Policy"> because GitHub Pages cannot send
@@ -17,11 +19,6 @@ const fs = require('fs');
 const path = require('path');
 const ROOT = path.join(__dirname, '..');
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => {
-  c ? (pass++, console.log('  PASS ' + n))
-    : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : '')));
-};
 
 const index = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
@@ -97,5 +94,4 @@ console.log('\n[5] sw.js — the cache namespace');
 const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 ok("CACHE is version-stamped as zeved-boards-v*", /const CACHE = 'zeved-boards-v\d+'/.test(sw));
 
-console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);
+process.exitCode = summary('security') ? 1 : 0;

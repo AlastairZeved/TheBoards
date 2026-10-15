@@ -1,3 +1,5 @@
+
+const { ok, summary } = require('./lib');
 /* The design contract, falsifiable (PRD §9.6): parse the SHIPPED files and
  * reproduce every table in UIUX §2 by recomputing WCAG relative luminance from
  * the declared hexes — ranges asserted at their worst extremes (UIUX §2.2,
@@ -28,11 +30,6 @@ const fs = require('fs');
 const path = require('path');
 const ROOT = path.join(__dirname, '..');
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => {
-  c ? (pass++, console.log('  PASS ' + n))
-    : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : '')));
-};
 
 const read = f => { try { return fs.readFileSync(path.join(ROOT, f), 'utf8'); } catch (e) { return ''; } };
 const css = read('styles.css');
@@ -1149,5 +1146,4 @@ console.log('\n[11] The delivery marker pair (UIUX §16.3)');
   }
 }
 
-console.log(`\n=== tokens: ${pass} passed, ${fail} failed ===`);
-process.exit(fail ? 1 : 0);
+process.exitCode = summary('tokens') ? 1 : 0;

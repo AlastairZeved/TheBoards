@@ -9,12 +9,8 @@
 // the day cards show only their day-note squares. The roll is driven by
 // Playwright's clock (the repo's precedent left fake-clock to QA — this suite
 // adopts the sanctioned tool instead of leaving the ruling untested).
-const { chromium } = require('playwright');
-const URL = process.env.BOARDS_URL || 'http://localhost:8000/index.html';
-const launchOpts = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {};
+const { URL, ok, summary, launch, tap, tapWithMove, touchDragTo, newMobilePage, newDesktopPage, waitBoard, withErrors, run } = require('./lib');
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
 async function newPage(browser, ctxOpts = {}) {
   const ctx = await browser.newContext({ viewport: { width: 384, height: 846 }, hasTouch: true, ...ctxOpts });
@@ -23,7 +19,7 @@ async function newPage(browser, ctxOpts = {}) {
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   await page.goto(URL);
-  await page.waitForFunction(() => !!document.querySelector('#board'));
+  await waitBoard(page);
   await page.waitForTimeout(300);
   return { ctx, page, errors };
 }
@@ -38,7 +34,7 @@ async function seedEventRecord(page, dayOffset, text) {
     await idbPut(newCalEvent(calKey(d), text));
   }, { dayOffset, text });
   await page.reload();
-  await page.waitForFunction(() => !!document.querySelector('#board'));
+  await waitBoard(page);
   await page.waitForTimeout(600);
 }
 
@@ -53,8 +49,8 @@ async function openCalendar(page) {
   }));
 }
 
-(async () => {
-  const browser = await chromium.launch(launchOpts);
+run(async () => {
+  const browser = await launch();
 
   console.log('\n[F1] A future-dated event RECORD creates NO board (B131) — record-level on the #363 surface');
   {
@@ -128,7 +124,7 @@ async function openCalendar(page) {
     // IS the morning load (rollDay resets, morning = true, B108).
     await page.clock.setFixedTime(new Date(Date.now() + 24 * 3600 * 1000));
     await page.reload();
-    await page.waitForFunction(() => !!document.querySelector('#board'));
+    await waitBoard(page);
     await page.waitForTimeout(1500);
     const got = await page.evaluate(() => {
       const now = new Date();
@@ -173,6 +169,5 @@ async function openCalendar(page) {
   }
 
   await browser.close();
-  console.log('\n=== future-event: ' + pass + ' passed, ' + fail + ' failed ===');
-  process.exit(fail ? 1 : 0);
-})();
+
+});

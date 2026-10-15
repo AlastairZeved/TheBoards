@@ -14,12 +14,8 @@
 // Black-box by ruling: we observe console output from a real page load, we do
 // not import module internals.
 
-const { chromium } = require('playwright');
-const URL = process.env.BOARDS_URL || 'http://localhost:8000/index.html';
-const launchOpts = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {};
+const { URL, ok, summary, launch, tap, tapWithMove, touchDragTo, newMobilePage, newDesktopPage, waitBoard, withErrors, run } = require('./lib');
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
 const EXPECTED = ['boot:layout', 'boot:idb', 'boot:migrate', 'boot:open', 'boot:pane-rail'];
 
@@ -37,8 +33,8 @@ async function bootMarkers(browser, viewport) {
   return { markers, errors };
 }
 
-(async () => {
-  const browser = await chromium.launch({ ...launchOpts });
+run(async () => {
+  const browser = await launch();
 
   console.log('\n[B1] Wide (desktop) boot emits every step marker in order');
   {
@@ -60,6 +56,5 @@ async function bootMarkers(browser, viewport) {
   }
 
   await browser.close();
-  console.log('\n=== boot-order: ' + pass + ' passed, ' + fail + ' failed ===');
-  process.exit(fail ? 1 : 0);
-})().catch(e => { console.error('FATAL', e); process.exit(1); });
+
+});

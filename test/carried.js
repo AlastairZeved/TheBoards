@@ -3,29 +3,17 @@
 // a soft bloom of the same token — B104's status layer, never the whole-card
 // fill, never the highlight layer. Black-box by ruling: seed through the window
 // surface, reload, observe; taps are genuine CDP touch events (B27b).
-const { chromium } = require('playwright');
-const URL = process.env.BOARDS_URL || 'http://localhost:8000/index.html';
-const launchOpts = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {};
+const { URL, ok, summary, launch, tap, tapWithMove, touchDragTo, newMobilePage, newDesktopPage, waitBoard, withErrors, run } = require('./lib');
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
 // A real touch tap through CDP Input domain; holdMs > LONGPRESS_MS (500) makes
 // it a long-press (the note menu, B91/B108/B109).
-async function tap(page, x, y, holdMs = 30) {
-  const c = await page.context().newCDPSession(page);
-  await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-  await page.waitForTimeout(holdMs);
-  await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await c.detach();
-}
-
 const CARRIED = 'rgb(225, 190, 38)';   // #E1BE26 (UIUX §2.6.3)
 const INK = 'rgb(3, 16, 25)';          // --ink-dark on the note (§2.3)
 const WASH = 'rgb(242, 214, 75)';      // #F2D64B, the highlight wash (§2.6.1)
 
-(async () => {
-  const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+run(async () => {
+  const browser = await launch();
 
   console.log('\n[C1] The status layer renders off the record: carriedOn = today glows, everything else stays plain (B110)');
   {
@@ -183,6 +171,5 @@ const WASH = 'rgb(242, 214, 75)';      // #F2D64B, the highlight wash (§2.6.1)
   }
 
   await browser.close();
-  console.log('\n=== carried: ' + pass + ' passed, ' + fail + ' failed ===');
-  process.exit(fail ? 1 : 0);
-})();
+
+});

@@ -1,3 +1,5 @@
+
+const { ok, summary } = require('./lib');
 /* The ruling file's numbering contract, falsifiable (AGENTS.md, record law;
  * issue #272): `The Docket/DECISIONS.md` is append-only and its `### B<n>` headings
  * are the citation space every other document cites by number. One number
@@ -16,11 +18,6 @@ const fs = require('fs');
 const path = require('path');
 const ROOT = path.join(__dirname, '..');
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => {
-  c ? (pass++, console.log('  PASS ' + n))
-    : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : '')));
-};
 
 const README = 'The Docket/DECISIONS.md';
 let text = '';
@@ -80,5 +77,4 @@ console.log('\n[4] Issue #424 schema ruling is recorded with its owner source');
     source.includes('Approve the issue proposal as written:'));
 }
 
-console.log(`\n=== records: ${pass} passed, ${fail} failed ===`);
-process.exit(fail ? 1 : 0);
+process.exitCode = summary('records') ? 1 : 0;

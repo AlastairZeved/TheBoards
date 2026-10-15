@@ -2,23 +2,11 @@
 // card, the glow, and the surfacing of reminder-active notes to today's linked
 // To-Do board as render-time echoes. Black-box by ruling: seed through the
 // window surface, reload, observe; taps are genuine CDP touch events (B27b).
-const { chromium } = require('playwright');
-const URL = process.env.BOARDS_URL || 'http://localhost:8000/index.html';
-const launchOpts = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {};
+const { URL, ok, summary, launch, tap, tapWithMove, touchDragTo, newMobilePage, newDesktopPage, waitBoard, withErrors, run } = require('./lib');
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
 // A real touch tap through CDP Input domain; holdMs > LONGPRESS_MS (500) makes
 // it a long-press (the note menu, B91/B108/B109).
-async function tap(page, x, y, holdMs = 30) {
-  const c = await page.context().newCDPSession(page);
-  await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-  await page.waitForTimeout(holdMs);
-  await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await c.detach();
-}
-
 // A seed board: category + notes, one record write, most-recent stamp.
 async function seedBoard(page, title, cat, notes) {
   return page.evaluate(({ title, cat, notes }) => {
@@ -28,8 +16,8 @@ async function seedBoard(page, title, cat, notes) {
   }, { title, cat, notes });
 }
 
-(async () => {
-  const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+run(async () => {
+  const browser = await launch();
 
   console.log('\n[R1] The clock: renders on every note card, one tap sets, one tap clears — and the record never grows a time field (B104/B109)');
   {
@@ -320,6 +308,5 @@ async function seedBoard(page, title, cat, notes) {
   }
 
   await browser.close();
-  console.log('\n=== reminder: ' + pass + ' passed, ' + fail + ' failed ===');
-  process.exit(fail ? 1 : 0);
-})();
+
+});

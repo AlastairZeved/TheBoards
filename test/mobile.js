@@ -1,11 +1,7 @@
-const { chromium } = require('playwright');
+const { URL, ok, summary, launch, tap, tapWithMove, touchDragTo, newMobilePage, newDesktopPage, waitBoard, withErrors, run } = require('./lib');
 const fs = require('fs');
-const URL = process.env.BOARDS_URL || 'http://localhost:8000/index.html';
 // Point at a specific Chromium with CHROMIUM_PATH; otherwise Playwright's own.
-const launchOpts = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {};
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
 // B108's morning landing owns boot: every load lands on today's linked board.
 // reopen() puts the board under test back on the sheet after a reload — by id
@@ -23,65 +19,12 @@ async function reopen(page, idOrTitle) {
 }
 
 
-async function newMobilePage(browser, viewport = { width: 384, height: 846 }) {
-  const ctx = await browser.newContext({
-    viewport, isMobile: true, hasTouch: true, deviceScaleFactor: 3,
-    acceptDownloads: true,
-  });
-  const page = await ctx.newPage();
-  const errors = [];
-  page.on('pageerror', e => errors.push(String(e)));
-  page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
-  await page.goto(URL);
-  await page.waitForFunction(() => !!document.querySelector('#board'));
-  await page.waitForTimeout(300);
-  return { ctx, page, errors };
-}
-
 // A real touch tap through CDP Input domain (Playwright's touchscreen.tap issues
 // touch events that the browser translates to pointer events).
-async function tap(page, x, y, holdMs = 30) {
-  const c = await page.context().newCDPSession(page);
-  await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-  await page.waitForTimeout(holdMs);
-  await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await c.detach();
-}
-async function tapWithMove(page, x, y, dx, dy) {
-  const c = await page.context().newCDPSession(page);
-  await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-  await page.waitForTimeout(20);
-  await c.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + dx, y: y + dy }] });
-  await page.waitForTimeout(20);
-  await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await c.detach();
-}
-
 // Press and drag, stopping WITH THE FINGER STILL DOWN so the caller can assert
 // mid-drag state (the landing frame, the ghost). Returns the live CDP session:
 // the caller sends touchEnd and detaches. Stepped so the move crosses
 // MOVE_THRESHOLD, and quick enough to stay inside LONGPRESS_MS.
-async function touchDragTo(page, from, to, steps = 8) {
-  const c = await page.context().newCDPSession(page);
-  await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: from.x, y: from.y }] });
-  await page.waitForTimeout(20);
-  for (let i = 1; i <= steps; i++) {
-    await c.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{
-      x: from.x + (to.x - from.x) * i / steps,
-      y: from.y + (to.y - from.y) * i / steps,
-    }] });
-    await page.waitForTimeout(15);
-  }
-  // Settle before the caller reads the DOM. Input.dispatchTouchEvent resolves
-  // when the event is DISPATCHED, not when the recognizer's handler has run and
-  // painted its consequence — so a drop-target assertion straight off the last
-  // move is a race the CI runner loses under load. The desktop twin already
-  // waits 60ms at exactly this point; this is the same wait, in the helper, so
-  // every caller gets it.
-  await page.waitForTimeout(60);
-  return c;
-}
-
 const noteCount = page => page.evaluate(() => document.querySelectorAll('.note').length);
 const activeIsNoteText = page => page.evaluate(() =>
   !!document.activeElement && document.activeElement.classList.contains('note-text'));
@@ -119,8 +62,8 @@ async function openCat(page, cat) {
   await page.waitForTimeout(300);
 }
 
-(async () => {
-  const browser = await chromium.launch({ ...launchOpts });
+run(async () => {
+  const browser = await launch();
 
   // ---- 1. mobile mode is actually active -----------------------------------
   console.log('\n[1] Mobile mode detection');
@@ -3463,6 +3406,5 @@ async function openCat(page, cat) {
   }
 
   await browser.close();
-  console.log('\n=== mobile: ' + pass + ' passed, ' + fail + ' failed ===');
-  process.exit(fail ? 1 : 0);
-})();
+
+});

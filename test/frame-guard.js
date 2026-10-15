@@ -8,40 +8,35 @@
 //      (serve the repo root on 8000; the suite serves its own cross-origin
 //       parent page on FRAME_GUARD_PORT (default 9999)
 
-const { chromium } = require('playwright');
+const { URL, ok, summary, launch, tap, tapWithMove, touchDragTo, newMobilePage, newDesktopPage, waitBoard, withErrors, run } = require('./lib');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-
-const BASE = process.env.BOARDS_URL || 'http://localhost:8000/index.html';
 const GUARD_PORT = Number(process.env.FRAME_GUARD_PORT) || 9999;
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
 // Minimal parent page on a second origin: iframes the app served on 8000.
-const PARENT = '<!doctype html><body style="margin:0"><iframe id="f" src="' + BASE + '?embed=1&mode=mobile" style="width:390px;height:844px;border:0"></iframe></body>';
+const PARENT = '<!doctype html><body style="margin:0"><iframe id="f" src="' + URL + '?embed=1&mode=mobile" style="width:390px;height:844px;border:0"></iframe></body>';
 
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/html' });
   res.end(PARENT);
 });
 
-(async () => {
+run(async () => {
   await new Promise((r) => server.listen(GUARD_PORT, r));
-  const launchOpts = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {};
-  const browser = await chromium.launch(launchOpts);
+  const browser = await launch();
 
   // (a) Same-origin iframe embed → app loads normally.
   {
     const ctx = await browser.newContext({ viewport: { width: 600, height: 800 } });
     const page = await ctx.newPage();
-    await page.goto(BASE);                       // parent = the app's own origin
+    await page.goto(URL);                       // parent = the app's own origin
     await page.evaluate((src) => {
       const f = document.createElement('iframe');
       f.id = 'f'; f.style.cssText = 'width:390px;height:844px;border:0';
       f.src = src; document.body.appendChild(f);
-    }, BASE + '?embed=1&mode=mobile');
+    }, URL + '?embed=1&mode=mobile');
     await page.waitForTimeout(1000);
     const frame = await (await page.$('#f')).contentFrame();
     ok('same-origin iframe: app boots (non-empty document in frame)',
@@ -90,7 +85,7 @@ const server = http.createServer((req, res) => {
   {
     const ctx = await browser.newContext({ viewport: { width: 600, height: 800 } });
     const page = await ctx.newPage();
-    await page.goto(BASE);
+    await page.goto(URL);
     await page.waitForTimeout(800);
     ok('top-level load: app boots normally (non-empty document)',
       await page.evaluate(() => document.documentElement.textContent.length > 0));
@@ -116,6 +111,5 @@ const server = http.createServer((req, res) => {
 
   await browser.close();
   server.close();
-  console.log('\nframe-guard: ' + pass + ' pass, ' + fail + ' fail');
-  process.exit(fail ? 1 : 0);
-})().catch((e) => { console.error(e); process.exit(1); });
+
+});
