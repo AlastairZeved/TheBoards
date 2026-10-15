@@ -124,7 +124,10 @@ run(async () => {
       const n = new Date(); const a = new Date(n.getFullYear(), n.getMonth() - 1, 1);
       return a.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
     });
+    // Each render binds its buttons to that render's month anchor. Wait for
+    // the first Previous redraw before clicking the replacement button.
     await nav('Previous month');
+    await waitLabelChange(fwd.label);
     await nav('Previous month');
     await page.waitForFunction((w) => document.querySelector('.mo-label').textContent === w, wantBackLabel);
     const back = await page.evaluate((want) => ({ label: document.querySelector('.mo-label').textContent, want }), wantBackLabel);
