@@ -220,7 +220,7 @@ run(async () => {
     await page.waitForTimeout(200);
     const heldAfter = await page.evaluate(() => ({
       lh: getComputedStyle(document.querySelector('#board')).getPropertyValue('--logical-h'),
-      deferred: state.layoutDeferred,
+      deferred: state.editVP.deferred,
     }));
     ok('blur with the room still shrunken holds the frame (B152)', heldAfter.lh === during, during + ' -> ' + heldAfter.lh);
     ok('...the deferral survives for the restore', heldAfter.deferred === true);
@@ -229,7 +229,7 @@ run(async () => {
     await page.waitForTimeout(200);
     const after = await page.evaluate(() => ({
       passes: window.__passes.length,
-      deferred: state.layoutDeferred,
+      deferred: state.editVP.deferred,
     }));
     ok('the restored room lands the deferred layout as ONE application (B152)', after.passes === 1, JSON.stringify(after));
     ok('...and the deferral is discharged', after.deferred === false);
@@ -1222,7 +1222,7 @@ run(async () => {
     const held = await page.evaluate(() => ({
       passes: window.__passes.length,
       wide: state.isWide,
-      deferred: state.layoutDeferred,
+      deferred: state.editVP.deferred,
       frame: getComputedStyle(document.getElementById('board')).getPropertyValue('--logical-w').trim(),
       notes: document.querySelectorAll('.note').length,
     }));
@@ -1293,7 +1293,7 @@ run(async () => {
     await tap(page, 250, 620);
     await page.keyboard.type('gecko hold');
     // the baseline focusin recorded, before the keyboard shrinks the room
-    await page.evaluate(() => { state.editStartH = 846; });
+    await page.evaluate(() => { state.editVP.startH = 846; });
     await countPasses(page);
     await page.setViewportSize({ width: 384, height: 450 });   // keyboard up (Gecko semantics)
     await page.waitForTimeout(300);
@@ -1302,8 +1302,8 @@ run(async () => {
     await page.evaluate(() => document.activeElement.blur());  // blur-by-tap, keyboard STILL up
     await page.waitForTimeout(300);
     const held = await page.evaluate(() => ({
-      deferred: state.layoutDeferred,
-      baseline: state.editStartH,
+      deferred: state.editVP.deferred,
+      baseline: state.editVP.startH,
       text: (state.current.notes[0] || {}).text,
     }));
     ok('blur with the keyboard still up COMMITS the note but HOLDS the frame (B152)',
@@ -1314,8 +1314,8 @@ run(async () => {
     await page.waitForTimeout(400);
     const landed = await page.evaluate(() => ({
       passes: window.__passes.map(p => p.vh),
-      deferred: state.layoutDeferred,
-      baseline: state.editStartH,
+      deferred: state.editVP.deferred,
+      baseline: state.editVP.startH,
     }));
     ok('the retraction resize lands the held frame as ONE application, at the restored height (B152)',
       landed.passes.length === 1 && landed.passes[0] === 846, JSON.stringify(landed));

@@ -855,8 +855,21 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   // --- Issue #158 / B99: the standing calendar rail (wide) ---
   ok('the calendar view carries the standing rail face (B99, mockup 6)',
     /id="cal-rail"/.test(html) && /calRail: document\.getElementById\('cal-rail'\)/.test(app));
-  ok('the rail renders at boot on wide — furniture, no press (B99)',
-    /if \(state\.isWide\) \{\s*\n\s*document\.documentElement\.classList\.add\('has-cal-rail'\);\s*\n\s*showCalRail\(\);/.test(app));
+  ok('the rail renders at boot on wide — furniture, no press (B99), with its gate owned by the calendar surface',
+    /if \(state\.isWide\) \{\s*\n\s*showCalRail\(\);/.test(app) &&
+    /export function showCalRail\(\)[\s\S]*?classList\.add\('has-cal-rail'\)/.test(app) &&
+    /export function hideCalRail\(\)[\s\S]*?classList\.remove\('has-cal-rail'\)/.test(app));
+  ok('calendar teardown is owned by the calendar module and shared by navigation and tier flips',
+    /export function tearDownCal\(\{ popHistory = false \} = \{\}\)[\s\S]*?setCalSqueeze\(false\)[\s\S]*?history\.back\(\)/.test(app) &&
+    /function hideCal\(\) \{\s*if \(!tearDownCal\(\)\) return;/.test(app) &&
+    /tearDownCal\(\{ popHistory: true \}\)/.test(app));
+  ok('the tier derives once and shares one class synchronizer; tablet is local to the entry',
+    /function setTierClasses\(\{ desktop, tablet, wide \}\)/.test(app) &&
+    /applyTier\(\{ desktop, tablet, wide \}\)/.test(app) &&
+    /state\.isWide = wide/.test(app) && !/state\.isTablet/.test(app));
+  ok('edit-session viewport state is grouped as one carrier record',
+    /editVP:\s*\{\s*floor: Infinity,[\s\S]*?width: 0,[\s\S]*?height: 0,[\s\S]*?startH: 0,[\s\S]*?deferred: false,[\s\S]*?holdPending: false,/.test(app) &&
+    !/state\.(?:editVVFloor|editVVWidth|editVVH|editStartH|layoutDeferred|holdFramePending)/.test(app));
   ok('wide boots into the collapsed rail BEFORE the first layout reads the frame (B118)',
     /applyInitialMode\(\);[^]*?if \(state\.isWide\) collapsePane\(\);[^\n]*\n\s*registerRender\(\);/.test(app));
   // --- Issue #191: the month view in the Calendar viewport's freed ground ---

@@ -896,6 +896,7 @@ function renderCalRail() {
 }
 
 export function showCalRail() {
+  document.documentElement.classList.add('has-cal-rail');
   closeLotMenu();
   hideListView();
   listOpen = false; catView = null;
@@ -907,6 +908,13 @@ export function showCalRail() {
   el.calRail.hidden = false;
   el.calRail.setAttribute('aria-expanded', 'false');
   renderCalRail();
+}
+
+export function hideCalRail() {
+  document.documentElement.classList.remove('has-cal-rail');
+  el.calView.hidden = true;
+  el.calView.classList.remove('rail-open', 'panel');
+  el.calRail.hidden = true;
 }
 
 function expandCalRail() {
@@ -975,8 +983,8 @@ export function showCal() {
 
 /* The popstate branch: {v:'cal'} re-shows the calendar (an OS-forward onto
    it); leaving it lands on the board and restores the action row. */
-function hideCal() {
-  if (!state.calOpen && !state.calExpanded) return;
+export function tearDownCal({ popHistory = false } = {}) {
+  if (!state.calOpen && !state.calExpanded) return false;
   state.calOpen = false;
   state.calExpanded = false;
   el.calView.hidden = !state.isWide;       // wide: the rail face remains (furniture, B99)
@@ -984,6 +992,12 @@ function hideCal() {
   el.calView.classList.toggle('rail-open', state.isWide);
   el.calRail.hidden = !state.isWide;
   setCalSqueeze(false);              // the squeeze lifts; the frame returns
+  if (popHistory && !EMBED && history.state && history.state.v === 'cal') history.back();
+  return true;
+}
+
+function hideCal() {
+  if (!tearDownCal()) return;
   syncBoardActions();
   if (!state.isWide) renderBoard();
   else renderCalRail();

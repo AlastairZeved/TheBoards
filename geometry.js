@@ -218,7 +218,7 @@ function applyFrame() {
    no soft keyboard and is left unguarded, as B28 had it. */
 export function deferLayoutIfEditing() {
   if (state.isDesktop || !editingInBoard()) return false;
-  state.layoutDeferred = true;
+  state.editVP.deferred = true;
   return true;
 }
 
@@ -278,15 +278,15 @@ export function onViewportResize() {
     // same size arriving twice is one change told twice — never a retraction.
     // Measured on the fold: (846×846) then (846×846); without this the second
     // read the fold as a keyboard leaving and blurred the editor.
-    if (w === state.editVVWidth && h === state.editVVH) return true;
-    const widthMoved = w !== state.editVVWidth;   // a width change is a fold, never a keyboard
-    state.editVVWidth = w;
-    state.editVVH = h;
-    if (h <= state.editVVFloor) { state.editVVFloor = h; state.layoutDeferred = true; return true; }
-    if (h > state.editVVFloor + KB_HIDE_SLOP && !widthMoved && !keyboardStillUp()) {
+    if (w === state.editVP.width && h === state.editVP.height) return true;
+    const widthMoved = w !== state.editVP.width;   // a width change is a fold, never a keyboard
+    state.editVP.width = w;
+    state.editVP.height = h;
+    if (h <= state.editVP.floor) { state.editVP.floor = h; state.editVP.deferred = true; return true; }
+    if (h > state.editVP.floor + KB_HIDE_SLOP && !widthMoved && !keyboardStillUp()) {
       document.activeElement.blur(); return true;
     }
-    state.layoutDeferred = true; return true;   // sub-threshold jitter, or a fold: keep holding
+    state.editVP.deferred = true; return true;   // sub-threshold jitter, or a fold: keep holding
   }
   return false;
 }
