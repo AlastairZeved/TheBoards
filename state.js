@@ -72,6 +72,7 @@ export const UNDO_MS = 5000;
 export const LEAVE_MS = 200;
 export const TOAST_HIDE_MS = 210;           // just past the toast's 200ms fade before hidden lands
 export const ACTION_DELAY = 400;            // re-fire drop-guard: a consequence commits now, a second tap inside is dropped (B81)
+export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 export const COPY = {
   // "All boards" (issue #60): the menu item is a destination, and "Boards"

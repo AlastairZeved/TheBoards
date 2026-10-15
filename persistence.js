@@ -1,8 +1,7 @@
 /* --- 2. IndexedDB persistence -------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { HIT_FLOOR, SAVE_DEBOUNCE, EMBED, state } from './state.js';
-import { LEGACY_H, LOGICAL_H, LOGICAL_W } from './geometry.js';
-import { clamp, hideSaveError, showSaveError } from './interactions.js';
+import { SAVE_DEBOUNCE, EMBED, state } from './state.js';
+import { hideSaveError, showSaveError } from './interactions.js';
 
 // B124 embed: a throwaway namespace wiped before every open — the visitor's
 // real `boards-db` is never touched by the embed (separate name, not a rename).
@@ -27,93 +26,26 @@ function db() {
   return dbPromise;
 }
 
-export async function idbGetAll() {
-  const database = await db();
-  return new Promise((resolve, reject) => {
-    const rq = database.transaction(STORE, 'readonly').objectStore(STORE).getAll();
-    rq.onsuccess = () => resolve(rq.result);
-    rq.onerror = () => reject(rq.error);
-  });
+function withStore(mode, operation) {
+  return db().then((database) => new Promise((resolve, reject) => {
+    const tx = database.transaction(STORE, mode);
+    const result = operation(tx.objectStore(STORE));
+    if (mode === 'readonly') {
+      result.onsuccess = () => resolve(result.result);
+      result.onerror = () => reject(result.error);
+    } else {
+      // A write succeeds with its transaction; the request value is unused.
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    }
+  }));
 }
-export async function idbPut(rec) {
-  const database = await db();
-  return new Promise((resolve, reject) => {
-    const tx = database.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).put(rec);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
-  });
-}
+export async function idbGetAll() { return withStore('readonly', (store) => store.getAll()); }
+export async function idbPut(rec) { return withStore('readwrite', (store) => store.put(rec)); }
 
-/* --- Legacy-frame adoption (B93, issue #141) ------------------------------
-   The one-time migration that collapses B32's two-path rendering. Notes
-   authored before B32 carry no `rh`; B32 mapped their `y` through LEGACY_H —
-   the height the pre-B32 build would have produced on this device — and
-   clamped into the page at render time only, while every note since runs
-   B64's single min-k path. Two paths forever means every future rendering
-   change pays for both, so at boot each legacy note is written onto the
-   single path by adopting the frame it already renders in — the same
-   rebaseNote performs at every grab.
-
-   Render-silence — why P3 (positions are permanent, PRD §3) holds. What the
-   note renders today is: x and size on the width ratio LOGICAL_W/(rw‖900),
-   y through clamp(y·(LOGICAL_H/LEGACY_H), 0, LOGICAL_H − HIT_FLOOR). The
-   migration writes exactly those values into storage and stamps
-   rw = LOGICAL_W, rh = LEGACY_H's frame height (LOGICAL_H), after which
-   noteK ≡ 1 and the single path renders the stored values verbatim. The
-   ratios agree by construction: on mobile LEGACY_H = 900·vh/vw, so the
-   legacy y-ratio LOGICAL_H/LEGACY_H = vw/900 — precisely the width ratio —
-   and min(LOGICAL_W/rw, LOGICAL_H/LEGACY_H) picks that same value; on
-   desktop LEGACY_H = LOGICAL_H, the ratio is 1, and B20's min-anchored
-   renderScale keeps the note where it rendered. The scale fold mirrors
-   rebaseNote: effScale before = (scale‖1)·widthRatio = scale after. The
-   stored-y clause of B21/B32 ("never mutated") is waived for THIS write
-   alone — it existed to stop incidental clamps from silently moving notes;
-   this is a deliberate, user-visible-identical adoption requested by
-   issue #141, recorded as B93. */
-export async function migrateLegacyBoards(all) {
-  const adopt = (n) => {
-    const wRatio = LOGICAL_W / (n.rw || 900);             // B32's legacy width ratio
-    return {                                              // renderY's legacy branch,
-      ...n,                                               // verbatim, incl. the clamp
-      x: n.x * wRatio,                                    // that is what renders today
-      y: clamp(n.y * (LOGICAL_H / LEGACY_H),
-               0, Math.max(0, LOGICAL_H - HIT_FLOOR)),
-      scale: (n.scale || 1) * wRatio,                     // rebaseNote's fold (B40/B64)
-      rw: LOGICAL_W,
-      rh: LOGICAL_H,                                      // noteK ≡ 1 for this note, forever
-    };
-  };
-  let adopted = 0;
-  for (const rec of all) {
-    if (!Array.isArray(rec.notes)) continue;
-    const legacy = rec.notes.filter((n) => n && !Number.isFinite(n.rh));
-    if (!legacy.length) continue;
-    rec.notes = rec.notes.map((n) => (n && !Number.isFinite(n.rh)) ? adopt(n) : n);
-    await idbPut(rec);                    // direct, not scheduleSave: boot owns the
-    adopted += legacy.length;             // store — nothing is open or debounced yet
-  }
-  return adopted;
-}
-export async function idbDelete(id) {
-  const database = await db();
-  return new Promise((resolve, reject) => {
-    const tx = database.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).delete(id);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
-  });
-}
-export async function idbGet(id) {
-  const database = await db();
-  return new Promise((resolve, reject) => {
-    const rq = database.transaction(STORE, 'readonly').objectStore(STORE).get(id);
-    rq.onsuccess = () => resolve(rq.result);
-    rq.onerror = () => reject(rq.error);
-  });
-}
+export async function idbDelete(id) { return withStore('readwrite', (store) => store.delete(id)); }
+export async function idbGet(id) { return withStore('readonly', (store) => store.get(id)); }
 
 /* --- 3. State + save queue ----------------------------------------------- */
 // Single-flight persist with exponential backoff; capture is never blocked.

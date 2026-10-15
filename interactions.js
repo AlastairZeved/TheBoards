@@ -1,6 +1,6 @@
 /* --- 7. Gesture recognizer ----------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { ACTION_DELAY, CE, COPY, DBLCLICK_MS, LEAVE_MS, LONGPRESS_MS, MAX_SCALE, MIN_SCALE, MOVE_THRESHOLD } from './state.js';
+import { ACTION_DELAY, CE, clamp, COPY, DBLCLICK_MS, LEAVE_MS, LONGPRESS_MS, MAX_SCALE, MIN_SCALE, MOVE_THRESHOLD } from './state.js';
 import { NOTE_MIN_W, TOAST_HIDE_MS, UNDO_MS, anchorEls, el, makeRecord, state, uuid, KB_HIDE_SLOP } from './state.js';
 import { saveNow, scheduleSave } from './persistence.js';
 import { LOGICAL_H, LOGICAL_W, applyLayout, applyNoteWidth, caretToEnd, effScale, noteMaxW, placeCaretAtPoint } from './geometry.js';
@@ -801,8 +801,6 @@ function surfaceNote(node) {
   el.board.appendChild(node);                         // move to top of DOM among notes
   saveNow();
 }
-
-export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 /* --- 8.5 Desktop selection (issues #12/#13, #4 select-then-act) -----------
    One selected thing at a time — a note or a Parking Lot line. Selection is
