@@ -122,7 +122,14 @@ browser's touch-to-mouse compatibility events (B27b) — keep them that way.
   asserts rewrites that assertion deliberately — say so in the commit message.
 - A behavior change ships with its ruling: a new `B<n>` entry in
   `DECISIONS.md` (append-only — supersede, never edit away), plus the
-  `UIUX.md`/`PRD.md` section edits it names, in the same PR.
+  `UIUX.md`/`PRD.md` section edits it names, in the same PR. A ruling's
+  downstream edits (`UIUX.md`, `PRD.md`, code comments, CSS) replace the value
+  in place and cite `B<n>`; how the value got there lives only in
+  `DECISIONS.md`.
+- An issue is sized so one PR closes it; work that needs more is split before
+  it is filed. Ordering between issues is set with GitHub's **Blocked by**
+  relationship (Relationships → Mark as blocked by), not with a tracking issue
+  or body text.
 - Work generally traces to a GitHub issue; check for one before assuming a
   change is unscoped.
 - Security issues → GitHub Security Advisory, never a public issue.
