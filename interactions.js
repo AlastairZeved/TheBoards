@@ -10,7 +10,8 @@ import { paintRequirementsRead } from './render.js';
 import { runClockAction } from './render.js';
 import { reflectToolbarSeat, removeLinksForNote, runNoteToolbarAction, setCarriedUi, setReminderUi, syncViewTitle, toggleLink, updateLinks, updateNoteToolbar, ensureNoteTitleEl } from './render.js';
 import { menuOpen, menuReturnFocus, openMenuFor } from './menus.js';
-import { renderCal, renderPane, updateActiveCardTitle, writeThroughRequirements } from './boards.js';
+import { renderPane, updateActiveCardTitle } from './boards.js';
+import { renderCal, writeThroughRequirements } from './calendar.js';
 
 // One recognizer over the board. Targets: note | anchor | lot-item | lot | canvas.
 export const pointers = new Map();          // pointerId -> {x,y,startX,startY}

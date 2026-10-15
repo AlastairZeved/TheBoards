@@ -30,7 +30,7 @@ const DIR = fs.mkdtempSync(path.join(require('os').tmpdir(), 'sw-check-'));
 // issue #182: app.js is the module entry; its imports must ride along or
 // install()'s addAll fails on the first 404.
 for (const f of ['index.html', 'app.js', 'state.js', 'persistence.js', 'geometry.js',
-                 'render.js', 'interactions.js', 'menus.js', 'export.js', 'boards.js',
+                 'render.js', 'interactions.js', 'menus.js', 'export.js', 'boards.js', 'calendar.js',
                  'styles.css', 'manifest.json', 'favicon.ico']) {
   fs.copyFileSync(path.join(ROOT, f), path.join(DIR, f));
 }

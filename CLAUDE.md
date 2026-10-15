@@ -18,7 +18,8 @@ bridge). The app's code is split into eight dependency-region modules:
 | `interactions.js` | §7 gesture recognizer + §8 edit/drag/pinch + §9 complete/undo/toast |
 | `menus.js` | §10 long-press menu + board-action row |
 | `export.js` | §10.5 PDF + §10.6 JSON backup/import |
-| `boards.js` | §11 board list + routing + §11.6 calendar |
+| `boards.js` | §11 board list + routing |
+| `calendar.js` | §11.6 calendar |
 
 Import graph note: several modules import each other (interactions ↔ render,
 boards ↔ export, etc.). These are legal ESM cycles; cross-module bindings are

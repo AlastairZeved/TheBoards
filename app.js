@@ -5,7 +5,8 @@ import { linkSource, noteEls, registerRender, renderBoard, updateLinks } from '.
 import { cancelGesture, clearSelection, commitAction, deleteNote, engaged, g, hideToast, leave, pointers, registerInteractions, selected } from './interactions.js';
 import { closeMenu, registerMenus } from './menus.js';
 import { EXPORT_GEO, buildBoardPdf, exportBoardPdf, exportNoteBox, pdfTextW } from './export.js';
-import { catOf, catOrder, catPageCap, catView, checkDayRoll, drillCat, goToList, listOpen, lotMenuOpen, openBoardObj, registerBoards, renderCal, renderPane, returnToBoard, showCalRail, swapBoard, collapsePane } from './boards.js';
+import { catOf, catOrder, catPageCap, catView, drillCat, goToList, listOpen, lotMenuOpen, openBoardObj, registerBoards, renderPane, returnToBoard, swapBoard, collapsePane } from './boards.js';
+import { checkDayRoll, registerCal, renderCal, showCalRail } from './calendar.js';
 
 /* --- B125 frame-guard -----------------------------------------------------
    The app may be framed only by its own origin or https://alastairzeved.com
@@ -214,7 +215,8 @@ async function boot() {
   registerRender();                 // toolbar keydown
   registerInteractions();           // pointer/focus/keydown/input listeners
   registerMenus();                  // board-action row fill + click/contextmenu listeners
-  registerBoards();                 // calendar + popstate listeners
+  registerBoards();                 // popstate listener
+  registerCal();                    // calendar listeners (calBack, calToday, calRail)
   console.debug('boot:layout');
   applyLayout();                 // establishes LEGACY_H before the migration reads it —
                                  // the first applyLayout otherwise fires inside openBoardObj,
@@ -368,7 +370,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its precached assets; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v156';
+const OWN_BUILD = 'v157';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {
