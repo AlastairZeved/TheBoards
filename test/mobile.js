@@ -1887,7 +1887,7 @@ run(async () => {
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
     }, target);
     await tap(page, tbox.x, tbox.y);
-    await page.waitForTimeout(600);                     // past ACTION_DELAY; two pops → board
+    await page.waitForTimeout(await page.evaluate(() => ACTION_DELAY + 200)); // past guard; two pops → board
     ok('the second card opened its board', await page.evaluate(() => state.current.id) === target);
     ok('and the nav returned all the way to the board', await page.evaluate(() =>
       !listOpen && document.querySelector('#list-view').hidden === true &&
@@ -2379,9 +2379,9 @@ run(async () => {
        }));
 
     // Re-linking the same pair removes the link (toggle, B91). Wait out the
-    // create's re-fire guard (ACTION_DELAY 400ms) first.
+    // create's re-fire guard (ACTION_DELAY) first.
     await page.evaluate(() => hideToast());
-    await page.waitForTimeout(450);
+    await page.waitForTimeout(await page.evaluate(() => ACTION_DELAY + 50));
     await tap(page, c.la.x, c.la.y, 700);
     await page.waitForTimeout(100);
     await chooseLink();

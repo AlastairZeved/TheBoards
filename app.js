@@ -1,15 +1,11 @@
-import { ACTION_DELAY, DESKTOP_MQ, EMBED, EMBED_MODE, LONGPRESS_MS, MOVE_THRESHOLD, TABLET_MQ, calKey, el, newBoardRecord, newCalEvent, readTier, state } from './state.js';
-import { idbDelete, idbGet, idbGetAll, idbPut, migrateLegacyBoards, persist, saveNow } from './persistence.js';
-import { LEGACY_H, LOGICAL_H, LOGICAL_W, applyLayout, calSqueeze, effScale, inEnvironmentPass, lotH, onViewportResize, rebaseNote, renderScale } from './geometry.js';
-import { renderX, renderY, setCalSqueeze } from './geometry.js';
+import { ACTION_DELAY, DESKTOP_MQ, EMBED, EMBED_MODE, TABLET_MQ, calKey, el, newBoardRecord, newCalEvent, readTier, state } from './state.js';
+import { idbDelete, idbGet, idbGetAll, idbPut, persist } from './persistence.js';
+import { LOGICAL_H, LOGICAL_W, applyLayout, calSqueeze, inEnvironmentPass, lotH, migrateLegacyBoards, onViewportResize, renderX, setCalSqueeze } from './geometry.js';
 import { linkSource, noteEls, registerRender, renderBoard, updateLinks } from './render.js';
-import { cancelGesture, clamp, clearSelection, commitAction, deleteNote, engaged, g, hideToast, leave, pointers } from './interactions.js';
-import { registerInteractions, selected } from './interactions.js';
-import { closeMenu, fillBoardAction, registerMenus } from './menus.js';
-import { EXPORT_GEO, EXPORT_W, buildBoardPdf, exportBoardPdf, exportCalPdf, exportNoteBox, exportX, pdfTextW } from './export.js';
-import { BOARD_CATS, GRID_ORDER, catOf, catOrder, catPageCap, catView, drillCat, goToList, listOpen, lotMenuOpen } from './boards.js';
-import { checkDayRoll, makeCalDay, newBoardIn, openBoardObj, popping, registerBoards, renderCal, renderPane, returnToBoard, showCalRail } from './boards.js';
-import { swapBoard, swapping, syncDateMirror, collapsePane } from './boards.js';
+import { cancelGesture, clearSelection, commitAction, deleteNote, engaged, g, hideToast, leave, pointers, registerInteractions, selected } from './interactions.js';
+import { closeMenu, registerMenus } from './menus.js';
+import { EXPORT_GEO, buildBoardPdf, exportBoardPdf, exportNoteBox, pdfTextW } from './export.js';
+import { catOf, catOrder, catPageCap, catView, checkDayRoll, drillCat, goToList, listOpen, lotMenuOpen, openBoardObj, registerBoards, renderCal, renderPane, returnToBoard, showCalRail, swapBoard, collapsePane } from './boards.js';
 
 /* --- B125 frame-guard -----------------------------------------------------
    The app may be framed only by its own origin or https://alastairzeved.com
@@ -226,7 +222,7 @@ async function boot() {
   console.debug('boot:idb');
   const all = await idbGetAll();
   console.debug('boot:migrate');
-  const adopted = await migrateLegacyBoards(all);   // B93: legacy notes onto the single path,
+  const adopted = await migrateLegacyBoards(all, idbPut);   // B93: legacy notes onto the single path,
                                                     // written straight to IDB — nothing is
                                                     // open or debounced yet
   let board;
@@ -263,17 +259,10 @@ boot();
    eval-based surface is itself an XSS sink. */
 const SURFACE = {
   get ACTION_DELAY() { return ACTION_DELAY; },
-  get BOARD_CATS() { return BOARD_CATS; },
   get EXPORT_GEO() { return EXPORT_GEO; },
-  get EXPORT_W() { return EXPORT_W; },
-  get GRID_ORDER() { return GRID_ORDER; },
   get exportBoardPdf() { return exportBoardPdf; },
-  get exportCalPdf() { return exportCalPdf; },
-  get LEGACY_H() { return LEGACY_H; },
   get LOGICAL_H() { return LOGICAL_H; },
   get LOGICAL_W() { return LOGICAL_W; },
-  get LONGPRESS_MS() { return LONGPRESS_MS; },
-  get MOVE_THRESHOLD() { return MOVE_THRESHOLD; },
   get buildBoardPdf() { return buildBoardPdf; },
   get calKey() { return calKey; },
   get calSqueeze() { return calSqueeze; },
@@ -281,16 +270,12 @@ const SURFACE = {
   get catOrder() { return catOrder; },
   get catPageCap() { return catPageCap; },
   get catView() { return catView; },
-  get clamp() { return clamp; },
   get commitAction() { return commitAction; },
   get deleteNote() { return deleteNote; },
   get drillCat() { return drillCat; },
-  get effScale() { return effScale; },
   get el() { return el; },
   get engaged() { return engaged; },
   get exportNoteBox() { return exportNoteBox; },
-  get exportX() { return exportX; },
-  get fillBoardAction() { return fillBoardAction; },
   get g() { return g; },
   get goToList() { return goToList; },
   get hideToast() { return hideToast; },
@@ -303,28 +288,20 @@ const SURFACE = {
   get listOpen() { return listOpen; },
   get lotH() { return lotH; },
   get lotMenuOpen() { return lotMenuOpen; },
-  get makeCalDay() { return makeCalDay; },
-  get newBoardIn() { return newBoardIn; },
   get newBoardRecord() { return newBoardRecord; },
   get newCalEvent() { return newCalEvent; },
   get noteEls() { return noteEls; },
   get pdfTextW() { return pdfTextW; },
   get persist() { return persist; },
-  get popping() { return popping; },
-  get rebaseNote() { return rebaseNote; },
   get renderBoard() { return renderBoard; },
   get renderCal() { return renderCal; },
   get renderPane() { return renderPane; },
-  get renderScale() { return renderScale; },
   get renderX() { return renderX; },
-  get renderY() { return renderY; },
   get returnToBoard() { return returnToBoard; },
-  get saveNow() { return saveNow; },
   get selected() { return selected; },
   get state() { return state; },
   get swapBoard() { return swapBoard; },
-  get swapping() { return swapping; },
-  get syncDateMirror() { return syncDateMirror; },
+
   get updateLinks() { return updateLinks; }
 };
 Object.defineProperties(window, Object.getOwnPropertyDescriptors(SURFACE));
@@ -391,7 +368,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its precached assets; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v154';
+const OWN_BUILD = 'v155';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

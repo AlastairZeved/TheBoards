@@ -11,9 +11,9 @@ bridge). The app's code is split into eight dependency-region modules:
 
 | File | Owns (AGENTS.md's section map) |
 |---|---|
-| `state.js` | graph root, imports nothing — constants, copy, GLYPH, DOM plumbing (`el`/`anchorEls`), MQ consts, the shared `state` carrier, calendar data helpers |
-| `persistence.js` | §2 IndexedDB + §3 save queue |
-| `geometry.js` | §4 layout/scale-to-fit + §5 coordinate/caret helpers |
+| `state.js` | graph root, imports nothing — constants and pure utilities (`clamp`), copy, GLYPH, DOM plumbing (`el`/`anchorEls`), MQ consts, the shared `state` carrier, calendar data helpers |
+| `persistence.js` | §2 IndexedDB wrappers + §3 save queue; imports interactions only for save-error notices |
+| `geometry.js` | §4 layout/scale-to-fit + §5 coordinate/caret helpers + B93 legacy-frame adoption |
 | `render.js` | §6 note/anchor/lot rendering + §6.6 links |
 | `interactions.js` | §7 gesture recognizer + §8 edit/drag/pinch + §9 complete/undo/toast |
 | `menus.js` | §10 long-press menu + board-action row |
@@ -21,10 +21,11 @@ bridge). The app's code is split into eight dependency-region modules:
 | `boards.js` | §11 board list + routing + §11.6 calendar |
 
 Import graph note: several modules import each other (interactions ↔ render,
-boards ↔ export, etc.). These are legal ESM cycles. Cross-module bindings are
-used inside function bodies; reads of `state.js` constants at module evaluation
-are also safe (`persistence.js:11`, `export.js:367`). `persistence.js` opens
-IndexedDB lazily on the first database operation through `db()`.
+boards ↔ export, etc.). These are legal ESM cycles; cross-module bindings are
+used inside function bodies. `geometry.js` receives the direct B93 migration
+writer from boot, so geometry and persistence remain independent. `persistence.js`
+imports interactions only for save-error notices and opens IndexedDB lazily on
+the first database operation through `db()`.
 `boot()`'s register calls (plus `test/boot-order.js`) pin the load order, and
 each region exposes a `register*()` called from `boot()`.
 
