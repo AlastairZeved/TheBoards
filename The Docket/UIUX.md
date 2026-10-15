@@ -14,14 +14,7 @@ where §§ below supersede a numbered ruling, they say so by number.
 Sections §1–§12 keep the meanings the code already cites. New v2 material is
 numbered §13 and up, so no existing citation moves.
 
-**The rendered reference.** This system was settled by rendered specimen sheets,
-not prose — seven proof rounds, run outside the repo. The final sheet, **proof
-sheet 7, "A Well, Swapped"**, (removed from the repo, B156); its own verification table records the
-swap that ended the process (the band takes `#020812` and is the deepest surface
-on the page; the card takes `#08152c` and separates by its border — 5.39:1 on the
-card, 5.95:1 on the band). The three `fonts/` files are extracted from that
-sheet's embedded faces. Where this document and that render disagree, the render
-is the earlier authority and the disagreement is a defect *here*.
+**Where this document and that render disagree, the render is the earlier authority and the disagreement is a defect here.**
 
 ---
 
@@ -35,12 +28,7 @@ And its corollary, which predates this document and survives it:
 > **Identity comes from structure — frame, scratch-out, surface tone — never
 > costume.**
 
-**And the test that separates the two, which a flat surface cannot pass.** A
-gradient present because interfaces have gradients is costume. A gradient that
-encodes something true about the page is structure. The distinction is not the
-technique but the job: the sheet's edge falloff (§2.8) renders the page's bound
-on the mobile path, where `renderScale = 1` leaves no letterbox to draw an edge
-against — a thing the product claims about itself and could not otherwise show.
+**A gradient earns its place only by doing a job.** The water sections' falloff (§2.8) gives their field depth; the sheet itself has no edge falloff.
 **Anything that cannot name its job in one sentence is costume and comes out.**
 
 Two consequences hold throughout, without exception:
@@ -53,21 +41,9 @@ Two consequences hold throughout, without exception:
   transient surfaces — menu, toast, drag ghost. **Notes carry no shadow.** A note
   is *on* the page, not floating over it.
 
-### §1.1 The register
+### §1.1 Emotional identity
 
-The board should feel like a place you are glad to return to. Not
-productive-anxious, not gamified, not neutral-corporate.
-
-The imagery is **calm water** — and note the register carefully: water at depth
-and at dusk, not noon glare. That is why the palette is dark. Deep water is
-peaceful; a bright white productivity surface is not. The page reads top to
-bottom as one scene — water closing each end of the sheet, the deep between —
-and the note is the one lit thing on the deep (B58, ruled from the rendered
-what-if the way every scene decision before it was ruled).
-
-This does not license decoration. Peace is produced by restraint, depth and
-consistency. Where a value below is decorative rather than structural, it is
-wrong and should be removed.
+The emotional identity is specified in PRD §1.1.
 
 ---
 
@@ -107,11 +83,7 @@ ratio in this document is computed from that column, so every ratio in this
 document holds on all five; where a number is genuinely per-ladder, it is
 printed per-ladder (§4.3 is the only such table).
 
-`--furniture` was retired by B46; `--band` and the `--shelf` texture are
-retired by B58 — the second swap renamed the deep's token honestly
-(`--band` → `--deep`, the field's stops → `--water-*`) and removed the sand
-from the application entirely (its fates are in §16.2). `--line` was already
-deleted (§2.3).
+`--line` is deleted (§2.3).
 
 **The page reads top to bottom as one scene:** water at the top, closing the
 band; the deep through the middle, where everything the person makes lives;
@@ -130,8 +102,7 @@ holds 3.32:1 behind its 0.40 hairline edge, and light ink reads at 18.33:1.
 and it is behind all four boards at once, so it keeps `#020812` — the To-Do
 deep's value — whichever board is open. Taken deliberately, the consequence is
 that a green board's OS chrome, menu, toast and board list are still the blue.
-Settled by proof rounds 8–9 (B52) and carried through the swap (B58); the
-renders were proof sheets 9 and 10 (removed from the repo, B156). **The platform edge is the same
+**The platform edge is the same
 room** (B55): the one `theme-color` meta and `manifest.json`'s
 `background_color`/`theme_color` all wear `#020812`.
 
@@ -220,67 +191,7 @@ board's `data-cat` onto `#pane` and the same rungs rebind under
 | `--frame` | `#698ebf` | `#52997f` | `#9d80b9` | `#b57a9b` | `#b48158` | 0.2611 |
 | `--note` | `#a0d4da` | `#b9d2b2` | `#cec6ed` | `#e6c2c9` | `#e3c6aa` | 0.5962 |
 
-**The derivation is hue and only hue.** Each rung was converted to OKLCH, its
-hue moved, and the result re-solved against sRGB so that its **WCAG relative
-luminance reproduces the To-Do rung's** — the right-hand column is one number
-per row because it is one number per row. The family's own internal hue spread
-(the shipped blue runs 205° at the note to 261° at the card) is narrowed as it
-rotates, so each scene reads as one hue rather than smearing across a 56° arc.
-The Learning rose runs a tight ~345°–11° arc (crossing 0°); the Calendar orange
-runs ~47°–66°:
-
-| Rung | To-Do H / L / C | Idea H / L / C | Note H / L / C | Learning H / L / C | Calendar H / L / C |
-|---|---|---|---|---|---|
-| `--deep` | 251.6° / 0.132 / 0.027 | 171.0° / 0.129 / 0.025 | 309.1° / 0.136 / 0.032 | 345.6° / 0.136 / 0.031 | 51.5° / 0.134 / 0.029 |
-| `--card` | 260.8° / 0.199 / 0.050 | 161.3° / 0.192 / 0.043 | 310.3° / 0.203 / 0.052 | 10.9° / 0.203 / 0.041 | 55.7° / 0.201 / 0.044 |
-| `--water-top` | 227.5° / 0.494 / 0.066 | 145.1° / 0.491 / 0.067 | 304.7° / 0.504 / 0.066 | 2.1° / 0.507 / 0.066 | 52.4° / 0.503 / 0.063 |
-| `--water-mid` | 228.2° / 0.415 / 0.059 | 148.3° / 0.413 / 0.059 | 300.2° / 0.424 / 0.057 | 2.5° / 0.427 / 0.059 | 46.6° / 0.424 / 0.059 |
-| `--water-bot` | 232.7° / 0.317 / 0.047 | 150.7° / 0.314 / 0.046 | 302.3° / 0.323 / 0.045 | 355.6° / 0.325 / 0.046 | 57.3° / 0.323 / 0.048 |
-| `--frame` | 255.7° / 0.639 / 0.085 | 167.8° / 0.629 / 0.083 | 307.3° / 0.648 / 0.089 | 345.1° / 0.650 / 0.085 | 59.3° / 0.645 / 0.085 |
-| `--note` | 205.0° / 0.836 / 0.054 | 138.9° / 0.836 / 0.051 | 294.6° / 0.846 / 0.054 | 4.9° / 0.847 / 0.042 | 66.1° / 0.844 / 0.050 |
-
-> **OKLCH lightness and chroma are the aiming coordinates, not the pinned
-> ones.** They are held as closely as 8-bit sRGB allows — L within 0.010, C
-> within 0.007 on the Idea and Note ladders; the Learning rose binds a little
-> harder (L within 0.013, C within 0.012), and its note is deliberately paler
-> than its aim (C 0.042 vs 0.054); the Calendar orange holds L within 0.009
-> and C within 0.006, its card spending a little chroma to the pin (C 0.044
-> against the blue's 0.050, where the sRGB maximum at that luminance is 0.049
-> — the pin, not the gamut, is what spends it) — and they cannot be held
-> *exactly*, because
-> OKLab lightness and WCAG luminance are different functions and a hue rotation
-> cannot preserve both. Luminance is the one that is pinned, because luminance
-> is what every ratio in this document is made of, and it is what §2.2.1 rule 1
-> means by "one axis". Where the two conflict, luminance wins. On Learning, the
-> dark rungs (`--deep`, `--card`) also sit at To-Do's *near-exact* raw
-> luminance, not merely its 4dp print, because they anchor the high-contrast
-> ratios (18.33:1, 12.36:1) whose 2dp value is sensitive to the fourth decimal;
-> being near-black, they have no visible chroma to spend there anyway.
-
-**One place the gamut binds, recorded so it is not re-litigated.** `--card` on
-the Idea ladder is `C = 0.043` against the blue's `0.050`, and `--deep` is
-`0.025` against `0.027`. Both are the **sRGB maximum** available at that
-luminance in that hue arc — verified by scanning every 8-bit triple. The blue
-primary is very dark (luminance weight 0.0722), so a dark blue can push `B`
-high and buy chroma almost free; green's weight is 0.7152, so a dark green must
-keep `G` small and its chroma is capped. A greener dark card at this luminance
-does not exist in sRGB, and no amount of searching will find one.
-
-> **Because luminance is preserved, every ratio this document publishes is
-> preserved.** §2.3's five ink pairings, §2.5's seven adjacencies, §2.7's ring
-> table and §2.3.1's crossover are all functions of luminance alone, and B67
-> moved no luminance (B74 added a fourth ladder the same way, issue #168 a
-> fifth). `test/tokens.js`
-> asserts each of them against **all five** ladders with a single expected
-> number, so a hue that drags a rung off its luminance fails the suite rather
-> than the eye.
-
-**§2.2.1 rule 4 is satisfied for all twenty-eight new values** (fourteen from
-B67, seven more from B74's Learning rose, seven more from issue #168's
-Calendar orange). Every one is outside §2.3.2's
-forbidden band (0.163–0.196), every ground below §2.3.1's 0.1788 crossover
-still takes `--ink-light`, and every note still takes `--ink-dark` —
-necessarily, since each sits at its To-Do rung's luminance.
+Each ladder preserves the To-Do ladder's luminance at every rung. Consequently, the contrast ratios in §§2.3, 2.5 and 2.7 hold across all five ladders; `test/tokens.js` checks each scope.
 
 **What does not rotate:** `--chrome` (§2.2 — one room, B55), the two ink poles
 (§2.3 — ink is per surface, not per app, and rotating it would move the
@@ -338,7 +249,7 @@ whose rungs sit at the same luminances (§2.2.2).
 
 **`--ink` is no longer a single value.** v1 used one `var(--ink)` for note text,
 lot text, band labels, rules, hairlines and borders alike, which worked only
-because there was one ground per theme. With a six-ground ladder the ink pole
+because there was one ground per theme. With a seven-rung ladder the ink pole
 flips at the surface, so ink is **rebound at each surface boundary** and
 inherited downward:
 
@@ -476,14 +387,9 @@ Three consequences worth stating out loud:
 
 **`--frame` `#698ebf`.** One token for the card's border and both full-width
 rules (B61): the two ends of the sheet close with the same line, the same
-idiom at both ends (§3.1). It is a lift of the deep's own hue, so the linework
+idiom at both ends (UIUX §3.1). It is a lift of the deep's own hue, so the linework
 belongs to the page rather than being applied to it. Clears 5.39:1 on the
 card, 5.95:1 on the deep, 3.77:1 on the water's darkest stop.
-
-> **Ratified.** `#698ebf` arrived as the frame carried by the "A Well"
-> specimen, kept deliberately by proof sheet 7 against rendered alternatives,
-> and extended to the lot's rule by Rob's B61 pick — both ends matching —
-> from the rendered pair on the second-swap round.
 
 **Hairlines.** A separator is that surface's ink at the lowest alpha clearing
 3:1 on it — `0.40` on `--chrome`, where the only separators in the app live
@@ -530,15 +436,6 @@ the sand was warm ground; the sand is retired, so among everything the app
 draws, the one thing that destroys is the one thing that isn't cool water,
 full stop.
 
-> **Ratified.** The whole family was re-derived against the deep-dusk grounds
-> in proof round 8 — candidates rendered beside the round-1 values, every
-> ratio against its worst extreme — and rendered whole in round 9
-> (proof round 9). The round-1 restore and page
-> values were hue 177°, the retired teal's kin; the new values belong to the
-> note's and the field's families. `--danger` re-verified clean against every
-> ground it lands on and kept its value — re-chosen, not inherited. Recorded
-> as B52, where the superseded hexes live.
-
 ### §2.6.1 The highlight wash (B71)
 
 | Token | Value | Role | text on it (`--ink-dark`) | vs. the note families (hue) |
@@ -552,7 +449,7 @@ set by board *type*, not by the note). So the rule that keeps accents off the
 board surface does not reach it: the highlight is *made* to sit on the board, on
 exactly one note at a time, at the user's command.
 
-It is the one **warm** surface a note can wear. The three note families are all
+It is the one **warm** surface a note can wear. The five note families are all
 cool pastels (§2.2.2); `#F2D64B` is a bright amber that reads as "marked" against
 every one of them — the separation is **hue**, not luminance. That is deliberate:
 the note is the brightest surface on the page (§2.2), and the wash keeps that rung
@@ -566,16 +463,13 @@ Since B85, `--highlight` also served as the Highlight tab's **identity fill** on
 the note toolbar (§4.5) — fixed like this wash, and chrome that names *which
 action*, never the note's state. Since B127 the tab's fill is its own token
 `--tab-highlight` (§2.6.4) at the shared note rung 0.5962 — the wash itself
-keeps its 0.675 rung and its role as the note's state surface. Its fixed blue
-sibling `--accent-copy` (B85)
-retired with the Copy tab it filled (B114): the token is out of the suite.
+keeps its 0.675 rung and its role as the note's state surface.
 
 ### §2.6.2 The reminder glow (B109; the card-frame bloom, issue #240/B132)
 
 | Token | Value | Role | text on it (`--ink-dark`) | vs. the note families (hue) |
 |---|---|---|---|---|
 | `--reminder-glow` | `#c6a400` | a note the user has toggled a reminder on (the card frame's border + soft bloom, §4.7) — the yellow the owner ruled, issue #240/B132 | 7.98:1 | the carried amber's hue held, one more rung down (B132) |
-| `--reminder` | `#e6c2c9` | the Remind tab's active fill value (kept for the B126/B127 record; the tab's live token is `--tab-remind`, same value, §2.6.4) — never a glow | 11.84:1 | the Learning ladder's `--note` rung |
 
 A reminder is **not an accent** — it belongs to the same class as the highlight
 wash (§2.6.1): a per-note appearance state the *user* asserts, sitting on the
@@ -707,15 +601,9 @@ adjacency in §2.5 is asserted against the stop that is worst **for that
 question** — the lightest where a mark must read on the water, the darkest
 where the water must part from the deep.
 
-### §2.9 The sand is retired
+### §2.9 Ramp texture
 
-The Parking Lot wore warm sand with turbulence weather from B46 to B58, and
-B58's swap retired the family entirely (the six superseded hexes live in that
-entry, as B52's precedent has it): the lot takes the water (§2.8),
-the primary control takes `--accent-page` (B59), and no sand value survives
-anywhere in the application. The full fate table is §16.2. What §2.9 carried
-that outlives the sand is its craft note, which applies to the water's own
-weather wherever a ramp meets a quantiser:
+The water field uses texture to prevent banding where ramps meet a quantiser:
 
 > **Banding comes from long monotonic ramps, not from amplitude.** A smooth
 > run gives the quantiser something to step through; irregular overlapping
@@ -807,7 +695,7 @@ reader's** (B133, issue #273): it reads **"Today's To Do"** at the compartment's
 own `15px/600`, and the board's `MM/DD/YY` date — read off its `cal` key,
 zero-padded month and day, two-digit year — rides **beneath it** in the
 secondary rung the legible stamps wear: the ground's own pole (`var(--ink)`,
-§16.2 retired the mid-grey) at **10px**, `line-height: 1.2`. Both are drawn at
+the retired v1 mid-grey) at **10px**, `line-height: 1.2`. Both are drawn at
 render and neither is a control: the seat is not a textbox (no `role`, no
 `tabindex`, no caret) and no edit reaches it. Every other board's compartment is
 the ordinary editable title, unchanged — the placeholder, the ink and the
@@ -833,10 +721,9 @@ Calendar ladder's `--note` rung (§2.2.2) — with `#031019` ink (§2.3), the
 calendar's orange on the To Do blue *on purpose* (the owner: "visually
 distinct and attract the user's eye to today's required events"),
 and so is the **frame**: `#b48158` — the Calendar ladder's `--frame` rung
-(§2.2.2) — the whole block in the calendar's orange palette on both tiers (the
-owner's correction of 2026-10-11: on the To Do board `var(--frame)` is the
-board's blue `#698ebf`). The hand
-lines after the span stay plain pre-wrap text beneath the grid; a non-linked
+(§2.2.2) — the whole block in the calendar's orange palette on both tiers. On
+To-Do, `var(--frame)` is its blue `#698ebf`. Hand-written lines after the span
+stay plain pre-wrap text beneath the grid; a non-linked
 board or an empty span paints exactly the plain text it always did. The
 blocks are a read state, not a surface: `pointer-events: none`, no per-block
 editing — the anchor stays the one contenteditable surface, entering edit
@@ -867,56 +754,21 @@ canvas; content past it is clipped (`#lot-items { overflow: hidden }`). **This
 supersedes B37's whole-row budget and B47/B57's row-count ceiling** (B73),
 which sized the lot by item *count* at a fixed 44px each and cut wrapped lines.
 
-### §3.3 The board-action row (B83; three tabs since B92; four since B95; two on desktop, three on tablet since B100, issue #157)
+### §3.3 The board-action row
 
-The board's board-level actions — **All** (the toggle), **Export**,
-**Import**, and, since issue #145, **Calendar** — are declared as a row of
-flat tabs **hovering just above the Parking Lot**, the mirror at the sheet's
-other end of the band's header tabs. This replaced the `Menu` handle of B65,
-whose only route was still a control the reader had to notice; the actions
-now name themselves, in place, on both platforms. B92 retires the anchor
-long-press/right-click menu outright: with Import joining the row, every
-board-level route is a visible tab, and the hidden menu duplicated doors the
-reader was already standing in front of. B95 re-grammars the labels so four
-tabs fit a phone (R7.2): side padding 12→6px and gap 8→6px — vertical
-padding and type are untouched, so B86's finger box and §6's collar-height
-math hold. B99 retires the Calendar **tab on wide** — the standing rail
-(§3.4) is the calendar's entry there. B100 retires the **All tab on desktop**
-(`html.desktop #action-boards { display: none }`) — the left rail (§10)
-already lists every category with every board, so the tab was a second door
-to the same room. The row is **two tabs on desktop** (Export · Import),
-**three on tablet** (All · Export · Import — the tablet keeps its tab: it is
-the tier's way into the lot-grid picker), **four on mobile** (All · Export ·
-Import · Calendar): the grammar each platform speaks, nothing held in
-reserve.
+The row sits flush above the Parking Lot and exposes only actions available at the current tier.
 
-(2026-09-16: B119 — issue #212 — supersedes the tablet clause: the All tab
-retires on tablet too, its hide widened to `html.wide` — the row is **two
-tabs on tablet** as on desktop, and the left rail is the one All-Boards
-surface on wide. The lot-grid picker stays mobile's entry.)
+| Control | Current value | Ruling |
+|---|---|---|
+| All boards | Mobile only; opens the 2×2 category picker | B100, B119 |
+| Export / Import | Visible on mobile, tablet and desktop | B92, B100 |
+| Calendar | Mobile only; wide enters from the standing rail | B99 |
+| Placement | Full-width, left-anchored; flush to lot top; follows `--lot-h` | B87, B88 |
+| Tabs | `--frame` fill; `--ink-dark` label; 14px/600; 8px 6px padding | B76, B86, B95 |
 
-**Placement.** `#board-actions` is `left: 0; right: 0`, a **left-anchored** flex
-cluster (`gap: 8px`, `justify-content: flex-start`, B88) at `bottom: var(--lot-h)`
-— **flush on the lot's top edge** (B87 removed the 8px gap). Its four tab corners
-stay round; it tracks `--lot-h`, riding up as
-the lot grows. `z-index: 1` (the furniture plane; notes at `z-2` stay above).
-The container is `pointer-events: none` — a positioning frame exactly like a
-`.band-zone` — so a press on bare canvas beside the tabs still reaches the
-recognizer and captures a note; only the tabs are live.
+The container is inert except for its tabs and spends its decoupled hit collar upward, onto the canvas. The **All boards ⇄ This board** label states the toggle; no `aria-pressed` is used.
 
-**The tab.** The band label's own box, **not** §14's tactile signature (§14):
-
-```css
-.board-action {
-  padding: 8px 6px;                 /* vertical: the band label's box (§3.1), finger-size (B86);
-                                       sides trimmed 12→6 for the four-tab row (B95, R7.2) */
-  border: none; border-radius: 3px; /* symmetric — it hangs beneath no rule */
-  background: var(--frame);         /* the band tab's fill (B76) — rotates per #board[data-cat] */
-  color: var(--ink);               /* --ink-dark at 5.70:1, rebound by .on-light */
-  font-size: 14px; font-weight: 600; line-height: 1.3;
-  gap: 6px;                        /* the drawn mark to its label; mark at 16px (B86) */
-}
-```
+**The Export choice menu (B92).** Export opens the menu (§7) at the pressed tab, with PDF (current board) and JSON (whole-library backup). Choosing is raw navigation; each file-producing action uses `commitAction`'s drop-guard.
 
 **The import input is a mechanism, not a control.** Import opens the platform
 file explorer through a hidden `<input type="file"
@@ -947,9 +799,9 @@ two-tone ring on focus. State is never colour (§1) — the **All boards ⇄ Thi
 board** toggle states its act in its label (B43/B71's grammar), so no
 `aria-pressed` rides alongside.
 
-### §3.4 The calendar view (B95, issue #145; tier shipped by B96, issue #155; events editable by B97, issue #152; standing rail by B99, issue #158; exit control renamed and reseated by B134, issue #259)
+### §3.4 Calendar layout
 
-The calendar wears the app's **fifth ladder** (issue #168): the same eight
+The calendar wears the app's **fifth ladder** (issue #168): the same seven
 rungs at an orange arc (~47°–66°), bound on `#cal-view` the way To-Do binds
 on `:root` — a rebinding, never an override, so the rail, the exit control,
 the day cards' water fall and date compartments, and the month view's today
@@ -957,82 +809,32 @@ cell all carry the hue through `var()` (§2.2.2). Linked boards opened from a da
 keep their own category scopes — nothing inside `#cal-view` carries
 `data-cat`.
 
-The third screen. Full-screen on mobile (`html:not(.wide)`). On any wide
-screen — desktop or tablet (`html.wide`) — the calendar is **standing
-furniture** (B99, issue #158): a 40px rail pinned to the viewport's right
-edge, always visible, its label **Calendar Board** reading vertically
-(`vertical-rl`, 12px/600, .18em caps) over today's date (9px/600) and a
-6px **lit dot** — the aperture: lit iff today carries events. The rail
-reserves its 40px from the frame at all times (`CAL_RAIL_W`; the room is
-three columns: boards, board, calendar). One tap expands the rail
-leftward into the panel docked at the right edge (320 unscaled px,
-`--frame` border) and the board reflows beside it — the R6 squeeze,
-entered from the rail; the panel's **Go Back** control is the way off
-— the panel's bottom-left, below the month view, reading `Go Back`, text
-alone (B134 seated and named it; B151, issue #353, renamed it and retired
-the arrow) —
-and on collapse the board renders exactly where it was. The rail commits
-nothing and pushes no history (B81: navigation runs raw). The Calendar
-tab retires on wide (`html.wide #action-calendar { display: none }`) —
-mobile keeps the four-tab row and the tab-driven full-screen view, unchanged.
-B100 retires desktop's **All Boards** R1 button too (`html.desktop #cal-boards
-{ display: none }`, with the handler guarding): the rail names every board,
-and the panel's exit control is **Go Back** alone, anchored bottom-left below
-the month view (B124's one-control row, renamed and reseated by B134 — mockup
-6's **Back + Export** row, its Export right-anchor and its `margin-left: auto`
-retire with it). The tablet tier renders
-this same rail + panel arrangement under the touch grammar (B96; B103's
-final gate: **one width floor, `min-width: 744px`, orientation-blind** —
-unfolded foldables, iPads, and Android tablets take this arrangement in
-PORTRAIT and landscape alike; B96's landscape-only widths and B101's shape
-leg are superseded), its All tab kept.
-
-(2026-09-16: B119 — issue #212 — supersedes the tablet All tab: the
-`#cal-boards` guard widens from `isDesktop` to `isWide`, so the calendar
-panel's All Boards control retires on tablet with the tab; the panel's exit
-control is **Go Back** alone on wide as on mobile — B124's one-control row,
-renamed and reseated by B134. The rail + panel
-arrangement itself stands on tablet — B118's collapse grammar included.)
+The calendar is full-screen on mobile. On wide screens it is standing furniture (B99): a 40px rail at the viewport's right edge, with a vertical label, today's date and a 6px event indicator. It reserves its width at all times. One tap expands it into a 320px panel and the board reflows beside it; on collapse the board returns to its prior position. The rail commits nothing and pushes no history (B81). The Calendar tab is mobile-only; wide screens enter through the rail. The 744px tablet tier uses the same rail and panel arrangement in either orientation; wide has no All tab.
 
 **The calendar's exit control.** One `--frame` flat tab in the row-control
-species: **Go Back**, anchored **left at the very bottom of the calendar
-view, below the month view** — the month view renders above it and the control
-renders last, in every mode (B134: the wide-only `order: -1` row-on-top rule
-retires). It reads **`Go Back`** — text alone, no arrow glyph (B151,
-issue #353: the owner's rename of B134's `Collapse ▶`; the mark retires with
-it) — and it pops the view's pushed History state (`goCalBack`); it is the
+species: **`Go Back`**, text alone with no arrow glyph, anchored **left at the
+very bottom of the calendar view below the month view** (B151). The month view
+renders above it and the control renders last in every mode; it pops the view's
+pushed History state (`goCalBack`) and is the
 always-visible exit, with the OS gesture as the second route, never
 the only one. All Boards and Export are not in this row: they left the
 calendar view in B124. **Today joins the row as its second control, anchored
 right** (B148, issue #342): the same `.cal-act` species, filled at boot by the
-same `fillBoardAction`, but **text alone** — `Today`, riding the existing
-`COPY.calToday` token, no drawn mark, as ruled — and one tap resets both
-render-time anchors: the month view back to the current month and the weekly
-stack back to the shipped today-at-top, next-6-days window (R4). The tab renders its act — drawn mark
-(22px) beside its label (`15px/600`) — in a frame that clears §6's touch
-floor **as drawn** (B98: `padding: 14px 16px`, ≈ 48px tall on touch), with
-the §6 decoupled collar (`--hit` on the row, set at render) topping up
-the width where the control is tight; at the bottom of the view the collar is
+same `fillBoardAction`; **text alone** — `Today`, via `COPY.calToday`, with no
+drawn mark (B148). One tap resets the month view and rolling stack to their
+current-date views. The control uses the §6 decoupled collar (`--hit`) to meet
+the touch floor where its drawn width is tight; at the bottom of the view the collar is
 spent **edge-ward and downward, never upward** — the month view sits directly
 above the control and an upward collar would steal the month grid's taps
 (B134, superseding B98's upward spend). Hover, press, and keyboard focus state
 themselves (brightness 1.1 / 0.92, §2.7's two-tone ring) — state is never colour.
 
-**The day head.** `#cal-dayhead` is today's date alone — weekday, comma,
-month-day, the ordinal suffix as a real `<sup>` (B149) — seated as
-`#cal-stack`'s first child, directly above the weekly stack (B150), centered
-to the view horizontally, in the view's own light ink (`--ink-light` on the
-`--chrome` ground, §2.3). It renders at the set's display step, **21px/600**
-(UIUX §13.1; the `.cat-head` token, B63) — a header, not a label (issue #363:
-"larger font size so it reads as a header").
+**The day head.** `#cal-dayhead` is today's weekday and month-day with an
+ordinal `<sup>` (B149), centered inside the title card above the stack (B150).
+It uses the board title's 15px/600 type (§13.1), with `--ink-light` on
+`--chrome` (UIUX §2.3).
 
-**The 7-day stack.** `#cal-stack` is a column of `#cal-day` cards — the six
-days after today (issue #384: today's card leaves the stack entirely; its
-content is the Today board body above) — computed at render (R4), never
-stored — flowing from the top of
-the view (issue #363 supersedes the bottom-anchor seating of #293/#334: the
-face moves up into the space the deleted top section freed, gap 10px, and
-whatever slack remains falls below the month view).
+**The weekly stack.** `#cal-stack` renders the next 30 dates after today; today is the separate body above it. The window is computed at render and flows from the top of the view with a 10px gap; remaining space falls below the month view.
 **Overflow (issue #391, B161): the stack scrolls vertically when its content
 overflows — the exception to the one-bounded-page law.** `overflow-y: auto`
 with `overflow-x: hidden` (horizontal scrollbars are never included); the
@@ -1065,7 +867,7 @@ z 1 — B38), three-sided (the face's own top edge is its fourth), 2px
 type (B37). The day head (`#cal-dayhead`, the B149 composition) renders
 inside the card as its title in the boards' title-card type — **15px/600/1.3,
 `#anchor-title`'s very format, one line** (`white-space: nowrap`), the card
-scaling to the line (issue #382, the owner's 2026-10-07 chat direction;
+scaling to the line (issue #382;
 supersedes B153's 21px display step for THIS title) — with `--ink-light` on
 the deep fill (16.62:1 on #251002, recomputed per §2.3's method), render-only;
 the card carries `pointer-events: none` (the bar and rule are inert ground
@@ -1077,50 +879,9 @@ writing the same `day`-field record (B153's binding; B153's per-card seat
 superseded for the today card — the other six day cards keep theirs).
 The band's own anatomy is otherwise untouched by #384.
 
-**The Today board body (issue #384, B158; bottom border B167, issue #396).** Today's day card leaves the
-weekly stack and becomes `#cal-today-board` — the full-width deep-orange
-body directly below the band, the title card's OWN fill (`var(--card)`
-#251002: "the background of the event note cards for 'today' needs to be
-the deep orange like the background of a to do board but in this orange
-palette"), a 2px `--frame` bottom border (B167: "Use the border that wraps
-the 'Today's Date' title card with the thicker weight"), pulled
-up 22px so the card's overhang LANDS ON it — band, card and body read as
-one little board at the top (the owner's "becomes like a little board at
-the top"); the fill never runs past the body's own bottom edge and the
-stack's 22px clearance stays (the owner's 2026-10-08 corrections: the
-banner, the card's flanking sections, the overhang, the squares' size, the
-fill's downward reach and the gap to tomorrow's card were never in scope).
-The body's zone is the `.cal-notes` row grammar: today's squares fill FROM
-THE LEFT at the weekly view's own square size — the grid capped to the
-weekly construction's arithmetic (the 84px compartment + the 12px zone
-padding + the 26px add slot) and anchored at the body's left edge, so the
-squares are the weekly squares' box, filling left to right as notes are
-added (the owner's correction of 2026-10-08: they filled right-to-left off
-the old inset). The collapsed rail's hide list
-carries the band and the body — the rail face (B99) is
-untouched.
+**Today board body.** Today's date and day-note squares form a full-width deep-orange board directly below the calendar band. The title card overhangs its top by 22px; the body has a 2px `--frame` bottom border. Squares use the weekly view's size and left-to-right order, and the collapsed rail hides the band and body.
 
-**The weekend cards (issue #385, B159 redrawn by B160).** Saturday and
-Sunday day cards in the weekly stack keep the Calendar ladder's own palette
-— no blue — with the title card's deep orange fill as the card's FLAT fill
-(`var(--card)` #251002, the owner's ruling of 2026-10-08: "use title card's
-deep orange fill as the fill color for saturday/sunday" — the owner's
-verdict on the first render: the blue was "too offputting in all that
-orange"). The fill stretches ALL the way across: the view's own 12px side
-padding is spent (`margin: 0 -12px`, the `#cal-band`/`#cal-today-board`
-idiom) — "There also shouldn't be any padding on the left or right side -
-the fill should stretch all the way across the screen. The only padding is
-above and below each date, not left and right." The fill is ONE surface:
-the date compartment's own `--card` fill drops (the `near`/`far` dark
-overrides stand down with it — the weekend rule is seated after theirs),
-the 1px `--hairline` divider between the date and the events stays (B159's
-clause, not superseded), and the padding between days stays (the stack's
-own gap). The recede treatment keeps its grip: `near`/`far`'s brightness
-filters apply to the weekend fill exactly as to the others (B159's
-ruling). The squares keep the day cards' own grammar — `var(--note)`,
-`--ink-dark`, `var(--frame)` — the ruling changed the card's fill only.
-Today's card is excluded: it renders in the body above, its own component
-(B158).
+**Weekend cards.** Saturday and Sunday cards use the Calendar ladder's `--card` fill edge-to-edge; their day-note squares, date/event divider, spacing and near/far receding treatment remain unchanged.
 
 **The rolling weekly stack (issue #398, B168).** The default stack shows the
 next 30 dates after today; today remains in its separate body above. A date
@@ -1129,59 +890,13 @@ Calendar ladder's `--frame` orange, separating the weekly groups while
 scrolling. Month-selected Sunday-first weeks retain their existing seven-day
 window; the Today control restores the rolling window.
 
-**The day-note squares (issues #363 + #371 + #384; one zone, issue #365).**
-The top
-day-note section
-(`#cal-frame`, #329/#331/#336) is deleted on every tier. Its records render
-as ONE-zone square blocks (issue #365 — the
-lighter title band is deleted and the deep orange fill expands to the top of
-the square, the square one large body): the fill `var(--note)` — the
-Calendar ladder's own note rung, `#e3c6aa` (UIUX §2.2.2, issue #168): the
-owner's "a new color derived using its palette, deriving from the note
-cards' fill on to do boards, learning boards, Idea boards, and notes
-boards" — the four ladders' note rungs share the axis (luminance 0.5962),
-and the Calendar ladder carries that rung already rotated into the
-calendar's orange hue; the owner's "I don't believe we have a token for
-that color yet" is answered by measurement — the token exists, `var(--note)`
-under `#cal-view` — supersedes ONLY B155's fill clause (the `var(--card)`
-#251002 fill) — with `--ink-dark` #031019, the note rung's approved pair
-(11.84:1, §2.3) in plain-text type
-(12px, weight 400, line-height 1.4, the body's own type), the B72 inset frame
-(`outline: 2px solid var(--frame)`), radius 4px; the squares center
-vertically in the notes row (`align-items: center`). Three squares per
-day, and a `‹`/`›` pager (the `.mo-nav` grammar) when a day holds more than
-three. **Each non-today day card's `+` seats UNDER the day/date, inside the
-date compartment's own centered column (issue #397, superseding issue
-#384's rightmost row seat for the six day cards; today's `+` keeps its
-#384 seat on the band's right).** Every `+` is a BOUNDED button — a 2px
-`--frame` border drawing the click space, one 28px box with the glyph
-centered in it (issue #384's treatment, unchanged by the seat move). The
-day buttons seat in the compartment's column, 4px beneath the date lines —
-the push-over alignment onto the band button's centre is superseded with
-the old seat, and `seatCalAdds()` measures the band's button alone (the
-card's width is `max-content`, so the band centre is measured, not
-guessed); the row's right end carries no adder, and the third square takes
-the space before the pager (issue #397: "That empty space can be used for a
-third event card to fit before pagination").
-The squares' own measure is untouched (issue #384: a
-color, not a size). The zone writes the record's
-`next` field (a legacy calKey value there renders as an empty body — nothing
-is rewritten); `rem` is no longer rendered and stays stored-but-unread (the
-#323 disposition — nothing migrated, nothing destroyed); the `+` writes a NEW
-`day` field on the record — the
-card's calKey — so a square lands on its own day; records without `day` stay
-stored but unreachable. The zone clamps to two lines (issue #365: it is the
-square's whole read). Calendar events never render in the weekly stack (the
-cards show only day-note squares); the event records and their mirror sync
-with the linked To-Do boards continue untouched.
+### §3.5 Calendar day cards
 
-**Capture.** Each day card's date compartment carries the card's `+`, under
-the date — the calendar edition
-of §6.2: tap and type, the caret arrives with the tap, in the square (issue
-#365: the square's one zone; issue #397: the seat). Today's `+` is seated on
-the band's right
-(issue #384); its squares render in the body below. Commit-on-blur writes
-the record; an empty commit discards (B8).
+The day-note strip is retired; one-zone square notes render inside each day card. They use the Calendar `--note` fill, `--ink-dark`, a 2px inset `--frame` outline, 4px radius and 12px/400/1.4 type; three render per day, with `‹`/`›` paging beyond three and a two-line clamp. The `+` for each of the six future cards sits centered below its date; today's `+` sits at the right of the band. Buttons are 28px with a 2px `--frame` border.
+
+The squares write the record's `next` field; the `+` creates a `day` field keyed to that card's `calKey`. Legacy `calKey` values in `next` render as empty bodies; `rem` remains stored but unread, and records without `day` remain stored but unreachable. Calendar events do not render in the weekly stack; event records and their linked To-Do mirrors are unchanged.
+
+**Capture.** Tapping a card's `+` opens its square for immediate typing. Commit-on-blur writes the record; an empty commit is discarded (B8).
 
 ---
 
@@ -1217,10 +932,7 @@ A note earns its frame the way it earns persistence.
 **The radius stays near-square.** Notes scale 0.5–2.0 and `NOTE_MIN_W` is 132
 (§4.5), so a large radius inside `transform: scale()` turns a minimum-width note
 into a capsule. 3px is a geometric constraint, not a taste: it reads as *drawn* at
-every size the note can be. It moves 2 → 3 from v1 to hold that reading against the
-new 2px frame; `EXPORT_GEO.radius` mirrors it by hand (§15).
-
-**The note carries no shadow** (§1).
+every size the note can be. It `EXPORT_GEO.radius` mirrors it by hand (§15).
 
 ### §4.1 Transform origin
 
@@ -1321,19 +1033,16 @@ width, not only the wrap-cap floor it was at 60. It is the width that seats the
 row, and one number carries three jobs so they cannot drift apart: the CSS
 `min-width` on a non-empty `.note-text`, the wrap-cap floor (`noteMaxW`), and the
 drag/resize width floor. A note can never be *sized* narrower than its own row. An
-empty note is exempt (it keeps no frame, §6.2, and shows no row), so it stays free
+empty note is exempt (it keeps no frame, §6, and shows no row), so it stays free
 to be its true width; `createNote` floors a new note's `x` `NOTE_MIN_W` back from
 the right edge so its frame never spills off the sheet.
-
-(2026-09-16: B120 — issue #173 — the row this floor seats moves to the note's
-bottom edge, centred; the minimum itself stays.)
 
 **The tabs are flat, in the band-label's hand** (§3.1 — the same tab that names
 Components and Requirements), not pills and not the `.sel-btn` raised control:
 
 ```css
 .note-tb-btn {
-  padding: 7px 6px;                    /* the band-label tab (§3.1), finger-size (B86) */
+  padding: 7px 6px;                    /* the band-label tab (UIUX §3.1), finger-size (B86) */
   border-radius: 3px;                  /* tracks the note's own (§4) */
   background: var(--tab-complete);     /* the shared note rung 0.5962, rotates per type (B67, B127) */
   color: var(--ink);                   /* .on-light → --ink-dark, the icon outline on every fill (B127) */
@@ -1346,19 +1055,7 @@ Components and Requirements), not pills and not the `.sel-btn` raised control:
 ```
 
 The marks are `GLYPH`'s own drawn SVG (§13.3), each SVG `aria-hidden` with the
-label on the button for AT. The row is a **child of the note**, so it scales with
-the note and is never wider than it. It sits **flush on the note's top edge**
-(`bottom: 100%`, B87 — the 12px gap removed) and **left-anchored, far left**
-(`left: 0`, no `translateX`, B88), flipping to just inside the top edge near the
-sheet top where there is no room above (`reflectToolbarFlip`, whose `TB_ROW_H`
-threshold is now 32 for the gapless row). Each tab keeps a 44px-tall hit target
-expanded upward (§6, B7's decoupled-hit idiom) so a row of four never overlaps a
-neighbour. Focus wears the two-tone ring (§2.7).
-
-(2026-09-16: B120 — issue #173 — supersedes this paragraph's edge and anchor
-clauses for the note toolbar: the row moves to the note's BOTTOM edge, centred
-on the card; `reflectToolbarFlip` re-reads for near-sheet-bottom. The gapless
-edge, show/hide grammar and hit targets stand.)
+label on the button for AT. The row is a **child of the note**, so it scales with the note and is never wider than it. It sits below the card, horizontally centred, with button tops flush to its bottom edge (B139); it never overlays note text, including near the sheet bottom. Each tab keeps a 44px-tall hit target expanded downward into bare canvas, never over the note text (B139; UIUX §6). Focus wears the two-tone ring (§2.7).
 
 **Shown only on select/focus** (the owner's call — not always drawn), by the same
 state that raises the resize frame: `.note.selected` on desktop (B22); on mobile a
@@ -1376,9 +1073,6 @@ tokens at the shared note rung 0.5962 (§2.6.4) — `--tab-highlight` (amber fam
 dropped from the wash's 0.675) and `--tab-delete` (warm danger family) here,
 `--tab-complete` with B67's per-type rotation, `--tab-remind` the B126 pink.
 Unlike `--tab-complete`, `--tab-highlight` does not change with board type.
-Copy's blue `--accent-copy` filled
-the fourth tab until B114 re-homed Copy to the note menu (§7) and retired the
-token with its tab.
 
 ### §4.6 Note links (B91)
 
@@ -1417,16 +1111,10 @@ link` (the armed hint, mobile / desktop); `Linked` / `Unlinked` (the undo captio
 
 ### §4.7 The reminder clock and the surfaced echo (B109; the Remind tab, issue #240/B126)
 
-*New in v2 (issue #169, B104/B109); moved into the note toolbar per issue #240
-(B126).* The clock is the reminder's whole
-interface: a drawn dial mark (§13.3's discipline, in `GLYPH`) sitting as the
-note toolbar's third tab (§4.5 — Complete · Highlight · Remind · Delete),
-resting in the tab's own `--frame` ground — it is a tab now, not a floating ink
-mark, and reads as a button whether or not the reminder is on. One tap
-sets the reminder, one tap clears it — **no time picker, no dialog, no due
-time stored anywhere in the record** (B104). Active, it takes the pink
-`--tab-remind` fill (§2.6.4 — `#e6c2c9`, B126/B127) — a legible active state
-and **no bloom**: the glow is the card's, not the button's (issue #240, B132).
+The clock is a drawn dial in the note toolbar's Remind tab (UIUX §4.5). One tap
+sets or clears the reminder — no time picker, dialog or due time is stored
+(B104). When active, the tab uses the pink `--tab-remind` fill (UIUX §2.6.4), with
+no bloom; the card's frame wears `--reminder-glow` instead (B132).
 The card itself wears the glow: with the reminder on, its frame takes the
 yellow `--reminder-glow` border + soft bloom (§2.6.2 — `#c6a400`, the carried
 amber dropped a rung), the same border + bloom grammar as the carried status
@@ -1435,7 +1123,7 @@ stored, and a completed note never wears it. Tapping the reminder off deletes
 the key (B104/B21) and the glow goes with it. The tab's
 `aria-label` states the act the tap will perform (`Remind me` ⇄ `Remove
 reminder`), so the state never rides colour alone. An empty note keeps no
-frame (§6.2) and shows no toolbar row — no clock with it.
+frame (§6) and shows no toolbar row — no clock with it.
 
 **The surfacing.** A note whose reminder is set renders an **echo** of itself
 on today's linked To-Do board (B95's species, `board.cal` = the today key) —
@@ -1497,12 +1185,7 @@ desktop code path.
 | Edit | tap again, on the engaged note (B90) | double-click, or `Enter` |
 | Menu | long-press (500ms) | right-click |
 | Caret on edit | at the end (B90 — was the touch point, B14) | at the end (B26) |
-| Boards | full-screen list | always-visible rail |
-
-(2026-09-16: the desktop rail's always-visible geometry reads subject to B118
-— issue #211 — which makes it collapsible on wide, collapsed by default.
-2026-09-17: the collapsed face is the 40px strip alone (B128, issue #248) —
-the month view renders only on the expanded panel.)
+| Boards | Parking Lot grid + category panel | collapsible rail |
 
 `MOVE_THRESHOLD = 16px` of slop before a drag begins or a long-press cancels
 (B29). `LONGPRESS_MS = 500`; any release before that with movement under
@@ -1552,12 +1235,10 @@ platforms. That row replaces the `Menu` handle of B65, and is why removing the
 handle costs desktop nothing — no long-press is armed there (B19/issue #4), and
 desktop `contextmenu` now opens a **note's** Link menu (B91, §4.6). Since B100
 desktop's route to All boards is the **rail** (the tab is retired); Export
-stays a tab there. The mobile anchor long-press still opens the anchor menu
-below.
+stays a tab there. There is no anchor long-press menu; board-level routes live in the visible action row.
 
 | Menu | Items |
 |---|---|
-| Anchor | All boards · Export |
 | Note (B91, B114) | Copy · Link |
 | Board row / rail card | Export · Delete |
 | Desktop selection | Complete/Restore · Highlight/Remove highlight · Delete |
@@ -1576,11 +1257,6 @@ on a desktop multi-selection that includes the tapped note, it copies the
 item is a real button (`GLYPH.copy`, labelled `Copy`), so keyboard access rides
 the menu. A surfaced echo carries no Copy (§4.7) — its record lives on the
 source board.
-
-(2026-09-16: B120 — issue #173 — extends the note menu's item list: a new
-"Add Title" item arms the note's optional Title, a header-style tab peeking
-from behind the card's top-left corner. Copy's first position and the
-ordering rule stand.)
 
 **Highlight** (issue #105, B71) is a note-only toggle: it washes the whole note
 in `--highlight` (§2.6.1) and, chosen again, returns it to the board's default
@@ -1656,9 +1332,7 @@ screen**, reached by choosing its button. Routing is two levels of History API
 state (`{v:'list'}` the picker, `{v:'cat',cat}` a drill, `{v:'cal'}` the calendar
 (B95)) specifically so the OS back gesture returns through every level
 (drill → picker → board; calendar → board). Back is never intercepted,
-shadowed or disabled — and the calendar's **Go Back** control makes the
-calendar's route visible (B95's exit row, renamed and reseated by B134), so
-the gesture is a second way, never the only way. **The picker is
+shadowed or disabled — and the calendar's visible exit control makes its route clear, with the OS gesture as a second path. **The picker is
 the Parking Lot turned into the 2×2 grid wherever it exists** (B100, issue
 #157): on mobile and tablet, the two surfaces that carry the All-boards tab.
 
@@ -1670,7 +1344,7 @@ B100, its tier admitted by B103's one width floor — 744px, any orientation). T
 top-left: To Do, Notes, Learning, Ideas. A drilled category is then a **panel
 that rises from the Parking Lot to a third of the viewport** (B82, issue #125),
 most recently updated first, opening straight onto that one section — the board
-stays visible above it, where a full-screen list once replaced it. **There is no
+stays visible above it. **There is no
 page heading** (B66): the category head says where you are. The panel's height is
 `⌊viewport / 3⌋`, measured in JS off `window.innerHeight` and published as
 `--list-panel-h` — never a CSS `vh`, so the soft keyboard (which moves only the
@@ -1679,7 +1353,7 @@ idiom on §8's one 200ms curve, degrading to instant under reduced-motion; its
 top edge is the Parking Lot's own `--frame` rule, rounded and on `--elevation`
 as the transient surface it is (§2.4).
 
-**Desktop:** an always-visible 300px rail (B24) — **sunken, not floating** (§2.4),
+**Desktop:** a collapsible 300px rail (B24, B118) — **sunken, not floating** (§2.4),
 sitting outside `#board` so the recognizer never sees its events, listing all
 four categories at once. Cards are the water's upper fall on `--chrome`, compact.
 **The rail IS desktop's all-boards surface** (B100, issue #157): the All-boards
@@ -1688,40 +1362,7 @@ calendar's exit row, the rail already naming every category with every board —
 so `#list-view` has no entry path on desktop and never shows. The drill's
 B82 split survives as code (rising panel under `html:not(.desktop)`), simply
 unreachable on desktop; wide's board row is **two tabs** (Export · Import) and
-the calendar's exit control is **Go Back** alone, anchored bottom-left below
-the month view (B124's one-control row, renamed and reseated by B134).
-
-(2026-09-16: B118 — issue #211 — supersedes the rail's always-visible 300px
-geometry: on wide the rail ships collapsed as a 40px face, mirroring the
-calendar rail, and expands to the 300px pane on tap. The rest of this
-section's rail grammar stands. 2026-09-19: B134 — issue #259 — moves the
-expanded pane's **Collapse** control to the pane's bottom-right corner and
-redraws its arrow to match the calendar's: label first, the mark after it,
-pointing right (`Collapse ▶`). The shipped top-left seat
-(`#pane-collapse { align-self: flex-start; }`) and its left chevron retire;
-B118's collapse grammar and collapsed-by-default state are untouched. That
-arrow grammar — label first, the mark after it, pointing right — is
-superseded by B135, below.
-
-2026-09-21: B135 — issue #279 — the expanded pane's **Collapse** control reads
-**`◀ Collapse`**: a left-pointing chevron **before** the label, the exact
-mirror of the calendar's `Collapse ▶` — the rail sits on the sheet's left edge
-and collapses left, so the mark leads and points left. The pane's bottom-right
-seat (B134), the label text and the `aria-label` stand; the calendar's exit
-control is untouched.)
-
-(2026-10-03: B151 — issue #353 — the owner renames BOTH rails' way off to
-**`Go Back`** and removes the arrow glyph from both: the calendar's exit
-control and the expanded pane's control each read `Go Back`, text alone —
-B134's `Collapse ▶` and B135's mirrored `◀ Collapse` marks retire with the
-rename. The seats, the History acts, B118's collapse grammar, and B148's
-Today control are untouched.)
-
-(2026-09-16: B119 — issue #212 — narrows the picker above to **mobile-only**
-and widens this arrangement's reach: tablet joins desktop as a wide tier
-carrying the rail-only All-Boards surface — B96 put the pane there already —
-and the tab-retirement clauses in this section's "desktop" headings read as
-B96's wide, desktop ∪ tablet.)
+the calendar panel has its own exit control.
 
 **Both surfaces order a section by last touch, newest first** (B69, superseding
 B24's immutable slot): the key is the later of `updatedAt` (written on every
@@ -1909,48 +1550,16 @@ header, B63's step re-tuned down by B74; the rail's header takes the scale's own
 "Notes", "Learning", "Ideas"), so the header clears its control with room to
 spare; the re-tuned sizes are kept.
 
-### §13.2 The band measurement gate
+### §13.2 Band measurement
 
-Montserrat Alternates has a different apparent x-height from `system-ui`. The
-band is **sized by the type it holds** (B37, §3), so changing the type changes
-the band. **The gate is discharged.** Measurements taken from the font's own
-`hmtx` advances, with no kerning applied, so every figure is a conservative
-upper bound on what a browser draws:
-
-| # | Measurement | Result | |
-|---|---|---|---|
-| 1 | "Requirements" at 13px/600 against the 100px column `--card-w`'s floor guarantees | **95.2px** | clears, 4.8px spare (96px browser-rendered) |
-| 2 | Two-line title box against `--band-top + --card-h = 82` | **79px** | clears |
-| 3 | 11px pager against `PANE_PAGER_H = 32` | **14.3px** | clears |
-
-x-height is 0.534em and cap height 0.700em at 1000 units per em.
-
-> **The gate clears, and the pixel it opened is taken: the label is 13px**
-> (B54). B38 set the label to 12px because that was "the largest whole px at
-> which the widest measured *Requirements* (~118px at 15px) fits the 100px
-> column" — a measurement taken in `system-ui`. In Montserrat Alternates the
-> same word sets **95.2px at 13px**, so B38's own rule applied to the face the
-> app owns returns 13, and keeping 12 would have inherited a dead face's
-> measurement. The band is sized by the type it holds (B37), so the formula's
-> label term moves 15.6 → 16.9 and the band grows by exactly the pixel: 88 at
-> the floor, 107 at three lines (§3.1). Rendered at both sizes on proof sheet
-> 8; the ratified render was proof sheet 9.
-
-**Superseded by B76 (issue #111):** the label no longer sits above the rule, so
-its `+ 16.9 + 10` term left the band budget — the band closes at **61 at the
-floor, 81 at three lines** (§3.1). The 13px measurement stands; only its place
-moved, below the rule as a tab.
-
-Still a gate for anything downstream: `test/mobile.js` asserts band and lot
-geometry, so a later font change that moves the band **fails the suite**, which
-is the correct outcome.
+The band is sized to its tallest zone from a two-line floor (UIUX §3.1). The shipped Montserrat Alternates 13px/600 Requirements label fits the 100px column; the two-line title fits the 82px band-plus-card allowance, and the 11px pager fits its 32px row. The current band is 61px at the floor and 81px at three lines. `test/mobile.js` pins the live geometry.
 
 ### §13.3 Marks
 
 v1's glyph set — `✓ ↺ ▦ ⇩ ⧉ 🗑 « ‹ › »` — is **retired as type and redrawn as
 inline SVG** in `currentColor`.
 
-The reasoning is the one `app.js` already applies to `🗑` and then does not
+The reasoning is the one `state.js` already applies to `🗑` and then does not
 follow through on. Montserrat Alternates is a Latin display face: of those ten
 marks, the four guillemets are plausibly in a Latin subset. **The other six —
 `✓ ↺ ▦ ⇩ ⧉ 🗑` — fall back** to whatever the platform supplies, which is exactly
@@ -1965,7 +1574,7 @@ everywhere, in one hand. Type is the wrong medium for that job. Drawing them:
 - puts every mark in the app rather than on the platform, which is the identity
   claim §13.1 is making in the first place;
 - solves the bin structurally instead of by substitution;
-- costs no dependency and no build step — inline SVG in `app.js`'s existing
+- costs no dependency and no build step — inline SVG in `state.js`'s existing
   `GLYPH` map;
 - and lets the marks be drawn **at the note's own stroke weight and corner
   radius**, so the icon set is literally in the same hand as the board. That is
@@ -2032,17 +1641,6 @@ The offset shadow and press-translate are the **shared tactile signature** acros
 all four species — the thing that makes a control feel like a control. It is
 instant (§8).
 
-Five corrections against the source reference this was drawn from, each with its
-reason:
-
-| Source | Corrected | Why |
-|---|---|---|
-| `font-color: #f4f5f1` | `color: var(--ink-dark)` | `font-color` is not a CSS property; and light ink on the original grey was 4.26:1, below AA |
-| `font-size: 10px` | `16px` | below the app's 13–16px control scale, and unreadable against a 44px target |
-| `padding: 0.6em 1.3em` | `min-height: 44px; padding: 0 18px` | §6; em-padding on a 16px label does not reach the floor |
-| bare `:hover` | `@media (hover: hover)` | mobile is the primary path; a bare hover sticks after a touch |
-| `box-shadow: 0.1em 0.1em` | `… var(--ink-dark)` | unqualified it inherits `currentColor` |
-
 **Lot-row actions** (`.sel-btn` — Complete · Copy · Delete, inline on a selected
 Parking Lot row, desktop only, B25): accent fill per §2.6, or `--chrome` for Copy,
 `--ink-dark` label, ink border, same shadow geometry. Copy takes plain chrome
@@ -2056,32 +1654,21 @@ when disabled.
 **Menu rows and the toast's Undo** carry no fill: rows are bare on `--chrome` and
 fill on tap; Undo is underlined text (§9).
 
-**The board-action row** (`.board-action` — the `All boards` and `Export` tabs
-above the Parking Lot, B83, §3.3): the one control that **does not** wear §14's
-tactile signature. It is the band label's flat box — `--frame` fill, `--ink-dark`
-label at **5.70:1** (rebound by `.on-light`), `13px/600`, `padding: 2px 6px`,
-symmetric `border-radius: 3px` — because **All boards** navigates and **Export**
-leaves the device; neither acts on a note, so they belong to the sheet's own
-furniture, not to the family of controls that say "I have your content."
+**The board-action row is specified in UIUX §3.3; that section is its sole current-value authority.**
+
+---
+
+**Duplicate copy of UIUX §3.3 — unresolved in this pass (issue #429).** The following values conflict with UIUX §3.3; issue #429 owns the choice of authority.
+
+**The board-action row** (`.board-action` — the `All boards` and `Export` tabs above the Parking Lot, B83, UIUX §3.3): the one control that **does not** wear §14's tactile signature. It is the band label's flat box — `--frame` fill, `--ink-dark` label at **5.70:1** (rebound by `.on-light`), `13px/600`, `padding: 2px 6px`, symmetric `border-radius: 3px`.
 
 ```css
 .board-action {
   padding: 2px 6px; border: none; border-radius: 3px;
-  background: var(--frame); color: var(--ink);   /* --ink-dark via .on-light */
+  background: var(--frame); color: var(--ink);
   font-size: 13px; font-weight: 600; line-height: 1.3;
 }
 ```
-
-Its interactive feedback is a transient `filter: brightness` on hover/press
-(§8's curve, dropped to instant by the kill-switch) and §2.7's two-tone ring on
-focus; the offset shadow and press-translate are deliberately absent. Placement,
-the decoupled `--hit` collar and the **All boards ⇄ This board** toggle live in
-§3.3. This **supersedes the compartment's handle** (`#title-menu`, B65): the
-fifth species is retired with the handle it dressed, and no control on the sheet
-now wears `--frame` as a tactile chip — the fill returns to being purely the
-band tab's (B76).
-
----
 
 ## §15 Where the identity does not reach
 
@@ -2096,55 +1683,9 @@ app's.
 
 ---
 
-## §16 Implementation consequences
+## §16
 
-Named here so the follow-up work was scoped rather than discovered — and
-landed with the v2 release, in the shape this list ordered. Scoped in
-`PRD §9` and verified per `PRD §9.6`.
-
-1. **Five colour sync points, none automated.** `styles.css :root`;
-   `index.html`'s two `theme-color` metas (which collapse to one — there is one
-   theme); `manifest.json`'s `background_color` and `theme_color`; and `app.js`'s
-   `PDF_PAPER` / `PDF_INK` / `PDF_SHADE`, which are hand-derived floats; and
-   `icons/`, whose B1 motif is drawn in the poles and must be regenerated, as
-   B16 regenerated it. Changing a token in one place silently desynchronises
-   the others. `PRD §9.6` requires a test that fails when they diverge.
-2. **PDF font embedding is the largest single item.** The exporter uses base-14
-   Helvetica with hardcoded base-36 advance-width tables. Embedding requires
-   `.ttf` (not `woff2`) for `FontFile2`; a `/FontDescriptor`; a `/Widths` array
-   with `/FirstChar`/`/LastChar`; real advances read from `hmtx`/`hhea`; and
-   `PDF_ASC`/`PDF_DESC` re-derived from the font's own em box. The existing
-   `/WinAnsiEncoding` + CP1252 layer is unaffected. With no build step there is
-   no subsetter, so both weights embed whole — roughly 150KB per exported PDF.
-   That cost is accepted deliberately.
-3. **`EXPORT_GEO.radius`** mirrors the CSS radius by hand and moves 2 → 3 (§4).
-4. **`sw.js`** `ASSETS` gains `fonts/`; `CACHE` bumps.
-5. **The light theme is removed, not overridden** — the whole light `:root` and
-   the `prefers-color-scheme: dark` block both go (§2.1).
-6. **`--ink` becomes per-surface and `--line` is deleted** (§2.3). This is a
-   rebinding, not a rewrite: downstream rules keep reading `var(--ink)`.
-7. **The marks become SVG** (§13.3), which changes `GLYPH` from a map of strings
-   to a map of markup and touches every site that injects one.
-8. **`--furniture` is retired and `--band`, `--card` and `--frame` replace it**
-   (§2.2, §2.5). The band and the compartment are no longer one surface, and the
-   linework is no longer ink.
-9. **Two surfaces stop being values.** `--board` becomes a three-stop field plus
-   a falloff plus dither (§2.8); `--shelf` becomes a base plus turbulence wisps
-   (§2.9). Both are pure CSS and one inline SVG each — no dependency, no build
-   step, and paint-only — the layout cost is untouched.
-10. **`test/tokens.js` cannot stay a pure function over constants.** With a
-    non-flat ground every ratio is a range. The rule becomes: *a non-flat
-    surface declares its extremes, and every adjacency is asserted against the
-    worst one.* Tractable because the field is authored as opaque stops and
-    because the falloff and dither can only darken (§2.8).
-11. **The band and the lot both size to their content** from a two-line and a
-    two-row floor respectively (§3.1, §3.2), and both rules go full width. This
-    supersedes **B32**, **B35/B38** and **B37**; `EXPORT_GEO` and
-    `test/mobile.js`'s geometry assertions both move with it.
-
-### §16.1 What is not settled
-
-Recorded here so it is not mistaken for decided:
+### §16.1 Open questions
 
 - **The Delete button's boundary on the field has a narrow handover.** Its fill
   separates below the field's mid stop (3.90:1) and its `--ink-dark` border at
@@ -2152,46 +1693,6 @@ Recorded here so it is not mistaken for decided:
   a hair under the 3:1 component floor. This lives in §14's construction
   meeting §2.8's field, not in any accent value. Surfaced by round 8's
   verification; not yet ruled.
-
-Everything else this list has carried is settled and has moved into the body,
-with the proof sheets as provenance and `DECISIONS.md` as the record: the desk
-token is retired (§2.2), the brightest-surface claim is reworded rather than
-defended (§2.2, `PRD §1.4`), the lot keeps its top rule in its own ink (§2.5),
-`--frame` is ratified (§2.5) — B46+ — and round 8's three, ruled B52–B54: the
-chrome family (§2.2, §2.6), the scratch-out's pair (§4.3), and the 13px band
-label (§3.1, §13.2), rendered whole in proof sheet 9.
-
-### §16.2 Retiring v1's tokens
-
-Thirteen tokens exist in v1. **Every one has a fate here**; a token with no
-stated fate is a call site nobody knows how to edit.
-
-| v1 token | Sites | v2 |
-|---|---|---|
-| `--paper` | 22 | **split** — as a ground → §2.2's ladder by role; as a label on a fill → `--ink-dark` (§2.3) |
-| `--ink` | 38 | **split** — `--ink-light` or `--ink-dark`, rebound at the surface (§2.3) |
-| `--ink-rgb` | 1 | **renamed** → `--ink-a`, rebound per surface (§2.3) — and corrected: v1 declared comma-separated channels and used them with slash alpha (`rgb(34, 28, 36 / 0.4)`), which CSS Color 4 rejects, so the buried-text fade (§4.3) may never have rendered. The v2 form is space-separated and valid |
-| `--ink-shadow` | 8 | **retired** — a second mid-tone has the same defect `--line` had (§2.3.2). Placeholders, dates and category heads take the ground's pole (the tap-ghost that also took it at a low alpha is itself retired, B81) |
-| `--letterbox` | 2 | **retired** — never drawn (§2.2). `html` keeps a plain black background, which is not a token |
-| `--surface-raised` | 3 | **retired** → `--chrome` — v1 raised menus *above* paper; v2 sinks them below the board (§2.2, B52) |
-| `--hairline` | 6 | **retired** → `rgb(var(--ink-a) / 0.4)` — that surface's ink at the lowest alpha clearing 3:1 on it (§2.5) |
-| `--danger` | 7 | **kept**, re-derived and held (§2.6, B52) |
-| `--accent-restore` | 5 | **kept**, re-derived to the note's family (§2.6, B52) |
-| `--focus-ring` | 11 | **retired** — no single hue works on six grounds; replaced by the two-tone ring (§2.7) |
-| `--elevation` | 3 | **kept** (§2.4), gains an inset variant for `#pane` |
-| `--pane` | 1 | **retired** → `--chrome` (§2.2, B52) |
-| `--accent-page` | 2 | **kept**, re-derived to the field's family (§2.6, B52) |
-
-**And the second swap's fates (B58–B61)** — the same discipline applied to the
-tokens the swap moved:
-
-| Pre-swap token | Fate |
-|---|---|
-| `--band` | **renamed** → `--deep`: the value moved from the band to the canvas, and the name follows the surface it grounds (§2.2) |
-| `--board-top/-mid/-bot` (+ `-a`) | **renamed** → `--water-top/-mid/-bot` (+ `-a`): the field grounds the two sections now, not the board (§2.8) |
-| `--sand-light/-base/-dark` | **retired** — the lot takes the water (§2.8); the primary takes `--accent-page` (B59) |
-| `--sand-taupe`, the three wisps | **retired with their ground** — the turbulence weather leaves with the sand (§2.9) |
-| `--chrome`, `--card`, `--frame`, `--note`, inks, accents, elevations | **kept**, unmoved — the swap trades surfaces, not values |
 
 ### §16.3 What pins this document
 
@@ -2201,53 +1702,13 @@ Per surface, what would actually fail if the words above were violated today:
 |---|---|
 | §2 — every token, every ratio | `test/tokens.js` (`PRD §9.6`): every table here recomputed from the shipped hexes, each range at its worst extreme, plus the sync points, the accent placement rule, self-hosting and B53's pair |
 | §2.2.2 — five ladders, one axis | `test/tokens.js` [1b] parses the palette **per scope** (`:root`, `#board[data-cat="idea"]`, `#board[data-cat="unsorted"]`, `#board[data-cat="learning"]`, `#cal-view`), asserts each rung's luminance against the shared column, asserts the two spellings of the darkest stop agree (`--water-bot` / `--water-bot-a`), asserts nothing inside `#cal-view` re-scopes the ladder (issue #168), and asserts `--chrome`, the ink poles and the accents are *not* rebound. §2.3/§2.5/§2.7's tables are then run against all five ladders with one expected number each |
-| §3 — band and lot geometry | `test/mobile.js` [9c]/[11b]/[11c] and `test/desktop.js` [D8] — moved with B47/B54 when the band shipped, recomputing rule-y from the formula (88 floor / 107 at three lines); `test/mobile.js` [21] and `test/desktop.js` [D21] pin the board-action row above the lot, prove its live tabs clear the touch/pointer floor (B95's re-grammar; B100's desktop retirement means the row's two visible tabs), export a PDF, and confirm the `#title-menu` handle is gone (B83); §3.4's calendar is pinned by `test/tokens.js`'s issue-#145 block (window computed at render, one mirror writer, link coercion, squeeze as render-time state) |
-| §3/§7 — `EXPORT_GEO` agreement | `test/mobile.js` [11c] pins export geometry to the rendered board — the intended tripwire |
+| §3 — band and lot geometry | `test/mobile.js` [9c]/[11b]/[11c] and `test/desktop.js` [D8] — moved with recomputing rule-y from the current formula (61px floor / 81px at three lines); `test/mobile.js` [21] and `test/desktop.js` [D21] pin the board-action row above the lot, prove its live tabs clear the touch/pointer floor (B95's re-grammar; B100's desktop retirement means the row's two visible tabs), export a PDF, and confirm the `#title-menu` handle is gone (B83); §3.4's calendar is pinned by `test/tokens.js`'s issue-#145 block (window computed at render, one mirror writer, link coercion, squeeze as render-time state) |
+| §3 — `EXPORT_GEO` agreement | `test/mobile.js` [11c] pins export geometry to the rendered board — the intended tripwire |
 | §4 — wrap, similarity render, centred text | `test/mobile.js` (B39 scenarios; [12c] pins B64's fold/rotate similarity — shape held, size uniform, storage untouched, round trip exact; [18b] computes the alignment, editing and at rest) and `test/desktop.js` [D13] (the silent cross-frame grab folds k) and [D17b] — the computed style, plus the centring inset parsed out of page 1's content stream (B62) |
 | §5 — the recognizer, both grammars | `test/mobile.js`, `test/desktop.js` |
-| §7 — menu contents and order | `test/mobile.js` [8]; the board-action row's two tabs (All boards · Export) by `test/mobile.js` [21] and `test/desktop.js` [D21], the anchor long-press menu still by `test/mobile.js` [16] (B83) |
+| §7 — menu contents and order | `test/mobile.js` [8]; the current board-action row by `test/mobile.js` [21] and `test/desktop.js` [D21] |
 | §8 motion, §12 accessibility beyond floors | **nothing** |
 | §13.2 — the band under the new face | measured from `hmtx` here; the live gate is `test/mobile.js`'s geometry, now running against the shipped face |
-| §16 — that shipped CSS reaches an installed PWA | `test/sw-update.js` (B36) — its marker moved with the band: `--card-h` died with B47, so the regex now reads `--band-top: 14px` literally out of `styles.css`, and `test/tokens.js` asserts the marker matches the shipped stylesheet |
+| §16 — that shipped CSS reaches an installed PWA | `test/sw-update.js` (B36) — its marker reads `--band-top: 14px` from `styles.css`, and `test/tokens.js` asserts the marker matches the shipped stylesheet |
 
 ---
-
-## §17 Cross-reference
-
-The codebase's `UIUX §x` citations resolve to their own numbers here — that is
-why §1–§12 keep their v1 meanings. For completeness:
-
-| Citation | Here |
-|---|---|
-| `UIUX §1` — governing law, identity | §1 |
-| `UIUX §2` — design tokens | §2 |
-| `UIUX §2.4` — elevation | §2.4 |
-| `UIUX §3` — board geometry | §3 |
-| `UIUX §4` — the note component | §4 |
-| `UIUX §4.1` — transform origin, truthful coordinates | §4.1 |
-| `UIUX §4.2` — note states, focus | §4.2, §2.7 |
-| `UIUX §4.3` — the scratch-out | §4.3 |
-| `UIUX §4.4` — lot lines are never framed | §4.4 |
-| `UIUX §5` — gestures | §5 |
-| `UIUX §6` — the touch floor | §6 |
-| `UIUX §7` — the menu, destructive last | §7 |
-| `UIUX §8` — motion | §8 |
-| `UIUX §9` — the undo toast | §9 |
-| `UIUX §10` — the board list, truncation | §10 |
-| `UIUX §11` — scale to fit | §11 |
-| `UIUX §12` — accessibility | §12 |
-| `styles.css §1` — "identity from structure, never costume" | §1 |
-
-**The prefix mandate.** Every new citation names its document — `PRD §x`,
-`UIUX §x`, or a `B`-number — never a bare `§x`. The codebase already carries
-bare cites that mean different documents in the same file (`styles.css` mixes
-`§6.1`, this document's anchors under PRD numbering, with `§6`, this document's
-touch floor); existing cites keep their meaning, and new ones do not add to the
-ambiguity.
-
-New in this revision, so nothing existing moves: **§2.2.1** the generative law,
-**§2.3.1**/**§2.3.2** the crossover and the forbidden band, **§2.8** the board
-as a field, **§2.9** the shelf as weather, **§3.1** the band, **§3.2** the
-Parking Lot as a section, **§13.4** the icon, **§16.1** what is not settled,
-**§16.2** retiring v1's tokens, **§16.3** what pins this document. Every
-citation above keeps the meaning it already had.
