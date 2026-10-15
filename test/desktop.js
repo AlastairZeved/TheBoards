@@ -1,13 +1,9 @@
-const { chromium } = require('playwright');
+const { URL, ok, summary, launch, tap, tapWithMove, touchDragTo, newMobilePage, newDesktopPage, waitBoard, withErrors, run } = require('./lib');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const URL = process.env.BOARDS_URL || 'http://localhost:8000/index.html';
 // Point at a specific Chromium with CHROMIUM_PATH; otherwise Playwright's own.
-const launchOpts = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {};
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
 // B108's morning landing owns boot: every load lands on today's linked board.
 // reopen() puts the board under test back on the sheet after a reload — by id
@@ -25,17 +21,6 @@ async function reopen(page, idOrTitle) {
 }
 
 
-async function newDesktopPage(browser) {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 },
-                                         acceptDownloads: true });
-  const page = await ctx.newPage();
-  const errors = [];
-  page.on('pageerror', e => errors.push(String(e)));
-  page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
-  await page.goto(URL);
-  await page.waitForTimeout(400);
-  return { ctx, page, errors };
-}
 // B118 (issue #211): the rail boots collapsed — suites that mouse-drive the
 // rail's cards expand it first, exactly as a user would (tap the face).
 async function expandRail(page) {
@@ -46,8 +31,8 @@ async function expandRail(page) {
 }
 const noteCount = page => page.evaluate(() => document.querySelectorAll('.note').length);
 
-(async () => {
-  const browser = await chromium.launch({ ...launchOpts });
+run(async () => {
+  const browser = await launch();
 
   console.log('\n[D1] Desktop mode is active');
   {
@@ -3197,7 +3182,7 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
     page.on('pageerror', e => errors.push(String(e)));
     page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
     await page.goto(URL);
-    await page.waitForFunction(() => !!document.querySelector('#board'));
+    await waitBoard(page);
     await page.waitForTimeout(400);
     // Six day-note records on TODAY's date: the card must show three and
     // page the rest; no top section may exist anywhere.
@@ -3305,6 +3290,5 @@ const noteCount = page => page.evaluate(() => document.querySelectorAll('.note')
   }
 
   await browser.close();
-  console.log('\n=== desktop: ' + pass + ' passed, ' + fail + ' failed ===');
-  process.exit(fail ? 1 : 0);
-})();
+
+});

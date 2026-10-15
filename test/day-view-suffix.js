@@ -22,12 +22,8 @@
 // The regression is written to FAIL if a future change re-composes a weekday
 // into a label (the tempting wrong fix is a render-time scrub).
 
-const { chromium } = require('playwright');
-const URL = process.env.BOARDS_URL || 'http://localhost:8000/index.html';
-const launchOpts = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {};
+const { URL, ok, summary, launch, tap, tapWithMove, touchDragTo, newMobilePage, newDesktopPage, waitBoard, withErrors, run } = require('./lib');
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
 async function newPage(browser, viewport = { width: 384, height: 846 }) {
   const ctx = await browser.newContext({ viewport, isMobile: true, hasTouch: true, deviceScaleFactor: 3, serviceWorkers: 'block' });
@@ -36,26 +32,19 @@ async function newPage(browser, viewport = { width: 384, height: 846 }) {
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   await page.goto(URL);
-  await page.waitForFunction(() => !!document.querySelector('#board'));
+  await waitBoard(page);
   await page.waitForTimeout(300);
   return { ctx, page, errors };
 }
 
-async function tap(page, x, y) {
-  const c = await page.context().newCDPSession(page);
-  await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-  await page.waitForTimeout(30);
-  await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await c.detach();
-}
 async function center(page, sel) {
   const r = await (await page.$(sel)).boundingBox();
   return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
 }
 const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
 
-(async () => {
-  const browser = await chromium.launch(launchOpts);
+run(async () => {
+  const browser = await launch();
 
   console.log('\n[V1] Adding a square to a day card appends no day-of-week suffix to any label (issue #320 — the labels stay, unchanged from #329)');
   {
@@ -331,7 +320,6 @@ const WEEKDAY = / — (SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
     await ctx.close();
   }
 
-  console.log(`\n=== day-view-suffix: ${pass} passed, ${fail} failed ===`);
   await browser.close();
-  process.exit(fail ? 1 : 0);
-})();
+
+});

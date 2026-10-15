@@ -10,16 +10,12 @@
 //
 // Run: NODE_PATH=<playwright> node test/embed.js  (serve the repo root on 8000)
 
-const { chromium } = require('playwright');
-const BASE = process.env.BOARDS_URL || 'http://localhost:8000/index.html';
+const { URL, ok, summary, launch, tap, tapWithMove, touchDragTo, newMobilePage, newDesktopPage, waitBoard, withErrors, run } = require('./lib');
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
-(async () => {
-  const launchOpts = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {};
-  const browser = await chromium.launch(launchOpts);
-  const url = (q) => BASE + q;
+run(async () => {
+  const browser = await launch();
+  const url = (q) => URL + q;
 
   // 1. Forced desktop at a narrow viewport the MQ would call mobile.
   {
@@ -104,6 +100,5 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++
   }
 
   await browser.close();
-  console.log(`\nembed.js: ${pass} pass, ${fail} fail`);
-  process.exit(fail ? 1 : 0);
-})().catch((e) => { console.error('CRASH', e); process.exit(1); });
+
+});

@@ -1,15 +1,11 @@
 // Day-roll launch (issue #153, B105): a fresh open lands on today's linked
 // To-Do board when today carries events; with none, nothing navigates.
 // Black-box by ruling: seed through the window surface, reload, observe.
-const { chromium } = require('playwright');
-const URL = process.env.BOARDS_URL || 'http://localhost:8000/index.html';
-const launchOpts = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {};
+const { URL, ok, summary, launch, tap, tapWithMove, touchDragTo, newMobilePage, newDesktopPage, waitBoard, withErrors, run } = require('./lib');
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
-(async () => {
-  const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+run(async () => {
+  const browser = await launch();
 
   console.log('\n[R1] Fresh open, today has 2 events: lands on the day\'s linked board (B105)');
   {
@@ -180,6 +176,5 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++
   }
 
   await browser.close();
-  console.log('\n=== day-roll: ' + pass + ' passed, ' + fail + ' failed ===');
-  process.exit(fail ? 1 : 0);
-})();
+
+});

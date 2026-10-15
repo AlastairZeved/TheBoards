@@ -15,17 +15,13 @@
  *
  * Run: CHROMIUM_PATH=... node test/sw-update-check.js
  */
-const { chromium } = require('playwright');
+const { URL, ok, summary, launch, tap, tapWithMove, touchDragTo, newMobilePage, newDesktopPage, waitBoard, withErrors, run } = require('./lib');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
-
-const launchOpts = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {};
 const ROOT = path.join(__dirname, '..');
 const PORT = Number(process.env.SW_TEST_PORT || 8199);
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
 // A throwaway document root we can mutate mid-flight. fonts/ rides along
 // because sw.js's ASSETS lists the three woff2 files (B50) and install()
@@ -122,10 +118,10 @@ async function launchUntil(page, pred, max = 4) {
   return 0;
 }
 
-(async () => {
+run(async () => {
   await new Promise(r => server.listen(PORT, r));
   const URL = `http://localhost:${PORT}/index.html`;
-  const browser = await chromium.launch({ ...launchOpts });
+  const browser = await launch();
   const ctx = await browser.newContext();          // one persistent origin
   const page = await ctx.newPage();
 
@@ -137,7 +133,7 @@ async function launchUntil(page, pred, max = 4) {
       fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8')
         .replace(CARD_H_RE, '--band-top: 200px;'));   // a build that is not this one
     await page.goto(URL);
-    await page.waitForFunction(() => !!document.querySelector('#board'));
+    await waitBoard(page);
     await page.waitForFunction(async () => {
       const r = await navigator.serviceWorker.getRegistration();
       return !!(r && r.active);
@@ -206,12 +202,11 @@ async function launchUntil(page, pred, max = 4) {
     ok('the board still renders with the network down', offline, String(offline));
     await ctx.setOffline(false);
   } catch (e) {
-    fail++; console.log('  FAIL harness threw :: ' + e.message);
+    ok('harness threw', false, e.message);
   }
 
   await browser.close();
   server.close();
   fs.rmSync(DIR, { recursive: true, force: true });
-  console.log(`\n=== sw-update: ${pass} passed, ${fail} failed ===`);
-  process.exit(fail ? 1 : 0);
-})();
+
+});

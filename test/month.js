@@ -11,12 +11,8 @@
 // Palette assertions read computed styles (the water fall's opaque stops and
 // --accent-page), so a palette drift fails here too.
 
-const { chromium } = require('playwright');
-const URL = process.env.BOARDS_URL || 'http://localhost:8000/index.html';
-const launchOpts = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {};
+const { URL, ok, summary, launch, tap, tapWithMove, touchDragTo, newMobilePage, newDesktopPage, waitBoard, withErrors, run } = require('./lib');
 
-let pass = 0, fail = 0;
-const ok = (n, c, extra) => { c ? (pass++, console.log('  PASS ' + n)) : (fail++, console.log('  FAIL ' + n + (extra ? ' :: ' + extra : ''))); };
 
 async function newPage(browser, viewport = { width: 384, height: 846 }) {
   const ctx = await browser.newContext({ viewport, isMobile: true, hasTouch: true, deviceScaleFactor: 3, acceptDownloads: true });
@@ -25,7 +21,7 @@ async function newPage(browser, viewport = { width: 384, height: 846 }) {
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   await page.goto(URL);
-  await page.waitForFunction(() => !!document.querySelector('#board'));
+  await waitBoard(page);
   await page.waitForTimeout(300);
   return { ctx, page, errors };
 }
@@ -35,8 +31,8 @@ async function monthReady(page, minCells = 1) {
   await page.waitForFunction((n) => document.querySelectorAll('.mo-cell').length >= n, minCells);
 }
 
-(async () => {
-  const browser = await chromium.launch({ ...launchOpts });
+run(async () => {
+  const browser = await launch();
 
   console.log('\n[M1] Dots, today\'s cell, the current-week band (mobile)');
   {
@@ -286,7 +282,7 @@ async function monthReady(page, minCells = 1) {
     const errors = [];
     page.on('pageerror', e => errors.push(String(e)));
     await page.goto(URL);
-    await page.waitForFunction(() => !!document.querySelector('#board'));
+    await waitBoard(page);
     await page.waitForTimeout(300);
     await page.evaluate(() => document.getElementById('cal-rail').click());
     await page.waitForTimeout(400);
@@ -301,6 +297,5 @@ async function monthReady(page, minCells = 1) {
   }
 
   await browser.close();
-  console.log(`\n=== month: ${pass} passed, ${fail} failed ===`);
-  process.exit(fail ? 1 : 0);
-})();
+
+});
