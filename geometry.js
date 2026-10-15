@@ -1,6 +1,6 @@
 /* --- 4. Layout / scale-to-fit -------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { HIT_FLOOR, HIT_FLOOR_DESKTOP, KB_HIDE_SLOP, LIST_PANEL_FRAC, NOTE_MIN_W, PANE_W, anchorEls, el, BAND_GAP, BAND_LINE, BAND_TOP, LOT_FLOOR, LOT_HEAD, LOT_MAX_FRAC, clamp, state } from './state.js';
+import { HIT_FLOOR, HIT_FLOOR_DESKTOP, KB_HIDE_SLOP, LIST_PANEL_FRAC, NOTE_MIN_W, PANE_W, REF_W, REF_H, anchorEls, el, BAND_GAP, BAND_LINE, BAND_TOP, LOT_FLOOR, LOT_HEAD, LOT_MAX_FRAC, clamp, noteRec, state } from './state.js';
 import { lotEls, noteEls, updateLinks } from './render.js';
 import { selected, updateSelectionUI } from './interactions.js';
 
@@ -34,7 +34,7 @@ import { selected, updateSelectionUI } from './interactions.js';
    writeRecord is injected by boot so geometry has no persistence dependency. */
 export async function migrateLegacyBoards(all, writeRecord) {
   const adopt = (n) => {
-    const wRatio = LOGICAL_W / (n.rw || 900);
+    const wRatio = LOGICAL_W / (n.rw || REF_W);
     return {
       ...n,
       x: n.x * wRatio,
@@ -59,9 +59,9 @@ export async function migrateLegacyBoards(all, writeRecord) {
 // The frame/geometry module's module-scope state (issue #182): the logical
 // coordinate space's own variables + the squeeze pair. Written only from this
 // region's layout math (the writers-map grep: every write-site is geometry).
-export let LOGICAL_W = 900;                 // mobile: = vw, the sheet is the viewport (B32); desktop: derived per layout (B20)
-export let LOGICAL_H = 1000;                // responsive: recomputed each layout to fill the viewport
-export let LEGACY_H = 1000;                 // the LOGICAL_H the pre-B32 build would have produced
+export let LOGICAL_W = REF_W;                // mobile: = vw, the sheet is the viewport (B32); desktop: derived per layout (B20)
+export let LOGICAL_H = REF_H;                // responsive: recomputed each layout to fill the viewport
+export let LEGACY_H = REF_H;                 // the LOGICAL_H the pre-B32 build would have produced
                                      // on this device. Read ONLY by migrateLegacyBoards
                                      // (B93): the render path no longer branches on it —
                                      // boot adopts every rh-less note onto the single
@@ -123,7 +123,7 @@ function computeFrame(vw, vh) {
     // B118 (issue #211): the left rail collapses to the calendar rail's own
     // 40px — one rail-width law, two rails — and the sheet fills what it frees.
     const paneW = paneCollapsed ? CAL_RAIL_W : PANE_W;
-    renderScale = Math.min(vh / 1000, (vw - paneW - calW) / 900);
+    renderScale = Math.min(vh / REF_H, (vw - paneW - calW) / REF_W);
     LOGICAL_H = vh / renderScale;
     LOGICAL_W = (vw - paneW - calW) / renderScale;
     frameUi.LOGICAL_W_TRUE = (calSqueeze || paneCollapsed)
@@ -142,7 +142,7 @@ function computeFrame(vw, vh) {
     renderScale = 1;
     offX = 0;
     offY = 0;
-    LEGACY_H = 900 * vh / vw;        // the height B17 would have produced here
+    LEGACY_H = REF_W * vh / vw;      // the height B17 would have produced here
   }
 }
 
@@ -169,7 +169,7 @@ function applyFrame() {
   // at creation (makeNoteEl) and by the gestures that change its inputs
   // (rebaseNote, applyNoteScale, the drag).
   noteEls.forEach((node, id) => {
-    const note = state.current && state.current.notes.find(n => n.id === id);
+    const note = noteRec(id);
     if (note) {
       node.style.left = renderX(note) + 'px';
       node.style.top = renderY(note) + 'px';
@@ -376,7 +376,7 @@ export function setPaneCollapsed(collapsed) {
    B93's boot migration adopted every rh-less note onto the single min-k
    path before first paint (issue #141). */
 export const noteKFor = (n, frameW, frameH) =>
-  Math.min(frameW / (n.rw || 900), frameH / n.rh);
+  Math.min(frameW / (n.rw || REF_W), frameH / n.rh);
 
 export const noteK = (note) => noteKFor(note, LOGICAL_W, LOGICAL_H);
 export const renderX  = (note) => note.x * noteK(note);
@@ -426,7 +426,7 @@ export function rebaseNote(note) {
    edge-adjacent note stays a usable column rather than a zero-width sliver.
    The old 405/45% cap (PRD §6.2) is superseded. */
 export const noteMaxW = (note) =>
-  Math.max(NOTE_MIN_W, ((note.rw || 900) - note.x) / (note.scale || 1));
+  Math.max(NOTE_MIN_W, ((note.rw || REF_W) - note.x) / (note.scale || 1));
 
 /* The cap lives on the NOTE element (custom properties inherit, so .note-text
    keeps reading the var). Set it BEFORE anything measures offsetWidth — the

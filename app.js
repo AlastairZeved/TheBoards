@@ -1,4 +1,4 @@
-import { ACTION_DELAY, DESKTOP_MQ, EMBED, EMBED_MODE, TABLET_MQ, calKey, el, newBoardRecord, newCalEvent, readTier, state } from './state.js';
+import { ACTION_DELAY, DESKTOP_MQ, EMBED, EMBED_MODE, TABLET_MQ, boardsOf, calKey, el, newBoardRecord, newCalEvent, readTier, state } from './state.js';
 import { idbDelete, idbGet, idbGetAll, idbPut, persist } from './persistence.js';
 import { LOGICAL_H, LOGICAL_W, applyLayout, calSqueeze, inEnvironmentPass, lotH, migrateLegacyBoards, onViewportResize, renderX, setCalSqueeze } from './geometry.js';
 import { linkSource, noteEls, registerRender, renderBoard, updateLinks } from './render.js';
@@ -231,7 +231,7 @@ async function boot() {
   // its first record verbatim; a store whose lowest uuid is an event then
   // boots an event as the board (renderBoard's crash, seen in CI). Boot
   // opens a BOARD: the most-recent record that has a title.
-  const boards = all.filter(r => r.title !== undefined);
+  const boards = boardsOf(all);
   if (!boards.length) { board = newBoardRecord(); await idbPut(board); }
   else { board = boards.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)); }  // launch → most recent
   console.debug('boot:open');
@@ -368,7 +368,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its precached assets; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v155';
+const OWN_BUILD = 'v156';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

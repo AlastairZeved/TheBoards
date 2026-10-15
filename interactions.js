@@ -1,6 +1,6 @@
 /* --- 7. Gesture recognizer ----------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { ACTION_DELAY, CE, clamp, COPY, DBLCLICK_MS, LEAVE_MS, LONGPRESS_MS, MAX_SCALE, MIN_SCALE, MOVE_THRESHOLD } from './state.js';
+import { ACTION_DELAY, CE, clamp, COPY, DBLCLICK_MS, LEAVE_MS, LONGPRESS_MS, MAX_SCALE, MIN_SCALE, MOVE_THRESHOLD, noteRec, lotRec } from './state.js';
 import { NOTE_MIN_W, TOAST_HIDE_MS, UNDO_MS, anchorEls, el, makeRecord, state, uuid, KB_HIDE_SLOP } from './state.js';
 import { saveNow, scheduleSave } from './persistence.js';
 import { LOGICAL_H, LOGICAL_W, applyLayout, applyNoteWidth, caretToEnd, effScale, noteMaxW, placeCaretAtPoint } from './geometry.js';
@@ -122,7 +122,7 @@ function onPointerDown(e) {
     startX: e.clientX, startY: e.clientY,
     shift: e.shiftKey,                             // multi-select modifier (issue #55)
     mode: 'pending', longPressed: false, moved: false,
-    note: target.type === 'note' ? state.current.notes.find(n => n.id === target.node.dataset.id) : null,
+    note: target.type === 'note' ? noteRec(target.node.dataset.id) : null,
   };
   // Resize is single-selection only, by design (issue #55): with two or more
   // selected the CSS hides the grip, and this guard keeps the gesture honest
@@ -280,7 +280,7 @@ function tapLotButton(target) {
   const isDel = target.node.classList.contains('sel-delete');
   const isCopy = target.node.classList.contains('sel-copy');
   commitAction(() => {
-    const item = state.current.parkingLot.find(i => i.id === lotRow.dataset.id);
+    const item = lotRec(lotRow.dataset.id);
     if (!item) return;
     if (isCopy) copyText(item.text);
     else if (isDel) { clearSelection(); deleteLot(lotRow); }
@@ -330,7 +330,7 @@ function tapLot(x, y) {
    note never edits (UIUX §4.2), so it only ever engages. */
 function tapNote(target, shift) {
   const node = target.node;
-  const note = state.current.notes.find(n => n.id === node.dataset.id);
+  const note = noteRec(node.dataset.id);
   if (!note) return;
   if (state.isDesktop) {
     // An open editor commits before the click acts (issue #54); on the
@@ -382,7 +382,7 @@ function tapNote(target, shift) {
    single-select (issue #55) — no shift path here, by design. */
 function tapLotItem(target, x, y) {
   const node = target.node;
-  const item = state.current.parkingLot.find(i => i.id === node.dataset.id);
+  const item = lotRec(node.dataset.id);
   if (!item) return;
   if (state.isDesktop) {
     if (commitOpenEditor(node)) return;
@@ -488,7 +488,7 @@ function createLotItem() {
 }
 
 function commitNote(node) {
-  const note = state.current.notes.find(n => n.id === node.dataset.id);
+  const note = noteRec(node.dataset.id);
   if (!note) return;
   note.text = node.querySelector('.note-text').textContent;
   if (note.text.trim().length === 0) { removeNoteSilently(note, node); return; }  // no empty frames ever
@@ -498,7 +498,7 @@ function commitNote(node) {
    path — the B81 guard family's home. An emptied title clears the field the
    B21 way (the key is deleted; absence is off) and the tab goes with it. */
 function commitNoteTitle(node) {
-  const note = state.current.notes.find(n => n.id === node.dataset.id);
+  const note = noteRec(node.dataset.id);
   if (!note) return;
   const tab = node.querySelector('.note-title');
   if (!tab) return;
@@ -512,7 +512,7 @@ function commitNoteTitle(node) {
    the issue's expected behavior, verbatim. Editing raises the note (B27) like
    every other edit entry. Arming is edit-entry — navigation, no drop-guard. */
 export function editNoteTitle(node) {
-  const note = state.current.notes.find(n => n.id === node.dataset.id);
+  const note = noteRec(node.dataset.id);
   if (!note) return;
   const tab = ensureNoteTitleEl(node);
   surfaceNote(node);
@@ -532,7 +532,7 @@ function removeNoteSilently(note, node) {
   saveNow();
 }
 function commitLot(node) {
-  const item = state.current.parkingLot.find(i => i.id === node.dataset.id);
+  const item = lotRec(node.dataset.id);
   if (!item) return;
   item.text = node.querySelector('.lot-text').textContent;
   if (item.text.trim().length === 0) { removeLotSilently(item, node); return; }
@@ -588,7 +588,7 @@ function commitAnchor(node) {
 function collectGroupMembers(startLogical) {
   g.group = [];
   for (const id of selectedNoteIds()) {
-    const n = state.current.notes.find(m => m.id === id);
+    const n = noteRec(id);
     const memberNode = noteEls.get(id);
     if (!n || !memberNode) continue;
     // Per-member rebase — the one licensed grab-time write (B21), which
@@ -793,7 +793,7 @@ function endPinch() {
 /* Z-order: last-touched note to the top (end of array + end of DOM). */
 function surfaceNote(node) {
   const id = node.dataset.id;
-  const note = state.current.notes.find(n => n.id === id);
+  const note = noteRec(id);
   if (!note) return;
   const i = state.current.notes.indexOf(note);
   if (i === state.current.notes.length - 1) { return; }    // already on top
@@ -997,7 +997,7 @@ function setSelectionHidden(hidden) {  // drag/resize in flight: chrome steps as
 export function updateSelectionUI() {
   if (!selected || !state.current) return;
   if (selected.kind === 'note') {
-    const note = state.current.notes.find(n => n.id === selected.id);
+    const note = noteRec(selected.id);
     const node = noteEls.get(selected.id);
     if (!note || !node || !selUi.selEl) return;
     const w = node.offsetWidth * effScale(note), h = node.offsetHeight * effScale(note);
@@ -1016,7 +1016,7 @@ export function updateSelectionUI() {
     setSelectionHidden(false);
   } else {
     const node = lotEls.get(selected.id);
-    const item = state.current.parkingLot.find(i => i.id === selected.id);
+    const item = lotRec(selected.id);
     if (!node || !item) return;
     const p = node.querySelector('.sel-complete');
     if (p) p.textContent = item.state === 'complete' ? COPY.restore : COPY.complete;
@@ -1026,7 +1026,7 @@ export function updateSelectionUI() {
 /* Frame-drag resize (issue #4): scale from the pointer's distance to the
    note's fixed top-left origin — same clamp, re-clamp, and hit math as pinch. */
 function startResize(e) {
-  const note = state.current.notes.find(n => n.id === selected.id);
+  const note = noteRec(selected.id);
   const node = noteEls.get(selected.id);
   if (!note || !node) { g.mode = 'cancelled'; return; }
   rebaseNote(note);                  // grab math runs in current-frame units (issue #15)
@@ -1055,7 +1055,7 @@ function endResize() {
 // State + presentation together, no write: the single-note wrappers below add
 // their own saveNow, the bulk path (issue #55) saves once for the whole set.
 function setNoteState(node, complete) {
-  const note = state.current.notes.find(n => n.id === node.dataset.id);
+  const note = noteRec(node.dataset.id);
   if (!note) return;                   // a blank note the pre-act blur just discarded (B84/B8)
   note.state = complete ? 'complete' : 'active';
   if (complete && note.carriedOn) delete note.carriedOn;   // carried status ends at completion (B108)
@@ -1071,24 +1071,24 @@ export function restoreNote(node) { setNoteState(node, false); saveNow(); }
 // applyCompleteA11y here; the amber wash is decorative and reads truthily off
 // note.highlighted (legacy notes lack the field, which is falsy — B21's idiom).
 function setNoteHighlight(node, on) {
-  const note = state.current.notes.find(n => n.id === node.dataset.id);
+  const note = noteRec(node.dataset.id);
   if (!note) return;                   // discarded blank note (B84/B8) — nothing to wash
   note.highlighted = on;
   node.classList.toggle('highlight', on);
   updateNoteToolbar(node, note);       // Highlight ⇄ Remove highlight label (B84)
 }
 export function toggleHighlight(node) {
-  const note = state.current.notes.find(n => n.id === node.dataset.id);
+  const note = noteRec(node.dataset.id);
   if (!note) return;
   setNoteHighlight(node, !note.highlighted); saveNow();
 }
 function completeLot(node) {
-  const item = state.current.parkingLot.find(i => i.id === node.dataset.id);
+  const item = lotRec(node.dataset.id);
   item.state = 'complete'; node.classList.add('complete');
   applyCompleteA11y(node, true); saveNow();
 }
 function restoreLot(node) {
-  const item = state.current.parkingLot.find(i => i.id === node.dataset.id);
+  const item = lotRec(node.dataset.id);
   item.state = 'active'; node.classList.remove('complete');
   applyCompleteA11y(node, false); saveNow();
 }
@@ -1098,7 +1098,7 @@ function restoreLot(node) {
 export function deleteNote(node) { deleteNotes([node.dataset.id]); }
 function deleteLot(node) {
   if (selected && selected.kind === 'lot' && selected.id === node.dataset.id) clearSelection();
-  const item = state.current.parkingLot.find(i => i.id === node.dataset.id);
+  const item = lotRec(node.dataset.id);
   const index = state.current.parkingLot.indexOf(item);
   const snapshot = JSON.parse(JSON.stringify(item));
   state.current.parkingLot.splice(index, 1);
@@ -1350,7 +1350,7 @@ function onFocusIn(e) {
   if (t.classList.contains('anchor') && !t.hasAttribute('contenteditable')) {
     enableEditing(t);
   } else if (t.classList.contains('note')) {
-    const note = state.current && state.current.notes.find(n => n.id === t.dataset.id);
+    const note = noteRec(t.dataset.id);
     if (!note) return;
     if (state.isDesktop) {
       // Tab selects; Enter edits (issue #13) — EXCEPT the menu's own focus
@@ -1363,7 +1363,7 @@ function onFocusIn(e) {
     }
     if (note.state === 'active') editText(t.querySelector('.note-text'));
   } else if (t.classList.contains('lot-item')) {
-    const item = state.current && state.current.parkingLot.find(i => i.id === t.dataset.id);
+    const item = lotRec(t.dataset.id);
     if (!item) return;
     if (state.isDesktop) { selectLot(item.id); return; }
     if (item.state === 'active') editText(t.querySelector('.lot-text'));
@@ -1394,13 +1394,13 @@ function onKeyDown(e) {
     e.preventDefault();
     const s = selected;
     if (s.kind === 'note') {
-      const rec = state.current.notes.find(n => n.id === s.id);
+      const rec = noteRec(s.id);
       const n = noteEls.get(s.id);
       if (rec && n && rec.state === 'active') {
         clearSelection(); surfaceNote(n); editText(n.querySelector('.note-text'));
       }
     } else {
-      const rec = state.current.parkingLot.find(i => i.id === s.id);
+      const rec = lotRec(s.id);
       const n = lotEls.get(s.id);
       if (rec && n && rec.state === 'active') {
         clearSelection(); editText(n.querySelector('.lot-text'));
@@ -1413,10 +1413,10 @@ function onKeyDown(e) {
 function onInput(e) {
   const t = e.target;
   if (t.classList.contains('note-text')) {
-    const note = state.current.notes.find(n => n.id === t.closest('.note').dataset.id);
+    const note = noteRec(t.closest('.note').dataset.id);
     if (note) { note.text = t.textContent; setHitInset(t.closest('.note'), note); scheduleSave(); }
   } else if (t.classList.contains('lot-text')) {
-    const item = state.current.parkingLot.find(i => i.id === t.closest('.lot-item').dataset.id);
+    const item = lotRec(t.closest('.lot-item').dataset.id);
     // The lot sizes to its rendered rows, live (issue #106, B73) — the same
     // capture feedback the band's anchor branch below already gives.
     if (item) { item.text = t.textContent; updateBoardGeometry(); scheduleSave(); }

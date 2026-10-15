@@ -980,10 +980,20 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('today wears the to-do boards\' water fall; the current week gets the pale ink-light band (issue #191)',
     /\.mo-cell\.today \{[^}]*linear-gradient\(180deg, var\(--water-top\) 0%, var\(--water-mid\) 46%, var\(--water-bot\) 100%\)/.test(css) &&
     /\.mo-cell\.wk \{ background: rgb\(244 245 241 \/ \.08\); \}/.test(css));
-  ok('the tap swaps the week view to the tapped date\'s Sunday-first week; the rolling window stays the default (issues #191, #398)',
-    /function calWeekOf\(anchor\)/.test(app) &&
+  ok('the tap swaps the week view to the tapped date\'s Sunday-first week; both windows share calWindow (issues #191, #398, #432)',
+    /export function calWindow\(count = 7, start = new Date\(\)\)/.test(app) &&
+    /function calWeekOf\(anchor\)[\s\S]*?return calWindow\(7, start\)/.test(app) &&
     /const days = calWeekAnchor \? calWeekOf\(calWeekAnchor\) : calWindow\(CAL_FUTURE_DAYS \+ 1\);/.test(app) &&
     /anchor\.getDate\(\) - anchor\.getDay\(\)/.test(app));
+  ok('issue #432: shared lookup, date, category and reference helpers live in state.js and are reused',
+    ['noteRec', 'lotRec', 'live', 'boardsOf', 'eventsOf', 'pad2', 'calMD', 'calDayName',
+      'CALKEY_DATE', 'BOARD_CATS', 'GRID_ORDER', 'catOf', 'splitLines', 'REF_W']
+      .every((name) => new RegExp('export const ' + name + '\\b').test(read('state.js'))) &&
+    /Object\.fromEntries\(BOARD_CATS\.map/.test(read('boards.js')) &&
+    /new Set\(BOARD_CATS\)/.test(read('export.js')) && /calDayName\(day\.date\)/.test(read('export.js')) &&
+    (app.match(/state\.current\.notes\.find/g) || []).length === 1 &&
+    (app.match(/state\.current\.parkingLot\.find/g) || []).length === 1 &&
+    !/const CALKEY_DATE\s*=/.test(read('boards.js')));
   ok('every Sunday day card carries the 2px Calendar-orange bottom divider (issue #398)',
     /day\.date\.getDay\(\) === 0 \? ' sunday'/.test(read('boards.js')) &&
     /\.cal-day\.sunday \{ border-bottom: 2px solid var\(--frame\); \}/.test(css));
@@ -1055,12 +1065,12 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /el\.calBack\.addEventListener\('click'[\s\S]*?goCalBack/.test(app) &&
     /function goCalBack[\s\S]*?history\.back\(\)/.test(app));
   ok('the rolling window is computed at render — no midnight write, no stored array (R4)',
-    /function calWindow\(count = 7\)/.test(read('state.js')) && /for \(let i = 0; i < count; i\+\+\)/.test(read('state.js')) &&
+    /function calWindow\(count = 7, start = new Date\(\)\)/.test(read('state.js')) && /for \(let i = 0; i < count; i\+\+\)/.test(read('state.js')) &&
     !/calRoll|rollWindow|midnightTimer/.test(app));
   ok('the default stack window is today plus the next 30 dates, with no past cards (issue #398)',
     /const CAL_FUTURE_DAYS = 30;/.test(read('boards.js')) &&
     /calWindow\(CAL_FUTURE_DAYS \+ 1\)/.test(read('boards.js')) &&
-    /function calWindow\(count = 7\)[\s\S]*?new Date\(now\.getFullYear\(\), now\.getMonth\(\), now\.getDate\(\) \+ i\)/.test(read('state.js')));
+    /function calWindow\(count = 7, start = new Date\(\)\)[\s\S]*?new Date\(first\.getFullYear\(\), first\.getMonth\(\), first\.getDate\(\) \+ i\)/.test(read('state.js')));
   ok('the mirror has one writer and a self-recorded span (R5\'s line identity)',
     /function syncMirror\(board, events\)/.test(app) && /board\.calReq = mirrored\.length/.test(app));
   ok('the linked board\u2019s title seat is derived at render, pinned: "Today\u2019s To Do" + the date line off the cal key (B133, issue #273)',

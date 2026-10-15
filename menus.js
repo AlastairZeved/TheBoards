@@ -1,6 +1,6 @@
 /* --- 10. Long-press menu ------------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { COPY, GLYPH, el, histPush, state } from './state.js';
+import { COPY, GLYPH, el, histPush, noteRec, state } from './state.js';
 import { beginLink, completeSurfaced, copyNoteTexts, linkSource, surfacedMap } from './render.js';
 import { commitAction, editNoteTitle, isEditing } from './interactions.js';
 import { exportAllJson, exportBoardPdf, importBoardsJson } from './export.js';
@@ -18,7 +18,7 @@ export let menuReturnFocus = false;         // true only inside closeMenu's sync
 export function openMenuFor(target, clientX, clientY) {
   if (target.type !== 'note') return;   // anchors lost their menu (B92); lot / canvas have none
   const id = target.node.dataset.id;
-  const note = state.current && state.current.notes.find(n => n.id === id);
+  const note = noteRec(id);
   // A surfaced echo (issue #169, B109): its record lives on the source board,
   // so its menu is its two acts — Complete here completes THERE (and the echo
   // unsurfaces), Go to Board takes the plain swapBoard route (B9). Link arms
