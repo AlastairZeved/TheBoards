@@ -4,7 +4,8 @@ import { COPY, GLYPH, el, histPush, noteRec, state } from './state.js';
 import { beginLink, completeSurfaced, copyNoteTexts, linkSource, surfacedMap } from './render.js';
 import { commitAction, editNoteTitle, isEditing } from './interactions.js';
 import { exportAllJson, exportBoardPdf, importBoardsJson } from './export.js';
-import { goToList, listOpen, lotMenuOpen, returnToBoard, showCal, swapBoard } from './boards.js';
+import { goToList, listOpen, lotMenuOpen, returnToBoard, swapBoard } from './boards.js';
+import { showCal } from './calendar.js';
 
 export let menuOpen = false;
 let menuKeyHandler = null, menuOutsideHandler = null;

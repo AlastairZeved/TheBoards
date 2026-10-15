@@ -70,7 +70,7 @@ the project has none.
 2. **A single custom gesture recognizer** (`onPointerDown`/`Move`/`Up`, §7)
    drives tap-to-capture, drag, pinch, and the desktop grammar alike; a live
    `matchMedia` switch (`isDesktop`) branches inline. There is no separate
-   desktop code path. The code is split into eight native modules; see
+   desktop code path. The code is split into nine native modules; see
    `CLAUDE.md` for ownership and `state.js:1-19` for the original section map.
 3. **IndexedDB is the only persistence**, through a debounced save queue
    (`scheduleSave`/`saveNow`). The standard namespace is `boards-db`; embed
@@ -89,7 +89,7 @@ the project has none.
 7. **Routing uses the History API** (`pushState`/`popstate`) so the OS back
    gesture works (B9) — never intercept or shadow it.
 
-The app is split across `app.js` and eight native ES modules; see the module
+The app is split across `app.js` and nine native ES modules; see the module
 ownership table in `CLAUDE.md`. The original section map is at `state.js:1-19`.
 `styles.css` remains sectioned against `The Docket/UIUX.md`: every top-level
 `§` marker is a UIUX section number, and its header block is that document's
@@ -100,7 +100,7 @@ table of contents.
 Bump `sw.js`'s `CACHE` constant (`zeved-boards-v<N>`) when shipped app code
 changes — it is the one string that says which build is live. `app.js`'s
 `OWN_BUILD` stamp must match the `CACHE` version suffix. The service worker
-precaches `app.js`, `styles.css`, and all eight modules, so a change to any
+precaches `app.js`, `styles.css`, and all nine modules, so a change to any
 of those files requires the bump. `test/tokens.js` checks that every root
 JavaScript file except `sw.js` is in `ASSETS` and that `OWN_BUILD` matches
 `CACHE`; `.github/workflows/pages.yml` curls the deployed `sw.js` to assert

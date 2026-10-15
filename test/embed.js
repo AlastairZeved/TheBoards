@@ -91,7 +91,7 @@ run(async () => {
     await page.evaluate(() => import('/menus.js').then(() => document.getElementById('action-calendar')?.click()));
     await page.waitForTimeout(300);
     const len2 = await page.evaluate(() => history.length);
-    await page.evaluate(() => import('/boards.js').then((m) => m.goCalBack()));
+    await page.evaluate(() => import('/calendar.js').then((m) => m.goCalBack()));
     await page.waitForTimeout(300);
     ok('calendar open+back adds no history entries', len2 === len1, `${len1} -> ${len2}`);
     ok('calendar Back did not navigate away (page still live)',

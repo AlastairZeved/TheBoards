@@ -40,7 +40,7 @@ const html = read('index.html');
 // whichever module now holds the text it asserts.
 const app = [
   'state.js', 'persistence.js', 'geometry.js', 'render.js',
-  'interactions.js', 'menus.js', 'export.js', 'boards.js', 'app.js',
+  'interactions.js', 'menus.js', 'export.js', 'boards.js', 'calendar.js', 'app.js',
 ].map(read).join('\n');
 const sw = read('sw.js');
 const swTest = read('test/sw-update.js');
@@ -995,7 +995,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     (app.match(/state\.current\.parkingLot\.find/g) || []).length === 1 &&
     !/const CALKEY_DATE\s*=/.test(read('boards.js')));
   ok('every Sunday day card carries the 2px Calendar-orange bottom divider (issue #398)',
-    /day\.date\.getDay\(\) === 0 \? ' sunday'/.test(read('boards.js')) &&
+    /day\.date\.getDay\(\) === 0 \? ' sunday'/.test(read('calendar.js')) &&
     /\.cal-day\.sunday \{ border-bottom: 2px solid var\(--frame\); \}/.test(css));
   // --- Issue #170: the calendar card shrink ---
   ok('non-today day cards are their content\'s size; the freed height leaves the stack (issue #170)',
@@ -1068,8 +1068,8 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /function calWindow\(count = 7, start = new Date\(\)\)/.test(read('state.js')) && /for \(let i = 0; i < count; i\+\+\)/.test(read('state.js')) &&
     !/calRoll|rollWindow|midnightTimer/.test(app));
   ok('the default stack window is today plus the next 30 dates, with no past cards (issue #398)',
-    /const CAL_FUTURE_DAYS = 30;/.test(read('boards.js')) &&
-    /calWindow\(CAL_FUTURE_DAYS \+ 1\)/.test(read('boards.js')) &&
+    /const CAL_FUTURE_DAYS = 30;/.test(read('calendar.js')) &&
+    /calWindow\(CAL_FUTURE_DAYS \+ 1\)/.test(read('calendar.js')) &&
     /function calWindow\(count = 7, start = new Date\(\)\)[\s\S]*?new Date\(first\.getFullYear\(\), first\.getMonth\(\), first\.getDate\(\) \+ i\)/.test(read('state.js')));
   ok('the mirror has one writer and a self-recorded span (R5\'s line identity)',
     /function syncMirror\(board, events\)/.test(app) && /board\.calReq = mirrored\.length/.test(app));
