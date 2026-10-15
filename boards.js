@@ -1,9 +1,13 @@
 /* --- 11. Board list + routing -------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { CAT_SEC_GAP, CE, COPY, GLYPH, LEAVE_MS, LIST_CARD_COLS, LIST_CARD_H, LIST_CAT_ROW } from './state.js';
-import { LONGPRESS_MS, MOVE_THRESHOLD, PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP, SWAP_MS, calBoardOf } from './state.js';
-import { calEventsOf, calKey, calWindow, el, ensureLinkedBoard, EMBED, histPush, makeDayNoteRecord, newBoardRecord, state } from './state.js';
-import { syncMirror, mirrorEventsOf } from './state.js';
+import {
+  BOARD_CATS, CALKEY_DATE, CAT_SEC_GAP, CE, COPY, GRID_ORDER, GLYPH, LEAVE_MS,
+  LIST_CARD_COLS, LIST_CARD_H, LIST_CAT_ROW, LONGPRESS_MS, MOVE_THRESHOLD,
+  PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP, SWAP_MS, boardsOf, calBoardOf,
+  calDayName, calEventsOf, calKey, calMD, calWindow, catOf, el, EMBED,
+  ensureLinkedBoard, eventsOf, histPush, live, makeDayNoteRecord, mirrorEventsOf,
+  newBoardRecord, pad2, state, syncMirror,
+} from './state.js';
 import { cancelPendingSave, flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, scheduleSave } from './persistence.js';
 import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze, setPaneCollapsed } from './geometry.js';
 import { applyBoardCat, linkedDate, LINKED_TITLE, renderBoard, seatAllNotes, syncViewTitle } from './render.js';
@@ -91,24 +95,10 @@ function fillRowContent(node, b) {
   }
 }
 
-/* Four categories since issue #112 / B74 — To Do, Notes, Learning, Ideas, in
-   that stacked order (the rail, the drilled list, and the All-Boards picker all
-   read it top to bottom). Learning is the one genuinely new bucket (pale pink,
-   UIUX §2.2.2 / B74); "unsorted" keeps its storage key and the "Notes" label
-   (B63). catOf() stays a read-site default — a record whose category is none of
-   the three named buckets IS 'unsorted' (B21's idiom, unchanged). */
-export const BOARD_CATS = ['todo', 'unsorted', 'learning', 'idea'];
+/* The category lists, order and fallback are shared from state.js; only the
+   display-copy map belongs to this renderer. */
+export { BOARD_CATS, GRID_ORDER, catOf, calMD, calDayName, eventsOf };
 const CAT_COPY = { todo: 'catTodo', idea: 'catIdea', unsorted: 'catUnsorted', learning: 'catLearning' };
-export const catOf = (b) =>
-  (b.category === 'todo' || b.category === 'idea' || b.category === 'learning')
-    ? b.category : 'unsorted';
-/* The mobile All-Boards grid is a 2x2 whose clockwise reading from the top-left
-   must be To Do, Notes, Learning, Ideas (issue #112). A row-major 2-col grid
-   fills TL, TR, BL, BR — so clockwise is TL, TR, BR, BL, and the DOM order that
-   lands Learning at BR and Ideas at BL is [todo, unsorted, idea, learning].
-   The stacked order (BOARD_CATS) and this grid order genuinely differ: a column
-   reads top-to-bottom, a 2x2 reads clockwise. */
-export const GRID_ORDER = ['todo', 'unsorted', 'idea', 'learning'];
 /* In-category order is last touch, newest first (issue #97 / B69, superseding
    B24's immutable slot): a board you just edited comes back to the top of its
    section. Two writes are a touch and both have a claim on the first slot —
@@ -131,7 +121,7 @@ export const catOrder = (a, b) => (touchedAt(b) - touchedAt(a)) || boardOrder(a,
    budget the last render used, and boardUi.catFilled the fill state it measured
    against — applyLayout compares both. */
 const boardUi = {
-  catPage: { todo: 0, idea: 0, unsorted: 0, learning: 0 },
+  catPage: Object.fromEntries(BOARD_CATS.map((cat) => [cat, 0])),
   catCap: 0,                           // 0 = never rendered; the capacity check waits
   catFilled: 0,                        // populated sections the last render measured
   catOpen: null,                       // B137: the tablet accordion's one expanded category (session state, not persisted)
@@ -369,7 +359,7 @@ export async function renderListSurface() {
 async function renderCat(cat) {
   const all = await idbGetAll();
   const boards = all
-    .map(b => (state.current && b.id === state.current.id) ? state.current : b)
+    .map(live)
     .filter(b => catOf(b) === cat);
   boardUi.catFilled = 1;
   boardUi.catCap = catPageCap(1, 1);                  // one section drawn: it takes the whole surface
@@ -440,8 +430,7 @@ export function formatDate(ms) {
 // PDF export's long form from export.js — this is a second formatter, not a change.
 function formatMDY(ms) {
   const d = new Date(ms);
-  const p = (n) => String(n).padStart(2, '0');
-  return p(d.getMonth() + 1) + '/' + p(d.getDate()) + '/' + p(d.getFullYear() % 100);
+  return pad2(d.getMonth() + 1) + '/' + pad2(d.getDate()) + '/' + pad2(d.getFullYear() % 100);
 }
 
 /* One gesture law for a board card, on either surface (issue #74 / B44).
@@ -680,12 +669,12 @@ export async function renderPane() {
   // would never arrive, stranding the fixed ghost on screen. Cancel it first.
   if (dragUi.dragCancel) dragUi.dragCancel();
   const all = await idbGetAll();
-  const buckets = { todo: [], idea: [], unsorted: [], learning: [] };
+  const buckets = Object.fromEntries(BOARD_CATS.map((cat) => [cat, []]));
   // The open board buckets from memory, not the snapshot: `current` is
   // authoritative for it (the export takes the same stance), and a drop's
   // write can still be behind the debounced persist when this getAll runs.
   for (const b of all) {
-    const rec = (state.current && b.id === state.current.id) ? state.current : b;
+    const rec = live(b);
     buckets[catOf(rec)].push(rec);
   }
   boardUi.catFilled = BOARD_CATS.filter(c => buckets[c].length).length;
@@ -840,7 +829,7 @@ async function ensureCurrentValid() {
   // Events ride the boards store (B105) with no `updatedAt` — same reduce
   // hazard as boot's most-recent pick: an event-first store would open an
   // event as the board. Current is a BOARD.
-  const boards = all.filter(r => r.title !== undefined);
+  const boards = boardsOf(all);
   state.current = boards.length ? boards.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)) : newBoardRecord();
   if (!boards.length) await idbPut(state.current);
   renderBoard();
@@ -896,9 +885,8 @@ function renderCalRail() {
   if (!state.isWide) return;
   el.calView.hidden = false;          // the rail is standing furniture: never hidden on wide
   const today = new Date();
-  const p = (n) => String(n).padStart(2, '0');
   el.calRail.querySelector('.cdate').textContent =
-    calDayName(today).slice(0, 3) + ' ' + p(today.getMonth() + 1) + '/' + p(today.getDate());
+    calDayName(today).slice(0, 3) + ' ' + calMD(today);
   // The dot is the aperture (mockup 6): lit iff today carries events.
   flushSave();
   idbGetAll().then((all) => {
@@ -1001,14 +989,6 @@ function hideCal() {
   else renderCalRail();
 }
 
-function calDayName(d) {
-  return d.toLocaleDateString(undefined, { weekday: 'long' });
-}
-export function calMD(d) {
-  const p = (n) => String(n).padStart(2, '0');
-  return p(d.getMonth() + 1) + '/' + p(d.getDate());
-}
-
 export function makeCalDay(day, dayNotes, board) {
   const card = document.createElement('div');
   // Issue #385 (B159): Saturday and Sunday cards carry the weekend class —
@@ -1053,7 +1033,7 @@ export function makeCalDay(day, dayNotes, board) {
    rewritten from the live event list (one writer). */
 export async function syncDateMirror(dateKey) {
   const all = await idbGetAll();
-  const boards = all.filter(b => b.title !== undefined);
+  const boards = boardsOf(all);
   const board = calBoardOf(boards, dateKey);
   if (!board) return;
   if (syncMirror(board, calEventsOf(eventsOf(all), dateKey))) await idbPut(board);
@@ -1116,12 +1096,6 @@ export async function writeThroughRequirements(board, before) {
   }
 }
 
-/* Event records ride the boards store (one store, no schema bump); they are
-   the records with a `date` and no `title`. Filtered once, at the read. */
-export function eventsOf(all) {
-  return all.filter(r => typeof r.date === 'string' && typeof r.text === 'string' && r.title === undefined);
-}
-
 /* --- The day-roll launch (issue #153, B105) + the morning lifecycle (B108) --
    Each morning's first load, TODAY's linked To-Do board exists — created by
    `ensureLinkedBoard` even with zero events (B107's unconditional landing,
@@ -1170,7 +1144,7 @@ async function launchTodayBoard(today) {
           !(state.current.notes || []).length) state.current = null;
       flushSave();
       const all = await idbGetAll();
-      const boards = all.filter(b => b.title !== undefined);
+      const boards = boardsOf(all);
       const { board } = ensureLinkedBoard(boards, today);
       // B162: this block is no longer the morning's alone — the mid-session
       // roll (the open-past-midnight case) runs the same routine: the mirror
@@ -1316,7 +1290,6 @@ let calDayNotePage = {};             // per-day pager position: day.key -> page
 
 const CAL_NOTE_PER_DAY = 3;          // the owner's cap: three squares per day
 const CAL_FUTURE_DAYS = 30;           // issue #398: rolling stack beyond today's separate body
-const CALKEY_DATE = /^\d{4}-\d{2}-\d{2}$/;   // a calKey date (the `day` field; also a legacy next-occurrence calKey, not body text)
 
 function calNoteRecords(all) {
   return all.filter((r) => typeof r.rem === 'string' && typeof r.day === 'string'
@@ -1530,14 +1503,8 @@ const MO_WDS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
    flagged by key comparison (the flag is computed, not positional — the
    tapped week usually does not contain today). */
 function calWeekOf(anchor) {
-  const days = [];
   const start = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - anchor.getDay());
-  const tk = calKey(new Date());
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-    days.push({ key: calKey(d), date: d, today: calKey(d) === tk });
-  }
-  return days;
+  return calWindow(7, start);
 }
 
 function renderCalMonth(evDays) {

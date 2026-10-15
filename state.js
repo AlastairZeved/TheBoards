@@ -73,6 +73,15 @@ export const LEAVE_MS = 200;
 export const TOAST_HIDE_MS = 210;           // just past the toast's 200ms fade before hidden lands
 export const ACTION_DELAY = 400;            // re-fire drop-guard: a consequence commits now, a second tap inside is dropped (B81)
 export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+export const REF_W = 900, REF_H = 1000;
+export const pad2 = (n) => String(n).padStart(2, '0');
+
+/* Shared board categories (issue #432): the stacked order is the source for
+   every category-derived collection. The 2x2 picker reads clockwise, so its
+   row-major DOM order swaps the bottom pair; unknown categories default to Notes. */
+export const BOARD_CATS = ['todo', 'unsorted', 'learning', 'idea'];
+export const GRID_ORDER = [BOARD_CATS[0], BOARD_CATS[1], BOARD_CATS[3], BOARD_CATS[2]];
+export const catOf = (board) => BOARD_CATS.includes(board.category) ? board.category : BOARD_CATS[1];
 
 export const COPY = {
   // "All boards" (issue #60): the menu item is a destination, and "Boards"
@@ -294,7 +303,8 @@ export const uuid = () =>
 
 /* Every persisted record shape, in one place. Each field maps to its coercer;
    construction, PDF projection, and backup import all use this table. */
-const isDateKey = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+export const CALKEY_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const isDateKey = (v) => typeof v === 'string' && CALKEY_DATE.test(v);
 const isString = (v) => typeof v === 'string' ? v : '';
 const isId = (v) => typeof v === 'string' && v ? v : uuid();
 const isFiniteNumber = (v, fallback) => Number.isFinite(v) ? v : fallback;
@@ -345,6 +355,8 @@ export function copyRecordFields(kind, raw) {
     .map((key) => [key, raw[key]]));
 }
 
+export const splitLines = (text) => text ? text.split('\n') : [];
+
 export const makeDayNoteRecord = (day) => makeRecord('dayNote', {
   id: 'rem-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
   rem: '', next: '', day,
@@ -385,20 +397,24 @@ const CAL_TITLE_SUFFIX = ' To Do';
    formatter (UIUX §10); these two are the calendar's own — key for storage and
    linking, long form for a day card's header. */
 export function calKey(d) {
-  const p = (n) => String(n).padStart(2, '0');
-  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
 }
 
-/* The rolling calendar window, today first (R7.4 — no past cards; mockup 6's
-   "yesterday deepest" line is dead). `count` is the number of dates, including
-   today; the weekly stack requests today + the next 30, while PDF export keeps
-   its existing seven-day window. Each entry is { key, date: Date, today: bool }. */
-export function calWindow(count = 7) {
+export const calMD = (d) => pad2(d.getMonth() + 1) + '/' + pad2(d.getDate());
+export const calDayName = (d) => d.toLocaleDateString(undefined, { weekday: 'long' });
+
+/* Consecutive local calendar dates from `start` (today by default). `count`
+   includes the start date; the weekly stack requests today + the next 30, while
+   the tapped week supplies its Sunday start and PDF export keeps seven days.
+   Each entry is { key, date: Date, today: bool }, with today determined by key. */
+export function calWindow(count = 7, start = new Date()) {
   const days = [];
-  const now = new Date();
+  const first = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const todayKey = calKey(new Date());
   for (let i = 0; i < count; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
-    days.push({ key: calKey(d), date: d, today: i === 0 });
+    const d = new Date(first.getFullYear(), first.getMonth(), first.getDate() + i);
+    const key = calKey(d);
+    days.push({ key, date: d, today: key === todayKey });
   }
   return days;
 }
@@ -419,7 +435,7 @@ export function newCalEvent(dateKey, text) {
    itself (renderPane's stance). */
 export function calBoardOf(all, dateKey) {
   for (const b of all) {
-    const rec = (state.current && b.id === state.current.id) ? state.current : b;
+    const rec = live(b);
     if (rec.cal === dateKey) return rec;
   }
   return null;
@@ -430,6 +446,10 @@ export function calEventsOf(events, dateKey) {
   return events.filter(e => e.date === dateKey)
     .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0) || (a.id < b.id ? -1 : 1));
 }
+
+export const boardsOf = (all) => all.filter((record) => record.title !== undefined);
+export const eventsOf = (all) => all.filter((record) =>
+  typeof record.date === 'string' && typeof record.text === 'string' && record.title === undefined);
 
 /* Ensure a date's linked To-Do board exists; create it on the date's first
    event (R5). Returns the board record (existing or new, already in `all`).
@@ -462,8 +482,7 @@ export function ensureLinkedBoard(all, dateKey) {
 
    Requirements is one plain string (PRD §4.1): lines are \n-separated. */
 export function syncMirror(board, events) {
-  const lines = (board.requirements || '').length
-    ? board.requirements.split('\n') : [];
+  const lines = splitLines(board.requirements || '');
   const span = typeof board.calReq === 'number'
     ? board.calReq
     : Math.min(lines.length, events.length);   // first sync on a legacy pair
@@ -482,8 +501,7 @@ export function syncMirror(board, events) {
    position (the first lines are the mirror's). Used when the READER edits a
    line — the edit writes through to the event record it mirrors. */
 export function mirrorEventsOf(board, events) {
-  const lines = (board.requirements || '').length
-    ? board.requirements.split('\n') : [];
+  const lines = splitLines(board.requirements || '');
   if (!board.cal) return [];
   const mine = calEventsOf(events, board.cal);
   const span = typeof board.calReq === 'number'
@@ -566,6 +584,12 @@ export const state = {
   calOpen: false,         // the MOBILE full-screen calendar (B95's third screen)
   calExpanded: false,     // wide's expanded panel (B99) — rail-up is not "open"
 };
+
+/* Shared record lookups (issue #432): all resolve against the in-memory open
+   board, preserving the existing undefined-on-miss behavior of Array.find. */
+export const noteRec = (id) => state.current && state.current.notes.find((note) => note.id === id);
+export const lotRec = (id) => state.current && state.current.parkingLot.find((item) => item.id === id);
+export const live = (record) => state.current && record.id === state.current.id ? state.current : record;
 
 /* New boards write their category (B67, extending B63's rule to the creation
    path): since the ladder rotates with board type, an unwritten category is

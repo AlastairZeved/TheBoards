@@ -1,6 +1,6 @@
 /* --- 6. Rendering -------------------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { COPY, GLYPH, anchorEls, calKey, el, state, uuid } from './state.js';
+import { COPY, GLYPH, anchorEls, calKey, el, noteRec, state, uuid } from './state.js';
 import { idbGet, idbGetAll, idbPut, saveNow, scheduleSave } from './persistence.js';
 import { applyLayout, applyNoteWidth, effScale, LOGICAL_H, noteK, renderX, renderY, setHitInset } from './geometry.js';
 import { clearSelection, commitAction, completeNote, copyText, deleteNotes, hideToast, isEditing, multiSel } from './interactions.js';
@@ -279,7 +279,7 @@ export function runClockAction(btn) {
   if (!node) return;
   if (isEditing(document.activeElement)) { document.activeElement.blur(); return; }
   const id = node.dataset.id;
-  const local = state.current.notes.find(n => n.id === id);
+  const local = noteRec(id);
   commitAction(() => {
     if (local) {
       if (local.reminder) delete local.reminder; else local.reminder = true;
@@ -472,7 +472,7 @@ export function seatAllNotes() {
   if (!state.current) return;
   let raised = false;
   noteEls.forEach((node, id) => {
-    const note = state.current.notes.find(n => n.id === id);
+    const note = noteRec(id);
     if (note && reflectToolbarSeat(node, note, false)) raised = true;
   });
   if (raised) saveNow();              // one save for the whole pass, not one per note
@@ -516,7 +516,7 @@ export function copyNoteTexts(anchorId) {
                   multiSel.size > 1 && multiSel.has(anchorId);
   const ids = inMulti ? selectedNoteIds() : [anchorId];
   copyText(ids.map(id => {
-    const n = state.current.notes.find(m => m.id === id);
+    const n = noteRec(id);
     return n ? n.text : '';
   }).join('\n'));
 }
@@ -528,7 +528,7 @@ export function copyNoteTexts(anchorId) {
 export function runNoteToolbarAction(btn) {
   const noteNode = btn.closest('.note');
   if (!noteNode) return;
-  const note = state.current.notes.find(n => n.id === noteNode.dataset.id);
+  const note = noteRec(noteNode.dataset.id);
   if (!note) return;
   const editingHere = () =>
     isEditing(document.activeElement) && noteNode.contains(document.activeElement);
@@ -691,8 +691,8 @@ export function updateLinks() {
   ensureLinkLayer();
   const live = new Set();
   for (const link of links) {
-    const na = state.current.notes.find(n => n.id === link.a);
-    const nb = state.current.notes.find(n => n.id === link.b);
+    const na = noteRec(link.a);
+    const nb = noteRec(link.b);
     const ea = noteEls.get(link.a), eb = noteEls.get(link.b);
     if (!na || !nb || !ea || !eb) continue;
     const ca = noteCenter(na, ea), cb = noteCenter(nb, eb);

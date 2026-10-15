@@ -17,13 +17,12 @@
    ---------------------------------------------------------------------- */
 
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { COPY, NOTE_MIN_W, UNDO_MS, calEventsOf, calWindow, copyRecordFields, makeRecord, state, uuid } from './state.js';
+import { BOARD_CATS, COPY, LOT_HEAD, LOT_MAX_FRAC, LOT_ROW, NOTE_MIN_W, REF_W, REF_H, UNDO_MS, calDayName, calEventsOf, calMD, calWindow, copyRecordFields, eventsOf, live, makeRecord, pad2, state, uuid } from './state.js';
 import { flushSave, idbGet, idbGetAll, idbPut } from './persistence.js';
 import { LOGICAL_H, LOGICAL_W, bandRuleYFor, noteKFor, noteMaxW } from './geometry.js';
-import { LOT_HEAD, LOT_MAX_FRAC, LOT_ROW } from './state.js';
 import { renderBoard } from './render.js';
 import { showNotice } from './interactions.js';
-import { calMD, eventsOf, formatDate, listOpen, renderListSurface, renderPane } from './boards.js';
+import { formatDate, listOpen, renderListSurface, renderPane } from './boards.js';
 
 const A4_W = 595.28, A4_H = 841.89;  // pt; the fit is one constant either way
 const PDF_MARGIN = 36;
@@ -32,7 +31,7 @@ const PDF_ASC = 0.718, PDF_DESC = 0.207;   // Helvetica em box, for baselines
 /* The export sheet is the 900x1000 REFERENCE frame, never the live
    LOGICAL_W/LOGICAL_H — those are viewport-derived (B20/B32), so exporting at
    them would make the same board a different document on every device. */
-export const EXPORT_W = 900, EXPORT_H = 1000;
+export const EXPORT_W = REF_W, EXPORT_H = REF_H;
 
 /* The export's OWN named palette — paper-light, deliberately NOT derived from
    :root (UIUX §15, B48): the app is dark-only now, and a dark board prints as
@@ -708,7 +707,7 @@ export async function exportCalPdf() {
       for (const day of calWindow()) {
         room(30); y += 12;
         para((day.today ? COPY.calToday + ' — ' : '') +
-          day.date.toLocaleDateString(undefined, { weekday: 'long' }) + ' ' + calMD(day.date),
+          calDayName(day.date) + ' ' + calMD(day.date),
           11, 15, true, PDF_INK);
         p.fill(PDF_SHADE).rect(L, y + 1, W, 0.5).raw('f');
         y += 6;
@@ -728,9 +727,8 @@ export async function exportCalPdf() {
     })();
     const bytes = pdfAssemble([stream], COPY.calTitle);
     const d = new Date();
-    const pad = (n) => (n < 10 ? '0' : '') + n;
     downloadBlob(new Blob([bytes], { type: 'application/pdf' }),
-      'calendar-' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + '.pdf');
+      'calendar-' + d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + '.pdf');
     if (pdfUi.pdfLossy) showNotice(COPY.exportLossy, 'export', UNDO_MS);
   } catch (e) {
     showNotice(COPY.exportError, 'export', UNDO_MS);
@@ -746,8 +744,7 @@ function pdfFilename(rec) {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60)
     .replace(/-+$/, '');
   const d = new Date(rec.createdAt || Date.now());
-  const pad = (n) => (n < 10 ? '0' : '') + n;
-  const stamp = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const stamp = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
   return (slug || 'board') + '-' + stamp + '.pdf';
 }
 
@@ -773,8 +770,9 @@ function downloadBlob(blob, name) {
    from IndexedDB in case its snapshot has aged. */
 export async function exportBoardPdf(board) {
   try {
-    const src = (state.current && state.current.id === board.id)
-      ? state.current : ((await idbGet(board.id)) || board);
+    const current = live(board);
+    const src = current === state.current
+      ? current : ((await idbGet(board.id)) || board);
     // B8/B31's sweep on a COPY. Records reach the menu straight from
     // idbGetAll(), so they have never been through renderBoard's sanitize, and
     // a whitespace husk would export as an empty framed box. Copying rather
@@ -835,8 +833,7 @@ export async function exportAllJson() {
       dayNotes,
     };
     const d = new Date();
-    const pad = (n) => (n < 10 ? '0' : '') + n;
-    const stamp = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    const stamp = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
     downloadBlob(new Blob([JSON.stringify(payload)], { type: 'application/json' }),
       'boards-backup-' + stamp + '.json');
   } catch (e) {
@@ -848,7 +845,7 @@ export async function exportAllJson() {
    read-site default (B21/B67: 'unsorted') — a file from a future version with
    a fifth category must still import, landing where the list already files
    unknown cats, rather than being rejected wholesale. */
-const IMPORT_CATS = new Set(['todo', 'idea', 'unsorted', 'learning']);
+const IMPORT_CATS = new Set(BOARD_CATS);
 
 /* One imported board, normalized to this app's record shape. Every field is
    coerced, not trusted: a backup is data that has been OUT of the device, and

@@ -72,8 +72,8 @@ run(async () => {
     });
     ok('one tap sets reminder: record true, glow class on, aria-pressed true, label flips',
       got.rec === true && got.cls === true && got.pressed === 'true' && got.label === 'Remove reminder', JSON.stringify(got));
-    ok('the record grew NO time field — known keys only, reminder a plain boolean',
-      JSON.stringify(got.keys) === JSON.stringify(['id', 'reminder', 'rh', 'rw', 'scale', 'state', 'text', 'x', 'y'].sort()) &&
+    ok('the record grew NO time field — current note fields only, reminder a plain boolean',
+      JSON.stringify(got.keys) === JSON.stringify(['carriedOn', 'highlighted', 'id', 'reminder', 'rh', 'rw', 'scale', 'state', 'text', 'title', 'x', 'y'].sort()) &&
       got.rec === true, JSON.stringify(got.keys));
 
     // B132: the glow is the CARD's, not the button's — yellow bloom on the
