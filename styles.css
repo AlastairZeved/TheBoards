@@ -1,8 +1,8 @@
 /* ============================================================================
    Zeved Boards — styles.css
    Identity comes from structure (frame, scratch-out, surface tone), never
-   costume. See The Docket/UIUX.md: §2 tokens, §3 geometry, §4 note, §6 touch floor,
-   §7 menu, §8 motion, §9 toast, §10 list, §12 a11y, §13 type, §14 controls.
+   costume. UIUX marker map: §1 global, §2 tokens, §3 geometry/calendar,
+   §4 note, §7 menu, §8 motion, §9 toast, §10 board list/rail, §13 typography.
    ========================================================================== */
 
 /* --- UIUX §13.1 The typeface: Montserrat Alternates, self-hosted, no CDN --
@@ -24,7 +24,7 @@
   src: url(fonts/MontserratAlternates-800.woff2) format('woff2');
 }
 
-/* --- §2 Design tokens — one theme, dark-only (UIUX §2.1, B48) -------------
+/* --- UIUX §2 Design tokens — one theme, dark-only (UIUX §2.1, B48) --------
    The page reads top to bottom as one scene, inverted by B58's second swap:
    water closing both ends of the sheet, the deep between, and the note as
    the one lit thing on the deep (UIUX §2.2). One rung is not a value — the
@@ -55,7 +55,7 @@
      undefined variable at their declaration element and were rejected
      invalid-at-computed-value-time — inheriting as UNSET everywhere the
          hairline is used (every 1px hairline in the app computed to 0px; the
-         R4 fix's hourly-strip border-bottom could not paint for this reason,
+         the hourly-strip border-bottom could not paint for this reason,
          not the flex/height collapse the field report described). The handles
      still override per surface below (UIUX §2.3). */
   --ink:             var(--ink-light);
@@ -86,7 +86,7 @@
      the note rung 0.5962 (B126's pink is the rung's reference value) — each
      keeping its own hue family, each carrying --ink-dark at 11.83–11.84:1
      (UIUX §2.6.4). Dedicated tokens: --frame stays the card border/rules token
-     (B61), the --highlight WASH keeps its 0.675 rung (§2.6.1), --danger keeps
+     (B61), the --highlight WASH keeps its 0.675 rung (UIUX §2.6.1), --danger keeps
      menu text and the .sel-btn fill. --tab-complete rotates with the ladder
      like --frame (B67); the other three do not rotate. */
   --tab-complete:    #becce2;   /* the board's frame-family hue lifted to the shared rung (rotates, B67/B127) */
@@ -112,11 +112,11 @@
 .on-dark  { --ink: var(--ink-light); --ink-a: 244 245 241; }
 .on-light { --ink: var(--ink-dark);  --ink-a: 3 16 25; }
 
-/* --- §2.2.2 The ladder rotates with the board type (issue #96, B67) -------
+/* --- UIUX §2.2.2 The ladder rotates with the board type (issue #96, B67) --
    A board type is a whole scene, not a rung on one. The ladder's single axis
    stays luminance (UIUX §2.2.1 rule 1): every rung below reproduces the To-Do
    rung's WCAG relative luminance to the 4dp the record prints, so every ratio
-   UIUX §2.2/§2.3/§2.5/§2.7 publishes holds unchanged on all three. Only the
+   UIUX §2.2, UIUX §2.3, UIUX §2.5, and UIUX §2.7 publish unchanged values on all five ladders. Only the
    family's hue moves — the blue's 205°..261° to a hunter green at 139°..171°
    and a violet at 295°..310°.
 
@@ -139,7 +139,7 @@
    To-Do needs no block: it IS :root, which is also what a board shows before
    app.js has spoken. A record with no category is the third bucket
    everywhere — catOf()'s read-site default, B21's idiom — so it files under
-   Note Boards in the list AND renders violet. The two agree, which is the
+   Notes in the list AND renders violet. The two agree, which is the
    whole point of the card preview further down. */
 #board[data-cat="idea"], #pane[data-cat="idea"] {
   --deep:        #000a06;
@@ -152,7 +152,7 @@
   --tab-complete: #b3d2c3;
   --note:        #b9d2b2;
 }
-/* Storage key 'unsorted', label "Note Boards" — B63 renamed the label only. */
+/* Storage key 'unsorted', label "Notes" — B63/B78 changed the label only. */
 #board[data-cat="unsorted"], #pane[data-cat="unsorted"] {
   --deep:        #0c0512;
   --card:        #1e0f28;
@@ -187,12 +187,12 @@
    section, so this binds the way To-Do binds on :root: the ladder is rebound
    under #cal-view and nothing inside it carries data-cat (makeCalDay builds
    plain divs), so the rebinding re-scopes exactly the calendar chrome — the
-   rail, the R1 row, the day cards' water fall and date compartments, and the
+   rail, the Calendar exit row, the day cards' water fall and date compartments, and the
    month view's today cell, which reads the same var(--water-*) fall. Every
    rung reproduces the To-Do rung's WCAG luminance to the 4dp UIUX §2.2 prints
    AND its 2dp ink ratios (test/tokens.js asserts it against this ladder too);
    the arc runs ~47–66deg, narrowed like the other rotations, and the residuals
-   are recorded in §2.2.2. Linked boards opened FROM the calendar keep their
+   are recorded in UIUX §2.2.2. Linked boards opened FROM the calendar keep their
    own data-cat scopes — they are #board elements, not children of this one. */
 #cal-view {
   --deep:        #110501;
@@ -209,8 +209,8 @@
    previews its board's hue. Since issue #107 (B72) a section is a framed,
    tinted tray in its own family, so it now reads FOUR rungs of the rotated
    ladder: the water's upper fall for its cards (see .board-row / .pane-card in
-   §10), plus --card as the tray ground and --frame as the tray's inset frame
-   (see the base .board-cat in §10.5). .card-drag-ghost is fixed to the
+   UIUX §10), plus --card as the tray ground and --frame as the tray's inset frame
+   (see the base .board-cat in UIUX §10). .card-drag-ghost is fixed to the
    viewport off document.body, outside its section's scope, so app.js stamps
    the attribute onto the ghost itself and it keeps its hue in the air — the
    ghost is a single card with no tray, so it takes only the two water stops. */
@@ -268,7 +268,7 @@
   --water-mid:   #6a414c;
 }
 
-/* --- Global -------------------------------------------------------------- */
+/* --- UIUX §1 Global rules ------------------------------------------------ */
 * { box-sizing: border-box; }
 
 html, body { margin: 0; height: 100%; width: 100%; }
@@ -296,7 +296,7 @@ body {
 [contenteditable] { -webkit-user-select: text; user-select: text; }
 
 /* ============================================================================
-   §3 Board view — layout geometry
+   UIUX §3 Board view — layout geometry
    ========================================================================== */
 #board-view {
   position: fixed;
@@ -322,7 +322,7 @@ body {
   touch-action: none;
 
   /* The band's geometry, declared once and derived from here (B35). Every edge
-     in §3 — both zones, the card, the rule, the lot — reads these, so the card
+     in UIUX §3 — both zones, the card, the rule, the lot — reads these, so the card
      can be resized in one place and the columns follow. Previously the card's
      right edge was the literal 62.2222% restated in three rules, and
      #zone-components landed on the card's *left* edge only because
@@ -362,13 +362,13 @@ body {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.86' numOctaves='4' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
 }
 
-/* ---- §3 / §6.1 Anchors (furniture; render beneath notes) ---------------- */
+/* ---- UIUX §3 / PRD §6.1 Anchors (furniture; render beneath notes) ------- */
 .anchor {
   position: absolute;
   z-index: 1;
   box-sizing: border-box;
   padding: 2px 0 4px;
-  min-height: 44px;                   /* long-pressable even when empty (§6.1) */
+  min-height: 44px;                   /* long-pressable even when empty (PRD §6.1) */
   color: var(--ink);
   caret-color: var(--ink);
   white-space: pre-wrap;
@@ -391,7 +391,7 @@ body {
   box-shadow: 0 0 0 4px var(--ink-dark);
 }
 
-/* ---- §3 The top band (B33/B38; resettled B47, UIUX §3.1) ----------------
+/* ---- UIUX §3.1 The top band (B33/B38; resettled B47) --------------------
    Drawn furniture, not a by-product of content. The section sits ABOVE the
    rule: reading down, Components/Requirements content, then the rule as the
    band's bottom edge, with each header hanging just below it as a tight tab
@@ -450,7 +450,7 @@ body {
 
 /* Issue #393 (the owner's ruling of 2026-10-11): the linked To Do board's
    MIRRORED Requirements lines render in read state as square blocks — the
-   calendar's .cal-note species (§3.4's family) as board-scoped classes —
+   calendar's .cal-note species (UIUX §3.4) as board-scoped classes —
    while hand lines below the mirror's span stay the anchor's own plain
    pre-wrap text. The square's fill is the CALENDAR ladder's --note rung
    #e3c6aa (UIUX §2.2.2's derivation is the authority; the literal hex,
@@ -547,7 +547,7 @@ html.desktop .req-square {
    no orphan strip of paper above a second top edge, and a tap on the
    compartment's shoulders reaches the title it belongs to instead of dropping
    a note behind the frame. Always framed, empty or not — the one deliberate
-   exception to §6.2 "no empty frames", which protects the free canvas; the
+   exception to PRD §6.2 "no empty frames", which protects the free canvas; the
    compartment is permanent furniture and the reference draws it on a blank
    board. Opaque, so it occludes the rule. min-height, so a long title grows
    it downward. */
@@ -579,7 +579,7 @@ html.desktop .req-square {
    name, with the board's date on the line beneath it. Both are render-time
    (render.js) and both are pinned, so this seat never holds a caret. The date
    rides the app's secondary rung — the ground's own pole, the family the
-   legible secondary stamps wear (§16.2 retired the mid-grey), at a smaller
+   legible secondary stamps wear (UIUX §16.2 retired the mid-grey), at a smaller
    size: it carries the day, the title leads. One short line fits inside the
    compartment's existing min-height beside a one-line title, so the card's
    geometry is untouched. */
@@ -589,11 +589,11 @@ html.desktop .req-square {
   color: var(--ink);
 }
 
-/* The board-action row (issue #126 / B83, UIUX §3.3 / §14; three tabs since
-   issue #140 / B92). The board-level actions declared as flat
+/* The board-action row (issue #126 / B83, UIUX §3.3 / UIUX §14; four tabs since
+   B95). The board-level actions declared as flat
    tabs hovering just above the Parking Lot: the mirror, at the sheet's other
    end, of the band's header tabs. They are the FLAT-tab species (the owner's
-   call): the band label's own box, deliberately NOT §14's tactile signature —
+   call): the band label's own box, deliberately NOT UIUX §14's tactile signature —
    All boards navigates and Export/Import move files off and onto the device,
    none acts on a note, so
    they wear the sheet's furniture rather than a control that says "I have your
@@ -613,7 +613,7 @@ html.desktop .req-square {
   bottom: var(--lot-h, 122px);         /* flush ON the lot's top edge, no gap (issue #133, B87) */
   display: flex;
   justify-content: flex-start;         /* left-anchored, not centred (issue #134, B88) */
-  gap: 6px;                            /* four tabs since issue #145: 8px read 400px on a 390 phone — the trim is the fit (R7.2) */
+  gap: 6px;                            /* four tabs since issue #145: 8px read 400px on a 390 phone — the trim is the fit (B95) */
   pointer-events: none;
 }
 /* Mobile only (issue #266): at narrow embed widths (the owner's site frame runs
@@ -624,12 +624,12 @@ html:not(.wide) #board-actions {
   row-gap: 4px;
 }
 .board-action {
-  position: relative;                  /* the §6 hit collar hangs off this */
+  position: relative;                  /* the UIUX §6 hit collar hangs off this */
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 6px;                    /* vertical keeps B86's finger box; sides trimmed 12→6 for the four-tab row (issue #145, R7.2) */
+  padding: 8px 6px;                    /* vertical keeps B86's finger box; sides trimmed 12→6 for the four-tab row (issue #145, B95) */
   border: none;
   border-radius: 3px;                  /* symmetric — it hangs beneath no rule */
   background: var(--frame);            /* the band tab's own fill (B76) */
@@ -659,8 +659,8 @@ html:not(.wide) #board-actions {
   top: calc(-2 * var(--hit, 0px));
 }
 /* Interactive states are visible without the tactile shadow: a transient
-   brightness on hover/press (the §8 curve; the kill-switch drops the ease to an
-   instant change), and §2.7's two-tone ring on focus — state is never colour,
+   brightness on hover/press (the UIUX §8 curve; the kill-switch drops the ease to an
+   instant change), and UIUX §2.7's two-tone ring on focus — state is never colour,
    the toggle's own label is (UIUX §1). */
 @media (hover: hover) {                /* bare :hover sticks after a touch */
   .board-action:hover { filter: brightness(1.1); }
@@ -672,7 +672,7 @@ html:not(.wide) #board-actions {
   box-shadow: 0 0 0 4px var(--ink-dark);
 }
 
-/* ---- §3 / §6.5 Parking Lot (resettled B47/UIUX §3.2: a section, not a box)
+/* ---- UIUX §3.2 / PRD §6.5 Parking Lot (resettled B47: a section, not a box)
    Full-bleed — left 0, right 0, bottom 0 — with its CONTENT still on the
    gutter: it lives as a section of the page, the exact mirror of the band at
    the other end. This supersedes B32's one-left-margin as it applied to the
@@ -744,10 +744,10 @@ html:not(.wide) #board-actions {
   grid-template-rows: 1fr 1fr;
   gap: 8px;
 }
-/* Unframed text lines — the one place text is never framed (§4.4 / §6.5). */
+/* Unframed text lines — the one place text is never framed (UIUX §4.4 / PRD §6.5). */
 .lot-item {
   position: relative;
-  min-height: 44px;                    /* full-width hit row (§6) */
+  min-height: 44px;                    /* full-width hit row (UIUX §6) */
   display: flex;
   align-items: center;
 }
@@ -771,15 +771,15 @@ html:not(.wide) #board-actions {
 }
 
 /* ============================================================================
-   §4 The note component
+   UIUX §4 The note component
    ========================================================================== */
 .note {
   position: absolute;
-  transform-origin: top left;          /* stored x,y stays truthful (§4.1) */
+  transform-origin: top left;          /* stored x,y stays truthful (UIUX §4.1) */
   z-index: 2;                          /* above anchors; DOM order = z-order */
   touch-action: none;
 }
-/* Decoupled hit area — expands the touch zone to the 44px floor (§6). --hit
+/* Decoupled hit area — expands the touch zone to the 44px floor (UIUX §6). --hit
    is set per-note in JS so hit·scale·renderScale ≥ 44px physical. */
 .note::before {
   content: "";
@@ -818,7 +818,7 @@ html:not(.wide) #board-actions {
 .note.highlight .note-text {
   background: var(--highlight);
 }
-/* Frame draws itself on the first character; no empty frames ever (§6.2) — and
+/* Frame draws itself on the first character; no empty frames ever (PRD §6.2) — and
    an empty highlighted note is no exception: the wash waits for the first
    character exactly as the default fill does. */
 .note-text:empty,
@@ -833,7 +833,7 @@ html:not(.wide) #board-actions {
   box-shadow: 0 0 0 4px var(--ink-dark);
 }
 
-/* ---- §4.5a The note's Title tab (issue #173, B120) -----------------------
+/* ---- UIUX §4 The note's Title tab (issue #173, B120) --------------------
    A header-style tab peeking from BEHIND the card's top-left corner — a note
    slid up from behind, its header showing. A CHILD of the note (it scales with
    the card's transform — no scaling code), positioned over the card's top-left
@@ -848,26 +848,26 @@ html:not(.wide) #board-actions {
   z-index: 0;                          /* under the card body (.note-text), over the hit collar */
   max-width: calc(100% + 4px);
   padding: 2px 10px;
-  border: 2px solid var(--ink);        /* the card's own frame hand (§4.5) */
+  border: 2px solid var(--ink);        /* the card's own frame hand (UIUX §4.5) */
   border-bottom: 0;                    /* the tucked edge continues behind the card */
   border-radius: 3px 3px 0 0;
   background: var(--frame);
   color: var(--ink);
-  font-size: 13px; font-weight: 600; line-height: 1.3;   /* header-like: the band-label tab's ink (§3.1) */
+  font-size: 13px; font-weight: 600; line-height: 1.3;   /* header-like: the band-label tab's ink (UIUX §3.1) */
   white-space: nowrap;                 /* a single-line Title (B120) */
   overflow: hidden; text-overflow: ellipsis;
   text-align: left;
   outline: none;
 }
-.note-title:focus {                    /* the two-tone ring (§2.7), same as the note */
+.note-title:focus {                    /* the two-tone ring (UIUX §2.7), same as the note */
   outline: 2px solid var(--ink-light);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--ink-dark);
 }
 
-/* ---- §4.5 The note's action toolbar (B84, issue #126) -------------------
+/* ---- UIUX §4.5 The note's action toolbar (B84, issue #126) --------------
    A real minimum rendered width, so a note is always at least a toolbar wide.
-   It floors only NON-empty notes: an empty note keeps no frame (§6.2) and shows
+   It floors only NON-empty notes: an empty note keeps no frame (PRD §6.2) and shows
    no row, so it must stay free to be its true (zero) width. = NOTE_MIN_W in
    app.js, which is at once this floor, the wrap-cap floor and the drag/resize
    floor — a note can never be sized narrower than its own row. */
@@ -877,7 +877,7 @@ html:not(.wide) #board-actions {
    Remind · Delete, Delete last in --danger (Copy left for the note
    menu, B114; Remind joined per issue #240). A CHILD of the note, so
    it scales with it and is never wider than the note (the min-width above seats
-   it). Styled as the band-label tab (§3.1): --frame fill, .on-light ink at
+   it). Styled as the band-label tab (UIUX §3.1): --frame fill, .on-light ink at
    13px/600, 3px radius — NOT a pill. Drawn always; shown only on select/focus.
    B120 moves the row here from the top edge: flush ON the bottom edge, no gap
    (B87's principle survives), centred on the card (B88's left anchor yields). */
@@ -896,14 +896,14 @@ html:not(.wide) #board-actions {
    removed; when there is no room below, reflectToolbarSeat raises the note
    itself so the flush-below seat fits — the row may never paint over the
    note's own text. */
-/* An empty note shows no row (it has no frame either, §6.2). The row follows the
+/* An empty note shows no row (it has no frame either, PRD §6.2). The row follows the
    text in DOM, so the general-sibling selector reaches it without :has(). */
 .note-text:empty ~ .note-toolbar { display: none; }
 
 .note-tb-btn {
   position: relative;
   display: inline-flex; align-items: center; justify-content: center;
-  padding: 7px 6px;                    /* the band-label tab (§3.1), grown for finger size (issue #132, B86) */
+  padding: 7px 6px;                    /* the band-label tab (UIUX §3.1), grown for finger size (issue #132, B86) */
   border: 0; border-radius: 3px;
   background: var(--tab-complete);     /* the shared note rung 0.5962; the frame-family hue, rotates per type (B67, B127) */
   color: var(--ink);                   /* --ink-dark, rebound by .on-light — 5.70:1 (B76) */
@@ -914,21 +914,21 @@ html:not(.wide) #board-actions {
 .note-tb-btn svg { width: 18px; height: 18px; }
 /* The destructive tab wears the warm hue as a FILL, not as text: --danger is a
    fill carrying --ink-dark (8.83:1, UIUX §2.6), and an accent is never a text
-   colour on the note (the water/note placement rule, §2.6). Its mark stays
+   colour on the note (the water/note placement rule, UIUX §2.6). Its mark stays
    --ink-dark, so the tab differs from the other three by fill + glyph, not colour
-   alone (§1) — Delete last and distinct, the menu's B43 order. */
+   alone (UIUX §1) — Delete last and distinct, the menu's B43 order. */
 .note-tb-delete { background: var(--tab-delete); }
 /* Highlight wears its own fixed identity fill, so the tabs differ
-   by fill + glyph, not colour alone (§1): amber is button chrome (which
+   by fill + glyph, not colour alone (UIUX §1): amber is button chrome (which
    action), never the note's state. The highlight STATE stays the wash + the inset
    rule below. (Copy's fixed blue filled a fourth tab until B114 re-homed Copy to
    the note menu and retired the token with it.) */
 .note-tb-highlight { background: var(--tab-highlight); }
-/* Highlight's "on" state is a geometry, not colour alone (§1): an inset border
+/* Highlight's "on" state is a geometry, not colour alone (UIUX §1): an inset border
    while the note wears the amber wash. The wash is the real signal; this only
    labels the toggle and flips its aria-label (updateNoteToolbar). */
 .note.highlight .note-tb-highlight { box-shadow: inset 0 0 0 2px var(--ink-dark); }
-/* Decoupled hit area (§6, B7's idiom): the small tab keeps a 44px-tall tap target.
+/* Decoupled hit area (UIUX §6, B7's idiom): the small tab keeps a 44px-tall tap target.
    The collar grows DOWNWARD (issue #301): since B120/#298 the row sits flush
    BELOW the card, so the old upward reach (`top: -12px`) extended 12px INTO the
    card — over the note's own last text line, where a tap fired Delete. Downward
@@ -939,7 +939,7 @@ html:not(.wide) #board-actions {
   position: absolute;
   left: 0; right: 0; top: 0; bottom: -12px;   /* 44px tap target under the taller tab (issue #132, B86; re-aimed by #301) */
 }
-.note-tb-btn:focus-visible {           /* the two-tone ring (§2.7), same as the note */
+.note-tb-btn:focus-visible {           /* the two-tone ring (UIUX §2.7), same as the note */
   outline: 2px solid var(--ink-light);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--ink-dark);
@@ -959,7 +959,7 @@ html:not(.desktop) .note:focus-within:not(.pressed) .note-toolbar {
 html.desktop .note.selected { z-index: 3; }
 html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so its toolbar clears overlaps, without a write (issue #136, B90) */
 
-/* ---- §4.6 The reminder clock (issue #169, B104/B109; the Remind tab, issue #240)
+/* ---- UIUX §4.7 The reminder clock (issue #169, B104/B109; Remind tab, #240)
    The clock is the note toolbar's third tab (Complete · Highlight · Remind ·
    Delete): one tap sets or clears the reminder (B104) — no picker, no dialog,
    no time concept anywhere. Resting, it is the tab's normal --frame ground with
@@ -969,7 +969,7 @@ html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so 
    NO bloom: the owner ruled the glow is the card's, not the button's (B132).
    The card frame carries the bloom below. Its
    aria-label stating the act the tap will perform. An empty note shows no frame
-   and no toolbar row (§6.2), which carries the old corner-guard's job. The
+   and no toolbar row (PRD §6.2), which carries the old corner-guard's job. The
    tab's own metrics come from .note-tb-btn; only the identity states differ.
    The corner placement, hit collar and sibling guard of the old floating clock
    are gone with the move (issue #240). */
@@ -980,7 +980,7 @@ html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so 
 
 /* The card glow (B132, issue #240): with the reminder active, the note card
    itself wears a soft yellow bloom on its frame — the same border + bloom
-   grammar as the carried status (§4.8), in the reminder's own quieter rung
+   grammar as the carried status (UIUX §4.8), in the reminder's own quieter rung
    --reminder-glow (#c6a400, the carried amber dropped a rung). The class is
    the record field's shadow, recomputed at render (setReminderUi); a completed
    note never wears it, and clearing the reminder deletes the key (B21), so the
@@ -992,7 +992,7 @@ html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so 
 
 /* The surfaced echo (B109): a reminder-active note's render-time reference on
    today's To Do. It keeps its SOURCE board's note hue — data-src-cat rebinds
-   --note for the echo alone, the ladder's own discipline (§2.2.2); a source on
+   --note for the echo alone, the ladder's own discipline (UIUX §2.2.2); a source on
    a To-Do board needs no rule (the default). Tap, drag, pinch and edit find no
    record here and stay inert; the clock and the long-press/right-click menu
    write the source record through. The echo engages like no other note, so its
@@ -1002,16 +1002,16 @@ html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so 
 .note.surfaced[data-src-cat="unsorted"] { --note: #cec6ed; }
 .note.surfaced[data-src-cat="learning"] { --note: #e6c2c9; }
 
-/* ---- §4.8 The carried indicator (issue #169, B104/B110) ------------------
+/* ---- UIUX §4.8 The carried indicator (issue #169, B104/B110) ------------
    B104's status layer: a note carried onto its board today (B108's `carriedOn`
    equals the today key) wears its frame in --carried plus a soft bloom of the
    same token — yellow border + glow, never the whole-card fill (owner-rejected
-   in #169 §3) and never the highlight layer (§2.6.1): the wash fills the text
+   in issue #169) and never the highlight layer (UIUX §2.6.1): the wash fills the text
    surface, the status dresses the frame, and a highlighted carried note wears
    both. The class is the record field's shadow, recomputed at render
    (setCarriedUi in render.js) — completing clears `carriedOn` under B108's law
    and the class goes with it, so a completed note never glows. The pressed
-   rule BELOW still owns a held card (§4.2): the frame reasserts the ink while
+   rule BELOW still owns a held card (UIUX §4.2): the frame reasserts the ink while
    the note is engaged, the status returning on release. */
 .note.carried .note-text {
   border-color: var(--carried);
@@ -1019,14 +1019,14 @@ html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so 
 }
 
 /* Pressed (drag/pinch engaged): border thickens to 3px, padding compensates so
-   nothing reflows — the "picked up" / "I have this" confirmation (§4.2). */
+   nothing reflows — the "picked up" / "I have this" confirmation (UIUX §4.2). */
 .note.pressed .note-text {
   border-color: var(--ink);
   border-width: 3px;
   padding: 9px 11px;
 }
 
-/* ---- §4.3 The scratch-out (complete) ----------------------------------- */
+/* ---- UIUX §4.3 The scratch-out (complete) ------------------------------ */
 .note-scratch,
 .lot-scratch {
   position: absolute;
@@ -1051,7 +1051,7 @@ html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so 
 .lot-item.complete .lot-text { color: rgb(var(--ink-a) / 0.12); }
 
 /* ============================================================================
-   §7 Long-press menu (elevation = "temporary, above the page")
+   UIUX §7 Long-press menu (elevation = "temporary, above the page")
    ========================================================================== */
 #menu {
   position: fixed;
@@ -1070,7 +1070,7 @@ html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so 
   align-items: center;
   gap: 12px;
   width: 100%;
-  min-height: 48px;                    /* §6 */
+  min-height: 48px;                    /* UIUX §6 */
   padding: 0 16px;
   background: none;
   border: none;
@@ -1093,7 +1093,7 @@ html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so 
 #menu .sep { height: 1px; margin: 6px 0; background: var(--hairline); }
 
 /* ============================================================================
-   §9 Undo toast
+   UIUX §9 Undo toast
    ========================================================================== */
 #toast {
   position: fixed;
@@ -1130,7 +1130,7 @@ html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so 
 }
 
 /* ============================================================================
-   §10 Board list view (the only other screen)
+   UIUX §10 Board list view (the only other screen)
    ========================================================================== */
 /* Since issue #74 the list holds three paged categories, so it does not scroll
    — the pager states the overflow instead (B44, extending B42's law to mobile).
@@ -1153,7 +1153,7 @@ html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so 
    already keeps the board reachable. The height is measured in JS (--list-panel-h,
    NO vh — B28/B32's keyboard-safe discipline); the top edge is the Parking Lot's
    own --frame rule (B61), rounded and lifted on --elevation as the transient
-   surface it is (§2.4). The rise is the #toast translateY idiom on §8's one
+   surface it is (UIUX §2.4). The rise is the #toast translateY idiom on UIUX §8's one
    curve; the kill-switch below lands it instant under reduced-motion. */
 html:not(.desktop) #list-view {
   top: auto;                           /* release inset:0's top; bottom/left/right hold */
@@ -1163,7 +1163,7 @@ html:not(.desktop) #list-view {
   border-top-right-radius: 12px;
   /* --elevation upward: the panel is flush to the viewport floor, so the token's
      downward cast would fall off-screen — the lift belongs on the top edge, the
-     one seam that adjoins the board (§2.4). Same magnitude and ink as --elevation,
+     one seam that adjoins the board (UIUX §2.4). Same magnitude and ink as --elevation,
      reflected for a bottom sheet. On the deep ground the --frame rule above does
      most of the separating (the Lot/band's own idiom); this is the transient
      surface's hint of lift over it. */
@@ -1275,7 +1275,7 @@ html:not(.desktop):has(#list-view.show) #board { pointer-events: none; }
 /* A row is a card now, not a list line: it can be picked up and carried to
    another category, so it has to read as a discrete object with its own edge
    (issue #74) — which is the hairline and the water fill, not the height, so
-   B68 takes the height to §6's 44px floor and no further to buy issue #97's
+   B68 takes the height to UIUX §6's 44px floor and no further to buy issue #97's
    fourth card. PANE_ROW_H in app.js. */
 /* A board card is a small rendering of what it names (UIUX §10): the field's
    own upper fall as its fill, edged with the chrome's hairline. */
@@ -1306,7 +1306,7 @@ html:not(.desktop):has(#list-view.show) #board { pointer-events: none; }
   font-size: 17px;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;             /* truncation always indicated (§10) */
+  text-overflow: ellipsis;             /* truncation always indicated (UIUX §10) */
 }
 /* Untitled and dated in the ground's own pole (UIUX §16.2) — the mid-grey is retired. */
 .board-row .row-title.untitled { color: var(--ink); }
@@ -1318,7 +1318,7 @@ html:not(.desktop):has(#list-view.show) #board { pointer-events: none; }
 /* The mobile drilled-list card is the slide-up panel's own denser skin
    (issue #125 / B82): three to a row (.cat-cards below), a title clamped to two
    lines, and the "Last Updated" line pinned bottom-right. It stands taller than
-   §6's floor — LIST_CARD_H in app.js, which catPageCap() budgets the panel
+   UIUX §6's floor — LIST_CARD_H in app.js, which catPageCap() budgets the panel
    against — while the rail and the desktop drill keep the single-line 44px card
    above (the always-on rail means the board is never hidden, so the phone's
    panel is where the denser card earns its place). */
@@ -1362,10 +1362,10 @@ html:not(.desktop) .board-row .row-board-date { display: inline; }
    and tablet are untouched: B82 survives there. */
 html:not(.desktop) .board-row .row-last-updated { display: none; }
 
-/* ---- §10.5 Categories (issue #58 / B42, issue #74 / B44, issue #88 / B63,
-   issue #97 / B68) -- Three sections — To-Do, Idea, Note — on both the mobile
+/* ---- UIUX §10 Categories (issue #58 / B42, issue #74 / B44, issue #88 / B63,
+   issue #97 / B68) -- Four categories — To Do, Notes, Learning, Ideas — on both the mobile
    list and the desktop rail, from one DOM shape: head, add, cards, pager.
-   Equal while all three hold boards; an empty one collapses (below). Overflow
+   Equal while all four hold boards; an empty one collapses (below). Overflow
    turns pages, never scrolls, so .cat-cards clips and the pager navigates.
 
    One grid on both surfaces (B63): the head row holds the category's label
@@ -1382,11 +1382,11 @@ html:not(.desktop) .board-row .row-last-updated { display: none; }
    collapsed height is exactly the head row, because catPageCap() reclaims
    exactly that. ---- */
 /* Each section is a framed, tinted tray in its own family (issue #107 / B72):
-   its --card as the ground and its --frame as an inset 2px frame, so the three
-   categories read as three enclosed places rather than one run of buttons on a
-   shared ground. Both are rotated rungs (§2.2.2), so the tray carries the
+   its --card as the ground and its --frame as an inset 2px frame, so each
+   category reads as an enclosed place rather than one run of buttons on a
+   shared ground. Both are rotated rungs (UIUX §2.2.2), so the tray carries the
    board type's own hue — --chrome stays the one room behind, showing through
-   the #list-rows padding and the section gaps (B55 unbroken). All three of
+   the #list-rows padding and the section gaps (B55 unbroken). The tray's
    background, outline and border-radius are layout-free, so catPageCap()'s
    card budget (which measures only vertical space) is untouched. The frame is
    inset because the surface clips — an outset outline loses its side edges,
@@ -1449,17 +1449,17 @@ html:not(.desktop) .board-row .row-last-updated { display: none; }
 .cat-head span {
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;             /* truncation always indicated (§10) */
+  text-overflow: ellipsis;             /* truncation always indicated (UIUX §10) */
   white-space: nowrap;
 }
 /* The per-category create control (issue #88 / B63): the primary species,
    sized to the head row it shares with the label — its own label steps to
-   14px (§13.1) so the 24px header keeps its whole name beside it at B32's
+   14px (UIUX §13.1) so the 24px header keeps its whole name beside it at B32's
    384px floor.
 
    position: relative because B68 took the row down to the control's own
    height: the primary species wears its signature outside its border box —
-   the offset shadow, and §2.7's focus ring at outline-offset 2px — and with
+   the offset shadow, and UIUX §2.7's focus ring at outline-offset 2px — and with
    no slack left in the row those fall on the cards track. Positioned, the
    control paints above its in-flow siblings, so the ring stays whole and the
    shadow lands ON the first card instead of under it. */
@@ -1496,7 +1496,7 @@ html.wide .cat-cards { grid-template-columns: minmax(0, 1fr); }
    inverts ≥ AA in both themes — behind a neutral ink-shadow border that holds
    its edge against both the fill and the surface. The n/m indicator sits
    between ‹ and ›: it says which page the arrows are on, so it travels with
-   them, and one page hides the whole strip at once (§10: no state, no
+   them, and one page hides the whole strip at once (UIUX §10: no state, no
    statement). Centred on its own row below the cards (B63 — the issue's word
    over the mockups' right lean). Mobile sizes to HIT_FLOOR; desktop to B23's
    24px floor. */
@@ -1559,7 +1559,7 @@ html.wide .cat-cards { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ============================================================================
-   Desktop mode (html.desktop) — issues #4 / #9–#15. Everything here is gated
+   UIUX §10 Desktop mode (html.wide) — issues #4 / #9–#15. Everything here is gated
    on the class the JS mode flag owns; the media query is never restated.
    ========================================================================== */
 
@@ -1604,8 +1604,8 @@ html.wide #pane {
    to the 40px face — the same --cal-rail-w, one rail-width law, two rails —
    with the pane's own name reading vertically; the face is one tap-target
    and its tap is the expand. Collapsed face = #pane-rail; expanded face =
-   #pane-collapse + #pane-cards, renderPane's cards unchanged. The arrow is
-   the collapse affordance (the pane has no Back). Raw navigation both ways
+   #pane-collapse + #pane-cards, renderPane's cards unchanged. Go Back returns
+   to the collapsed face. Raw navigation both ways
    (B81): the frame re-reads the rail width via setPaneCollapsed. Mobile
    never sees any of it (#pane is display:none there). */
 html.wide #pane.rail-open {
@@ -1653,7 +1653,7 @@ html.wide #pane.rail-open #pane-collapse { display: none; }
    markup-order direction (label is the only child now). Id beats class. */
 #pane-collapse { align-self: flex-end; }
 
-/* ---- Rail categories: the desktop skin of the shared §10.5 grid. Same four
+/* ---- Rail categories: the desktop skin of the shared UIUX §10 grid. Same four
    children, same areas — only the row heights and the control's size step
    down, for the desktop pointer rather than a fingertip. The fixed heights
    here are shared law with app.js: head row = PANE_CAT_HEAD (32), pager row
@@ -1727,7 +1727,7 @@ html.wide .pager-btn + .pager-btn { margin-left: 0; }
 /* Structural active mark: ink weight, not color alone; padding compensates. */
 .pane-card.active { border: 2px solid var(--ink); padding: 5px 11px 5px 15px; cursor: default; }
 /* The rail card takes the drilled-list card's two-line title + bottom-right
-   stamp (issue #254, the B82 shape). Truncation always indicated (§10). */
+   stamp (issue #254, the B82 shape). Truncation always indicated (UIUX §10). */
 .pane-card .row-title {
   flex: 0 0 auto;
   min-width: 0;
@@ -1828,7 +1828,7 @@ html.wide .pager-btn + .pager-btn { margin-left: 0; }
 #selection .sel-handle.bl { left: -8px;  bottom: -8px; }
 #selection .sel-handle.br { right: -8px; bottom: -8px; }
 /* The note overlay carries no action buttons since B84 — a selected note's
-   actions live on its own top-edge toolbar (§4.5). .sel-btn remains only for the
+   actions live on its own bottom-edge toolbar (UIUX §4.5). .sel-btn remains only for the
    Parking Lot's inline row actions (.lot-actions) below. */
 
 /* The lot-row actions (UIUX §14): accent fills carrying --ink-dark behind the
@@ -1871,7 +1871,7 @@ html.desktop .note.multi-selected .note-text {
 #selection.multi .sel-handle { display: none; }
 
 /* ---- Lot rows on desktop (issue #11): the selected row draws a frame — an
-   explicit, narrow override of "lot lines are never framed" (§4.4), scoped to
+   explicit, narrow override of "lot lines are never framed" (UIUX §4.4), scoped to
    desktop + selected. outline, not border (rows have no padding; a border
    would shift text 2px), in ink, not focus-ring (selection ≠ edit). Buttons
    sit inline at the row's right edge; #lot-items clips anything below. ---- */
@@ -1890,12 +1890,12 @@ html.desktop .lot-item.selected { outline: 2px solid var(--ink); outline-offset:
 /* Tap acknowledgment retired (B81): actions commit instantly, so there is no
    400ms window to fill — no `.tapped` weight/fill on content, furniture, or
    controls, and no `.tap-ghost` on the empty canvas. The instant result is its
-   own acknowledgment. The drag/pinch "pressed" weight (§4.2) is untouched. */
+   own acknowledgment. The drag/pinch "pressed" weight (UIUX §4.2) is untouched. */
 
 [hidden] { display: none !important; }
 
 /* ============================================================================
-   §8 Motion — the complete justified set; everything else is instant.
+   UIUX §8 Motion — the complete justified set; everything else is instant.
    The durations lengthen from v1's 120/150ms because UIUX §1.1 argues for a
    water-like settle — a 120ms fade reads as a flicker, not a movement — on
    one long deceleration. Paired JS constants: LEAVE_MS, SWAP_MS,
@@ -1916,13 +1916,11 @@ html.desktop .lot-item.selected { outline: 2px solid var(--ink); outline-offset:
 html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1); }
 #board.swapping     { opacity: 0; }
 
-/* --- §3.4 The calendar view (issue #145) ----------------------------------
+/* --- UIUX §3.4 The calendar view (issue #145) -----------------------------
    The third screen, on the room's own ground (B52). Full-screen on phone
-   (html:not(.wide) — the mobile path); on a wide screen it is
-   the right-side panel (b6 builds that grammar; this block draws the shared
-   day card). The stack never scrolls: seven day cards, one bounded page —
-   EXCEPT the stack's own vertical scroll on overflow (issue #391, B161: the
-   exception to the rule; the view itself stays a fixed, bounded page). */
+   (html:not(.wide) — the mobile path); on a wide screen it is the right-side
+   panel. It draws the rolling 30-day stack, which scrolls vertically on
+   overflow (issue #391, B161); the view itself stays a fixed, bounded page. */
 #cal-view {
   position: fixed;
   inset: 0;
@@ -1939,7 +1937,7 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
   margin-top: 10px;                    /* B134 (issue #259): the row renders LAST — its breathing room is above it now */
 }
 .cal-act {
-  position: relative;                  /* the §6 hit collar hangs off this (B98) */
+  position: relative;                  /* the UIUX §6 hit collar hangs off this (B98) */
   display: inline-flex;
   flex-direction: row-reverse;         /* B134 (issue #259) set this for the label-then-mark row; B151 (issue #353) retired the marks — with the glyph span empty the direction is inert, left as-is so no other surface shifts */
   align-items: center;
@@ -1971,7 +1969,7 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
   bottom: calc(-2 * var(--hit, 0px));
 }
 /* Interactive states, board-row-exact (issue #156, B98): visible without the
-   tactile shadow; §2.7's two-tone ring on focus — state is never colour. */
+   tactile shadow; UIUX §2.7's two-tone ring on focus — state is never colour. */
 @media (hover: hover) {
   .cal-act:hover { filter: brightness(1.1); }
 }
@@ -1981,16 +1979,8 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--ink-dark);
 }
-#cal-back  { margin-right: auto; }     /* anchored left (R1) — the view's bottom-left corner since B134 (issue #259) */
+#cal-back  { margin-right: auto; }     /* anchored left — the view's bottom-left corner since B134 (issue #259) */
 #cal-today { margin-left: auto; }      /* anchored right — B148 (issue #342) */
-#cal-boards{ margin-left: auto; margin-right: auto; }  /* centred */
-#cal-export{ margin-left: 0; }         /* anchored right */
-/* B100 (issue #157) as widened by B119 (issue #212): wide's calendar row is
-   Back + Export only — the centred All Boards control retires on tablet the
-   same way it retired on desktop. With it gone, Export takes the row's
-   right anchor itself. */
-html.wide #cal-boards { display: none; }
-html.wide #cal-export { margin-left: auto; }
 #cal-stack {
   flex: 1;
   display: flex;
@@ -2030,7 +2020,7 @@ html.wide #cal-export { margin-left: auto; }
    is DELETED on every tier — no frame, no fill, no upper line. (Issue #382
    moved the day head out of the stack: the header band below is the face's
    first content now — see B157.) */
-/* Issue #382 (B157): the face's header — the boards' top band (§3) drawn in
+/* Issue #382 (B157): the face's header — the boards' top band (UIUX §3.1) drawn in
    the calendar's own orange ladder, no Components/Requirements zones and no
    band label (the issue names neither): the full-width bar over the ladder's
    water fall, the 1px full-width rule at the bar's bottom edge, and the
@@ -2041,7 +2031,7 @@ html.wide #cal-export { margin-left: auto; }
    wraps the 21px head (width max-content, no orphan strip beside it), with
    the boards' band floor (61px) and overhang (22px) kept verbatim. Static
    furniture: nothing in the band is a target — the card carries
-   pointer-events:none (§7's recognizer rule; the bar and rule are inert
+   pointer-events:none (interactions.js §7's recognizer rule; the bar and rule are inert
    ground already). Edge-to-edge: the bar runs the component's FULL
    width, so it spends the view's own padding on every tier.
    Issue #384 adds ONE element to the band — the row's "+" (today's adder),
@@ -2133,7 +2123,7 @@ html.wide #cal-export { margin-left: auto; }
    Today's date should fit on one line, and the title card should scale to
    fit it in one line and it must use the same text formatting as a title
    card on a board"): 15px/600/1.3, #anchor-title's very type (styles.css
-   §3), replacing B153's display step for THIS title — the card scales to
+   UIUX §3.1), replacing B153's display step for THIS title — the card scales to
    the line (width max-content), the date never wraps. Tokens only: light
    ink on the card's deep fill — var(--ink) resolves to --ink-light #f4f5f1
    under #cal-view's .on-dark, the palette's approved ink on the ladder's
@@ -2143,7 +2133,7 @@ html.wide #cal-export { margin-left: auto; }
   align-items: center;
   justify-content: center;
   color: var(--ink);              /* --ink-light #f4f5f1 under #cal-view's .on-dark — the approved pair on the card's fill */
-  font-size: 15px; font-weight: 600; line-height: 1.3;   /* the boards' title-card type (§3 #anchor-title) — issue #382 */
+  font-size: 15px; font-weight: 600; line-height: 1.3;   /* the boards' title-card type (UIUX §3.1 #anchor-title) — issue #382 */
   white-space: nowrap;            /* one line, always — the card scales to it */
   text-align: center;
 }
@@ -2214,7 +2204,7 @@ html.wide #cal-export { margin-left: auto; }
    rung, rotated into the calendar's hue (UIUX §2.2.2, issue #168) — the
    owner's "a new color derived using its palette, deriving from the note
    cards' fill" (the derivation was on record already; the owner's "I don't
-   believe we have a token" is answered by the §2.2.2 table). With it the ink
+   believe we have a token" is answered by the UIUX §2.2.2 table). With it the ink
    moves to the note rung's own pair: --ink-dark #031019, 11.84:1 (UIUX §2.3).
    `rem` renders nowhere (the #323 disposition, stored-but-unread). */
 .cal-note-text {
@@ -2240,7 +2230,7 @@ html.wide #cal-export { margin-left: auto; }
   display: grid;
   grid-template-columns: 84px 1fr;     /* date card left-anchored, one timeline zone (v2 refinement) */
 }
-.cal-day::before {                     /* the water fill, per §2.8's fall */
+.cal-day::before {                     /* the water fill, per UIUX §2.8's fall */
   content: "";
   position: absolute; inset: 0;
   background: linear-gradient(180deg, var(--water-top) 0%, var(--water-mid) 46%, var(--water-bot) 100%);
@@ -2248,7 +2238,7 @@ html.wide #cal-export { margin-left: auto; }
 .cal-date {
   position: relative;
   background: var(--card);
-  border-right: 1px solid var(--hairline);   /* the token (§2.5) — rebinding rides .on-dark */
+  border-right: 1px solid var(--hairline);   /* the token (UIUX §2.5) — rebinding rides .on-dark */
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   padding: 4px 2px;
@@ -2305,7 +2295,7 @@ html.wide #cal-export { margin-left: auto; }
    each date, not left and right." The date compartment's own --card fill
    drops so one surface reads edge to edge (the near/far dark overrides stand
    down with it — the weekend rule is seated after theirs); the divider
-   between date and events stays (the 1px --hairline, §2.5), and the padding
+   between date and events stays (the 1px --hairline, UIUX §2.5), and the padding
    between days stays (the stack's own gap). The recede treatment keeps its
    grip: .near/.far's brightness filters apply to the weekend ::before
    exactly as to the others. The squares keep the day cards' own grammar
@@ -2318,7 +2308,7 @@ html.wide #cal-export { margin-left: auto; }
 /* Issue #398: a Sunday closes each visual week in the expanded rolling view. */
 .cal-day.sunday { border-bottom: 2px solid var(--frame); }
 
-/* --- §3.5 The month view (issue #191) -------------------------------------
+/* --- UIUX §3.4 The month view (issue #191) --------------------------------
    The compact month grid in the ground #170 freed below the day stack. Pure
    display + the tap-to-week-swap; palette only: the current-week band is the
    ink-light wash at reading-alpha (the recede idiom above), today wears the
@@ -2395,7 +2385,7 @@ html.wide #cal-export { margin-left: auto; }
   background: var(--accent-page);
 }
 
-/* Desktop/tablet (R3/R6): the calendar docks to the right edge as a real
+/* Desktop/tablet: the calendar docks to the right edge as a real
    column — the board reflows beside it, nothing is covered. The board's own
    container (html.desktop #board-view) narrows via its layout in JS. */
 #cal-view.panel {
@@ -2405,12 +2395,12 @@ html.wide #cal-export { margin-left: auto; }
   padding: 12px;
 }
 
-/* --- The standing calendar rail (issue #158, B99) -------------------------
+/* --- UIUX §3.4 The standing calendar rail (issue #158, B99) ---------------
    The mockup (rtcb-6-desktop-rail.html) drew the wide-species entry: a slim
    rail pinned to the viewport's right edge, ALWAYS visible on wide screens,
    reading "Calendar Board" vertically with today's date and a lit dot. One
    tap expands it leftward into the panel (~a third of the viewport) and the
-   board reflows beside it — the R6 squeeze, entered from the rail instead of
+   board reflows beside it, entered from the rail instead of
    the action row (whose Calendar tab retires on wide). Collapsed face =
    #cal-rail; expanded face = #cal-top + #cal-stack. The rail is furniture:
    it renders at boot on wide without any press, its expand/collapse is
@@ -2429,7 +2419,7 @@ html.wide #cal-export { margin-left: auto; }
 #cal-view.rail-open.panel { width: auto; }   /* expanded wins over the collapsed width */
 /* B134 (issue #259): the row renders LAST in the DOM now, so the wide
    expanded face keeps the owner's order for free — stack → month view →
-   Collapse at the bottom. B124's `order: -1` row-on-top rule retires with the
+   Go Back at the bottom. B124's `order: -1` row-on-top rule retires with the
    reseat (the row's own membership ruling stands). */
 #cal-view.rail-open #cal-band,
 #cal-view.rail-open #cal-top,

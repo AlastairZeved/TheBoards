@@ -23,7 +23,7 @@ export const lotEls = new Map();            // lotItem.id -> element
    it rebuilds the frames anyway. */
 function sanitizeBoard(board) {
   /* The sweep must not eat what an open editor is still writing (issue #145
-     baseline prerequisite; review-2026-08-31.md finding #1). renderBoard runs
+     baseline prerequisite). renderBoard runs
      on flows that can land inside the 300ms save debounce — a board swap, a
      rail re-read, a visibility flip — and a record whose text still lives only
      in its DOM node reads as a whitespace husk from stale `current`. Skip the
@@ -66,7 +66,7 @@ export function applyBoardCat() {
 
 /* The tab/OS-window title follows the view (issue #148 item 2). Chrome only —
    nothing on the canvas reads or renders it; the views themselves stay exactly
-   as UIUX §10/§6 draw them. Board view shows the board's own title text (the
+   as specified in UIUX §10. Board view shows the board's own title text (the
    anchor's copy, 'What's up?' when untitled — the same rule renderBoard
    applies to the anchor); the picker and a drilled category name themselves. */
 /* B133 (issue #273): the linked To-Do board's own title seat is the day's, not
@@ -101,7 +101,7 @@ export function syncViewTitle() {
 /* Issue #393 (the owner's ruling of 2026-10-11): ONLY the linked To Do
    board's MIRRORED Requirements lines render in read state as square blocks —
    the calendar's .cal-note species, board-scoped (.req-squares/.req-square,
-   styles.css §3) — in the calendar ladder's own orange, deliberately apart
+   UIUX §2.2.2) — in the calendar ladder's own orange, deliberately apart
    from this board's blue. The span is mirrorEventsOf's own law (state.js):
    the first `calReq` lines are the mirror's, everything after them is the
    reader's hand and stays plain pre-wrap text. A board that has never synced
@@ -399,7 +399,7 @@ async function toggleSurfacedReminder(id) {
   renderBoard();                        // clock-off unsurfaces; nothing to re-add
 }
 
-/* The note's action toolbar (B84, issue #126; four tabs per issue #240, UIUX §4.5/§14):
+/* The note's action toolbar (B84, issue #126; four tabs per issue #240, UIUX §4.5 / UIUX §14):
    flat tabs on the note's bottom edge — Complete/Restore · Highlight · Remind ·
    Delete, Delete last in --danger. It is a CHILD of the note, so it
    scales with it (never wider than the note it belongs to) and rides the board's
@@ -446,18 +446,11 @@ export function updateNoteToolbar(node, note) {
   if (hl) hl.setAttribute('aria-label', note.highlighted ? COPY.unhighlight : COPY.highlight);
 }
 
-/* The row hangs BELOW the note's bottom edge, centred (issue #173, B120); a note
-   near the sheet bottom has no room there, so it flips to sit just inside the
-   bottom edge instead (B120's re-aim). The row is a note child,
-   so its board-logical height scales with the note (effScale) — the threshold
-   does too. renderY is stable across fold/renderScale.
-
-   The owner's ruling on issue #298 overrules B120's re-aim: the row may never
-   paint over the note's own text, so the flip is gone. When the card's bottom
-   plus the row would exit the sheet, the NOTE itself is raised within the
-   sheet (reflectToolbarSeat) so the flush-below seat always fits — row top on
-   the card's bottom edge, centred, at every viewport and every note
-   position. */
+/* The row hangs below the note's bottom edge, centred (issue #173, B120). The
+   row is a note child, so its board-logical height scales with the note
+   (effScale). If the row would extend past the sheet, issue #298 raises the
+   note itself so the flush-below seat still fits. renderY is stable across
+   fold/renderScale. */
 const TB_ROW_H = 44;                  // the row's painted height (32) + the downward hit collar (12) the seat must clear (issue #132, B86; collar re-aimed by #301)
 /* Returns true when the note was raised (so callers can batch their save). */
 export function reflectToolbarSeat(node, note, save = true) {
@@ -474,7 +467,7 @@ export function reflectToolbarSeat(node, note, save = true) {
 
 /* Issue #298: a frame change (viewport, fold, URL-bar show/hide) re-seats every
    note — the seat is a law of the current frame, never a stale verdict. Fired
-   from boards' frameReflow hook (geometry cannot import render — cycle). */
+   from boards' frameReflow hook after layout reflows. */
 export function seatAllNotes() {
   if (!state.current) return;
   let raised = false;
@@ -552,7 +545,7 @@ export function runNoteToolbarAction(btn) {
       if (inMulti) setSelectedNotesHighlight(!note.highlighted);
       else toggleHighlight(noteNode);                     // primary keys the direction
     } else {                                              // complete / restore
-      // #54's law: completing buries the text (§4.3), so an open editor on this
+      // #54's law: completing buries the text (UIUX §4.3), so an open editor on this
       // note commits first — the veil never falls over a live caret.
       if (editingHere()) document.activeElement.blur();
       if (inMulti) setSelectedNotesState(note.state === 'complete');
@@ -560,14 +553,6 @@ export function runNoteToolbarAction(btn) {
     }
   });
 }
-
-/* Keyboard operability (UIUX §12/§4.5): the pointer path routes through the
-   recognizer (setPointerCapture retargets native clicks), so a keyboard Enter/
-   Space on a focused tab is the ONE activation the recognizer never sees. This
-   handles it, and stopPropagation keeps it off the desktop note grammar below —
-   without it, Enter on a selected note's tab would ALSO edit the note. The tabs
-   are the keyboard route to Complete/Highlight the removed note menu used
-   to be (B84); Copy rides the menu's own focusable items since B114. */
 
 export function makeLotEl(item) {
   const node = document.createElement('div');
@@ -729,6 +714,13 @@ export function updateLinks() {
 
 /* Region init (issue #182): top-level side effects, explicit register()
    call from boot() — no module does load-time work. */
+/* Keyboard operability (UIUX §12 / UIUX §4.5): the pointer path routes through the
+   recognizer (setPointerCapture retargets native clicks), so a keyboard Enter/
+   Space on a focused tab is the ONE activation the recognizer never sees. This
+   handles it, and stopPropagation keeps it off the desktop note grammar —
+   without it, Enter on a selected note's tab would ALSO edit the note. The tabs
+   are the keyboard route to Complete/Highlight the removed note menu used to
+   be (B84); Copy rides the menu's own focusable items since B114. */
 export function registerRender() {
   el.board.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;

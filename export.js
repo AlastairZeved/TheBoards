@@ -79,7 +79,7 @@ const PDF_CP1252 = {
 /* Unicode -> WinAnsi. A base-14 font cannot say CJK or emoji and embedding one
    that could would mean shipping a font file — the dependency this exporter
    exists to avoid. Those characters export as '?', and the substitution is
-   reported rather than swallowed: §10's law is that truncation is always
+   reported rather than swallowed: UIUX §10's law is that truncation is always
    indicated, and a silently mangled line is truncation. See DECISIONS B34. */
 const pdfUi = { pdfLossy: false };
 function pdfCode(ch) {
@@ -204,7 +204,7 @@ function pdfCanvas() {
   return p;
 }
 
-// Rounded rect as a path; radius 2 everywhere, as everywhere in the CSS.
+// Rounded rect path helper; note rectangles pass EXPORT_GEO.radius (3).
 function rrectPath(p, x, y, w, h, r) {
   r = Math.max(0, Math.min(r, w / 2, h / 2));
   if (!r) return p.rect(x, y, w, h);
@@ -275,7 +275,7 @@ function drawLines(p, arr, x, w, top, size, lh, bold, align, color) {
   return p;
 }
 
-/* The scratch-out: the three repeating-linear-gradients of styles.css §4.3
+/* The scratch-out: the three repeating-linear-gradients of UIUX §4.3
    as three families of ruled lines. Clip first — this fills whatever the
    current clip allows. Angles are CSS's, and in a y-down space a positive
    angle rotates clockwise on screen, same as CSS reads them. */
@@ -361,7 +361,7 @@ export const EXPORT_GEO = {
   // overhangs the rule by 22; cardPadTop is its top padding (band-top + 6).
   cardL: 280, cardW: 340, cardTop: 0, cardOverhang: 22, cardPad: 12, cardPadTop: 20,
   // Both sections size to their MEASURED content from a floor (UIUX
-  // §3.1/§3.2, B73); the lot's ceiling is half the sheet, applied in
+  // UIUX §3.1 / UIUX §3.2, B73); the lot's ceiling is half the sheet, applied in
   // exportLotH — one law with the screen, the export's own number (B34).
   // lotHead/lotRow ARE the screen's LOT_HEAD/LOT_ROW — shared constants.
   lotHead: LOT_HEAD, lotRow: LOT_ROW, lotHeaderY: 8, lotItemsY: 34,
@@ -448,7 +448,7 @@ function exportBoardPage(rec) {
   const p = pdfCanvas();
   p.q().flip(A4_H);
   // Paper edge to edge, not a paper rectangle floating on white. Paper tone is
-  // named in styles.css §1 as part of the identity, alongside the frame and the
+  // named in UIUX §1 as part of the identity, alongside the frame and the
   // scratch-out, and the margin is margin — not a desk. B17 and B32 spent two
   // rulings deleting the letterbox; this is not the place to reintroduce it.
   p.fill(PDF_PAPER).rect(0, 0, A4_W, A4_H).raw('f');
@@ -677,11 +677,11 @@ export function buildBoardPdf(rec) {
                      rec.title || COPY.untitled);
 }
 
-/* ---- The calendar's 7-day reference sheet (issue #145, R1's Export) ------
+/* ---- The calendar's 7-day reference sheet (issue #145) -------------------
    One text page: the rolling week as it renders — today first, one line per
-   event, completed events reading "— completed —" (§7's bytes property).
+   event, completed events reading "— completed —".
    Built from the same primitives as exportTextPages; reads STORAGE (the
-   computed window, live events), never the squeezed frame (R6 clause 2). */
+   computed window, live events), never the squeezed frame. */
 export async function exportCalPdf() {
   try {
     flushSave();
@@ -765,7 +765,7 @@ function downloadBlob(blob, name) {
 /* Export runs off the board RECORD, not the live DOM: the menu belongs to a
    board card, and the card is usually not the board that happens to be open.
 
-   Which copy of the record, though. renderPane/renderList close over an
+   Which copy of the record, though. renderPane/renderListSurface close over an
    idbGetAll() snapshot taken when the rail was drawn, so right-clicking the
    ACTIVE card after typing would export the board as it was some keystrokes
    ago. `current` is the one that is ahead of storage (saves are debounced by

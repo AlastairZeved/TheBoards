@@ -16,18 +16,9 @@ import { renderCal, renderPane, updateActiveCardTitle, writeThroughRequirements 
 export const pointers = new Map();          // pointerId -> {x,y,startX,startY}
 export let g = null;                        // active gesture context
 
-/* The anchors and, since B91, notes carry a long-press menu (mobile) — the
-   anchor's is the board's own menu (All boards · Export, B84/B75); the note's is
-   a single item, Link (issue #142). Notes had lost their long-press menu when
-   they gained the on-select toolbar (B84); B91 revives it as the home for
-   inter-note RELATIONAL actions (Link), kept distinct from the toolbar's per-note
-   STATE actions (Complete/Highlight/Copy/Delete) — so the two planes don't
-   compete. Desktop reaches the note's Link menu by right-click instead (its own
-   contextmenu listener, §10); the lot's mobile item menu is still gone (accepted
-   gap — desktop lot rows keep their inline actions). The creation surfaces —
-   bare canvas and the lot background — carry no menu: they have no item to act
-   on, so no timer is armed and the press stays a pending tap (hold as long as
-   you like on empty paper and the release still captures a note; B5). */
+/* Notes open a menu by mobile long-press or desktop right-click. The current
+   note menu carries Copy, Title, and Link; the note toolbar carries its state
+   actions. Anchors lost their menu in B92, and the lot/canvas do not arm one. */
 const HAS_MENU = new Set(['note']);   // anchors lost theirs to B92 (issue #140)
 
 function classifyTarget(target, press) {
@@ -188,7 +179,7 @@ function onPointerUp(e) {
   g = null;
 }
 
-/* Teardown for a mode flip (issue #182, B'): the entry's media-query listener
+/* Teardown for a mode flip (issue #182): the entry's media-query listener
    used to cancel an in-flight gesture inline by writing `g` directly. A module
    split cannot write an imported bare `let` (imported bindings are read-only),
    so the one cross-module write of `g` moves here, where `g` lives. The entry
@@ -279,7 +270,7 @@ function resolvePendingLink(target) {
   return true;
 }
 
-/* Lot rows only now (B84): notes act through their own top-edge toolbar
+/* Lot rows only now (B84): notes act through their own bottom-edge, centred toolbar
    (tapNoteToolbar). Every button commits on release through the B81
    drop-guard; Copy of a completed row is allowed — the record still holds
    the text (issue #59). */
@@ -336,7 +327,7 @@ function tapLot(x, y) {
    a first tap ENGAGES (toolbar shows, no keyboard, no write, B22); a second
    tap on the already-engaged active note EDITS, synchronously inside
    pointerup so the keyboard rises (B27a), caret at the END. A completed
-   note never edits (§4.3), so it only ever engages. */
+   note never edits (UIUX §4.2), so it only ever engages. */
 function tapNote(target, shift) {
   const node = target.node;
   const note = state.current.notes.find(n => n.id === node.dataset.id);
@@ -376,7 +367,7 @@ function tapNote(target, shift) {
   // already-engaged active note EDITS it, synchronously inside pointerup so the
   // keyboard rises (B27a), caret at the END (no coords → caretToEnd, overriding
   // B14 on mobile; the desktop precedent is B26). A completed note never edits
-  // (§4.3), so it only ever engages.
+  // (UIUX §4.2), so it only ever engages.
   if (isEditing(document.activeElement)) document.activeElement.blur();
   if (note.state === 'active' && engaged === note.id) {
     clearEngaged();
@@ -495,18 +486,6 @@ function createLotItem() {
   enableEditing(text); text.focus(); caretToEnd(text);
   if (document.activeElement !== text) removeLotSilently(item, node);
 }
-
-/* Commit-on-blur for every editable region; empty new notes/items are discarded. */
-
-/* Keyboard/AT users focus a region → enter edit. The pointer path owns taps, so
-   auto-edit only when no pointer gesture is in control (otherwise a tabindexed
-   note would open the keyboard on pointerdown before drag/long-press resolve). */
-
-/* Desktop keyboard (additive, issue #4 "mnk"): inert while the menu is open —
-   menuKeyHandler owns Escape/Tab/arrows there, and Delete must not destroy the
-   selection underneath an open menu (issue #10). */
-
-/* Live growth = capture feedback; debounced persistence (PRD §4 writes). */
 
 function commitNote(node) {
   const note = state.current.notes.find(n => n.id === node.dataset.id);
@@ -639,11 +618,6 @@ function startDrag() {
   surfaceNote(g.target.node);
   const note = g.note;
   const startLogical = toLogical(g.startX, g.startY);
-  // Group drag (issue #55): grabbing a MEMBER of a multi-selection moves every
-  // member by the same delta. Only the grabbed note surfaces (above) — the
-  // others keep their z-order; every member wears .pressed. Grabbing a
-  // non-member falls through to the single path, which collapses the set
-  // (selectNote below) — today's behavior.
   if (state.isDesktop && multiSel.size > 1 && multiSel.has(note.id)) {
     collectGroupMembers(startLogical);
     return;
@@ -838,7 +812,7 @@ export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
    Notes wear a #selection overlay — the resize frame only now (ring + edges +
    handles, B84) — a sibling of the notes in board space: it inherits renderScale
    but never note.scale, so the frame stays constant-weight at any note size.
-   The note's actions live on its own top-edge toolbar (makeNoteToolbar), shown
+   The note's actions live on its own bottom-edge, centred toolbar (makeNoteToolbar), shown
    by this same select state; its buttons are routed through the recognizer —
    setPointerCapture retargets click, so native listeners inside #board are
    unreliable by construction. */
@@ -947,7 +921,7 @@ function ensureSelectionEl() {
   }
   // The overlay is the resize frame only now (B84): the ring, four edge bands
   // and four corner handles. A selected note's actions moved onto its own
-  // top-edge toolbar (makeNoteToolbar), so the overlay no longer carries
+  // bottom-edge, centred toolbar (makeNoteToolbar), so the overlay no longer carries
   // Complete/Copy/Delete buttons.
 }
 
@@ -1038,9 +1012,6 @@ export function updateSelectionUI() {
     selUi.selEl.style.top = top + 'px';
     selUi.selEl.style.width = w + 'px';
     selUi.selEl.style.height = h + 'px';
-    // The note's own toolbar carries the labels now (B84): re-derive its
-    // Complete/Highlight marks and its above/below flip for the current geometry
-    // (a drag or resize can have moved the note toward the sheet top).
     // Two or more selected: the overlay drops its resize grip (edges +
     // handles, hidden in CSS) — resize is single-selection only (issue #55).
     selUi.selEl.classList.toggle('multi', multiSel.size > 1);
@@ -1187,11 +1158,10 @@ export function deleteNotes(ids) {
   });
 }
 
-/* Complete or restore every selected note in one pass (issue #55). The caller
-   picks the direction — the sel-btn keys off the PRIMARY's state, the context
-   menu off the whole set — and each member is SET, not toggled, so a mixed
-   selection lands uniform. One save for the whole action, like endDrag and
-   deleteNotes. */
+/* Complete or restore every selected note in one pass (issue #55). The note
+   toolbar chooses a direction from the primary note's state; each member is
+   SET, not toggled, so a mixed selection lands uniform. One save for the whole
+   action, like endDrag and deleteNotes. */
 export function setSelectedNotesState(restore) {
   for (const id of selectedNoteIds()) {
     const node = noteEls.get(id);
@@ -1230,7 +1200,7 @@ export let undoTimer = null;
 export function showUndo(undoFn, scope, label) {
   clearTimeout(undoTimer);
   el.toast.dataset.mode = 'undo';                      // capture priority over save-error
-  el.toast.dataset.scope = scope || 'item';            // 'item' undo is current-bound (finding 1)
+  el.toast.dataset.scope = scope || 'item';            // item Undo belongs to the current board
   el.toast.textContent = '';
   // The caption defaults to "Deleted"; link create/toggle pass "Linked"/"Unlinked" (B91).
   const msg = document.createElement('span'); msg.className = 'msg'; msg.textContent = label || COPY.deleted;
@@ -1322,6 +1292,7 @@ export function copyText(text) {
    listeners below are lifted verbatim into named handlers; registerInteractions
    keeps them registered in the original order (board pointer handlers first). */
 
+/* Commit-on-blur for every editable region; empty new notes/items are discarded. */
 function onFocusOut(e) {
   const t = e.target;
   if (!t.hasAttribute || !t.hasAttribute('contenteditable')) return;
@@ -1363,6 +1334,9 @@ function onFocusOut(e) {
   }
 }
 
+/* Keyboard/AT users focus a region → enter edit. The pointer path owns taps, so
+   auto-edit only when no pointer gesture is in control (otherwise a tabindexed
+   note would open the keyboard on pointerdown before drag/long-press resolve). */
 function onFocusIn(e) {
   // Issue #360 (B152): the edit's layout-viewport baseline. Chromium's
   // interactive-widget=resizes-visual keeps innerHeight full under the
@@ -1398,6 +1372,9 @@ function onFocusIn(e) {
   }
 }
 
+/* Desktop keyboard (additive, issue #4 "mnk"): inert while the menu is open —
+   menuKeyHandler owns Escape/Tab/arrows there, and Delete must not destroy the
+   selection underneath an open menu (issue #10). */
 function onKeyDown(e) {
   if (!state.isDesktop || menuOpen) return;
   // While a link is armed, Escape cancels it and every other key is inert (B91) —
@@ -1434,6 +1411,7 @@ function onKeyDown(e) {
   }
 }
 
+/* Live growth = capture feedback; debounced persistence (PRD §4 writes). */
 function onInput(e) {
   const t = e.target;
   if (t.classList.contains('note-text')) {

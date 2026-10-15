@@ -386,7 +386,7 @@ export function applyNoteWidth(node, note) {
   node.style.setProperty('--note-max-w', noteMaxW(note) + 'px');
 }
 
-/* Both ends of the sheet close the same way (B47, UIUX §3.1/§3.2): a section
+/* Both ends of the sheet close the same way (B47, UIUX §3.1 / UIUX §3.2): a section
    sized by its content from a floor, whole units only, chosen here rather
    than in CSS because CSS cannot step a length by lines or rows.
 
@@ -464,7 +464,7 @@ export function updateBoardGeometry() {
   el.boardActions.style.setProperty('--hit', (hitInset(el.boardActions, renderScale) + 0.5) + 'px');
 }
 
-/* §6/B7's law is not the note's alone: any board-space target expands its hit
+/* UIUX §6/B7's law is not the note's alone: any board-space target expands its hit
    area to the floor without growing its visual frame. `k` is what the element
    draws at — one arithmetic, both callers. */
 export function hitInset(node, k) {

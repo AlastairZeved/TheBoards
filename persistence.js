@@ -116,23 +116,6 @@ export async function idbGet(id) {
 }
 
 /* --- 3. State + save queue ----------------------------------------------- */
-// Shared mutable state carrier (issue #182, B' ruling): only globals WRITTEN
-// from more than one future module live here, so a module split can safely
-// cross-module-write them (a bare imported `let` is read-only in ESM). The
-// container is never reassigned and never destructured into locals; live-binding
-// reads of state.<member> are legal from any module. Membership derived from a
-// writers-map grep of the unsplit file; all other module-scope lets stay loose
-// in their owning module.
-
-/* The category is written, not defaulted (B67, extending B63's rule to the one
-   creation path that predates it): since the ladder rotates with the type, an
-   unwritten category is no longer invisible — it renders. A fresh install's
-   board would open violet on an app named for its To-Do boards. `newBoardIn`
-   overwrites this with the section the board is made in; the two empty-database
-   paths (`ensureCurrentValid`, `boot`) are the ones this is for. Legacy pre-#58
-   records still carry no category and still read as Note Boards — that is B21's
-   read-site idiom, and changing it would cost a migration and a version bump. */
-
 // Single-flight persist with exponential backoff; capture is never blocked.
 let saveTimer = null, persisting = false, dirtyAgain = false, retryDelay = 1000;
 export function scheduleSave() { state.dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, SAVE_DEBOUNCE); }

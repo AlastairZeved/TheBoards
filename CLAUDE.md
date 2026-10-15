@@ -23,8 +23,8 @@ bridge). The app's code is split into eight dependency-region modules:
 Import graph note: several modules import each other (interactions ↔ render,
 boards ↔ export, etc.). These are legal ESM cycles. Cross-module bindings are
 used inside function bodies; reads of `state.js` constants at module evaluation
-are also safe (`persistence.js:11`, `export.js:367`). `persistence.js:24`
-opens IndexedDB at load time; that existing side effect is tracked separately.
+are also safe (`persistence.js:11`, `export.js:367`). `persistence.js` opens
+IndexedDB lazily on the first database operation through `db()`.
 `boot()`'s register calls (plus `test/boot-order.js`) pin the load order, and
 each region exposes a `register*()` called from `boot()`.
 

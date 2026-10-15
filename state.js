@@ -5,12 +5,12 @@
      1. Constants & copy
      2. IndexedDB persistence
      3. State + save queue
-     4. Layout / scale-to-fit (PRD §5, UIUX §3/§11)
+     4. Layout / scale-to-fit (PRD §5, UIUX §3 / UIUX §11)
      5. Coordinate + caret helpers
      6. Note / anchor / lot rendering
      7. Gesture recognizer (UIUX §5)
-     8. Editing, drag, pinch, z-order (PRD §6.2/§6.3)
-     9. Complete / restore / delete + Undo toast (PRD §6.4/§6.6, UIUX §9)
+     8. Editing, drag, pinch, z-order (PRD §6.2 / PRD §6.3)
+     9. Complete / restore / delete + Undo toast (PRD §6.4 / PRD §6.6, UIUX §9)
     10. Long-press menu (UIUX §7)
     10.5 PDF export (issue #43)
     10.6 JSON backup: export all, import merged (issue #140, B92)
@@ -45,7 +45,7 @@ export const PANE_PAGER_H = 32;             // .cat-pager row, desktop (issue #5
 export const LIST_CAT_ROW = 44;             // .board-cat head/pager rows, mobile (issues #74, #88, #97)
 // Two gaps, because they say two things (B68): card to card inside a section,
 // and section to section. The first tightens to buy the fourth card; the
-// second is what keeps three categories reading as three, and it holds at 8.
+// second is what keeps four categories reading as four, and it holds at 8.
 export const PANE_ROW_GAP = 4;              // .cat-cards grid gap
 // Cards to a row in the drilled list (B70 put two; B82 takes it to three,
 // issue #125). The mobile drill is now a slide-up panel a third of the viewport
@@ -55,7 +55,7 @@ export const PANE_ROW_GAP = 4;              // .cat-cards grid gap
 export const LIST_CARD_COLS = 3;            // = .cat-cards grid-template-columns (mobile; the rail is one)
 // Both board cards carry the two-line title and the "Last Updated" stamp
 // (B82, issue #125; the rail card joined them in issue #254), so both stand
-// taller than the §6 touch floor: catPageCap() budgets BOTH surfaces against
+// taller than the UIUX §6 touch floor: catPageCap() budgets BOTH surfaces against
 // this height.
 export const LIST_CARD_H = 76;              // = .pane-card height and html:not(.desktop) .board-row height in styles.css
 // The drilled list rises to a third of the viewport, the board still behind it
@@ -64,9 +64,9 @@ export const LIST_CARD_H = 76;              // = .pane-card height and html:not(
 export const LIST_PANEL_FRAC = 1 / 3;
 export const CAT_SEC_GAP = 8;               // #list-rows / #pane-cards flex gap
 export const DBLCLICK_MS = 350;             // second click on a selected item within this = edit
-// Three durations paired to styles.css §8 values — they move together
-// (PRD §9.5): the 200ms set and the 260ms board swap, on §8's one curve.
-export const SWAP_MS = 260;                 // board-swap crossfade; sequenced by timeout (§8-safe)
+// Three durations paired to UIUX §8 values — they move together
+// (PRD §9.5): the 200ms set and the 260ms board swap, on UIUX §8's one curve.
+export const SWAP_MS = 260;                 // board-swap crossfade; sequenced by timeout
 export const SAVE_DEBOUNCE = 300;
 export const UNDO_MS = 5000;
 export const LEAVE_MS = 200;
@@ -151,7 +151,7 @@ export const COPY = {
   // states the return, and the tab is not visible there.
   calBoardTab: 'All', calendar: 'Calendar',
   // The calendar's exit control (B151, issue #353): the owner's rename of
-  // B134's "Collapse" — both rails' way off reads `Go Back`, no arrow glyph
+  // B134's `Collapse` — both rails' way off reads `Go Back`, no arrow glyph
   // (B134/B135's marks retire). The KEY and the element id keep their old
   // names (a value change, not a rename).
   calToday: 'Today', calBack: 'Go Back',
@@ -372,15 +372,16 @@ export const makeDayNoteRecord = (day) => makeRecord('dayNote', {
    calendar data (they live on the event records below) and the next event
    added to that date re-creates a board. No blocking, no orphan.
 
-   The 7-day window is COMPUTED at render from today's date (R4): no stored
-   rolling array, no midnight write, no skip-forward problem, no undo
-   question — and the DB stays at version 1. An event is stored on its date
+   The rolling calendar windows are COMPUTED at render from today's date:
+   the visible stack uses 30 dates (issue #398), while the PDF reference sheet
+   keeps its seven-day window. No rolling array is stored, no midnight write
+   occurs, and the DB stays at version 1. An event is stored on its date
    record: { id, date: 'YYYY-MM-DD', text, state } — plain strings, the
-   §4.1 shape. */
+   PRD §4.1 shape. */
 
 const CAL_TITLE_SUFFIX = ' To Do';
 /* Date keys are local-time YYYY-MM-DD. formatMDY stays the card stamp's
-   formatter (§10); these two are the calendar's own — key for storage and
+   formatter (UIUX §10); these two are the calendar's own — key for storage and
    linking, long form for a day card's header. */
 export function calKey(d) {
   const p = (n) => String(n).padStart(2, '0');
@@ -401,7 +402,7 @@ export function calWindow(count = 7) {
   return days;
 }
 
-/* One event record. Plain strings + a state, the §4.1 shape; `date` is the
+/* One event record. Plain strings + a state, the PRD §4.1 shape; `date` is the
    calendar link (calKey form) and `createdAt` the mirror's order key — the
    positional identity the Requirements mirror rewrites around. `time` is the
    hourly view's top line (issue #313, B142): the box's time, split OUT of
@@ -507,7 +508,7 @@ export const el = {
   pane: document.getElementById('pane'),
   paneCards: document.getElementById('pane-cards'),
   paneRail: document.getElementById('pane-rail'),         // the collapsed All-Boards face (issue #211, B118)
-  paneCollapse: document.getElementById('pane-collapse'), // the expanded pane's collapse arrow (B118)
+  paneCollapse: document.getElementById('pane-collapse'), // the expanded pane's Go Back control (B151)
   boardActions: document.getElementById('board-actions'),   // the board-action row (B83)
   actionBoards: document.getElementById('action-boards'),   // All Boards ⇄ This board toggle
   actionExport: document.getElementById('action-export'),   // Export this board (PDF · JSON, B92)
@@ -525,7 +526,7 @@ export const el = {
   calBack: document.getElementById('cal-back'),
   calToday: document.getElementById('cal-today'),       // B148 (issue #342): the row's right anchor
   calMonth: document.getElementById('cal-month'),       // the month view's ground (issue #191)
-  actionCalendar: document.getElementById('action-calendar'), // 4th board-action tab (R7.2)
+  actionCalendar: document.getElementById('action-calendar'), // fourth board-action tab (B95)
 };
 export const anchorEls = {
   title: document.getElementById('anchor-title'),
@@ -533,12 +534,15 @@ export const anchorEls = {
   requirements: document.getElementById('anchor-requirements'),
 };
 
-/* The shared mutable state carrier (moved here at the cut, issue #182): the graph root imports nothing. */
+/* Shared mutable state carrier (issue #182): only globals written from more
+   than one module live here, so a module split can safely cross-module-write
+   them (a bare imported `let` is read-only in ESM). The container is never
+   reassigned or destructured; modules read its members through `state`. */
 const bootTier = readTier();    // issue #409: seed the arrangement flags from the one derivation
 export const state = {
   current: null,          // the open board record (in memory)
   dirty: false,           // `current` holds an edit the debounce hasn't written
-  // Arrangement tier (issue #182, B'): the environment pass (the entry's
+  // Arrangement tier (issue #182): the environment pass (the entry's
   // media-query orchestrator) WRITES these and every region READS them — a
   // cross-module write, so they ride the carrier. A module entry cannot write a
   // bare `let` (imported bindings are read-only); state members it can.
@@ -562,6 +566,11 @@ export const state = {
   calExpanded: false,     // wide's expanded panel (B99) — rail-up is not "open"
 };
 
+/* New boards write their category (B67, extending B63's rule to the creation
+   path): since the ladder rotates with board type, an unwritten category is
+   visible. `newBoardIn` replaces this default with the section it is created
+   in; the empty-database paths use the To-Do default. Legacy records without
+   a category still read as Notes under B21's read-site default. */
 export function newBoardRecord() {
   const now = Date.now();
   return makeRecord('board', { id: uuid(), createdAt: now, updatedAt: now, category: 'todo' },

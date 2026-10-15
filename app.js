@@ -33,11 +33,13 @@ function frameGuard() {
 /* --- Trusted Types default policy (issue #374) ----------------------------
    index.html's CSP meta declares require-trusted-types-for 'script', which
    makes every DOM XSS sink (innerHTML, outerHTML, the eval family) and every
-   script-URL assignment throw unless the write carries a Trusted* value. The
-   HTML sinks — boards.js:89, 314, 728, menus.js:67, 147, render.js:292, 365,
-   386 — assign a static GLYPH.* constant: developer-owned SVG markup, never
-   user data. The one script-URL sink is the service-worker registration of
-   the developer-owned 'sw.js' (app.js). This default policy passes both
+   script-URL assignment throw unless a write carries a Trusted* value. HTML
+   sinks receive developer-owned GLYPH SVG, never user data: boards.js uses
+   GLYPH.calendar, GLYPH[key], and GLYPH.delete; menus.js passes GLYPH.boards,
+   export, import, calendar, complete, copy, title, and link into its mark
+   builders; render.js uses GLYPH.clock, highlight, delete, complete, and restore
+   for note controls. The sole script-URL sink is app.js's service-worker
+   registration of developer-owned 'sw.js'. This default policy passes both
    through unchanged, so the directive costs the sinks nothing and no
    user-data path is touched. Engines without Trusted Types (Firefox, Safari)
    ignore the directive entirely; the guard makes this a no-op there.
@@ -60,12 +62,6 @@ frameGuard();
 // import-based test layer.
 
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-
-/* The isTablet/isDesktop/isWide flags live on `state` (§3): the environment
-   pass writes them, every region reads them (issue #182, B' cross-module write).
-   The initial html classes are applied by boot() via applyInitialMode — the
-   flags live on `state`, so a load-time toggle here would hit the const's TDZ
-   (state is declared at §3, after this block runs). */
 
 /* Issue #281 item 3: ONE environment pass. The two resize listeners and the
    two media-query changes are TRIGGERS ONLY — each schedules this pass, and
@@ -179,10 +175,8 @@ if (!EMBED_MODE) {                    // B124: a forced view never re-applies ov
   TABLET_MQ.addEventListener('change', scheduleEnvironment);
 }
 
-/* The initial html arrangement classes, applied by boot() — NOT at load time.
-   The isX flags live on `state`, which is declared at §3; a load-time toggle
-   here would hit the const's TDZ (this block runs before §3). Same values,
-   applied before boot's first marker, so the painted classes land identically. */
+/* Boot applies the initial html arrangement classes before the first render;
+   later environment passes update them when the device tier changes. */
 function applyInitialMode() {
   document.documentElement.classList.toggle('desktop', state.isDesktop);
   document.documentElement.classList.toggle('tablet', state.isTablet);
@@ -391,12 +385,13 @@ if ('serviceWorker' in navigator) {
 
    DATA IS NEVER TOUCHED. The self-heal deletes Cache Storage entries (the
    `zeved-boards-v*` and any retired `todo-boards-v*` copies of the app shell) and unregisters the worker —
-   nothing else. The boards live in IndexedDB (`boards-db`), a different
-   store the handshake never opens, and B21's read-site defaulting means an
+   nothing else. The boards live in IndexedDB (`boards-db`, or
+   `boards-db-embed` in embed mode), a different store the handshake never
+   opens, and B21's read-site defaulting means an
    old record renders correctly under a new build anyway. Worst case is the
-   app re-downloading its own five files; a board cannot be lost to this
+   app re-downloading its precached assets; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v153';
+const OWN_BUILD = 'v154';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

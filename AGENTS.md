@@ -27,7 +27,7 @@ Three documents under `The Docket/` outrank code comments **and this file**. `do
 **Grep `DECISIONS.md` first.** A prior ruling has very likely already answered
 your question — often to forbid exactly what you're about to do (the band
 geometry alone has been ruled on five times: B33 → B35 → B36 → B37 → B38, with
-B47 and B50 reopening it). A PR that changes gesture, layout, band/lot, menu,
+B47 and B54 reopening it). A PR that changes gesture, layout, band/lot, menu,
 or routing behavior without a `B<n>` entry will be asked to add one.
 
 **Cite with the document prefix** (`UIUX §3.3`, not bare `§3.3`) — the
