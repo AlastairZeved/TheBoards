@@ -196,9 +196,10 @@ PDF export and whole-library JSON backup (§7) are the ways data leaves the app.
 ### §3.3 Build constraints
 
 Vanilla HTML/CSS/JS. No frameworks, no build step, no package manager, no
-dependencies, no backend. The shell is `index.html`,
-`styles.css`, `app.js`, `manifest.json`, `sw.js` plus the modules `state.js`, `persistence.js`, `geometry.js`, `render.js`, `interactions.js`, `menus.js`, `export.js`, `boards.js`, and `icons/`/`fonts/`
-(committed; declared and cached only when the design system ships — §9.5).
+dependencies, no backend. The shell is `index.html`, `styles.css`, `app.js`,
+`manifest.json`, `sw.js`, plus the modules `state.js`, `persistence.js`,
+`geometry.js`, `render.js`, `interactions.js`, `menus.js`, `export.js`, and
+`boards.js`.
 
 This is a hard constraint, not a preference. It is why the PDF exporter is
 hand-rolled (§7), why the icons come from a dependency-free PNG writer (B1), why
