@@ -191,7 +191,7 @@ whole shell, so a cold launch in airplane mode is indistinguishable from an
 online one.
 
 The consequence must be stated plainly: **the device is the only live copy.**
-PDF export and whole-library JSON backup (§7) are the ways data leaves the app.
+PDF and JSON export (§7) are the two ways to take data out of the app.
 
 ### §3.3 Build constraints
 
@@ -584,7 +584,7 @@ is live.
 
 ## §7 Export
 
-The only way data leaves the app.
+You can export a board as PDF or the whole library as JSON.
 
 **Hand-rolled, no library** (B34) — §3.3 forbids the dependency, and a
 hand-rolled writer works offline by construction.
@@ -612,9 +612,9 @@ Rules:
 - Export is reachable from the board-action row and the rail card menu — the
   board you are looking at, or another board from the rail, without an anchor menu.
 
-The whole-library JSON backup keeps payload version 2. It separates board
+The whole-library JSON export uses payload version 2. It separates board
 records, calendar events (`calendarEvents`) and calendar day-notes (`dayNotes`)
-into their own arrays. Import recovers day-notes from existing v2 backups where
+into their own arrays. Import recovers day-notes from older v2 JSON exports where
 they were carried inside `boards`, and restores board `catStamp` values.
 
 > B34 marks the `EXPORT_GEO` duplication *impermanent*: the exporter restates
