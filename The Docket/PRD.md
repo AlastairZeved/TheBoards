@@ -144,7 +144,7 @@ completion as a visible scratch-out; multiple boards; and a PDF export.
 | Tags, folders, search, filters, auto-grouping | P2. Every one of these infers a relationship the person did not assert. |
 | Rich text, images, attachments, drawing | The data model is plain strings (§4.1). B3 enforces this at the paste boundary. |
 | Snapping, alignment guides, auto-layout | P2 and P3. Notes overlap freely; the person places them. |
-| Due dates with time logic, push notifications, in-app notification banners, email, SMS, any outbound message system, streaks, recurring reminders | §1.1 and §3.2. The board makes no demands and sends nothing — there is no backend to send from. Clock-toggle reminders and the day's To-Do surface are the bounded exception (B104). The recurring-reminders strip was removed by B145; its records remain and render as blocks in the new calendar section, not as calendar events. |
+| Due dates with time logic, push notifications, in-app notification banners, email, SMS, any outbound message system, streaks, recurring reminders | P4 and §3.2. The board makes no demands and sends nothing — there is no backend to send from. Clock-toggle reminders and the day's To-Do surface are the bounded exception (B104). The recurring-reminders strip was removed by B145; its records remain and render as blocks in the new calendar section, not as calendar events. |
 | Infinite canvas, pan, zoom | §5.1. Boundedness is the feature — a page you can see all of. |
 | A framework, bundler, package manager, dependency | §3.3. |
 | Settings, preferences, a theme switch | P4. §9 is one identity, not a choice to make. |
@@ -174,14 +174,13 @@ them to the design system would gate a palette on unrelated work.
 
 A PWA, installable to the home screen, running standalone and fully offline.
 
-Mobile-first, and mobile is the primary path — the geometry (§5.2), the touch
-floor (§5.3) and the capture path (§6.2) are all specified for touch first, with
-desktop as an explicit second grammar (§5.4). Foldables are first-class: both the
-inner and cover displays of a Z Fold are supported — the unfolded cover lands in
-the tablet arrangement on its width alone (B103) — which is why the sheet is
-viewport-derived (B32), while the installed mobile surface is portrait-locked
-(B141): the manifest declares `orientation: "portrait"`, so a phone never enters
-a landscape arrangement.
+Mobile is the primary path — geometry (§5.2), the touch floor (§5.3) and
+capture (§6.2) are specified for touch first, with desktop an explicit second
+grammar (§5.4). Foldables are first-class: a Z Fold's unfolded cover lands in the
+tablet arrangement on its width alone (B103), which is why the sheet is
+viewport-derived (B32). The installed mobile surface is portrait-locked (B141) —
+the manifest declares `orientation: "portrait"`, so a phone never enters a
+landscape arrangement.
 
 ### §3.2 Offline and storage
 
@@ -223,20 +222,18 @@ A board:
 A note: `{ id, text, x, y, rw, rh, scale, state }`
 A parking-lot item: `{ id, text, state }`
 
-Since B95 (issue #145) a board record may also carry `cal` (the YYYY-MM-DD
-date key it serves as that day's To-Do board) and `calReq` (the count of
-Requirements lines the calendar mirror last wrote — the span that
-distinguishes the mirror's lines from the reader's own). Both are added at
-the read site, defaulted when absent (B21's idiom — no migration, no DB
-version move). Since B106 (issue #154) the span is the arbiter of a two-way
-mirror: a board-side edit of a span line writes through to the event record
-it mirrors (span line i ↔ event i), a board-side deletion of span lines
-deletes the mirrored events, and hand lines after the span are never
-touched by either direction. Calendar events are records in the same store
-shaped
-`{ id, date, text, state, createdAt }`, identified by carrying `date` and
-no `title`; the 30-day window is computed from today's date at render, so no
-rolling array is stored and midnight writes nothing.
+Since B95 (issue #145) a board record may also carry `cal` (the YYYY-MM-DD key
+it serves as that day's To-Do board) and `calReq` (the count of Requirements
+lines the calendar mirror last wrote — the span distinguishing the mirror's lines
+from the reader's own). Both are added at the read site, defaulted when absent
+(B21's idiom — no migration, no DB version move). Since B106 (issue #154) the
+span arbitrates a two-way mirror: a board-side edit of a span line writes through
+to the event it mirrors (span line i ↔ event i), a board-side deletion of span
+lines deletes the mirrored events, and hand lines after the span are never
+touched by either direction. Calendar events are records in the same store shaped
+`{ id, date, text, state, createdAt }`, identified by carrying `date` and no
+`title`; the 30-day window is computed from today's date at render, so no rolling
+array is stored and midnight writes nothing.
 
 Calendar day-notes are records shaped `{ id, rem, next, day }`, with ids
 prefixed `rem-` and `day` holding the date key they belong to. They are a
@@ -291,32 +288,19 @@ landmines that compounded into flakiness.
 
 ### §5.1 One logical page, one render scale
 
-The board is a fixed, bounded logical coordinate space (`LOGICAL_W` ×
-`LOGICAL_H`) rendered through a single `transform: scale()` (`renderScale`,
-`offX`, `offY`). Note positions and sizes are stored in that logical space and
-converted with `toLogical` / `renderX` / `renderY`.
-
-The board never pans and never zooms. Browser pinch-zoom is disabled at the
-platform level (`touch-action: none`, `user-scalable=no`) because the two-finger
-pinch is reserved for scaling a note (B12).
-
-Because the scale is *uniform*, a note's frame stays square and the hit-area
-maths in §5.3 stays exact.
+The board is one fixed logical coordinate space (`LOGICAL_W` × `LOGICAL_H`)
+rendered through a single uniform `transform: scale()` (`renderScale`, `offX`,
+`offY`); positions and sizes are stored in that space and converted with
+`toLogical` / `renderX` / `renderY`. It never pans and never zooms — the
+two-finger pinch belongs to the note (B12) — and because the scale is uniform, a
+note's frame stays square and the hit-area maths in §5.3 stays exact.
 
 ### §5.2 The sheet's dimensions
 
-**Mobile (B32):** `LOGICAL_W = vw`, `LOGICAL_H = vh`, `renderScale = 1`. The
-sheet *is* the viewport. This overrides the earlier fixed-900 model (B17)
-because at `renderScale ≈ 0.45` a 24px title reached the screen as 10px —
-legibility beat abstraction.
-
-**Desktop (B20):** `renderScale = min(vh/1000, (vw − 300)/900)`,
-`LOGICAL_H = vh/renderScale`, `LOGICAL_W = (vw − 300)/renderScale`, `offX = 300`
-for the rail. Neither logical dimension ever drops below 900×1000.
-
-**The reference sheet is 900×1000.** It is what the band and lot proportions are
-derived against and what the export draws (§7) — distinct from the live
-viewport-derived dimensions.
+Sheet dimensions, the render scale and the 900×1000 reference sheet are
+`UIUX §3`. The live sheet is viewport-derived (B32) rather than B17's fixed-900
+model, because a fixed sheet scaled down to a phone made the title illegible —
+legibility beat abstraction; desktop's scale is rail-aware (B20).
 
 **Committed notes are never re-clamped on resize** (B17, and P3). A rotation
 or a window drag changes how a position renders, never what it is.
@@ -335,8 +319,6 @@ Because notes scale, this cannot be a fixed padding. Each note carries a
 computed `--hit` inset on a transparent `::before`, sized so that
 `inset × scale × renderScale ≥ 44px` physical (B7). The hit area expands; the
 visual frame does not.
-
-The floor stands on touch.
 
 ### §5.4 Two grammars, one recognizer
 
@@ -362,10 +344,9 @@ path.
 | Caret on edit | at the touch point (B14) | at the end (B26) |
 | Boards | full-screen list (§6.7) | always-visible rail (§6.7) |
 
-`MOVE_THRESHOLD = 16px` of slop before a drag begins or a long-press cancels
-(B29 — 10px was cancelling ordinary taps on a 7.6" foldable). `LONGPRESS_MS =
-500`; any release before that with movement under threshold commits as a tap
-(B5).
+Gesture thresholds — the drag slop and the long-press beat — are `UIUX §5`
+(B29 raised the slop after ordinary taps on a foldable cancelled themselves; B5
+keeps a release under it a tap).
 
 ### §5.5 The soft keyboard
 
@@ -376,31 +357,21 @@ and clipping the note being written.
 
 ### §5.6 Actions are acknowledged, not idle
 
-Every committing action — delete, complete, board create/swap/delete, note
-creation — lands the instant it is released; the result itself is the
-acknowledgment. There is no dead time to wonder about, and no filled window: the
-400ms beat that once stood between click and action (B18) is gone (B81), because
-a result that is simply *there* on release acknowledges better than a beat the
-user has to read as "heard."
-
-What survives is only a re-fire guard: a *consequence* (delete, complete, copy,
-undo, a menu item, board create/delete) commits at once and then briefly ignores
-a second tap, so an impatient double-tap is **dropped, not doubled** — first tap
-wins. Navigation (opening a menu, swapping boards) and capture (a note or lot
-line) commit nothing a stray tap could duplicate, so they run with no guard.
-
-This is the shared primitive: any new interactive consequence goes through
-`commitAction()` rather than a bespoke timeout.
+Every committing action lands the instant it is released — the result itself is
+the acknowledgment, and B81 retired the beat that once stood between click and
+action (B18). What survives is a re-fire guard: a *consequence* commits at once
+and then briefly ignores a second tap, so an impatient double-tap is **dropped,
+not doubled**, first tap wins. Navigation and capture commit nothing a stray tap
+could duplicate, so they take no guard — the full set is `UIUX §5`. Any new
+interactive consequence goes through `commitAction()`, not a bespoke timeout.
 
 Three things are deliberately outside it. **Mobile capture** runs synchronously
-in `pointerup` (B27) — a browser raises the soft keyboard only inside user
-activation, and a 400ms timeout is outside it, so P1 wins. **Desktop
-selection** opens no window (B22): it commits nothing, and a delayed selection
-would swallow every double-click. **Rail page turns** likewise commit nothing
-(B42).
+in `pointerup` (B27): a browser raises the soft keyboard only inside user
+activation, so P1 wins. **Desktop selection** opens no window (B22) — a delayed
+selection would swallow every double-click. **Rail page turns** likewise commit
+nothing (B42).
 
-> B18's 400ms is explicitly marked *impermanent* — it is a felt value, and
-> re-interrogating it is invited.
+> B18's 400ms is marked *impermanent* — re-interrogating it is invited.
 
 ---
 
@@ -432,9 +403,8 @@ side, so only three sides are drawn (B38). It is the **one deliberate exception*
 to "no empty frames" (§6.2) — that rule protects the free canvas; the compartment
 is permanent furniture and is always drawn.
 
-Band geometry is sized **by the type it holds, not by the sheet** (B37): across
-is a fraction of the sheet, because it holds the sheet's own divisions; down is
-set by the type. The rule crosses the compartment at its midpoint.
+Band geometry is sized **by the type it holds, not by the sheet** (B37, `UIUX
+§3`). The rule crosses the compartment at its midpoint.
 
 > The band has been ruled on five times: B33 → B35 → B36 → B37 → B38. B38 is
 > current. Read that chain before changing band geometry — each ruling corrected
@@ -523,8 +493,6 @@ superseded by that row (B83). The rail card's menu offers **Export · Delete**.
 Destructive actions remain last, in `--danger` and behind a hairline, never
 distinguished by colour alone (`UIUX §1`, `UIUX §7`).
 
-
-
 No long-press timer is armed over bare canvas or lot background — the release
 still captures — and the `pointerdown` that dismisses an open menu is inert and
 creates nothing, because dismissal is a retraction, not a choice of what was
@@ -532,8 +500,9 @@ underneath (B30).
 
 #### §6.6.1 Undo
 
-Delete is undoable for **5 seconds** (`UIUX §8`) via a toast that restores exact prior state,
-including a note's original index in its collection. A batch delete is **one**
+Delete is undoable for **5 seconds** (`UIUX §9`) via a toast that restores exact
+prior state, including a note's original index in its collection. A batch delete
+is **one**
 window, one save and one Undo. A new destructive action finalizes or cancels the
 prior undo. A pending note or lot Undo is finalized on any board switch; a
 board-delete Undo is cross-board-safe and survives (B26).
@@ -548,13 +517,13 @@ always shows a working page.
 History API (`pushState` / `popstate`) specifically so the OS back gesture
 returns you to the board (B9). Back is never intercepted, shadowed or disabled.
 
-**Desktop:** the list is replaced by a 300px **rail** (B24), collapsed by default
+**Desktop:** the list is replaced by a **rail** (B24), collapsed by default
 (B118), sunken rather than floating, sitting outside `#board` so the gesture
-recognizer never sees its events. Cards are compact.
+recognizer never sees its events; its width and card grammar are `UIUX §10`.
+Cards are compact.
 
-Both surfaces order a section by **last touch, newest first** — the later of
-`updatedAt` and `catStamp`, floored at `createdAt`, with `createdAt` desc + an
-`id` tiebreak closing it (B69, superseding B24's immutable slot; `UIUX §10`).
+Both surfaces order a section by **last touch, newest first** (B69, superseding
+B24's immutable slot; the comparator is `UIUX §10`).
 A card's slot therefore moves when you edit the board: P3 keeps *positions*
 permanent, and a listing's order was never a position.
 
@@ -571,14 +540,13 @@ not touched.
 
 ### §6.8 Offline
 
-The service worker is cache-first with stale-while-revalidate. A warm hit is
-returned without ever waiting on the network, so offline behaviour and
-cold-start latency are unchanged, but the revalidation runs alongside the hit
-and overwrites the entry — so the next launch is current.
+The service worker is cache-first with stale-while-revalidate: a warm hit never
+waits on the network, so offline behaviour and cold-start latency are unchanged,
+while the revalidation beside it makes the next launch current.
 
 `CACHE` is version-stamped and `install` only re-runs when `sw.js`'s own bytes
-change. See §8.1: this makes the cache name the one string that says which build
-is live.
+change — §8.1's reason the cache name is the one string that says which build is
+live.
 
 ---
 
@@ -651,15 +619,12 @@ both must match (B36). B38 records `v7` in the cache lineage.
 ### §8.2 Testing
 
 The `test/` scripts are dev-only and run whole, without a test runner or
-framework. Browser suites drive real Chromium via Playwright; the tokens,
-records and security suites are browserless (`test/README.md`).
-
-Mobile taps are dispatched as **genuine touch events**, not synthesized clicks,
-because a real bug lived specifically in the browser's touch-to-mouse
-compatibility events (B27) — test taps stay that way.
-
-`test/sw-update.js` exists because of B36: it asserts that a shipped change
-actually reaches an installed PWA.
+framework; browser suites drive real Chromium via Playwright, the tokens, records
+and security suites are browserless, and the inventory with its CI column is
+`test/README.md`. Mobile taps are dispatched as **genuine touch events**, not
+synthesized clicks — a real bug lived specifically in the browser's touch-to-mouse
+compatibility events (B27) — and `test/sw-update.js` exists because of B36: it
+asserts a shipped change actually reaches an installed PWA.
 
 > *A suite which cannot fail is lying.*
 
@@ -691,8 +656,8 @@ good.
 
 Positions, not values. The values are `UIUX.md`'s — see §9.3.
 
-**Dark-only, and not a default with an escape hatch.** P4 forbids the setting,
-so there is nothing to escape *to*. The light/dark pair driven by
+**Dark-only, and not a default with an escape hatch** (§1.4): P4 forbids the
+setting, so there is nothing to escape *to*, and the light/dark pair driven by
 `prefers-color-scheme` (B16) is retired. This is the identity: deep water, one
 room, the note as the lit thing in it.
 
@@ -700,21 +665,19 @@ room, the note as the lit thing in it.
 are ordered top to bottom — water closing the band, the deep through the
 middle, water closing the Parking Lot (`UIUX §2.2`, B58). The canvas is the
 deepest thing on the page because it is the ground everything the person makes
-sits on; the two sections are water because they are structure you read past,
-closing the sheet's ends. **The note is the brightest thing on the page**,
-without qualification since B58 retired the sand, because it is the only thing
-the person made — if a re-tune ever made some other mark brighter than the
-note, the identity would be wrong even if every contrast ratio still passed.
+sits on. **The note is the brightest thing on the page**, without qualification
+since B58 retired the sand: it is the only thing the person made, so a re-tune
+that made some other mark brighter would be wrong even if every contrast ratio
+still passed.
 
-**One warm hue, and it is the destructive one.** Everything the app draws is
-cool water or the deep — the sand left with B58 — except the one thing that
-destroys. It need not shout — position and the hairline above it already
-carry the meaning (§6.6).
+**One warm hue, and it is the destructive one** (§1.4): everything the app draws
+is cool water or the deep — the sand left with B58 — except the one thing that
+destroys. It need not shout; position and the hairline above it carry the
+meaning (§6.6).
 
-**One typeface, self-hosted, three weights.** Montserrat Alternates. A CDN font
+**One typeface, self-hosted, three weights** — Montserrat Alternates. A CDN font
 is a network dependency (§3.3) and an uncacheable hole in an offline-first shell
-(§3.2), so it ships from `fonts/` — the three woff2 weights are committed
-there — and is subject to §8.1's bump when declared.
+(§3.2), so it ships from `fonts/`, subject to §8.1's bump when declared.
 
 **Notes carry no shadow.** Elevation means "temporary, above the page", so it
 belongs to summoned surfaces only. A note is *on* the page.
@@ -788,12 +751,11 @@ Covered by standing rulings (B34, B37, B38, B47, B49); none block this release.
 
 ## §10 The boundary with `UIUX.md`
 
-`UIUX.md` now exists, at the `§1`–`§12` numbering the codebase already cites
-and that `styles.css:4-5` carries as its own header index (§13–§17 extend it
-for what the citations never named). **Every
-`UIUX §x` citation resolves natively.** The redirect table this section used to
-hold — mapping each citation into a §9 subsection — is gone with the reason for
-it.
+`UIUX.md` now exists, at the `§1`–`§12` numbering the codebase already cites and
+that `styles.css:4-5` carries as its own header index (§13–§17 extend it for what
+the citations never named). **Every `UIUX §x` citation resolves natively.** The
+redirect table this section used to hold — mapping each citation into a §9
+subsection — is gone with the reason for it.
 
 The line between the two documents:
 
@@ -809,5 +771,3 @@ supersedes them where a later ruling contradicts an earlier position.
 `UIUX §17` mandates the document prefix on every new citation:
 `styles.css` currently mixes bare `§6.1` (this document's anchors) with bare
 `§6` (`UIUX`'s touch floor) in the same file.
-
-
