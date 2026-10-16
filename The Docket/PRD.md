@@ -144,7 +144,7 @@ completion as a visible scratch-out; multiple boards; and a PDF export.
 | Tags, folders, search, filters, auto-grouping | P2. Every one of these infers a relationship the person did not assert. |
 | Rich text, images, attachments, drawing | The data model is plain strings (§4.1). B3 enforces this at the paste boundary. |
 | Snapping, alignment guides, auto-layout | P2 and P3. Notes overlap freely; the person places them. |
-| Due dates with time logic, push notifications, in-app notification banners, email, SMS, any outbound message system, streaks, recurring reminder firing | §1.1 and §3.2. The board makes no demands and sends nothing — there is no backend to send from. Clock-toggle reminders and the day's To-Do surface are the bounded exception (B104); the separate Recurring Reminders strip and its persisted schedule are in scope (B138), but its firing/notification mechanics are not. |
+| Due dates with time logic, push notifications, in-app notification banners, email, SMS, any outbound message system, streaks, recurring reminders | §1.1 and §3.2. The board makes no demands and sends nothing — there is no backend to send from. Clock-toggle reminders and the day's To-Do surface are the bounded exception (B104). The recurring-reminders strip was removed by B145; its records remain and render as blocks in the new calendar section, not as calendar events. |
 | Infinite canvas, pan, zoom | §5.1. Boundedness is the feature — a page you can see all of. |
 | A framework, bundler, package manager, dependency | §3.3. |
 | Settings, preferences, a theme switch | P4. §9 is one identity, not a choice to make. |
