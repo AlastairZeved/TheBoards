@@ -1299,9 +1299,9 @@ function onFocusOut(e) {
   else if (t.classList.contains('note-title')) commitNoteTitle(t.closest('.note'));
   else if (t.classList.contains('lot-text')) commitLot(t.closest('.lot-item'));
   else if (t.classList.contains('anchor')) commitAnchor(t);
-  state.editVVFloor = Infinity;   // next edit measures its own keyboard-up floor (B80)
-  state.editVVWidth = 0;          // ...and its own widths (issue #281): never inherit the last edit's
-  state.editVVH = 0;
+  state.editVP.floor = Infinity;   // next edit measures its own keyboard-up floor (B80)
+  state.editVP.width = 0;          // ...and its own widths (issue #281): never inherit the last edit's
+  state.editVP.height = 0;
   // A viewport change held back during the edit lands now that nothing is at
   // stake — the keyboard's own retraction resize would repeat it, but a
   // rotation or fold has no such second chance.
@@ -1317,18 +1317,18 @@ function onFocusOut(e) {
   // blur-apply exactly as B28/B80 left them. When the gate holds, the frame
   // stays deferred: the keyboard's retraction resize is guaranteed on close,
   // and it lands through the environment pass at the restored height.
-  const stillShrunken = state.editStartH && !state.isDesktop &&
-    window.innerHeight < state.editStartH - KB_HIDE_SLOP;
-  if (state.layoutDeferred && !stillShrunken) {
-    state.layoutDeferred = false;
+  const stillShrunken = state.editVP.startH && !state.isDesktop &&
+    window.innerHeight < state.editVP.startH - KB_HIDE_SLOP;
+  if (state.editVP.deferred && !stillShrunken) {
+    state.editVP.deferred = false;
     requestAnimationFrame(() => applyLayout());
   }
   if (stillShrunken) {
     // arm the environment pass: the retraction resize must land the held frame
     // even if the restored viewport reads unchanged against its lastEnv (B152)
-    state.holdFramePending = true;
+    state.editVP.holdPending = true;
   } else {
-    state.editStartH = 0;
+    state.editVP.startH = 0;
   }
 }
 
@@ -1343,7 +1343,7 @@ function onFocusIn(e) {
   // The max keeps a keyboard that was ALREADY up when this edit began (the
   // held-frame chain, B152's focusout gate) from re-baselining the edit on
   // its own shrunken height.
-  if (!state.isDesktop) state.editStartH = Math.max(state.editStartH, window.innerHeight);
+  if (!state.isDesktop) state.editVP.startH = Math.max(state.editVP.startH, window.innerHeight);
   if (pointers.size) return;
   const t = e.target;
   if (!t.classList) return;

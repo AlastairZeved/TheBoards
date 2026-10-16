@@ -1,11 +1,11 @@
 import { ACTION_DELAY, DESKTOP_MQ, EMBED, EMBED_MODE, TABLET_MQ, boardsOf, calKey, el, newBoardRecord, newCalEvent, readTier, state } from './state.js';
 import { idbDelete, idbGet, idbGetAll, idbPut, persist } from './persistence.js';
-import { LOGICAL_H, LOGICAL_W, applyLayout, calSqueeze, inEnvironmentPass, lotH, migrateLegacyBoards, onViewportResize, renderX, setCalSqueeze } from './geometry.js';
+import { LOGICAL_H, LOGICAL_W, applyLayout, calSqueeze, inEnvironmentPass, lotH, migrateLegacyBoards, onViewportResize, renderX } from './geometry.js';
 import { linkSource, noteEls, registerRender, renderBoard, updateLinks } from './render.js';
 import { cancelGesture, clearSelection, commitAction, deleteNote, engaged, g, hideToast, leave, pointers, registerInteractions, selected } from './interactions.js';
 import { closeMenu, registerMenus } from './menus.js';
 import { EXPORT_GEO, buildBoardPdf, exportBoardPdf, exportNoteBox, pdfTextW } from './export.js';
-import { catOf, catOrder, catPageCap, catView, checkDayRoll, drillCat, goToList, listOpen, lotMenuOpen, openBoardObj, registerBoards, renderCal, renderPane, returnToBoard, showCalRail, swapBoard, collapsePane } from './boards.js';
+import { catOf, catOrder, catPageCap, catView, checkDayRoll, drillCat, goToList, hideCalRail, listOpen, lotMenuOpen, openBoardObj, registerBoards, renderCal, renderPane, returnToBoard, showCalRail, swapBoard, collapsePane, tearDownCal } from './boards.js';
 
 /* --- B125 frame-guard -----------------------------------------------------
    The app may be framed only by its own origin or https://alastairzeved.com
@@ -86,17 +86,17 @@ function applyEnvironment() {
   // resizes were consumed by the editing guard, so the retraction can read
   // unchanged against lastEnv and still owe the held frame ONE application.
   const changed = !lastEnv || tierChanged || vw !== lastEnv.vw || vh !== lastEnv.vh ||
-                  state.holdFramePending;
-  state.holdFramePending = false;
+                  state.editVP.holdPending;
+  state.editVP.holdPending = false;
   lastEnv = { vw, vh, wide };
   if (!changed) return;
   inEnvironmentPass(true);
   try {
-    if (tierChanged) applyTier(desktop, tablet);
+    if (tierChanged) applyTier({ desktop, tablet, wide });
     // B152 (issue #360): an application discharges the focusout hold — the
     // held frame has landed, so nothing is deferred and no stale baseline
     // may outlive it (a future edit in a smaller room must re-baseline).
-    if (!applyLayout(vw, vh)) { state.layoutDeferred = false; state.editStartH = 0; }
+    if (!applyLayout(vw, vh)) { state.editVP.deferred = false; state.editVP.startH = 0; }
   } finally {
     inEnvironmentPass(false);
   }
@@ -109,15 +109,17 @@ function applyEnvironment() {
    flip whose collapsePane changes the frame's rail width still costs exactly
    one application (inEnvironmentPass keeps the rail setters from laying out
    underneath it). */
-function applyTier(desktop, tablet) {
+function setTierClasses({ desktop, tablet, wide }) {
   state.isDesktop = desktop;
-  state.isTablet = tablet;
-  state.isWide = desktop || tablet;
-  document.documentElement.classList.toggle('desktop', state.isDesktop);
+  state.isWide = wide;
+  document.documentElement.classList.toggle('desktop', desktop);
   // The wide class is the CSS arrangement gate — every `html.desktop` rule
   // that draws the rail or the picker overlay is a wide rule now (B96).
-  document.documentElement.classList.toggle('tablet', state.isTablet);
-  document.documentElement.classList.toggle('wide', state.isWide);
+  document.documentElement.classList.toggle('tablet', tablet);
+  document.documentElement.classList.toggle('wide', wide);
+}
+function applyTier(tier) {
+  setTierClasses(tier);
   // Teardown: nothing half-finished survives the flip.
   clearSelection();
   closeMenu();
@@ -134,14 +136,7 @@ function applyTier(desktop, tablet) {
   // tear down (the expanded panel's squeeze must lift so the frame re-reads
   // the rail's 40px). Mobile, closed, hides the view outright as before.
   if (state.calOpen || state.calExpanded) {
-    state.calOpen = false;
-    state.calExpanded = false;
-    el.calView.hidden = true;
-    el.calView.classList.remove('rail-open', 'panel');
-    el.calRail.hidden = true;
-    setCalSqueeze(false);
-    // B124 embed: nothing was pushed, so don't pop the parent page's history.
-    if (!EMBED && history.state && history.state.v === 'cal') history.back();
+    tearDownCal({ popHistory: true });
   }
   // Issue #281 item 2: the mode path defers exactly as the resize path does. A
   // fold flips the tier under a focused editor; applying here would move the
@@ -152,18 +147,9 @@ function applyTier(desktop, tablet) {
   if (state.isWide) {
     collapsePane();                  // B118: every return to wide re-enters through the collapsed face
     renderPane();
-    document.documentElement.classList.add('has-cal-rail');  // B99: re-arm the rail's CSS gate on every return to wide (issue #213)
     showCalRail();                   // the rail re-renders on every flip to wide (B99)
   } else {
-    document.documentElement.classList.remove('has-cal-rail');
-    // Issue #219: the rail is wide furniture — flip back to narrow and the
-    // mobile state must be restored exactly as hideCal's mobile path leaves
-    // it: the view hidden by attribute (mobile's only concealment), no rail
-    // face. The furniture pushed no history and set no state flags, so this
-    // is all the teardown there is.
-    el.calView.hidden = true;
-    el.calView.classList.remove('rail-open', 'panel');
-    el.calRail.hidden = true;
+    hideCalRail();
   }
 }
 if (!EMBED_MODE) {                    // B124: a forced view never re-applies over the force
@@ -174,9 +160,7 @@ if (!EMBED_MODE) {                    // B124: a forced view never re-applies ov
 /* Boot applies the initial html arrangement classes before the first render;
    later environment passes update them when the device tier changes. */
 function applyInitialMode() {
-  document.documentElement.classList.toggle('desktop', state.isDesktop);
-  document.documentElement.classList.toggle('tablet', state.isTablet);
-  document.documentElement.classList.toggle('wide', state.isWide);
+  setTierClasses(readTier());
 }
 
 /* --- 12. Boot + service worker ------------------------------------------- */
@@ -243,7 +227,6 @@ async function boot() {
   // section must not render as a 40px sliver where the feature isn't armed).
   // Mobile never sees it (its calendar stays the tab-driven full-screen view).
   if (state.isWide) {
-    document.documentElement.classList.add('has-cal-rail');
     showCalRail();
   }
   // The day-roll launch (issue #153, B105): if today carries events, the app
@@ -368,7 +351,7 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its precached assets; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v156';
+const OWN_BUILD = 'v157';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

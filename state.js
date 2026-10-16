@@ -565,20 +565,16 @@ export const state = {
   // media-query orchestrator) WRITES these and every region READS them — a
   // cross-module write, so they ride the carrier. A module entry cannot write a
   // bare `let` (imported bindings are read-only); state members it can.
-  isTablet: bootTier.tablet,        // arrangement tier — seeded from readTier(), written by the environment pass
   isDesktop: bootTier.desktop,
   isWide: bootTier.wide,
-  editVVFloor: Infinity,  // smallest visual-viewport height seen this edit (keyboard fully up)
-  editVVWidth: 0,         // the width of the PREVIOUS resize of this edit (issue #281): a fold
-                          // changes width, the keyboard never does — the blur's second gate
-  editVVH: 0,             // ...and its height, so a size told twice by both listeners is inert
-  editStartH: 0,          // the layout-viewport height when the edit began (issue #360): engines
-                          // without navigator.virtualKeyboard (Gecko/WebKit) shrink innerHeight
-                          // under the keyboard too, so focusout can tell a still-shrunken room
-                          // from a restored one; 0 = no baseline (desktop, or no edit yet)
-  layoutDeferred: false,
-  holdFramePending: false, // a focusout hold (B152) armed the pass: land the held frame even
-                           // if the restored viewport reads unchanged against lastEnv
+  editVP: {
+    floor: Infinity,       // smallest visual-viewport height seen this edit (keyboard fully up)
+    width: 0,              // previous resize width; a fold changes width, the keyboard never does
+    height: 0,             // paired with width so duplicate window/visualViewport events are inert
+    startH: 0,             // layout-viewport height at edit start (B152); 0 = no baseline
+    deferred: false,       // B28: a frame changed during editing and must land after the edit
+    holdPending: false,    // B152: the restored room must land the held frame even if unchanged
+  },
   menuInvoker: null,      // desktop contextmenu: focus returns here on close
   swallowTap: false,      // the pointerdown that dismissed a menu is inert (B30)
   calOpen: false,         // the MOBILE full-screen calendar (B95's third screen)
