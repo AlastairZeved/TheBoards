@@ -114,7 +114,7 @@ If v2 ships with any of these it has failed, regardless of technical correctness
 | Symbols | **Drawn, not typed** (`UIUX §13.3`) | A symbol asked to render identically everywhere in one voice is not text |
 | The page's edge | **Closed by its sections** (B58) — water at both ends, and the deep needs no falloff | The sheet fills the viewport on every path; the two water sections are what bound the page's reading, and a near-black canvas has nothing darker to fall to |
 | Export | **Paper-light, always** | It is a reference sheet *for paper* |
-| Motion | A closed set of five transitions. It does not grow | Nothing else has earned its place |
+| Motion | A closed set of eight transitions (`UIUX §8`, B173). It does not grow | Nothing else has earned its place |
 
 ---
 
