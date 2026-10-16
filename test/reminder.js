@@ -145,6 +145,32 @@ run(async () => {
       got.sourceIntact[1].id === 'p1' && got.sourceIntact[1].reminder === undefined,
       JSON.stringify(got.sourceIntact));
     ok('no copy record exists: no linked board holds r1 in its notes array', got.todayCopies === 0, JSON.stringify(got.todayCopies));
+
+    const sourceBeforeResize = await page.evaluate(async (boardId) => {
+      const source = await idbGet(boardId);
+      return JSON.stringify(source.notes.find(n => n.id === 'r1'));
+    }, boardId);
+    await page.setViewportSize({ width: 480, height: 846 });
+    await page.waitForTimeout(450);             // viewport frame reflow
+    const reflow = await page.evaluate(async ({ boardId, sourceBeforeResize }) => {
+      const note = (await idbGet(boardId)).notes.find(n => n.id === 'r1');
+      const k = Math.min(LOGICAL_W / (note.rw || 900), LOGICAL_H / note.rh);
+      const echo = document.querySelector('.note.surfaced[data-id="r1"]');
+      return {
+        left: parseFloat(echo.style.left),
+        top: parseFloat(echo.style.top),
+        scale: parseFloat(echo.style.transform.slice(6, -1)),
+        expectedLeft: renderX(note),
+        expectedTop: note.y * k,
+        expectedScale: (note.scale || 1) * k,
+        sourceUnchanged: JSON.stringify(note) === sourceBeforeResize,
+      };
+    }, { boardId, sourceBeforeResize });
+    ok('a viewport frame change re-seats the echo from its source note geometry (issue #436)',
+      Math.abs(reflow.left - reflow.expectedLeft) < 0.01 &&
+      Math.abs(reflow.top - reflow.expectedTop) < 0.01 &&
+      Math.abs(reflow.scale - reflow.expectedScale) < 0.00001, JSON.stringify(reflow));
+    ok('re-seating an echo does not write the source record', reflow.sourceUnchanged, JSON.stringify(reflow));
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
