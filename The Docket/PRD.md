@@ -5,14 +5,14 @@ first; this document reconstructs its product rules from the working code and
 `DECISIONS.md`, and adds §9, which states the design system's position for v2.
 
 **How to read this with the other records.** `DECISIONS.md` is the binding,
-cumulative record of every UI/interaction ruling (A1, B1–B43+), each resolved
+cumulative record of every UI/interaction ruling (A1, B1–B170+), each resolved
 against the principles in §1 below. Where this document and `DECISIONS.md`
 disagree, **`DECISIONS.md` wins** — it is the later, issue-tied ruling, and
 several of its entries deliberately supersede earlier positions stated here.
 This document exists to say what the app *is* and what it is *for*, so that a
 new ruling has something to resolve against.
 
-`UIUX.md` is the third record and the **rendering authority** (`DECISIONS.md:22`):
+`UIUX.md` is the third record and the **rendering authority** (`DECISIONS.md`):
 it holds every value the app draws with. This document holds positions; where a
 value appears here it is quoted from `UIUX.md`, never authored here. §9.3 maps
 the two, and §10 states the boundary.
@@ -53,16 +53,25 @@ like, and it is equally binding on §9.
 **Peaceful Fondness.** The board should feel like a place you are glad to
 return to. Not productive-anxious, not gamified, not neutral-corporate.
 
-The mental imagery is **calm water** — beaches, rivers, brooks. Note the
-register carefully: this is water at depth and at dusk, not noon glare. The
-palette (§9.2, `UIUX §2.1`) is dark, and that is deliberate. Deep water is peaceful; a
-bright white productivity surface is not. The page reads top to bottom as one
-scene — water closing each end of the sheet, the deep between (B58) — and
-**the note is the one lit thing on the deep.**
+**Imagery:** calm water — beaches, rivers, brooks — at depth and at dusk, not
+noon glare. That is why the palette (§9.2, `UIUX §2.1`) is dark, and that is
+deliberate. Deep water is peaceful; a bright white productivity surface is not.
+The page reads top to bottom as one scene — water closing each end of the
+sheet, the deep between (B58) — and **the note is the one lit thing on the
+deep.**
+
+**Personality:** quiet, exact, unhurried, completely uninterested in your
+attention.
 
 This identity does **not** license decoration. §1's law still holds: every pixel
 earns its place. Peace is produced by restraint, depth and consistency, not by
 ornament. Where §9 adds something, it is because that thing does a job.
+
+**The one exception, bounded (B104):** reminders are a tap, not a nag. A clock
+icon toggles on a note card; the active clock glows and the card surfaces to
+that morning's To-Do board. No time picker, no pop-up, no due-time stored
+anywhere, nothing pushes — the board still asks nothing; it only remembers
+where the person put the clock.
 
 ### §1.2 Design principles, numbered
 
@@ -93,24 +102,9 @@ If v2 ships with any of these it has failed, regardless of technical correctness
 - An **empty board that looks broken.** A blank page is the correct state of a
   blank page.
 
-### §1.4 North star
 
-- **Feel:** peaceful fondness. A place you are glad to return to.
-- **Imagery:** calm water, at depth and at dusk, not noon glare. That is why the
-  palette is dark. The page reads top to bottom as one scene — water closing
-  each end of the sheet, the deep between (B58) — and **the note is the one
-  lit thing on the deep.**
-- **Personality:** quiet, exact, unhurried, completely uninterested in your
-  attention.
-- **What this does not license:** decoration. Peace comes from restraint, depth
-  and consistency.
-- **The one exception, bounded (B104):** reminders are a tap, not a nag. A
-  clock icon toggles on a note card; the active clock glows and the card
-  surfaces to that morning's To-Do board. No time picker, no pop-up, no
-  due-time stored anywhere, nothing pushes — the board still asks nothing; it
-  only remembers where the person put the clock.
 
-### §1.5 Taste decisions
+### §1.4 Taste decisions
 
 | Decision | Choice | Rationale |
 |---|---|---|
@@ -146,14 +140,14 @@ completion as a visible scratch-out; multiple boards; and a PDF export.
 
 | Not built | Reason |
 |---|---|
-| Accounts, sync, sharing, collaboration | §1.4. There is no backend (§3.2) and adding one changes what the product is. |
+| Accounts, sync, sharing, collaboration | §1.1. There is no backend (§3.2) and adding one changes what the product is. |
 | Tags, folders, search, filters, auto-grouping | §1.2. Every one of these infers a relationship the person did not assert. |
 | Rich text, images, attachments, drawing | The data model is plain strings (§4.1). B3 enforces this at the paste boundary. |
 | Snapping, alignment guides, auto-layout | §1.3 and §1.2. Notes overlap freely; the person places them. |
-| Due dates with time logic, push notifications, in-app notification banners, email, SMS, any outbound message system, streaks, recurring reminders | §1.4 and §3.2. The board makes no demands and sends nothing — there is no backend to send from. Clock-toggle reminders and the day's To-Do surface are the bounded exception, ruled **B104** (issue #169) — a tap, a glow, and a card that shows up where the person already looks; no times are stored and nothing pushes. The end-of-day SMS summary is removed, ruled **B107**; the 2x2 home screen widget is dropped, ruled **B111** — nothing pushes, nothing sits outside the app (the "Today's To Do History" rail is killed by the same ruling, **B111**). Recurring reminders are ruled out, **B113** — the shipped reminder is the complete feature; a completed reminder is complete, and re-tapping the clock is the only return path (the month view is deferred to issue #191, parked behind #170) — with one bounded exception, ruled **B138** (issue #295, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/295#issuecomment-5826290712): the Recurring Reminders strip component is IN SCOPE — chips read title + next occurrence, page left / page right paging, an orange plus add control, and persistence of the reminder records; B113's clause is superseded for this component only, the firing/notification mechanics stay OUT of scope, and the clock-toggle reminder of B108/B109 remains the complete reminder mechanism |
+| Due dates with time logic, push notifications, in-app notification banners, email, SMS, any outbound message system, streaks, recurring reminders | §1.1 and §3.2. The board makes no demands and sends nothing — there is no backend to send from. Clock-toggle reminders and the day's To-Do surface are the bounded exception, ruled **B104** (issue #169) — a tap, a glow, a card that shows up where the person already looks; no times stored, nothing pushes. |
 | Infinite canvas, pan, zoom | §5.1. Boundedness is the feature — a page you can see all of. |
 | A framework, bundler, package manager, dependency | §3.3. |
-| Settings, preferences, a theme switch | §1.4. §9 is one identity, not a choice to make. |
+| Settings, preferences, a theme switch | §1.1. §9 is one identity, not a choice to make. |
 
 ### §2.4 Success
 
@@ -169,7 +163,7 @@ them to the design system would gate a palette on unrelated work.
 | Deferred | Why it is not here |
 |---|---|
 | **The fold/rotate arrangement bug — issues #65, #75** | **Shipped — ruled B64.** The similarity transform landed as its own ruling, its own branch and its own PR, exactly as scoped here: one ratio `min(LOGICAL_W/rw, LOGICAL_H/rh)` for both axes and for size, superseding B40's anisotropic mapping and B21's width-only multiplier (`UIUX §11`) |
-| **PDF font embedding** | ~150KB per exported file, in the most intricate code in the app, so that a printed reference sheet matches the app's typography. Worth doing; not worth blocking a recolor on. The export keeps base-14 Helvetica and stays correct (§9.5.2) |
+| **PDF font embedding** | ~150KB per exported file, in the most intricate code in the app, so that a printed reference sheet matches the app's typography. Worth doing; not worth blocking a recolor on. The export keeps base-14 Helvetica and stays correct (§9.5 item 2) |
 | **Board categories on mobile** | **Already shipped** — PR #79, issue #74, ruled B44 |
 
 ---
@@ -202,8 +196,8 @@ export (§7) is the only way data leaves the app.
 ### §3.3 Build constraints
 
 Vanilla HTML/CSS/JS. No frameworks, no build step, no package manager, no
-dependencies, no backend. Five files are the entire app: `index.html`,
-`styles.css`, `app.js`, `manifest.json`, `sw.js`, plus `icons/` and `fonts/`
+dependencies, no backend. The shell is `index.html`,
+`styles.css`, `app.js`, `manifest.json`, `sw.js` plus the modules `state.js`, `persistence.js`, `geometry.js`, `render.js`, `interactions.js`, `menus.js`, `export.js`, `boards.js`, and `icons/`/`fonts/`
 (committed; declared and cached only when the design system ships — §9.5).
 
 This is a hard constraint, not a preference. It is why the PDF exporter is
@@ -240,7 +234,7 @@ deletes the mirrored events, and hand lines after the span are never
 touched by either direction. Calendar events are records in the same store
 shaped
 `{ id, date, text, state, createdAt }`, identified by carrying `date` and
-no `title`; the 7-day window is computed from today's date at render, so no
+no `title`; the 30-day window is computed from today's date at render, so no
 rolling array is stored and midnight writes nothing.
 
 Calendar day-notes are records shaped `{ id, rem, next, day }`, with ids
@@ -256,13 +250,13 @@ Two structural facts carry product meaning:
   (B6), why they are never framed (§6.5), and why they are not multi-selectable
   on desktop (B41) — herding is a spatial operation.
 - **`rw`/`rh` are the reference frame a note was authored against**, not a
-  position. They exist so §1.3 can be honoured across devices: stored `x`/`y`
+  position. They exist so P3 can be honoured across devices: stored `x`/`y`
   are never mutated, and rendering scales them from the authoring frame to the
   current one (B21, B32, B40).
 
 New fields are **defaulted at the read site, never migrated** (B21's idiom,
 reused by B42 for `category`/`catStamp`). A board written by an older build
-opens correctly without being rewritten — which is §1.3 applied to the schema.
+opens correctly without being rewritten — which is P3 applied to the schema.
 
 ### §4.2 Writes
 
@@ -323,7 +317,7 @@ for the rail. Neither logical dimension ever drops below 900×1000.
 derived against and what the export draws (§7) — distinct from the live
 viewport-derived dimensions.
 
-**Committed notes are never re-clamped on resize** (B17, and §1.3). A rotation
+**Committed notes are never re-clamped on resize** (B17, and P3). A rotation
 or a window drag changes how a position renders, never what it is.
 
 Cross-device rendering is **homothetic**: position's law applied to size.
@@ -333,15 +327,15 @@ rather than letting fixed-size notes collide.
 
 ### §5.3 The touch floor
 
-44 CSS px physical on mobile — the fingertip floor (WCAG 2.5.5 AAA).
+The touch floor is `UIUX §6`: 44px physical on mobile (WCAG 2.5.5 AAA), 24px
+on desktop (`HIT_FLOOR_DESKTOP`, B23).
 
 Because notes scale, this cannot be a fixed padding. Each note carries a
 computed `--hit` inset on a transparent `::before`, sized so that
 `inset × scale × renderScale ≥ 44px` physical (B7). The hit area expands; the
 visual frame does not.
 
-On desktop the floor drops to 24px (`HIT_FLOOR_DESKTOP`), which is WCAG 2.5.8
-AA and pointer-appropriate (B23). The 44px floor stands on touch.
+The floor stands on touch.
 
 ### §5.4 Two grammars, one recognizer
 
@@ -399,7 +393,7 @@ This is the shared primitive: any new interactive consequence goes through
 
 Three things are deliberately outside it. **Mobile capture** runs synchronously
 in `pointerup` (B27) — a browser raises the soft keyboard only inside user
-activation, and a 400ms timeout is outside it, so §1.1 wins. **Desktop
+activation, and a 400ms timeout is outside it, so P1 wins. **Desktop
 selection** opens no window (B22): it commits nothing, and a delayed selection
 would swallow every double-click. **Rail page turns** likewise commit nothing
 (B42).
@@ -422,7 +416,7 @@ editing (B2) so the gesture recognizer owns tap/drag/long-press without fighting
 native focus, and it is `plaintext-only` where supported, falling back to `true`
 (B3), because the data model is plain strings.
 
-### §6.1.1 The top band
+#### §6.1.1 The top band
 
 The band is **drawn furniture, independent of content** (B33). It reads
 **rule → header → content** — the same three-part split the Parking Lot has used
@@ -448,7 +442,7 @@ set by the type. The rule crosses the compartment at its midpoint.
 ### §6.2 Notes — the atom
 
 **A tap on empty canvas creates a note at the tapped point, in edit mode, with
-the caret placed.** Instantly on mobile (§5.6, B27). This is §1.1 in one
+the caret placed.** Instantly on mobile (§5.6, B27). This is P1 in one
 sentence, and it is the single most important behaviour in the app.
 
 **No empty frame ever exists.** The frame draws itself on the first character
@@ -466,7 +460,7 @@ impermanent in B39.*
 
 ### §6.3 Move, scale, stack
 
-**Drag to move.** Free overlap, no snapping, no alignment guides (§1.2). The
+**Drag to move.** Free overlap, no snapping, no alignment guides (P2). The
 only clamp is to the page bounds.
 
 **Pinch to scale** on mobile, **drag the selection frame** on desktop — both
@@ -489,7 +483,7 @@ the item: three families of ruled strokes at ≥90% coverage, texture rather tha
 colour, plus the underlying text destroyed to 40% ink so no screenshot or zoom
 recovers it.
 
-This is §1.5. The item stays in place, at its size, in its arrangement — the
+This is P5. The item stays in place, at its size, in its arrangement — the
 board still shows that the work was done and where it sat.
 
 Completion is reversible (Restore). In the PDF export, a completed item is drawn
@@ -516,15 +510,13 @@ with action buttons inline at the row's right edge (B25).
 
 ### §6.6 The menu
 
-Long-press (mobile) or right-click (desktop) on a note, lot line or anchor —
-**and the title compartment carries a visible `Menu` control** that opens the
-anchor menu directly (B65, issue #94). It replaces neither gesture; it is there
-because a feature reachable only by an undeclared gesture is a cognitive tax the
-product does not levy elsewhere. On desktop it is that menu's only route, since
-click-and-hold was removed with B19. Its rendering is `UIUX §14`.
+Long-press (mobile) or right-click (desktop) on a note or lot line opens its
+item menu. The anchor menu (Export · All boards) is retired (B92): anchor
+actions now live on the flat-tab row above the Parking Lot — **All boards ·
+Export · Import** (B83, B92) — and the title compartment's `Menu` control is
+superseded by that row (B83).
 
-**Item menu:** All boards · Complete/Restore · Copy · Delete.
-**Anchor menu:** Export · All boards.
+**Item menu:** Complete/Restore · Copy · Delete.
 **Board row / rail card menu:** Export · Delete.
 **Desktop selection buttons:** Complete · Copy · Delete.
 
@@ -533,17 +525,16 @@ Ordering is navigation first, then the item's own actions in rising severity
 hairline** — and, per `UIUX §1`, never distinguished by colour alone. The
 menu's geometry and the exhaustive list of its variants are `UIUX §7`.
 
-Every menu says "All boards" — and since B66 removed the list view's page
-heading, that is the only place the word is written.
+
 
 No long-press timer is armed over bare canvas or lot background — the release
 still captures — and the `pointerdown` that dismisses an open menu is inert and
 creates nothing, because dismissal is a retraction, not a choice of what was
 underneath (B30).
 
-### §6.6.1 Undo
+#### §6.6.1 Undo
 
-Delete is undoable for **5 seconds** via a toast that restores exact prior state,
+Delete is undoable for **5 seconds** (`UIUX §8`) via a toast that restores exact prior state,
 including a note's original index in its collection. A batch delete is **one**
 window, one save and one Undo. A new destructive action finalizes or cancels the
 prior undo. A pending note or lot Undo is finalized on any board switch; a
@@ -555,23 +546,23 @@ Multiple boards; the board is the unit. An empty database creates and opens one
 blank board — **the list is never the landing view** (B10), because the desk
 always shows a working page.
 
-**Mobile:** a full-screen list, most recently updated first. Routing uses the
+**Mobile:** a slide-up panel, most recently updated first (B82). Routing uses the
 History API (`pushState` / `popstate`) specifically so the OS back gesture
 returns you to the board (B9). Back is never intercepted, shadowed or disabled.
 
-**Desktop:** the list is replaced by an always-visible 300px **rail** (B24),
-sunken rather than floating, sitting outside `#board` so the gesture recognizer
-never sees its events. Cards are compact.
+**Desktop:** the list is replaced by a 300px **rail** (B24), collapsed by default
+(B118), sunken rather than floating, sitting outside `#board` so the gesture
+recognizer never sees its events. Cards are compact.
 
 Both surfaces order a section by **last touch, newest first** — the later of
 `updatedAt` and `catStamp`, floored at `createdAt`, with `createdAt` desc + an
 `id` tiebreak closing it (B69, superseding B24's immutable slot; `UIUX §10`).
-A card's slot therefore moves when you edit the board: §1.3 keeps *positions*
+A card's slot therefore moves when you edit the board: P3 keeps *positions*
 permanent, and a listing's order was never a position.
 
-The rail sorts into three sections — **To-Do / Idea / Note** (the third
-renamed at the label only; its storage key remains `unsorted`, B63) — and a
-pointer-drag moves a card between them, with the target section framing itself.
+The rail sorts into four sections — **To-Do / Notes / Learning / Ideas** (B78;
+the `unsorted` key is retained for Note, B63) — and a pointer-drag moves a card
+between them, with the target section framing itself.
 Each section carries its own **New board** control on its head row, and a board
 created there is written into that category and opened (B63; the global create
 controls are gone). Overflow **pages** rather than scrolling, and a single page
@@ -630,8 +621,8 @@ into their own arrays. Import recovers day-notes from existing v2 backups where
 they were carried inside `boards`, and restores board `catStamp` values.
 
 > B34 marks the `EXPORT_GEO` duplication *impermanent*: the exporter restates
-> `styles.css`'s geometry by hand, and splitting §10.5 into its own file is
-> invited.
+> `styles.css`'s geometry by hand, and the split now lives in `export.js`
+> (§10.5); resolving it fully is not this release.
 
 ---
 
@@ -657,14 +648,12 @@ happened once, with two merges landing with no deploy at all.
 The fastest way to answer "did my change reach anyone":
 `curl -s https://<pages-host>/sw.js | grep -E "(zeved-boards|todo-boards)-"`
 
-*Current state, 2026-09-17: `sw.js` reads `zeved-boards-v74` (version-bumped). Historical state: B38 and `plans/TOP-BAND-PLAN.md`
-record `v7` as the last documented bump of the retired cache lineage.*
+*Current state, 2026-09-17: `sw.js` reads `zeved-boards-v158` (version-bumped). Historical state: B38 records `v7` as the last documented bump of the retired cache lineage.*
 
 ### §8.2 Testing
 
-Three standalone Node scripts driving real Chromium via Playwright; no test
-runner, no framework, not shipped. `test/mobile.js`, `test/desktop.js`,
-`test/sw-update.js`. Each is one linear scenario and is run whole.
+The `test/` suites drive real Chromium via Playwright; no test
+runner, no framework, not shipped. Each is one linear scenario and is run whole.
 
 Mobile taps are dispatched as **genuine touch events**, not synthesized clicks,
 because a real bug lived specifically in the browser's touch-to-mouse
@@ -680,10 +669,10 @@ actually reaches an installed PWA.
 ## §9 Design system
 
 New in this document. §1–§8 describe an app that already works; §9 says what it
-should look like and why. It implements §1.1 under §1's law.
+should look like and why. It implements P1 under §1's law.
 
 **§9 holds positions; `UIUX.md` holds values.** That split is not a filing
-convenience — `DECISIONS.md:22` calls `UIUX.md` "the rendering authority" and
+convenience — `DECISIONS.md` calls `UIUX.md` "the rendering authority" and
 resolved A1 by following `UIUX §7` over this document's §6.6. Design values
 belong where the rendering authority can be cited against them. §9.3 is the map.
 
@@ -703,7 +692,7 @@ good.
 
 Positions, not values. The values are `UIUX.md`'s — see §9.3.
 
-**Dark-only, and not a default with an escape hatch.** §1.4 forbids the setting,
+**Dark-only, and not a default with an escape hatch.** P4 forbids the setting,
 so there is nothing to escape *to*. The light/dark pair driven by
 `prefers-color-scheme` (B16) is retired. This is the identity: deep water, one
 room, the note as the lit thing in it.
@@ -737,7 +726,7 @@ distinguished by geometry, position or texture.
 ### §9.3 Where the values live
 
 Every enumerable value — hexes, ratios, sizes, durations, offsets, thresholds —
-is in `UIUX.md`, which `DECISIONS.md:22` calls the rendering authority. This
+is in `UIUX.md`, which `DECISIONS.md` calls the rendering authority. This
 document does not restate them. **A value with two homes has no home**, and this
 repo has already had to arbitrate one document conflict (A1).
 
@@ -773,94 +762,25 @@ exporter's three colour constants pointing at tokens that no longer exist.
 
 Montserrat Alternates **does** reach the export: the PDF embeds it, so the
 document is typographically the app's even though it is not chromatically the
-app's. See §9.5.2.
+app's. See §9.5 item 2.
 
 ### §9.5 Implementation consequences
 
-Named here so the follow-up work is scoped rather than discovered.
-
-1. **Five sync points, none automated** — enumerated in `UIUX §16`.
-   `styles.css :root`; `index.html`'s two `theme-color` metas; `manifest.json`'s
-   `background_color` and `theme_color` (the format has no dark variant, so both
-   become one dark value); `app.js`'s `PDF_PAPER` / `PDF_INK` / `PDF_SHADE`,
-   which are hand-derived floats and do **not** follow the ladder (§9.4); and
-   `icons/`, whose B1 motif is drawn in the poles and must be regenerated as B16
-   regenerated it. Changing a token in one place silently desynchronises the
-   others.
-2. **PDF font embedding is the largest single item.** The exporter uses base-14
-   Helvetica with hardcoded base-36 advance-width tables. Embedding requires:
-   `.ttf` (not `woff2`) for `FontFile2`; a `/FontDescriptor`; a `/Widths` array
-   with `/FirstChar`/`/LastChar`; real advances read from `hmtx`/`hhea`; and
-   `PDF_ASC`/`PDF_DESC` re-derived from the font's own em box. The existing
-   `/WinAnsiEncoding` + CP1252 layer is unaffected. With no build step (§3.3)
-   there is no subsetter, so both weights embed whole — roughly 150KB per
-   exported PDF. That cost is accepted deliberately.
-3. **`EXPORT_GEO.radius` moves with the note: 3px.** An earlier draft held the
-   note at 2px, arguing the radius set is three steps — 2 drawn, 3 the selection
-   ring, 8 elevated transient — and the ring is 3 *because* it sits 1px outside
-   a 2px note. The rendered proofs overruled it: at 3px the note still reads as
-   drawn at every scale a note can take (`NOTE_MIN_W = 60` under
-   `transform: scale()` keeps it near-square, `UIUX §4`), and the ring
-   re-derives to 4px by the same 1px-outside law. The counterargument is
-   recorded with the ruling (B49).
-4. `sw.js` `ASSETS` gains the font files; `CACHE` bumps per §8.1.
-5. The `prefers-color-scheme: dark` block and the entire light `:root` are
-   removed, not overridden. `UIUX §16.2` gives every one of v1's thirteen tokens
-   a fate, and `UIUX §2.3` the ground → ink binding for the 60 call sites the
-   two retiring poles carry.
-6. **The band's type metrics must be re-verified against the shipped font files**
-   before release (`UIUX §13.2`). The band is sized by the type it holds (B37)
-   and has been ruled on five times; `--card-h: 68px` and the 12px label's
-   clearance of the 100px `--card-w` floor are both `system-ui` measurements.
-7. **Three JS duration constants are paired to CSS values** and must move
-   together (`UIUX §8`); nothing tests the pairing.
-
----
+Standing law:
+1. The five sync points (`UIUX §16`) stay in agreement (`styles.css :root`,
+   `index.html` theme-color metas, `manifest.json` colors, `export.js`
+   `PDF_PAPER`/`PDF_INK`/`PDF_SHADE`, `icons/` B1 motif).
+2. `sw.js` `ASSETS` gains the font files; `CACHE` bumps per §8.1.
+3. The three JS duration constants are paired to CSS values (`UIUX §8`).
 
 ### §9.6 Verification
 
-**A token test is written first.** `test/tokens.js` makes the design system
-falsifiable before any of it is built, needs no browser, and is the only part
-of the specification that cannot rot. It parses the shipped files and asserts:
-
-- **The ladder and every published ratio** — parse `styles.css :root`, compute
-  WCAG relative luminance, reproduce every table in `UIUX §2`. A pure function
-  over constants.
-- **Dark-only** — no `prefers-color-scheme` block survives in `styles.css`
-  (§9.2; the light theme is removed, not overridden).
-- **The five colour sync points agree** (§9.5) — parse `styles.css`,
-  `index.html`, `manifest.json` and `app.js`; assert the colour literals agree
-  with `:root`. The direct fix for the silent divergence those points have
-  already exhibited once.
-- **Accent placement** — assert the rule rather than each case: no accent
-  appears as text on `--board`, `--shelf` or `--note` (`UIUX §2.6`).
-- **Self-hosting** — `sw.js`'s `ASSETS` lists the font files; no CDN URL exists
-  anywhere in the app.
-
-The three browser suites remain the gate for everything they already pin. Two
-of their assertion families move **only with the rulings that moved them**: the
-band's geometry (the rule is now the band's bottom edge, and `--rule-y` is set
-by the type it holds — B47) and the note's radius (B49). Updating those
-assertions is part of implementing the ruling, not a test regression;
-everything else in `test/mobile.js`, `test/desktop.js` and `test/sw-update.js`
-must pass unchanged. `test/sw-update.js`'s `CARD_H_RE` reads `--card-h`
-literally out of `styles.css`, so the token block keeps that declaration or the
-regex moves in the same commit.
-
-> **A suite which cannot fail is lying.** `sw-update.js`'s step 2 requires the
-> bug to reproduce before step 3 demonstrates the fix. If step 2 ever passes
-> cleanly, the harness has stopped exercising the service worker.
+`test/tokens.js` asserts the ladder, dark-only, the five sync points, accent
+placement, and self-hosting; the three browser suites gate the rest.
 
 ### §9.7 Risks
 
-| # | Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|---|
-| R1 | **The new typeface moves the band**, regressing the chain that has been ruled five times (B33 → B38) | High | High | `UIUX §13.2`'s measurements are a gate before shipping, and `test/mobile.js` asserts band geometry — a typeface that moves the band fails the suite, which is the correct outcome |
-| R2 | **The five colour sync points diverge silently** | High, historically | Medium | `test/tokens.js` asserts their agreement (§9.6) |
-| R3 | **`EXPORT_GEO` drifts from `styles.css`** as the design system lands | High | High | Assert screen/PDF *agreement* on an observable rather than comparing constants; `DECISIONS.md` marks the duplication impermanent three times (B34, B37, B38). Splitting the exporter out of `app.js` is the structural fix, and is not this release |
-| R4 | **Drawn SVG marks read worse than glyphs at 16px** | Medium | Low | Impermanent (`UIUX §13.3`): a mark that fails is redrawn, not reverted to a code point |
-| R5 | **Removing the light theme upsets a use case** — outdoors, bright light | Low | Medium | Accepted deliberately; P4 forbids the setting. Revisit from use, not from principle |
-| R6 | **A missed `CACHE` bump** means the recolor never reaches the installed app | Medium | High | §8.1 is the ruling (B36), and `pages.yml` asserts the deployed `sw.js` matches the commit |
+Covered by standing rulings (B34, B37, B38, B47, B49); none block this release.
 
 
 ---
@@ -889,11 +809,4 @@ supersedes them where a later ruling contradicts an earlier position.
 `styles.css` currently mixes bare `§6.1` (this document's anchors) with bare
 `§6` (`UIUX`'s touch floor) in the same file.
 
-Two `PRD §x` citations in the codebase point at superseded text:
 
-- **`PRD §6.2`**'s predetermined width cap was superseded by B39 — a note wraps
-  at the sheet's right edge (§6.2, `UIUX §4`).
-- **`PRD §6.6`**'s menu ordering was superseded by A1 and then B43 (§6.6,
-  `UIUX §7`).
-
-Every other `PRD §x` citation resolves to its own number here.
