@@ -1134,6 +1134,8 @@ same clock (tapping it there writes the *source* record and unsurfaces), and
 it wears the **source board's note hue** — a `data-src-cat` attribute rebinds
 `--note` for the echo alone, the ladder's own §2.2.2 discipline. A reminder
 note on today's board itself simply glows; it does not surface to itself.
+On every frame change, re-seat each echo from its source note’s current rendered
+position and scale; render-only, never write stored records (B170).
 The surfacing set is **active** reminder notes: completing the note anywhere
 (completing an echo completes the source, B109) unsurfaces it, as does
 clearing its clock. The echo's long-press/right-click menu carries **Complete**

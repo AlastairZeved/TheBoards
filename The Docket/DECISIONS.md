@@ -5625,3 +5625,9 @@ To make each week visually separate in the weekly view when scrolling, make ever
 **Source:** the owner approved the issue proposal in this chat on 2026-10-14: "Approve the issue proposal as written: separate dayNotes payload and normalizer; recover legacy v2 day-notes from boards; use a shared field/coercer table for board, note, lot, event, and day-note records across creation, PDF export, and imports; restore catStamp." The proposal is in [issue #424](https://github.com/AlastairZeved/TheBoards/issues/424).
 
 **The record.** `RECORD_FIELDS` in `state.js` is the sole field/coercer table used to construct board, note, lot, event and day-note records; PDF export projects board fields through it; JSON import uses its normalizers for all five kinds. JSON backups retain version 2 and place day-notes in a dedicated `dayNotes` array beside `boards` and `calendarEvents`. Import also recovers legacy v2 day-notes from `boards`, identified by a `rem-` id and `day` field, and restores `catStamp` on boards. `The Docket/PRD.md` §4.1 and §7 document the stored record and backup shapes. The round-trip regression covers new payloads, legacy v2 recovery, and `catStamp` preservation.
+
+### B170. “Re-seat each echo from its source note’s current rendered position and scale on every frame change; render-only, never write stored records.”
+
+**Source:** issue #436 (owner ruling): “Re-seat each echo from its source note’s current rendered position and scale on every frame change; render-only, never write stored records.” — https://github.com/AlastairZeved/TheBoards/issues/436
+
+**The record.** `render.js` re-seats surfaced echoes during the frame-reflow pass. `UIUX.md` §4.7 records the rendering rule; `test/reminder.js` verifies the echo geometry updates without changing the source note record.

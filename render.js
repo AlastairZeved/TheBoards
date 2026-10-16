@@ -303,7 +303,7 @@ export function runClockAction(btn) {
    surfacing set is ACTIVE reminder notes: completing one anywhere unsurfaces
    it, and the same is true of clearing its clock. */
 
-export const surfacedMap = new Map();      // note.id -> { boardId } — the echoes on screen
+export const surfacedMap = new Map();      // note.id -> { boardId, note } — the echoes on screen
 let surfacedToken = 0;                     // stale-async guard across re-renders
 
 function clearSurfaced() {
@@ -365,7 +365,7 @@ function hydrateSurfaced() {
       if (b.id === board.id || b.cal === board.cal) continue;
       for (const n of (b.notes || [])) {
         if (!n.reminder || n.state === 'complete') continue;
-        surfacedMap.set(n.id, { boardId: b.id });
+        surfacedMap.set(n.id, { boardId: b.id, note: n });
         el.board.appendChild(makeSurfacedEl(n, b));
       }
     }
@@ -475,6 +475,16 @@ export function seatAllNotes() {
     const note = noteRec(id);
     if (note && reflectToolbarSeat(node, note, false)) raised = true;
   });
+  // B170: echoes share their source note's geometry on every frame reflow;
+  // this changes only the render-time reference, never the stored record.
+  for (const node of el.board.querySelectorAll('.note.surfaced')) {
+    const surfaced = surfacedMap.get(node.dataset.id);
+    const note = surfaced && surfaced.note;
+    if (!note) continue;
+    node.style.left = renderX(note) + 'px';
+    node.style.top = renderY(note) + 'px';
+    node.style.transform = 'scale(' + effScale(note) + ')';
+  }
   if (raised) saveNow();              // one save for the whole pass, not one per note
 }
 
