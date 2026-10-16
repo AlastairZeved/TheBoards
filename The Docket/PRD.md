@@ -140,14 +140,14 @@ completion as a visible scratch-out; multiple boards; and a PDF export.
 
 | Not built | Reason |
 |---|---|
-| Accounts, sync, sharing, collaboration | §1.1. There is no backend (§3.2) and adding one changes what the product is. |
-| Tags, folders, search, filters, auto-grouping | §1.2. Every one of these infers a relationship the person did not assert. |
+| Accounts, sync, sharing, collaboration | P4. There is no backend (§3.2) and adding one changes what the product is. |
+| Tags, folders, search, filters, auto-grouping | P2. Every one of these infers a relationship the person did not assert. |
 | Rich text, images, attachments, drawing | The data model is plain strings (§4.1). B3 enforces this at the paste boundary. |
-| Snapping, alignment guides, auto-layout | §1.3 and §1.2. Notes overlap freely; the person places them. |
-| Due dates with time logic, push notifications, in-app notification banners, email, SMS, any outbound message system, streaks, recurring reminders | §1.1 and §3.2. The board makes no demands and sends nothing — there is no backend to send from. Clock-toggle reminders and the day's To-Do surface are the bounded exception, ruled **B104** (issue #169) — a tap, a glow, a card that shows up where the person already looks; no times stored, nothing pushes. |
+| Snapping, alignment guides, auto-layout | P2 and P3. Notes overlap freely; the person places them. |
+| Due dates with time logic, push notifications, in-app notification banners, email, SMS, any outbound message system, streaks, recurring reminder firing | §1.1 and §3.2. The board makes no demands and sends nothing — there is no backend to send from. Clock-toggle reminders and the day's To-Do surface are the bounded exception (B104); the separate Recurring Reminders strip and its persisted schedule are in scope (B138), but its firing/notification mechanics are not. |
 | Infinite canvas, pan, zoom | §5.1. Boundedness is the feature — a page you can see all of. |
 | A framework, bundler, package manager, dependency | §3.3. |
-| Settings, preferences, a theme switch | §1.1. §9 is one identity, not a choice to make. |
+| Settings, preferences, a theme switch | P4. §9 is one identity, not a choice to make. |
 
 ### §2.4 Success
 
@@ -163,7 +163,7 @@ them to the design system would gate a palette on unrelated work.
 | Deferred | Why it is not here |
 |---|---|
 | **The fold/rotate arrangement bug — issues #65, #75** | **Shipped — ruled B64.** The similarity transform landed as its own ruling, its own branch and its own PR, exactly as scoped here: one ratio `min(LOGICAL_W/rw, LOGICAL_H/rh)` for both axes and for size, superseding B40's anisotropic mapping and B21's width-only multiplier (`UIUX §11`) |
-| **PDF font embedding** | ~150KB per exported file, in the most intricate code in the app, so that a printed reference sheet matches the app's typography. Worth doing; not worth blocking a recolor on. The export keeps base-14 Helvetica and stays correct (§9.5 item 2) |
+| **PDF font embedding** | ~150KB per exported file, in the most intricate code in the app, so that a printed reference sheet matches the app's typography. Worth doing; not worth blocking a recolor on. The export keeps base-14 Helvetica and stays correct. |
 | **Board categories on mobile** | **Already shipped** — PR #79, issue #74, ruled B44 |
 
 ---
@@ -190,8 +190,8 @@ app. All data is client-side in IndexedDB (§4). The service worker precaches th
 whole shell, so a cold launch in airplane mode is indistinguishable from an
 online one.
 
-The consequence must be stated plainly: **the device is the only copy.** The PDF
-export (§7) is the only way data leaves the app.
+The consequence must be stated plainly: **the device is the only live copy.**
+PDF export and whole-library JSON backup (§7) are the ways data leaves the app.
 
 ### §3.3 Build constraints
 
@@ -510,20 +510,17 @@ with action buttons inline at the row's right edge (B25).
 
 ### §6.6 The menu
 
-Long-press (mobile) or right-click (desktop) on a note or lot line opens its
-item menu. The anchor menu (Export · All boards) is retired (B92): anchor
-actions now live on the flat-tab row above the Parking Lot — **All boards ·
-Export · Import** (B83, B92) — and the title compartment's `Menu` control is
-superseded by that row (B83).
+Long-press (mobile) or right-click (desktop) on a note opens its menu for
+**Copy · Add/Edit Title · Link** (B91, B114, B120); its state actions live on
+the note's own toolbar (B84). A surfaced reminder echo instead offers
+**Complete · Go to Board** (B109). Lot lines have no long-press menu; desktop
+lot actions are inline (B25). The anchor menu is retired (B92): board actions
+live on the flat-tab row above the Parking Lot — **All boards · Export ·
+Import** (B83, B92) — and the title compartment's `Menu` control is
+superseded by that row (B83). The rail card's menu offers **Export · Delete**.
 
-**Item menu:** Complete/Restore · Copy · Delete.
-**Board row / rail card menu:** Export · Delete.
-**Desktop selection buttons:** Complete · Copy · Delete.
-
-Ordering is navigation first, then the item's own actions in rising severity
-(B43). The destructive action is **always last, in `--danger`, behind a
-hairline** — and, per `UIUX §1`, never distinguished by colour alone. The
-menu's geometry and the exhaustive list of its variants are `UIUX §7`.
+Destructive actions remain last, in `--danger` and behind a hairline, never
+distinguished by colour alone (`UIUX §1`, `UIUX §7`).
 
 
 
@@ -611,9 +608,8 @@ Rules:
   testable.
 - Non-Latin characters outside the font's encoding export as `?` and raise a
   toast saying so, rather than failing silently.
-- Export is reachable from the anchor menu, the board-row menu and the rail card
-  menu — the board you are looking at, or any other, with no detour through the
-  list.
+- Export is reachable from the board-action row and the rail card menu — the
+  board you are looking at, or another board from the rail, without an anchor menu.
 
 The whole-library JSON backup keeps payload version 2. It separates board
 records, calendar events (`calendarEvents`) and calendar day-notes (`dayNotes`)
@@ -648,12 +644,14 @@ happened once, with two merges landing with no deploy at all.
 The fastest way to answer "did my change reach anyone":
 `curl -s https://<pages-host>/sw.js | grep -E "(zeved-boards|todo-boards)-"`
 
-*Current state, 2026-09-17: `sw.js` reads `zeved-boards-v158` (version-bumped). Historical state: B38 records `v7` as the last documented bump of the retired cache lineage.*
+For the live version, read `sw.js`'s `CACHE` alongside `app.js`'s `OWN_BUILD`;
+both must match (B36). B38 records `v7` in the cache lineage.
 
 ### §8.2 Testing
 
-The `test/` suites drive real Chromium via Playwright; no test
-runner, no framework, not shipped. Each is one linear scenario and is run whole.
+The `test/` scripts are dev-only and run whole, without a test runner or
+framework. Browser suites drive real Chromium via Playwright; the tokens,
+records and security suites are browserless (`test/README.md`).
 
 Mobile taps are dispatched as **genuine touch events**, not synthesized clicks,
 because a real bug lived specifically in the browser's touch-to-mouse
@@ -669,7 +667,7 @@ actually reaches an installed PWA.
 ## §9 Design system
 
 New in this document. §1–§8 describe an app that already works; §9 says what it
-should look like and why. It implements P1 under §1's law.
+should look like and why. It implements §1.1 under §1's law.
 
 **§9 holds positions; `UIUX.md` holds values.** That split is not a filing
 convenience — `DECISIONS.md` calls `UIUX.md` "the rendering authority" and
@@ -762,7 +760,7 @@ exporter's three colour constants pointing at tokens that no longer exist.
 
 Montserrat Alternates **does** reach the export: the PDF embeds it, so the
 document is typographically the app's even though it is not chromatically the
-app's. See §9.5 item 2.
+app's.
 
 ### §9.5 Implementation consequences
 
@@ -770,13 +768,15 @@ Standing law:
 1. The five sync points (`UIUX §16`) stay in agreement (`styles.css :root`,
    `index.html` theme-color metas, `manifest.json` colors, `export.js`
    `PDF_PAPER`/`PDF_INK`/`PDF_SHADE`, `icons/` B1 motif).
-2. `sw.js` `ASSETS` gains the font files; `CACHE` bumps per §8.1.
+2. `sw.js` precaches the self-hosted font files; `CACHE` bumps on shipped
+   asset changes per §8.1.
 3. The three JS duration constants are paired to CSS values (`UIUX §8`).
 
 ### §9.6 Verification
 
 `test/tokens.js` asserts the ladder, dark-only, the five sync points, accent
-placement, and self-hosting; the three browser suites gate the rest.
+placement, and self-hosting; the browser suites and their CI inventory live
+in `test/README.md`.
 
 ### §9.7 Risks
 
