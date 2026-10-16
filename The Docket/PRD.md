@@ -260,10 +260,10 @@ opens correctly without being rewritten — which is P3 applied to the schema.
 
 IndexedDB `boards-db` / store `boards` is the only persistence.
 
-Keystrokes debounce at `SAVE_DEBOUNCE = 300ms`. Blur, drag-end, pinch-end,
+Keystrokes debounce at 300ms (`UIUX §5`). Blur, drag-end, pinch-end,
 complete, delete and z-order changes commit immediately. Writes go through a
 single-flight queue with exponential backoff; a failure raises a polite
-`role="status"` toast ("Couldn't save — retrying.") which never clobbers a
+`role="status"` toast — its copy and duration are `UIUX §9`'s — which never clobbers a
 pending Undo (B13).
 
 A committing write stamps `updatedAt`; the flush on the way **out** of a board
@@ -305,10 +305,11 @@ legibility beat abstraction; desktop's scale is rail-aware (B20).
 **Committed notes are never re-clamped on resize** (B17, and P3). A rotation
 or a window drag changes how a position renders, never what it is.
 
-Cross-device rendering is **homothetic**: position's law applied to size.
-`noteMult = LOGICAL_W / (rw ‖ 900)`, and a note's effective scale is
-`scale × noteMult` (B21, B40). Resizing a window slides notes proportionally
-rather than letting fixed-size notes collide.
+Cross-device rendering is a **similarity transform** (B64): one ratio
+`k = min(LOGICAL_W/rw, LOGICAL_H/rh)` applied to `x`, `y` **and** size
+(`UIUX §11`), superseding B40's anisotropic mapping and B21's width-only
+`noteMult`. Resizing a window maps the arrangement as a figure rather than
+letting fixed-size notes collide.
 
 ### §5.3 The touch floor
 
@@ -336,12 +337,12 @@ path.
 | | Mobile | Desktop |
 |---|---|---|
 | Create | tap empty canvas | click empty canvas (nothing selected) |
-| Select | — | click |
+| Select | tap — reveals the toolbar, no keyboard (B90) | click |
 | Move | drag | drag |
 | Scale | two-finger pinch | drag the selection frame |
-| Edit | tap | double-click, or Enter |
+| Edit | tap again, on the engaged note (B90) | double-click, or Enter |
 | Menu | long-press (500ms) | right-click |
-| Caret on edit | at the touch point (B14) | at the end (B26) |
+| Caret on edit | at the end (B90) | at the end (B26) |
 | Boards | full-screen list (§6.7) | always-visible rail (§6.7) |
 
 Gesture thresholds — the drag slop and the long-press beat — are `UIUX §5`
@@ -350,10 +351,11 @@ keeps a release under it a tap).
 
 ### §5.5 The soft keyboard
 
-`interactive-widget=resizes-visual` plus a JS guard that skips mobile re-layout
-while a `contenteditable` inside `#board` holds focus, re-applied on `focusout`
-(B28). Without this the keyboard changed `vh`, collapsing the sheet mid-sentence
-and clipping the note being written.
+The soft keyboard is a viewport event, and `UIUX §6` owns the declaration that
+handles it: `interactive-widget=resizes-visual` plus a JS guard that skips mobile
+re-layout while a `contenteditable` inside `#board` holds focus, re-applied on
+`focusout` (B28). Without this the keyboard changed `vh`, collapsing the sheet
+mid-sentence and clipping the note being written.
 
 ### §5.6 Actions are acknowledged, not idle
 
@@ -426,8 +428,8 @@ A note wraps at **the sheet's right edge**, not at a predetermined width:
 live during a drag, and the export mirrors the same law so a cap-hitting note
 cannot disagree between screen and PDF (B39, superseding an earlier 45% cap).
 
-`NOTE_MIN_W = 60` — roughly three characters at 17px plus box chrome. *Marked
-impermanent in B39.*
+`NOTE_MIN_W = 132` (`UIUX §4.5`) — a real minimum *rendered* width, not a wrap
+floor. *Marked impermanent in B39.*
 
 ### §6.3 Move, scale, stack
 
@@ -435,8 +437,8 @@ impermanent in B39.*
 only clamp is to the page bounds.
 
 **Pinch to scale** on mobile, **drag the selection frame** on desktop — both
-share the same maths. `MIN_SCALE = 0.5`, `MAX_SCALE = 2.0`, clamps widened to
-admit an out-of-range starting scale (B40). `transform-origin` is top-left
+share the same maths. `MIN_SCALE = 0.5`, `MAX_SCALE = 2.0` (`UIUX §4`), clamps
+widened to admit an out-of-range starting scale (B40). `transform-origin` is top-left
 throughout, so stored `x`/`y` stay truthful and there is no drift to compensate
 (B4).
 
@@ -451,8 +453,8 @@ line is a list entry, not a spatial object worth herding (B41).
 
 Completing does not delete and does not hide. It draws a **scratch-out** over
 the item: three families of ruled strokes at ≥90% coverage, texture rather than
-colour, plus the underlying text destroyed to 40% ink so no screenshot or zoom
-recovers it.
+colour, plus the underlying text destroyed to **12% ink** (`UIUX §4.3`) so no
+screenshot or zoom recovers it.
 
 This is P5. The item stays in place, at its size, in its arrangement — the
 board still shows that the work was done and where it sat.
@@ -471,9 +473,10 @@ text is never framed. That is the visual expression of §4.1's structural fact
 that a lot item has no coordinates. They are ordered lines, so they live in
 block flow, not the absolute canvas (B6).
 
-Tapping the lot background creates a line. Height is a whole-row budget,
-`34 + n × 44` — three rows on a tall sheet, two on a phone (B37). Rows past the
-budget are clipped from view but **still exist, still save and still export**.
+Tapping the lot background creates a line. Its height follows its **measured**
+contents, from a two-row floor (`UIUX §3.2`, B73, superseding B37's `34 + n × 44`
+whole-row budget). Rows past the budget are clipped from view but **still exist,
+still save and still export**.
 
 Desktop selection frames the selected row with an `outline` — an explicit,
 narrow override of "lot lines are never framed," scoped to desktop and selected,
@@ -535,8 +538,8 @@ created there is written into that category and opened (B63; the global create
 controls are gone). Overflow **pages** rather than scrolling, and a single page
 hides its own pager: no state, no statement (B42).
 
-A rail board swap is a 150ms crossfade with **no history push** — B9 is bypassed,
-not touched.
+A rail board swap is a 260ms crossfade (`UIUX §8`) with **no history push** — B9
+is bypassed, not touched.
 
 ### §6.8 Offline
 
@@ -560,10 +563,10 @@ hand-rolled writer works offline by construction.
 Export produces **two A4 portrait pages**:
 
 1. **The reference sheet**, drawn as vectors at the fixed 900×1000 geometry —
-   never the live viewport — centred with a 36pt margin. The export reuses the
-   screen's own laws (`exportX`/`exportY`/`exportMult` mirror
-   `renderX`/`renderY`/`noteMult`, and `exportNoteBox` mirrors `noteMaxW`) so the
-   PDF is geometrically faithful to what is on screen (B39, B40).
+   never the live viewport — centred with a 36pt margin (`UIUX §15`). The export
+   reuses the screen's own laws (`exportX`/`exportY` and one ratio `k` mirror
+   `renderX`/`renderY` and the same similarity, and `exportNoteBox` mirrors
+   `noteMaxW`) so the PDF is geometrically faithful to what is on screen (B39, B64).
 2. **The board as prose** — title, date, Components, Requirements, notes, lot.
 
 Rules:

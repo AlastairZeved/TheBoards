@@ -14,7 +14,7 @@ where §§ below supersede a numbered ruling, they say so by number.
 Sections §1–§12 keep the meanings the code already cites. New v2 material is
 numbered §13 and up, so no existing citation moves.
 
-**Where this document and that render disagree, the render is the earlier authority and the disagreement is a defect here.**
+**Where this document and the shipped code disagree, the disagreement is a defect in one of them — filed as an issue and resolved by an owner ruling (B177).** The proof render that once held this sentence's place was removed from the repo by B156.
 
 ---
 
@@ -849,7 +849,10 @@ two-column grid: the date card (`--card`, the day's name over MM/DD — with
 the card's `+` seated UNDER the date lines, centered in the compartment's
 own column, issue #397) beside the day's notes zone on the water's fall. Attention recedes with distance
 from now — days with notes near, empty days far (`brightness .6`). Scale and
-luminance, never icons.
+luminance, never icons. The date compartment's fill recedes with the day too —
+`--deep` lightened for `near`, `--deep` darkened for `far` (B175); the literals
+`#050b18` and `#030813` ship today and are restated as a derivation from `--deep`
+in issue #457.
 
 **The face's header — the boards' top band in the calendar's own orange
 (issue #382, B157).** The expanded face opens with the boards' §3 band
@@ -929,8 +932,9 @@ the frame. The export draws the same centring in the same content box
 is transparent before it — enforced at blur (B8) and again on every render (B31).
 A note earns its frame the way it earns persistence.
 
-**The radius stays near-square.** Notes scale 0.5–2.0 and `NOTE_MIN_W` is 132
-(§4.5), so a large radius inside `transform: scale()` turns a minimum-width note
+**The radius stays near-square.** Notes scale `MIN_SCALE` 0.5 to `MAX_SCALE` 2.0
+(B174) and `NOTE_MIN_W` is 132 (§4.5), so a large radius inside `transform: scale()`
+turns a minimum-width note
 into a capsule. 3px is a geometric constraint, not a taste: it reads as *drawn* at
 every size the note can be. It `EXPORT_GEO.radius` mirrors it by hand (§15).
 
@@ -1191,7 +1195,9 @@ desktop code path.
 
 `MOVE_THRESHOLD = 16px` of slop before a drag begins or a long-press cancels
 (B29). `LONGPRESS_MS = 500`; any release before that with movement under
-threshold commits as a tap (B5).
+threshold commits as a tap (B5). `SAVE_DEBOUNCE = 300ms` — keystrokes debounce at
+300ms, while blur, drag-end, pinch-end, complete, delete and z-order changes
+commit immediately (B174).
 
 **Instant commit, guarded against re-fire.** Every committing action lands on
 release with no latency (B81) — the instant result is its own acknowledgement.
@@ -1219,6 +1225,11 @@ physical (B7). **The hit area expands; the visual frame does not.**
 
 On desktop the floor is 24px (WCAG 2.5.8 AA, pointer-appropriate) — a 44px collar
 swallows dismiss clicks (B23). The 44px floor stands on touch.
+
+**The soft keyboard is a viewport event, not a layout one.** The page declares
+`interactive-widget=resizes-visual`, and a JS guard skips mobile re-layout while a
+`contenteditable` inside `#board` holds focus, re-applied on `focusout` (B28,
+B174) — without it the keyboard changed `vh`, collapsing the sheet mid-sentence.
 
 **A collar is not obliged to be symmetric.** The note's is, because a note is
 surrounded by paper on all sides. The board-action row (§3.3, B83) spends its
@@ -1292,13 +1303,16 @@ underneath (B30).
 | `#toast` | opacity + transform | 200ms |
 | `.leaving` (note, lot, row, card) | opacity | 200ms |
 | `html.desktop #board.swapping` | opacity | 260ms |
+| `.note-toolbar` | opacity (+ `visibility 0s`) | 200ms |
+| The controls' press-filter — `.board-action`, `.cal-act`, `.cal-add`, `.mo-nav` | filter | 200ms |
+| `#list-view` (the risen panel) | transform | 200ms |
 
 Curve: a long deceleration — `cubic-bezier(0.22, 0.61, 0.36, 1)`. The durations
 lengthen from v1's 120/150ms because §1.1 argues for a water-like settle, and a
 120ms fade reads as a flicker rather than a movement.
 
-**The set does not grow.** No new motion has earned its place. Two things stay
-instant and are not candidates:
+**The set grew once, by ruling, and is closed at eight (B173).** Nothing else
+animates. Two things stay instant and are not candidates:
 
 - **Note capture** (§5, B27) — the caret must arrive with the tap.
 - **The control press-translate** (§14) — a control that lags feels broken, not
@@ -1321,7 +1335,11 @@ The toast sits on `--chrome` with `--elevation` (§2.4) and a light edge (§2.5)
 Its Undo is `--accent-restore` text distinguished by **underline** — not colour
 (§1).
 
-A save-failure toast must never clobber a pending Undo (B13).
+A save-failure toast must never clobber a pending Undo (B13). Its copy is exactly
+**"Couldn't save — retrying."**, on `role="status"` (B174).
+
+**The copy notice holds 1500ms** (B176) — long enough to read, short enough that it
+never sits over the board it is speaking about.
 
 ---
 
@@ -1660,15 +1678,15 @@ fill on tap; Undo is underlined text (§9).
 
 ---
 
-**Duplicate copy of UIUX §3.3 — unresolved in this pass (issue #429).** The following values conflict with UIUX §3.3; issue #429 owns the choice of authority.
+**Duplicate copy of UIUX §3.3 — §3.3's values are the authority (B171); this copy is kept in step with it, never as a second opinion.**
 
-**The board-action row** (`.board-action` — the `All boards` and `Export` tabs above the Parking Lot, B83, UIUX §3.3): the one control that **does not** wear §14's tactile signature. It is the band label's flat box — `--frame` fill, `--ink-dark` label at **5.70:1** (rebound by `.on-light`), `13px/600`, `padding: 2px 6px`, symmetric `border-radius: 3px`.
+**The board-action row** (`.board-action` — the `All boards` and `Export` tabs above the Parking Lot, B83, UIUX §3.3): the one control that **does not** wear §14's tactile signature. It is the band label's flat box — `--frame` fill, `--ink-dark` label at **5.70:1** (rebound by `.on-light`), `14px/600`, `padding: 8px 6px`, symmetric `border-radius: 3px`.
 
 ```css
 .board-action {
-  padding: 2px 6px; border: none; border-radius: 3px;
+  padding: 8px 6px; border: none; border-radius: 3px;
   background: var(--frame); color: var(--ink);
-  font-size: 13px; font-weight: 600; line-height: 1.3;
+  font-size: 14px; font-weight: 600; line-height: 1.3;
 }
 ```
 
@@ -1682,6 +1700,13 @@ to it, by intent rather than omission.
 Montserrat Alternates **does** reach the export: the PDF embeds it, so the
 document is typographically the app's even though it is not chromatically the
 app's.
+
+**The text page's type and spacing (B176).** The prose page sets its title at
+`18/24` bold, the created date at `9/13` in the shade, and body copy at `10/14`;
+a section heading is `11/15` bold over a hairline, with `30` reserved before it,
+`12` above and `6` below. The reference sheet is centred on the page with a
+**36pt margin** (B174). The board's copy notice is not paper — its 1500ms lives in
+§9.
 
 ---
 
