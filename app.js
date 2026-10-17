@@ -351,7 +351,11 @@ if ('serviceWorker' in navigator) {
    old record renders correctly under a new build anyway. Worst case is the
    app re-downloading its precached assets; a board cannot be lost to this
    path by construction. */
-const OWN_BUILD = 'v158';
+/* The handshake runs 20s after launch — off the critical path (boot has
+   settled, the first render is long done), once per session, and only ever
+   acting on device-vs-deploy disagreement. */
+const HANDSHAKE_MS = 20000;
+const OWN_BUILD = 'v159';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {
@@ -379,5 +383,5 @@ if ('serviceWorker' in navigator && 'caches' in window) {
       });
     }).catch(() => {});                     // offline: nothing to compare, do nothing
   };
-  setTimeout(handshake, 20000);
+  setTimeout(handshake, HANDSHAKE_MS);
 }

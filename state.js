@@ -27,6 +27,17 @@ export const NOTE_MIN_W = 132;              // real minimum rendered note width 
                                      // drag/resize width floor — so a note can never be sized
                                      // narrower than its own row (issue #126 pt 4.1).
 export const MIN_SCALE = 0.5, MAX_SCALE = 2.0;
+/* The note toolbar row's seat (issue #132, B86; the collar re-aimed by
+   #301): the row's painted height (32) plus the downward hit collar (12) the
+   seat must clear. It is UIUX §4.5's 44px — the same floor the row's tabs
+   keep (§4.5: "Each tab keeps a 44px-tall hit target expanded downward into
+   bare canvas"), so reflectToolbarSeat's raise keeps the row on the sheet
+   wherever the note's bottom edge lands (issue #298, B139). */
+export const TB_ROW_H = 44;
+/* A new note's y keeps this much room above the sheet's bottom edge
+   (createNote). Small enough to read as "at the tap", large enough that the
+   frame's own border never sits flush on the sheet's edge. */
+export const NOTE_BOTTOM_PAD = 4;
 export const MOVE_THRESHOLD = 16;           // px before a drag begins / long-press cancels (B29)
 export const KB_HIDE_SLOP = 120;            // visual-viewport growth (px) that reads as the soft
                                      // keyboard retracting, not URL-bar/inset jitter (B80, issue #119)
@@ -71,6 +82,11 @@ export const SAVE_DEBOUNCE = 300;
 export const UNDO_MS = 5000;
 export const LEAVE_MS = 200;
 export const TOAST_HIDE_MS = 210;           // just past the toast's 200ms fade before hidden lands
+/* The copy notice's own window (UIUX §9, B176): long enough to read, short
+   enough that it never sits over the board it is speaking about. Shorter than
+   UNDO_MS on purpose — a copy has nothing to undo, so its notice must not
+   outstay a notice that does. */
+export const COPY_NOTICE_MS = 1500;
 export const ACTION_DELAY = 400;            // re-fire drop-guard: a consequence commits now, a second tap inside is dropped (B81)
 export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 export const REF_W = 900, REF_H = 1000;
@@ -169,6 +185,25 @@ export const COPY = {
   // A day card's header: "Today" then the long date; the future days read
   // weekday + MM/DD (the mockups' own voice).
   calTitle: 'Calendar Board',
+  /* The calendar's aria-labels (issue #438): a day's add control, the day-note
+     pager's two buttons and the month head's two nav buttons name themselves
+     from here, so no surface of the calendar carries a bare string. The two
+     pager words keep their trailing space — the date is appended to them
+     verbatim ("Previous 10/17 notes"). */
+  calAddNote: 'Add a note',
+  calPagerPrev: 'Previous ', calPagerNext: 'Next ', calPagerUnit: ' notes',
+  calMonthPrev: 'Previous month', calMonthNext: 'Next month',
+  // A month cell that carries events appends this to its date (issue #191).
+  calHasEvents: ', has events',
+  // The rail's delete control on the open board's own card (issue #10): its
+  // aria-label, beside the Export/Delete menu items' own COPY labels.
+  deleteBoard: 'Delete board',
+  /* The PDF's section words (UIUX §15, paper-light; issue #438): the band's two
+     zone headers, the Parking Lot's, and the one line a completed item exports
+     as — a completed item keeps its place in the order but not its words
+     (B34), so this is the whole of what it says. */
+  pdfComponents: 'Components', pdfRequirements: 'Requirements',
+  pdfParkingLot: 'Parking Lot', pdfCompleted: '— completed —',
 };
 /* The marks are drawn, not typed (UIUX §13.3, B50): inline SVG in
    currentColor, at the note's own stroke weight and corner radius, so the
