@@ -1,8 +1,8 @@
 /* --- 6. Rendering -------------------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { COPY, GLYPH, anchorEls, calKey, el, noteRec, state, uuid } from './state.js';
+import { COPY, GLYPH, TB_ROW_H, anchorEls, calKey, el, noteRec, state, uuid } from './state.js';
 import { idbGet, idbGetAll, idbPut, saveNow, scheduleSave } from './persistence.js';
-import { applyLayout, applyNoteWidth, effScale, LOGICAL_H, noteK, renderX, renderY, setHitInset } from './geometry.js';
+import { applyLayout, applyNoteWidth, effScale, LOGICAL_H, noteK, placeNote, renderX, renderY, setHitInset } from './geometry.js';
 import { clearSelection, commitAction, completeNote, copyText, deleteNotes, hideToast, isEditing, multiSel } from './interactions.js';
 import { restoreNote, selected, selectedNoteIds, setSelectedNotesHighlight, setSelectedNotesState, showNotice, showUndo, toggleHighlight } from './interactions.js';
 import { syncBoardActions } from './menus.js';
@@ -198,6 +198,32 @@ export function renderBoard() {
   applyLayout();
 }
 
+/* The text a note (or a lot row) carries, and the scratch-out that strikes
+   through it when the item completes (UIUX §4.3): two children, one factory,
+   for the three species that wear them — a note, a surfaced echo, and a lot
+   row — so `.note-text`/`.note-scratch` and `.lot-text`/`.lot-scratch` are
+   built in exactly one place.
+
+   `editable` is the one thing that differs, and it is the surfaced echo's: a
+   real note's text IS an editor, so it carries role=textbox and
+   aria-multiline (UIUX §12), while the echo is inert to tap/drag/edit (B109)
+   — it renders the source note's words and takes no role at all. */
+function makeBody(node, cls, text, editable) {
+  const body = document.createElement('div');
+  body.className = cls + '-text';
+  if (editable) {
+    body.setAttribute('role', 'textbox');
+    body.setAttribute('aria-multiline', 'true');
+  }
+  body.textContent = text;
+
+  const scratch = document.createElement('div');
+  scratch.className = cls + '-scratch';
+  scratch.setAttribute('aria-hidden', 'true');
+
+  node.appendChild(body); node.appendChild(scratch);
+}
+
 export function makeNoteEl(note) {
   const node = document.createElement('div');
   // .on-light: the ink pole flips at the note's boundary (UIUX §2.3), and the
@@ -207,21 +233,9 @@ export function makeNoteEl(note) {
   node.dataset.id = note.id;
   node.setAttribute('tabindex', '0');
   applyNoteWidth(node, note);                               // wrap at the sheet edge (issue #53)
-  node.style.left = renderX(note) + 'px';
-  node.style.top = renderY(note) + 'px';
-  node.style.transform = 'scale(' + effScale(note) + ')';   // the similarity (B64)
+  placeNote(node, note);                                    // left / top / the similarity (B64)
 
-  const text = document.createElement('div');
-  text.className = 'note-text';
-  text.setAttribute('role', 'textbox');
-  text.setAttribute('aria-multiline', 'true');
-  text.textContent = note.text;
-
-  const scratch = document.createElement('div');
-  scratch.className = 'note-scratch';
-  scratch.setAttribute('aria-hidden', 'true');
-
-  node.appendChild(text); node.appendChild(scratch);
+  makeBody(node, 'note', note.text, true);
   renderNoteTitle(node, note);                               // the Title tab (B120) — absent when empty
   setCarriedUi(node, note);                                  // the carried status shadow (B110)
   node.appendChild(makeNoteToolbar(note));                   // the on-select action row (B84) — Remind included (issue #240)
@@ -270,6 +284,15 @@ export function setCarriedUi(node, note) {
     note.state !== 'complete' && !!note.carriedOn && note.carriedOn === calKey(new Date()));
 }
 
+/* The clock's one write (B104): the reminder key is SET or DELETED — never
+   falsed, so a cleared note and a legacy note that never carried one are the
+   same shape (B21's absence-is-off idiom). One definition for the two toggles
+   that write it: this board's own note (below) and a surfaced echo's, whose
+   clock writes the same field on the same source record. */
+function toggleReminder(rec) {
+  if (rec.reminder) delete rec.reminder; else rec.reminder = true;
+}
+
 /* One clock activation, from a pointer tap or the keyboard: commit on release
    through the B81 drop-guard, exactly like the toolbar's tabs. On this board's
    own note the record is `state.current`'s; on a surfaced echo it lives on the
@@ -282,7 +305,7 @@ export function runClockAction(btn) {
   const local = noteRec(id);
   commitAction(() => {
     if (local) {
-      if (local.reminder) delete local.reminder; else local.reminder = true;
+      toggleReminder(local);
       setReminderUi(node, local);
       saveNow();
     } else {
@@ -321,19 +344,9 @@ function makeSurfacedEl(note, srcBoard) {
   node.dataset.srcCat = catOf(srcBoard);
   node.setAttribute('tabindex', '0');
   applyNoteWidth(node, note);
-  node.style.left = renderX(note) + 'px';
-  node.style.top = renderY(note) + 'px';
-  node.style.transform = 'scale(' + effScale(note) + ')';
+  placeNote(node, note);
 
-  const text = document.createElement('div');
-  text.className = 'note-text';
-  text.textContent = note.text;
-
-  const scratch = document.createElement('div');
-  scratch.className = 'note-scratch';
-  scratch.setAttribute('aria-hidden', 'true');
-
-  node.appendChild(text); node.appendChild(scratch);
+  makeBody(node, 'note', note.text, false);      // inert: no textbox role, no editor (B109)
   /* B109's echo carries the Remind tab on its own one-tab row (issue #240):
      the echo is inert to tap/drag/edit, but the clock's recognizer route writes
      the SOURCE record through (toggleSurfacedReminder). aria mirrors the source
@@ -372,30 +385,36 @@ function hydrateSurfaced() {
   });
 }
 
-/* The two acts a surfaced card's menu carries (B109). Both write the SOURCE
-   record through idbGet — the echo holds no state of its own — then re-render
-   today's board, which recomputes the surfacing set. Completing clears a
-   carriedOn marker under the same law as setNoteState (B108). */
-export async function completeSurfaced(id) {
+/* A surfaced echo's SOURCE record, read fresh out of the store — the echo
+   holds no state of its own (B109), so both of its acts resolve the same pair
+   before they write: the board record and the note inside it. Null when the
+   echo has left the screen or its source record has left the store. */
+async function surfacedRecord(id) {
   const surf = surfacedMap.get(id);
-  if (!surf) return;
+  if (!surf) return null;
   const rec = await idbGet(surf.boardId);
-  const n = rec && (rec.notes || []).find(m => m.id === id);
-  if (!n || n.state === 'complete') return;
-  n.state = 'complete';
-  if (n.carriedOn) delete n.carriedOn;
-  await idbPut(rec);
+  const note = rec && (rec.notes || []).find((m) => m.id === id);
+  return note ? { rec, note } : null;
+}
+
+/* The two acts a surfaced card's menu carries (B109). Both write the SOURCE
+   record through — then re-render today's board, which recomputes the
+   surfacing set. Completing clears a carriedOn marker under the same law as
+   setNoteState (B108). */
+export async function completeSurfaced(id) {
+  const src = await surfacedRecord(id);
+  if (!src || src.note.state === 'complete') return;
+  src.note.state = 'complete';
+  if (src.note.carriedOn) delete src.note.carriedOn;
+  await idbPut(src.rec);
   renderBoard();
 }
 
 async function toggleSurfacedReminder(id) {
-  const surf = surfacedMap.get(id);
-  if (!surf) return;
-  const rec = await idbGet(surf.boardId);
-  const n = rec && (rec.notes || []).find(m => m.id === id);
-  if (!n) return;
-  if (n.reminder) delete n.reminder; else n.reminder = true;
-  await idbPut(rec);
+  const src = await surfacedRecord(id);
+  if (!src) return;
+  toggleReminder(src.note);
+  await idbPut(src.rec);
   renderBoard();                        // clock-off unsurfaces; nothing to re-add
 }
 
@@ -451,7 +470,6 @@ export function updateNoteToolbar(node, note) {
    (effScale). If the row would extend past the sheet, issue #298 raises the
    note itself so the flush-below seat still fits. renderY is stable across
    fold/renderScale. */
-const TB_ROW_H = 44;                  // the row's painted height (32) + the downward hit collar (12) the seat must clear (issue #132, B86; collar re-aimed by #301)
 /* Returns true when the note was raised (so callers can batch their save). */
 export function reflectToolbarSeat(node, note, save = true) {
   const need = node.offsetHeight + TB_ROW_H * effScale(note); // card + row, logical
@@ -481,9 +499,7 @@ export function seatAllNotes() {
     const surfaced = surfacedMap.get(node.dataset.id);
     const note = surfaced && surfaced.note;
     if (!note) continue;
-    node.style.left = renderX(note) + 'px';
-    node.style.top = renderY(note) + 'px';
-    node.style.transform = 'scale(' + effScale(note) + ')';
+    placeNote(node, note);
   }
   if (raised) saveNow();              // one save for the whole pass, not one per note
 }
@@ -514,6 +530,17 @@ function renderNoteTitle(node, note) {
   ensureNoteTitleEl(node).textContent = t;
 }
 
+/* The ids one note act runs on: the whole desktop multi-selection when this
+   note is its PRIMARY, else this note alone. Mobile has no selection, so it is
+   always the single note (issue #55). One definition for Copy and for the
+   toolbar's acts, so "which notes did that touch" cannot diverge between
+   them. */
+function actionNoteIds(id) {
+  const inMulti = selected && selected.kind === 'note' &&
+                  multiSel.size > 1 && multiSel.has(id);
+  return inMulti ? selectedNoteIds() : [id];
+}
+
 /* Copy one note's text — or, where the desktop multi-selection reaches the menu,
    the whole selection's, primary first, one \n between (issue #171, B114). One
    home for the act: the note menu's Copy item routes here (the toolbar branch it
@@ -522,9 +549,7 @@ function renderNoteTitle(node, note) {
    needs no blur — it copies the current text and leaves the note engaged. The
    caller supplies the commit (buildMenu's commitAction drop-guard). */
 export function copyNoteTexts(anchorId) {
-  const inMulti = selected && selected.kind === 'note' &&
-                  multiSel.size > 1 && multiSel.has(anchorId);
-  const ids = inMulti ? selectedNoteIds() : [anchorId];
+  const ids = actionNoteIds(anchorId);
   copyText(ids.map(id => {
     const n = noteRec(id);
     return n ? n.text : '';
@@ -543,9 +568,7 @@ export function runNoteToolbarAction(btn) {
   const editingHere = () =>
     isEditing(document.activeElement) && noteNode.contains(document.activeElement);
   commitAction(() => {
-    const inMulti = selected && selected.kind === 'note' &&
-                    multiSel.size > 1 && multiSel.has(note.id);
-    const ids = inMulti ? selectedNoteIds() : [note.id];
+    const ids = actionNoteIds(note.id);
     if (btn.classList.contains('note-tb-delete')) {
       if (editingHere()) document.activeElement.blur();   // no dangling editor in the leaving node
       deleteNotes(ids);                                   // one commit → one Undo
@@ -570,17 +593,7 @@ export function makeLotEl(item) {
   node.dataset.id = item.id;
   node.setAttribute('tabindex', '0');
 
-  const text = document.createElement('div');
-  text.className = 'lot-text';
-  text.setAttribute('role', 'textbox');
-  text.setAttribute('aria-multiline', 'true');
-  text.textContent = item.text;
-
-  const scratch = document.createElement('div');
-  scratch.className = 'lot-scratch';
-  scratch.setAttribute('aria-hidden', 'true');
-
-  node.appendChild(text); node.appendChild(scratch);
+  makeBody(node, 'lot', item.text, true);
   applyCompleteA11y(node, item.state === 'complete');
   lotEls.set(item.id, node);
   return node;
@@ -637,12 +650,15 @@ export function toggleLink(a, b) {
   }
 }
 
-// Drop links referencing an id (a deleted note); returns the removed links so a
-// caller's Undo can restore them (exact prior state, UIUX §9).
-export function removeLinksForNote(id) {
+// Drop links touching any of `ids` (a deleted note); returns the removed links
+// so a caller's Undo can restore them (exact prior state, UIUX §9). One
+// definition for the two sites that drop links — a note the pre-act blur just
+// discarded, and a batch delete — so a Set of one is the same call as the
+// whole selection's.
+export function removeLinksFor(ids) {
   if (!state.current || !state.current.links || !state.current.links.length) return [];
-  const removed = state.current.links.filter(l => l.a === id || l.b === id);
-  if (removed.length) state.current.links = state.current.links.filter(l => l.a !== id && l.b !== id);
+  const removed = state.current.links.filter(l => ids.has(l.a) || ids.has(l.b));
+  if (removed.length) state.current.links = state.current.links.filter(l => !ids.has(l.a) && !ids.has(l.b));
   return removed;
 }
 
@@ -676,14 +692,14 @@ export function clearLink() {
    — appended after the static furniture — above the z:1 furniture, the valid-
    integer realization of the issue's "z-index: 1.5" (B91). */
 const SVGNS = 'http://www.w3.org/2000/svg';
-const renderUi = { linkLayer: null };
+let linkLayer = null;                  // the one <svg> the link lines ride in
 const linkLineEls = new Map();       // link.id -> <line>
 function ensureLinkLayer() {
-  if (renderUi.linkLayer) return;
-  renderUi.linkLayer = document.createElementNS(SVGNS, 'svg');
-  renderUi.linkLayer.id = 'link-layer';
-  renderUi.linkLayer.setAttribute('aria-hidden', 'true');
-  el.board.appendChild(renderUi.linkLayer);
+  if (linkLayer) return;
+  linkLayer = document.createElementNS(SVGNS, 'svg');
+  linkLayer.id = 'link-layer';
+  linkLayer.setAttribute('aria-hidden', 'true');
+  el.board.appendChild(linkLayer);
 }
 // A note's centre in current board-logical px — the same math updateSelectionUI
 // uses (renderX + offsetWidth·effScale/2), read from the live DOM node.
@@ -697,7 +713,7 @@ function noteCenter(note, node) {
    until sanitizeBoard prunes it. Cheap no-op on a board that has never linked. */
 export function updateLinks() {
   const links = boardLinks();
-  if (!links.length && !renderUi.linkLayer) return;
+  if (!links.length && !linkLayer) return;
   ensureLinkLayer();
   const live = new Set();
   for (const link of links) {
@@ -710,7 +726,7 @@ export function updateLinks() {
     if (!line) {
       line = document.createElementNS(SVGNS, 'line');
       linkLineEls.set(link.id, line);
-      renderUi.linkLayer.appendChild(line);
+      linkLayer.appendChild(line);
     }
     line.setAttribute('x1', ca.x); line.setAttribute('y1', ca.y);
     line.setAttribute('x2', cb.x); line.setAttribute('y2', cb.y);
@@ -733,7 +749,7 @@ export function updateLinks() {
    be (B84); Copy rides the menu's own focusable items since B114. */
 export function registerRender() {
   el.board.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    if (e.key !== 'Enter' && e.key !== ' ') return;
     const clock = e.target.closest && e.target.closest('.note-clock');
     if (clock) {                    // the clock's keyboard route, beside the tabs' (B109)
       e.preventDefault();

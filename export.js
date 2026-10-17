@@ -80,14 +80,14 @@ const PDF_CP1252 = {
    exists to avoid. Those characters export as '?', and the substitution is
    reported rather than swallowed: UIUX §10's law is that truncation is always
    indicated, and a silently mangled line is truncation. See DECISIONS B34. */
-const pdfUi = { pdfLossy: false };
+let pdfLossy = false;                  // set when a character cannot be said in a base-14 font
 function pdfCode(ch) {
   const u = ch.codePointAt(0);
   if (u === 9) return 32;                              // tab -> space
   if ((u >= 32 && u <= 126) || (u >= 160 && u <= 255)) return u;
   const m = PDF_CP1252[u];
   if (m !== undefined) return m;
-  pdfUi.pdfLossy = true;
+  pdfLossy = true;
   return 63;
 }
 function pdfAdv(code, bold) {
@@ -386,6 +386,15 @@ function exportRuleY(rec) {
   }
   return bandRuleYFor(lines);
 }
+/* One Parking Lot row, from a floor: the row's own height, or its wrapped
+   lines' plus the padding the row carries above and below them. The export
+   measures its wrapped lines where the screen measures rendered ones (B73),
+   so the SAME row height must come out of both — one floor, one pad, one
+   formula, shared by exportLotH's sum and the draw loop's own rows. */
+const LOT_ROW_PAD = 4;
+const lotRowH = (lineCount) =>
+  Math.max(EXPORT_GEO.lotRow, lineCount * EXPORT_GEO.lotLH + LOT_ROW_PAD);
+
 const exportLotH = (rec) => {
   const g = EXPORT_GEO;
   // Sum the same wrapped row heights the draw loop uses, from the two-row
@@ -394,7 +403,7 @@ const exportLotH = (rec) => {
   let sum = 0;
   for (const item of rec.parkingLot || []) {
     const lines = pdfWrap(item.text, false, g.lotSize, EXPORT_W - 2 * g.gutter);
-    sum += Math.max(g.lotRow, lines.length * g.lotLH + 4);
+    sum += lotRowH(lines.length);
   }
   return Math.min(g.lotHead + Math.max(2 * g.lotRow, sum),
                   Math.round(EXPORT_H * LOT_MAX_FRAC));
@@ -468,8 +477,8 @@ function exportBand(p, rec) {
   const g = EXPORT_GEO;
   const ruleY = exportRuleY(rec);
   const zones = [
-    { text: rec.components, label: 'Components', l: g.compL, r: g.compR },
-    { text: rec.requirements, label: 'Requirements', l: g.reqL, r: g.reqR },
+    { text: rec.components, label: COPY.pdfComponents, l: g.compL, r: g.compR },
+    { text: rec.requirements, label: COPY.pdfRequirements, l: g.reqL, r: g.reqR },
   ];
   for (const z of zones) {
     const w = z.r - z.l;
@@ -526,7 +535,7 @@ function exportLot(p, rec) {
   const lotTop = EXPORT_H - lotH;
   const lotW = EXPORT_W - 2 * g.gutter;
   p.fill(PDF_INK).rect(0, lotTop, EXPORT_W, 1).raw('f');       // full width (B47)
-  p.lines(['Parking Lot'], g.gutter, lotW, lotTop + g.lotHeaderY,
+  p.lines([COPY.pdfParkingLot], g.gutter, lotW, lotTop + g.lotHeaderY,
           g.headSize, g.headLH, true, 'left');
   const itemsTop = lotTop + g.lotItemsY;
   const itemsH = lotH - g.lotItemsY;
@@ -535,7 +544,7 @@ function exportLot(p, rec) {
   for (const item of rec.parkingLot || []) {
     if (ly >= itemsTop + itemsH) break;
     const lines = pdfWrap(item.text, false, g.lotSize, lotW);
-    const rowH = Math.max(g.lotRow, lines.length * g.lotLH + 4);
+    const rowH = lotRowH(lines.length);
     if (item.state === 'complete') {
       // Hatching only. The words are not in the file at all, which is a
       // stronger promise than the screen's "no screenshot recovers it".
@@ -599,7 +608,16 @@ function exportNotes(p, rec) {
    closes A4 text pages and lays paragraphs under a running baseline. The
    old closures become the returned object's members (`cur` is the live
    canvas, `y` reads and writes the baseline). */
-function textPager() {
+/* The page machinery the two prose exports run on: opens and closes A4 text
+   pages and lays paragraphs under a running baseline.
+
+   `overflow` is what running out of page MEANS. 'paginate' (the board's
+   default) simply opens another — a board's prose can be any length. 'error'
+   (the calendar's) throws instead: that page is a fixed reference sheet
+   (issue #145), and one that did not fit would be a sheet nobody designed,
+   so the caller reports COPY.exportError rather than shipping a truncated
+   file (B34's law that truncation is always indicated, never silent). */
+function textPager({ overflow = 'paginate' } = {}) {
   const L = PDF_MARGIN, W = A4_W - 2 * PDF_MARGIN;
   const BOTTOM = A4_H - PDF_MARGIN;
   const streams = [];
@@ -612,7 +630,11 @@ function textPager() {
     y = PDF_MARGIN;
   };
   const closePage = () => { if (p) { streams.push(p.Q().stream()); p = null; } };
-  const room = (h) => { if (y + h > BOTTOM) { closePage(); openPage(); } };
+  const room = (h) => {
+    if (y + h <= BOTTOM) return;
+    if (overflow === 'error') throw new Error('pdf-page-overflow');
+    closePage(); openPage();
+  };
 
   const para = (str, size, lh, bold, color, indent) => {
     const x = L + (indent || 0);
@@ -635,27 +657,39 @@ function textPager() {
            get cur() { return p; }, get y() { return y; }, set y(v) { y = v; } };
 }
 
+/* One bulleted list on a pager: the heading, then one indented block per item.
+   A completed item keeps its place in the order but not its words — the same
+   promise the scratch-out makes on page 1 (B34) — so `state` picks the ink and
+   the text, and nothing else changes.
+
+   `mark: false` drops the bullet glyph and keeps the indent, which is what the
+   calendar's event lines want: they are a day's own lines beneath that day's
+   own heading, not a list that needs one of its own. */
+function pdfBullets(t, label, items, { mark = true } = {}) {
+  if (!items.length) return;
+  if (label) t.heading(label);
+  const indent = 14;
+  for (const it of items) {
+    // A completed item keeps its place in the order but not its words —
+    // the same promise the scratch-out makes on page 1.
+    const done = it.state === 'complete';
+    const color = done ? PDF_SHADE : PDF_INK;
+    const lines = pdfWrap(done ? COPY.pdfCompleted : it.text, false, 10, t.W - indent);
+    if (mark) {
+      t.room(indent);                              // keep the bullet with its first line
+      t.cur.text('•', t.L, pdfBaseline(t.y, indent, 10), 10, false, color);
+    }
+    for (const line of lines) {
+      t.room(indent);
+      if (line.length) t.cur.text(line, t.L + indent, pdfBaseline(t.y, indent, 10), 10, false, color);
+      t.y += indent;
+    }
+  }
+}
+
 function exportTextPages(rec) {
   const t = textPager();
-
-  const bullets = (label, items) => {
-    if (!items.length) return;
-    t.heading(label);
-    for (const it of items) {
-      // A completed item keeps its place in the order but not its words —
-      // the same promise the scratch-out makes on page 1.
-      const done = it.state === 'complete';
-      const color = done ? PDF_SHADE : PDF_INK;
-      const lines = pdfWrap(done ? '— completed —' : it.text, false, 10, t.W - 14);
-      t.room(14);                                  // keep the bullet with its first line
-      t.cur.text('•', t.L, pdfBaseline(t.y, 14, 10), 10, false, color);
-      for (const line of lines) {
-        t.room(14);
-        if (line.length) t.cur.text(line, t.L + 14, pdfBaseline(t.y, 14, 10), 10, false, color);
-        t.y += 14;
-      }
-    }
-  };
+  const bullets = (label, items) => pdfBullets(t, label, items);
 
   t.openPage();
   t.para(rec.title || COPY.untitled, 18, 24, true, PDF_INK);
@@ -686,50 +720,28 @@ export async function exportCalPdf() {
     flushSave();
     const all = await idbGetAll();
     const events = eventsOf(all);
-    const L = PDF_MARGIN, R = A4_W - PDF_MARGIN, W = R - L;
-    pdfUi.pdfLossy = false;                       // report lossy substitution, as exportBoardPdf does (B34)
-    const stream = (() => {
-      const p = pdfCanvas();
-      p.q().flip(A4_H);
-      p.fill(PDF_PAPER).rect(0, 0, A4_W, A4_H).raw('f');
-      let y = PDF_MARGIN;
-      const room = (h) => { if (y + h > A4_H - PDF_MARGIN) throw new Error('cal-pdf-overflow'); };
-      const para = (str, size, lh, bold, color) => {
-        for (const line of pdfWrap(str, bold, size, W)) {
-          room(lh);
-          if (line.length) p.text(line, L, pdfBaseline(y, lh, size), size, bold, color);
-          y += lh;
-        }
-      };
-      para(COPY.calTitle, 18, 24, true, PDF_INK);
-      para(formatDate(Date.now()), 9, 13, false, PDF_SHADE);
-      y += 6;
-      for (const day of calWindow()) {
-        room(30); y += 12;
-        para((day.today ? COPY.calToday + ' — ' : '') +
-          calDayName(day.date) + ' ' + calMD(day.date),
-          11, 15, true, PDF_INK);
-        p.fill(PDF_SHADE).rect(L, y + 1, W, 0.5).raw('f');
-        y += 6;
-        const evs = calEventsOf(events, day.key);
-        if (!evs.length) continue;
-        for (const ev of evs) {
-          const done = ev.state === 'complete';
-          const color = done ? PDF_SHADE : PDF_INK;
-          for (const line of pdfWrap(done ? '— completed —' : ev.text, false, 10, W - 14)) {
-            room(14);
-            if (line.length) p.text(line, L + 14, pdfBaseline(y, 14, 10), 10, false, color);
-            y += 14;
-          }
-        }
-      }
-      return p.Q().stream();
-    })();
-    const bytes = pdfAssemble([stream], COPY.calTitle);
+    pdfLossy = false;                       // report lossy substitution, as exportBoardPdf does (B34)
+    // The same pager the board's prose runs on (issue #438), told that a page
+    // which does not fit is an error rather than a page turn: this is one
+    // fixed reference sheet, never a document that grows.
+    const t = textPager({ overflow: 'error' });
+    t.openPage();
+    t.para(COPY.calTitle, 18, 24, true, PDF_INK);
+    t.para(formatDate(Date.now()), 9, 13, false, PDF_SHADE);
+    t.y += 6;
+    for (const day of calWindow()) {
+      t.heading((day.today ? COPY.calToday + ' — ' : '') +
+        calDayName(day.date) + ' ' + calMD(day.date));
+      // The day's events, unmarked: the indent alone groups them under the
+      // day's own heading, so no bullet competes with it.
+      pdfBullets(t, null, calEventsOf(events, day.key), { mark: false });
+    }
+    t.closePage();
+    const bytes = pdfAssemble(t.streams, COPY.calTitle);
     const d = new Date();
     downloadBlob(new Blob([bytes], { type: 'application/pdf' }),
       'calendar-' + d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + '.pdf');
-    if (pdfUi.pdfLossy) showNotice(COPY.exportLossy, 'export', UNDO_MS);
+    if (pdfLossy) showNotice(COPY.exportLossy, 'export', UNDO_MS);
   } catch (e) {
     showNotice(COPY.exportError, 'export', UNDO_MS);
   }
@@ -792,10 +804,10 @@ export async function exportBoardPdf(board) {
       links: (src.links || []).filter((l) =>
         notes.some((n) => n.id === l.a) && notes.some((n) => n.id === l.b)),
     });
-    pdfUi.pdfLossy = false;
+    pdfLossy = false;
     const bytes = buildBoardPdf(rec);
     downloadBlob(new Blob([bytes], { type: 'application/pdf' }), pdfFilename(rec));
-    if (pdfUi.pdfLossy) showNotice(COPY.exportLossy, 'export', UNDO_MS);
+    if (pdfLossy) showNotice(COPY.exportLossy, 'export', UNDO_MS);
   } catch (e) {
     showNotice(COPY.exportError, 'export', UNDO_MS);
   }

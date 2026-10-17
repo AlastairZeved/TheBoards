@@ -82,6 +82,18 @@ export function syncBoardActions() {
   if (l) l.textContent = away ? COPY.thisBoard : COPY.calBoardTab;
 }
 
+/* Where a context menu opens. A keyboard summon (Shift+F10) fires
+   `contextmenu` at 0,0 — there is no pointer under it, so a menu opened at
+   the event's own coordinates would land in the sheet's top-left corner,
+   away from the thing it acts on. The fallback is the target's own centre,
+   the same place a right-click on it lands. One definition for the three
+   summoning sites: a note (below), a rail card and a drilled row (boards.js). */
+export function menuPoint(ev, node) {
+  if (ev.clientX || ev.clientY) return { x: ev.clientX, y: ev.clientY };
+  const r = node.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+
 export function buildMenu(items, clientX, clientY) {
   closeMenu();
   el.menu.textContent = '';
@@ -253,11 +265,7 @@ export function registerMenus() {
     const noteNode = ev.target.closest('.note');
     if (!noteNode || isEditing(ev.target)) return;    // non-note / text edit keeps the native menu
     ev.preventDefault();
-    let x = ev.clientX, y = ev.clientY;
-    if (!x && !y) {                                   // Shift+F10 fires contextmenu at 0,0
-      const r = noteNode.getBoundingClientRect();
-      x = r.left + r.width / 2; y = r.top + r.height / 2;
-    }
+    const { x, y } = menuPoint(ev, noteNode);
     // No menuInvoker: closeMenu's focus-return would run the focusin Tab-selects
     // rule (issue #55) and stray-select the source note. The mouse user finishes
     // the link by clicking the target, so no focus return is needed.

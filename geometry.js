@@ -171,9 +171,7 @@ function applyFrame() {
   noteEls.forEach((node, id) => {
     const note = noteRec(id);
     if (note) {
-      node.style.left = renderX(note) + 'px';
-      node.style.top = renderY(note) + 'px';
-      node.style.transform = 'scale(' + effScale(note) + ')';
+      placeNote(node, note);
       setHitInset(node, note);
     }
   });
@@ -185,8 +183,6 @@ function applyFrame() {
   // surface state), so applyLayout fires a hook the boards register() fills
   // in — this breaks the geometry <-> boards import cycle at the root (#182).
   if (frameUi.frameReflow) frameUi.frameReflow();
-  // No letterbox now: the toast sits 12px above the screen's bottom edge.
-  document.documentElement.style.setProperty('--toast-bottom', '12px');
 }
 
 /* The Android soft keyboard opening fires a viewport resize. Under B17 the
@@ -382,6 +378,17 @@ export const noteK = (note) => noteKFor(note, LOGICAL_W, LOGICAL_H);
 export const renderX  = (note) => note.x * noteK(note);
 export const effScale = (note) => (note.scale || 1) * noteK(note);
 export const renderY  = (note) => note.y * noteK(note);
+
+/* A note's on-sheet seat — left, top, and the similarity's scale (B64). The
+   one write every site that publishes a note's position makes: the render
+   paths (makeNoteEl, a surfaced echo), a frame change (applyFrame), and the
+   gestures' own tails when a note moves. Kept here, beside the three
+   coordinates it writes, so no caller restates the transform. */
+export function placeNote(node, note) {
+  node.style.left = renderX(note) + 'px';
+  node.style.top = renderY(note) + 'px';
+  node.style.transform = 'scale(' + effScale(note) + ')';   // the similarity (B64)
+}
 
 export function rebaseNote(note) {
   // Fold the similarity ratio into the authored scale (B40's fold, on B64's

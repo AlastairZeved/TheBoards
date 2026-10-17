@@ -49,7 +49,12 @@ export async function idbGet(id) { return withStore('readonly', (store) => store
 
 /* --- 3. State + save queue ----------------------------------------------- */
 // Single-flight persist with exponential backoff; capture is never blocked.
-let saveTimer = null, persisting = false, dirtyAgain = false, retryDelay = 1000;
+/* The backoff a failed save retries on: one second, doubled per failure, up to
+   sixteen. Long enough that a transient IndexedDB refusal heals itself, capped
+   so an unwritable device cannot spin on it — and the retry is
+   fire-and-forget, so nothing in the app ever waits behind it. */
+const RETRY_MS_MIN = 1000, RETRY_MS_MAX = 16000;
+let saveTimer = null, persisting = false, dirtyAgain = false, retryDelay = RETRY_MS_MIN;
 export function scheduleSave() { state.dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, SAVE_DEBOUNCE); }
 export function cancelPendingSave() { clearTimeout(saveTimer); }
 export function saveNow() {
@@ -86,11 +91,11 @@ export function persist() {
   persisting = true;
   const snapshot = state.current;
   idbPut(snapshot).then(() => {
-    persisting = false; retryDelay = 1000; hideSaveError();
+    persisting = false; retryDelay = RETRY_MS_MIN; hideSaveError();
     if (dirtyAgain) { dirtyAgain = false; persist(); }
   }).catch(() => {
     persisting = false; showSaveError();
     setTimeout(persist, retryDelay);
-    retryDelay = Math.min(retryDelay * 2, 16000);
+    retryDelay = Math.min(retryDelay * 2, RETRY_MS_MAX);
   });
 }
