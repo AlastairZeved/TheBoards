@@ -5631,3 +5631,51 @@ To make each week visually separate in the weekly view when scrolling, make ever
 **Source:** issue #436 (owner ruling): “Re-seat each echo from its source note’s current rendered position and scale on every frame change; render-only, never write stored records.” — https://github.com/AlastairZeved/TheBoards/issues/436
 
 **The record.** `render.js` re-seats surfaced echoes during the frame-reflow pass. `UIUX.md` §4.7 records the rendering rule; `test/reminder.js` verifies the echo geometry updates without changing the source note record.
+
+### B171. The board-action row's value is `UIUX §3.3`'s — `14px/600` on `padding: 8px 6px` — the shipped CSS and §3.3 agreeing, and the §13 duplicate restated to match with its "unresolved" flag removed (issue #429, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504; supersedes NOTHING — §3.3's tab metrics (B76, B86, B95) stand exactly as written, and the duplicate was never an authority; keeps B83's row, B86's finger box, B95's four-tab row, B7's decoupled hit collar, §14's rule that this control is the exception to the tactile signature; waives nothing)
+
+**Source:** issue #429 (owner ruling): "8px 6px / 14px — code and §3.3 win; the §13 duplicate is restated to match, flag removed" — https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504
+
+**The record.** `UIUX.md` §3.3's table is the sole authority for the row's type and padding; the §13 duplicate now carries the same values and no longer announces an unresolved conflict. `styles.css`'s `.board-action` is unchanged by this entry — the rendered board does not move.
+
+### B172. The PDF font claim stands and the code is what changes: both records keep "Montserrat Alternates does reach the export: the PDF embeds it," and the exporter's base-14 Helvetica is filed as its own issue (issue #429, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504; supersedes NOTHING — the Helvetica ruling of record stands as the description of what ships today, and `PRD.md`'s deferred-font row stands; keeps B34's byte-identical export, §15's paper-light palette, the non-Latin `?` toast; waives nothing. The work is issue #456)
+
+**Source:** issue #429 (owner ruling): "Leave the claim standing and file a new issue to actually embed Montserrat" — https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504
+
+**The record.** `PRD.md` §9.4 and `UIUX.md` §15 keep the sentence as written, unamended. The defect is in the exporter (`export.js` declares `/BaseFont /Helvetica` and `/Helvetica-Bold` and embeds no face), and it is filed as issue #456 — a code change with its own `CACHE` bump, outside this docs-only issue's scope.
+
+### B173. The closed motion set grows to eight: the note toolbar fade, the controls' press-filter, and the risen list panel are named members with their durations (issue #429, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504, with the two follow-up rulings in the same thread; supersedes ONLY §8's "the set does not grow" clause — the five members, the curve, the reduced-motion kill-switch and the two things that stay instant all stand; keeps B81's commit-on-release, §14's press-translate exemption, B27's instant capture; waives nothing)
+
+**Source:** issue #429 (owner ruling): "Grow the set: add the toolbar fade and the recede filters as named members with their durations"; the members were then named in the owner's follow-up answers in the same thread: "Name the controls' press-filters as members — filter 200ms" and "Add it as a member too — transform 200ms" — https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504 and https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6224666758
+
+**The record.** `UIUX.md` §8's table grows from five rows to eight: `.note-toolbar` (opacity, with `visibility 0s`, 200ms), the controls' press-filter — `.board-action`, `.cal-act`, `.cal-add`, `.mo-nav` (filter, 200ms) — and `#list-view` (transform, 200ms). Nothing in the CSS changes: these ship already, and the ruling records them rather than inventing them. The calendar's near/far recede (`brightness .8` / `.6`) is applied statically and is not a member.
+
+### B174. The six values that lived only in `PRD.md` move to `UIUX.md`, and `PRD.md` cites them: `MIN_SCALE` and `MAX_SCALE` in §4, `SAVE_DEBOUNCE` in §5, `interactive-widget` in §6, the save-failure copy in §9, the 36pt PDF margin in §15 (issue #429, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504, with the owner's placement ruling of the same day: https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6224666758; supersedes NOTHING — no ruling had placed these values; keeps `PRD.md`'s own rule that it quotes values from `UIUX.md` and never authors them, B40's widened clamps, B28's keyboard guard, B13's no-clobber law, B34's export geometry; waives nothing)
+
+**Source:** issue #429 (owner ruling): "Move all six into UIUX as new entries; PRD cites them (creates new rendering contracts)"; the homes were ruled in the same thread: "SAVE_DEBOUNCE in §5; interactive-widget in §6 the touch floor" — https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504 and https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6224666758
+
+**The record.** `UIUX.md` now states `MIN_SCALE = 0.5` / `MAX_SCALE = 2.0` (§4), `SAVE_DEBOUNCE = 300ms` among §5's thresholds, `interactive-widget=resizes-visual` and its JS guard in §6, the save-failure toast's copy in §9, and the 36pt margin in §15. `PRD.md` quotes each with a `UIUX §` citation and authors none of them. No value changed — only its home.
+
+### B175. The calendar's near/far date-compartment fills are derived from `--deep`, not written as literals: `--deep` lightened for `near`, darkened for `far`, with the shipped `#050b18` / `#030813` restated as that derivation in a separate issue (issue #429, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504; supersedes NOTHING — no ruling had sourced these hexes; keeps B117's calendar ladder, the per-ladder `--deep` values pinned by `test/tokens.js`, §3.4's scale-and-luminance recede, B160's weekend cards; waives nothing. The CSS restatement is issue #457)
+
+**Source:** issue #429 (owner ruling): "Derive them from --deep — restate the CSS to build them off --deep and document that" — https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504
+
+**The record.** `UIUX.md` §3.4 names `--deep` as the source of both fills and records the literals as what ships today, pending issue #457. The derivation is from the token, so the Calendar ladder keeps governing the compartment on every ladder.
+
+### B176. The text page's type sizes and spacing and the copy notice's duration get homes in the record: the sizes and the 36pt margin in `UIUX §15`, the 1500ms notice in `UIUX §9` with a cross-reference from §15 (issue #429, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504, with the owner's placement ruling of the same day: https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6224666758; supersedes NOTHING — these values had no home and no prior ruling; keeps B34's export geometry, §15's paper-light palette, §9's toast grammar and B13's no-clobber law; waives nothing)
+
+**Source:** issue #429 (owner ruling): "Add them to UIUX §15 (paper-light export) — the type sizes, spacing, and the 1500ms notice"; the notice's home was then ruled: "Both: duration in §9, with a cross-reference line in §15" — https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504 and https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6224666758
+
+**The record.** `UIUX.md` §15 carries the prose page's type (`18/24` title, `9/13` date, `10/14` body, `11/15` headings) and their `30/12/6` spacing; §9 carries the 1500ms copy notice beside the 5s undo window, and §15 points there. The values are as `export.js` and `interactions.js` already ship them.
+
+### B177. `UIUX.md`'s authority sentence no longer points at a deleted render: where the document and the shipped code disagree, the disagreement is a defect in one of them — filed as an issue and resolved by an owner ruling (issue #429, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504; supersedes ONLY the sentence at issue — B156's removal of the proof sheets stands, and `UIUX.md` remains the rendering authority; keeps the append-only law, the rule that law is stated by the owner, and every ruling's substance; waives nothing)
+
+**Source:** issue #429 (owner ruling): "Replace it with: a disagreement with shipped code is a defect in one of them — filed as an issue and resolved by a ruling" — https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504
+
+**The record.** `UIUX.md`'s opening sentence names the shipped code, not the proof render B156 deleted, as the thing a disagreement is measured against — and says how such a disagreement is settled: an issue, then an owner ruling. This entry and issue #429 are that mechanism working.
+
+### B178. The two unused assets stay: `--reminder` and `icons/icon-192-light.png` are pinned records, not dead code (issue #429, the owner's ruling of record: https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504; supersedes NOTHING; keeps B126/B132's reminder identity, `test/tokens.js`'s pin of the token, the dark-only law of B16, `sw.js`'s precache list as written; waives nothing)
+
+**Source:** issue #429 (owner ruling): "Keep both — they are pinned records, not dead code" — https://github.com/AlastairZeved/TheBoards/issues/429#issuecomment-6223587504
+
+**The record.** No file changes. `--reminder` stays defined in `:root` and pinned by `test/tokens.js` with its "kept for the record" note; `icons/icon-192-light.png` stays in `sw.js`'s `ASSETS`. Neither is retired, and neither is counted as debt.
