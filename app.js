@@ -59,8 +59,8 @@ function scheduleEnvironment() {
 }
 function applyEnvironment() {
   const vw = window.innerWidth, vh = window.innerHeight;
-  // B124 embed: a forced view pins the tier (the MQ listeners are unregistered
-  // under EMBED_MODE, so this covers the resize path only).
+  // B124 embed: a forced view pins the tier (the MQ listeners are not
+  // registered under EMBED_MODE, so this covers the resize path only).
   const { desktop, tablet, wide } = readTier();   // one derivation, boot or flip
   const tierChanged = wide !== state.isWide;
   // B152: a focusout hold armed the pass. The keyboard-up resizes were
@@ -90,8 +90,8 @@ function setTierClasses({ desktop, tablet, wide }) {
   state.isDesktop = desktop;
   state.isWide = wide;
   document.documentElement.classList.toggle('desktop', desktop);
-  // `wide` gates the rail and calendar-panel arrangement in CSS (B96).
   document.documentElement.classList.toggle('tablet', tablet);
+  // `wide` gates the rail and calendar-panel arrangement in CSS (B96).
   document.documentElement.classList.toggle('wide', wide);
 }
 function applyTier(tier) {
@@ -274,7 +274,7 @@ if ('serviceWorker' in navigator) {
    worker and reloads once; install IS addAll over the network, so the new
    worker reinstalls current. Two strikes, so one bad response (captive
    portal, proxy error page) cannot nuke a healthy install; the sessionStorage
-   counter dies with the tab. Runs 20s after launch, off the critical path.
+   marker dies with the tab. Runs 20s after launch, off the critical path.
    Offline it does nothing: no authority to compare against.
 
    DATA IS NEVER TOUCHED: it deletes only Cache Storage and unregisters the

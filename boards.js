@@ -307,7 +307,7 @@ function makeListRow(b) {
     { container: el.listRows, onTap: () => openBoardById(b.id) });
   // Desktop reaches the row menu by right-click, as makePaneRow does.
   card.addEventListener('contextmenu', (ev) => {
-    if (!state.isDesktop) return;              // mobile: the hold is the path
+    if (!state.isDesktop) return;      // off desktop, the hold is the path
     ev.preventDefault();
     const { x, y } = menuPoint(ev, card);
     state.menuInvoker = card;
@@ -934,8 +934,8 @@ async function launchTodayBoard(today) {
       else if (state.calExpanded) collapseCalRail();
       swapBoard(board.id);
     } catch (e) {
-      rollDay = null;                 // un-stamp: the next check retries whole
-      throw e;                // fire-and-forget, as elsewhere in this file
+      rollDay = null;   // un-stamp: the next check retries whole
+      throw e;          // fire-and-forget, as elsewhere in this file
     }
   });
 }
@@ -1249,9 +1249,6 @@ function renderCalMonth(evDays) {
   el.calMonth.appendChild(grid);
 }
 
-/* Back drives the calendar, drill, list and board states via History (B9).
-   The calendar is checked first: it can sit beneath the picker. */
-
 /* Region init: called from boot(); no module does load-time work. */
 export function registerBoards() {
 
@@ -1290,6 +1287,8 @@ export function registerBoards() {
     expandPane();
   });
   el.paneCollapse.addEventListener('click', collapsePane);
+  // Back drives the calendar, drill, list and board states via History (B9).
+  // The calendar is checked first: it can sit beneath the picker.
   window.addEventListener('popstate', () => {
     popping = false;                     // B83
     closeMenu();
