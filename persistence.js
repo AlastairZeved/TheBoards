@@ -128,17 +128,22 @@ export function persist(rec = state.current) {
 function drain() {
   clearTimeout(retryTimer);
   const entry = queue.values().next().value;
-  if (!entry) return;
+  // A direct write or delete can empty the queue under a pending retry:
+  // nothing is left unsaved, so the notice goes.
+  if (!entry) { hideSaveError(); return; }
   queue.delete(entry.rec.id);
   flight = entry;
   rawPut(entry.rec).then(() => {
     flight = null; retryDelay = RETRY_MS_MIN; hideSaveError();
     drain();
   }).catch(() => {
-    flight = null; showSaveError();
+    flight = null;
     // Back in the queue unless a newer save, a direct write or a delete has
-    // superseded it.
-    if (!entry.dead && !queue.has(entry.rec.id)) queue.set(entry.rec.id, { rec: entry.rec });
+    // superseded it; a superseded failure is no unsaved work to announce.
+    if (!entry.dead) {
+      showSaveError();
+      if (!queue.has(entry.rec.id)) queue.set(entry.rec.id, { rec: entry.rec });
+    }
     clearTimeout(retryTimer);
     retryTimer = setTimeout(drain, retryDelay);
     retryDelay = Math.min(retryDelay * 2, RETRY_MS_MAX);

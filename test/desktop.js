@@ -3508,6 +3508,8 @@ run(async () => {
       await breakPuts(page, false);
       await page.waitForTimeout(4500);
       ok('the deleted board stays deleted', (await raw(page, ids.a)) === null);
+      ok('with nothing left to save, the save-error notice clears', await page.evaluate(() =>
+        document.querySelector('#toast').dataset.mode !== 'save'));
       ok('no page errors', errors.length === 0, errors.join(' | '));
       await ctx.close();
     }
