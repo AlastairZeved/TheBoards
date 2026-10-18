@@ -9,7 +9,7 @@
    ========================================================================== */
 
 
-/* --- Constants & copy ---------------------------------------------------- */
+/* --- 1. Constants & copy ------------------------------------------------- */
 export const NOTE_MIN_W = 132;              // real minimum rendered note width (UIUX §4.5, B84):
                                      // wide enough to seat the 4-button on-select toolbar.
                                      // One number does three jobs — the wrap-cap floor
@@ -238,7 +238,7 @@ export const CE = (() => {
   return d.contentEditable === 'plaintext-only' ? 'plaintext-only' : 'true';
 })();
 
-/* --- Desktop mode (B19) --------------------------------------------------
+/* --- 1.5 Desktop mode (B19) ----------------------------------------------
    A session is desktop iff the primary pointer is fine and can hover AND the
    window is wide enough for the rail. Capability — not width, not UA — is what
    excludes tablets: iPadOS reports coarse/none even with a trackpad. One flag +
@@ -357,7 +357,7 @@ export const makeDayNoteRecord = (day) => makeRecord('dayNote', {
 });
 
 
-/* --- The rolling temporal calendar (B95) ---------------------------------
+/* --- 1.7 The rolling temporal calendar (B95) -----------------------------
 
    The calendar is not a record of its own — it is a VIEW over the To-Do
    boards (R5). Each date that carries at least one event is linked to an
@@ -525,7 +525,7 @@ export const el = {
   actionExport: document.getElementById('action-export'),   // Export this board (PDF · JSON, B92)
   actionImport: document.getElementById('action-import'),   // Import a JSON backup (B92)
   importFile: document.getElementById('import-file'),       // the import tab's file dialog
-  calView: document.getElementById('cal-view'),             // calendar screen 
+  calView: document.getElementById('cal-view'),             // calendar screen
   calRail: document.getElementById('cal-rail'),             // the standing rail face (B99)
   calBand: document.getElementById('cal-band'),             // the face's header band (B157)
   calBandCard: document.getElementById('cal-band-card'),    // the band's title card (B157)
@@ -536,7 +536,7 @@ export const el = {
   calTop: document.getElementById('cal-top'),
   calBack: document.getElementById('cal-back'),
   calToday: document.getElementById('cal-today'),       // B148: the row's right anchor
-  calMonth: document.getElementById('cal-month'),       // the month view's ground 
+  calMonth: document.getElementById('cal-month'),       // the month view's ground
   actionCalendar: document.getElementById('action-calendar'), // fourth board-action tab (B95)
 };
 export const anchorEls = {
