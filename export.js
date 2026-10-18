@@ -1,4 +1,4 @@
-/* --- 10.5 PDF export (issue #43) -----------------------------------------
+/* --- 10.5 PDF export -----------------------------------------
    A board leaves the device as a .pdf, not a screenshot. PDF is a text format
    and the base-14 fonts need no embedding, so the whole exporter is written
    here rather than vendored: a library would be the app's first dependency and
@@ -6,8 +6,8 @@
    its encoders (the icons come out of a dependency-free PNG writer).
 
    Two pages. Page 1 is the board itself — the same furniture and the same note
-   positions, drawn as vectors, which is what the screenshot was standing in
-   for. Page 2 is the text of the board, for search and for reading.
+   positions, drawn as vectors rather than pasted as a screenshot. Page 2 is
+   the text of the board, for search and for reading.
 
    Everything is drawn in ONE convention: origin top-left, y down, matching CSS
    and matching the stored coordinates. Each page opens with a y-flip so the
@@ -16,7 +16,7 @@
    its own `1 0 0 -1` text matrix, which cancels the flip and leaves the scale.
    ---------------------------------------------------------------------- */
 
-// issue #182 module wiring — native ESM, no bundler (AGENTS.md).
+// Native ESM, no bundler (AGENTS.md).
 import { BOARD_CATS, COPY, LOT_HEAD, LOT_MAX_FRAC, LOT_ROW, NOTE_MIN_W, REF_W, REF_H, UNDO_MS, calDayName, calEventsOf, calMD, calWindow, copyRecordFields, eventsOf, live, makeRecord, pad2, state, uuid } from './state.js';
 import { flushSave, idbGet, idbGetAll, idbPut } from './persistence.js';
 import { LOGICAL_H, LOGICAL_W, bandRuleYFor, noteKFor, noteMaxW } from './geometry.js';
@@ -44,7 +44,7 @@ const PDF_SHADE = [0.514, 0.482, 0.533];
 // an ExtGState object just to say so. (The burial half of B53's pair has no
 // print analogue: a completed item emits no text object at all — B34.)
 const PDF_SCRATCH = PDF_INK.map((c, i) => c * 0.62 + PDF_PAPER[i] * 0.38);
-// The highlight wash on paper (issue #105, B71): the screen's amber, toned down
+// The highlight wash on paper (B71): the screen's amber, toned down
 // to a paper-light fill so a highlighted note prints as itself, not a slab of
 // saturated ink — the same reasoning that keeps PDF_PAPER off :root.
 const PDF_HILITE = [0.949, 0.847, 0.361];
@@ -125,8 +125,7 @@ function pdfNum(n) {
 
 /* `white-space: pre-wrap` + `overflow-wrap: break-word`, measured in Helvetica.
    Hard breaks are honoured; a word wider than the box breaks mid-word rather
-   than overflowing it, which is what keeps a note frame inside its edge cap
-   (issue #53). */
+   than overflowing it, which is what keeps a note frame inside its edge cap. */
 function pdfWrap(str, bold, size, maxW) {
   const lines = [];
   if (!(maxW > 0)) return [String(str)];
@@ -164,9 +163,8 @@ function pdfBaseline(top, lh, size) {
    Board coordinates in, operators out. Every method returns `p` so the
    drawing code below reads as a sequence rather than a pile of pushes.
    The larger furniture (rounded paths, frames, text, the scratch-out)
-   lives in the free `draw*`/`rrectPath` functions below — each takes `p`
-   and holds the verbatim body — so this builder stays a table of
-   one-line delegates rather than 100 lines of nesting. */
+   lives in the free `draw*`/`rrectPath` functions below, each taking `p`, so
+   this builder stays a table of one-line delegates. */
 function pdfCanvas() {
   const ops = [];
   const p = {
@@ -231,7 +229,7 @@ function drawFrame(p, x, y, w, h, r, bw, bg) {
   return p.raw('S');
 }
 
-// The title compartment (B38, issue #52): the sheet's own top edge is its
+// The title compartment (B38): the sheet's own top edge is its
 // fourth side, so only three are drawn — down the left, across the bottom,
 // back up the right, one path, inset by half the border width same as
 // `frame`. No radius: at the export's 0.581 A4 scale the 2px CSS corner is
@@ -349,8 +347,8 @@ function pdfAssemble(streams, title) {
 export const EXPORT_GEO = {
   gutter: 24,
   // B47's band formula, the same law the screen derives --rule-y from (the
-  // shared bandRuleYFor, with B76's label moved below the rule so it no
-  // longer budgets above it), resolved per record in exportRuleY() against
+  // shared bandRuleYFor; B76's label hangs below the rule, so it budgets
+  // nothing above it), resolved per record in exportRuleY() against
   // THIS sheet's zone widths. bandTop/bandGap stay literal here: the [11c]
   // tripwire recomputes the formula from EXPORT_GEO's own source terms, so
   // they are part of the test contract — they MUST equal BAND_TOP/BAND_GAP.
@@ -360,7 +358,7 @@ export const EXPORT_GEO = {
   // overhangs the rule by 22; cardPadTop is its top padding (band-top + 6).
   cardL: 280, cardW: 340, cardTop: 0, cardOverhang: 22, cardPad: 12, cardPadTop: 20,
   // Both sections size to their MEASURED content from a floor (UIUX
-  // UIUX §3.1 / UIUX §3.2, B73); the lot's ceiling is half the sheet, applied in
+  // §3.1 / §3.2, B73); the lot's ceiling is half the sheet, applied in
   // exportLotH — one law with the screen, the export's own number (B34).
   // lotHead/lotRow ARE the screen's LOT_HEAD/LOT_ROW — shared constants.
   lotHead: LOT_HEAD, lotRow: LOT_ROW, lotHeaderY: 8, lotItemsY: 34,
@@ -370,7 +368,7 @@ export const EXPORT_GEO = {
   lotSize: 16, lotLH: 23.2,            // 16px / 1.45
   noteSize: 17, noteLH: 23.8,          // 17px / 1.4
   border: 2, radius: 3, notePadX: 12, notePadY: 10,   // radius mirrors B49 by hand
-  linkWidth: 1.5,                      // the note-link hairline (issue #142, B91)
+  linkWidth: 1.5,                      // the note-link hairline (B91)
 };
 
   // The band sizes to its tallest zone (B47), on the export's own frame: line
@@ -414,22 +412,20 @@ const exportLotH = (rec) => {
 // standing in for the frame. One LAW shared with the screen, not one number:
 // each frame takes its own min, so notes of one authoring cohort keep their
 // figure exactly, while a mixed-cohort board can relate its cohorts
-// differently here than on a given screen — inherent to min-k and owned in
-// B64's costs. Stored x/y are read only — B21's "committed positions are
-// permanent" is not ours to break. Legacy notes never reach here: B93's boot
-// migration adopted every rh-less note onto the single min-k path before
-// first paint, so the export reads the same unified geometry the screen
-// renders (issue #141).
+// differently here than on a given screen (B64). Stored x/y are read only
+// (B21). Legacy notes never reach here: B93's boot migration puts every
+// rh-less note on the single min-k path before first paint, so the export
+// reads the same geometry the screen renders.
 const exportK = (n) => noteKFor(n, EXPORT_W, EXPORT_H);
 export const exportX = (n) => n.x * exportK(n);
 const exportY = (n) => n.y * exportK(n);
 
 // Border box of a note, before its own scale — `width: max-content` capped at
 // the export sheet's right edge, height from however many lines that width
-// produces. The cap IS noteMaxW (issue #53, B39; B64): since the law became
-// pure authored units — (rw − x)/scale, no frame constant left in it — the
-// export calls the screen's own function rather than restating it, so the
-// two wrap widths cannot drift apart by construction.
+// produces. The cap IS noteMaxW (B39; B64): the law is pure authored units,
+// (rw − x)/scale, with no frame constant in it, so the export calls the
+// screen's own function rather than restating it and the two wrap widths
+// cannot drift apart.
 export function exportNoteBox(note) {
   const g = EXPORT_GEO;
   const chrome = 2 * g.notePadX + 2 * g.border;
@@ -457,8 +453,7 @@ function exportBoardPage(rec) {
   p.q().flip(A4_H);
   // Paper edge to edge, not a paper rectangle floating on white. Paper tone is
   // named in UIUX §1 as part of the identity, alongside the frame and the
-  // scratch-out, and the margin is margin — not a desk. B17 and B32 spent two
-  // rulings deleting the letterbox; this is not the place to reintroduce it.
+  // scratch-out, and the margin is margin — not a desk (B17, B32: no letterbox).
   p.fill(PDF_PAPER).rect(0, 0, A4_W, A4_H).raw('f');
   p.cm(scale, 0, 0, scale, mx, my);
   p.fill(PDF_PAPER).rect(0, 0, EXPORT_W, EXPORT_H).raw('f');   // the sheet itself
@@ -504,8 +499,8 @@ function exportBand(p, rec) {
 }
 
 // The title compartment. ruleY comes from exportBand — the compartment's
-// border-top is no longer drawn (B38, issue #52), and it overhangs the band's
-// rule by 22, occluding it (B47).
+// border-top is not drawn (B38), and it overhangs the band's rule by 22,
+// occluding it (B47).
 function exportCard(p, rec, ruleY) {
   const g = EXPORT_GEO;
   const title = rec.title || '';
@@ -559,7 +554,7 @@ function exportLot(p, rec) {
   p.Q();
 }
 
-// Links UNDER the notes (issue #142, B91): a thin line between two note centres,
+// Links UNDER the notes (B91): a thin line between two note centres,
 // drawn in sheet space (not the per-note transform), so it sits below the cards
 // it joins — the same z-order as the screen (the link layer is below notes). A
 // neutral hairline suits the export's paper/ink/shade palette better than a
@@ -588,12 +583,12 @@ function exportNotes(p, rec) {
     // transform-origin: top left — translate to the note, then scale in place.
     p.q().cm(s, 0, 0, s, exportX(note), exportY(note));
     // A highlighted note fills amber, matching the screen; a completed one still
-    // fills first, then the scratch draws over it (issue #105, B71).
+    // fills first, then the scratch draws over it (B71).
     p.frame(0, 0, box.w, box.h, g.radius, g.border, note.highlighted ? PDF_HILITE : PDF_PAPER);
     if (note.state === 'complete') {
       p.q().rrect(0, 0, box.w, box.h, g.radius).clip().scratch(box.w, box.h).Q();
     } else {
-      // Centred in the content box, as the screen draws it (issue #82, B62).
+      // Centred in the content box, as the screen draws it (B62).
       p.lines(box.lines, g.border + g.notePadX, box.content, g.border + g.notePadY,
               g.noteSize, g.noteLH, false, 'center');
     }
@@ -610,8 +605,8 @@ function exportNotes(p, rec) {
 
    `overflow` is what running out of page MEANS. 'paginate' (the board's
    default) simply opens another — a board's prose can be any length. 'error'
-   (the calendar's) throws instead: that page is a fixed reference sheet
-   (issue #145), and one that did not fit would be a sheet nobody designed,
+   (the calendar's) throws instead: that page is a fixed reference sheet,
+   and one that did not fit would be a sheet nobody designed,
    so the caller reports COPY.exportError rather than shipping a truncated
    file (B34's law that truncation is always indicated, never silent). */
 function textPager({ overflow = 'paginate' } = {}) {
@@ -705,7 +700,7 @@ export function buildBoardPdf(rec) {
                      rec.title || COPY.untitled);
 }
 
-/* ---- The calendar's 7-day reference sheet (issue #145) -------------------
+/* ---- The calendar's 7-day reference sheet -------------------
    One text page: the rolling week as it renders — today first, one line per
    event, completed events reading "— completed —".
    Built from the same primitives as exportTextPages; reads STORAGE (the
@@ -716,7 +711,7 @@ export async function exportCalPdf() {
     const all = await idbGetAll();
     const events = eventsOf(all);
     pdfLossy = false;                       // report lossy substitution, as exportBoardPdf does (B34)
-    // The same pager the board's prose runs on (issue #438), told that a page
+    // The same pager the board's prose runs on, told that a page
     // which does not fit is an error rather than a page turn: this is one
     // fixed reference sheet, never a document that grows.
     const t = textPager({ overflow: 'error' });
@@ -793,7 +788,7 @@ export async function exportBoardPdf(board) {
       notes,
       parkingLot: (src.parkingLot || []).filter(keep)
         .map((item) => copyRecordFields('lot', item)),
-      // B91's links must reach the PDF (issue #407): carry them, but only a link
+      // B91's links reach the PDF: carry them, but only a link
       // whose two pinned notes both survive the sweep — a line to a dropped
       // empty note would draw to nowhere (exportLinks skips the dangling ones).
       links: (src.links || []).filter((l) =>
@@ -808,11 +803,10 @@ export async function exportBoardPdf(board) {
   }
 }
 
-/* --- 10.6 JSON backup: export all, import merged (issue #140, B92; payload
-   v2 per B123 — issue #231) ---------------------------------------------- */
+/* --- 10.6 JSON backup: export all, import merged (B92; payload v2 per B123) ---------------------------------------------- */
 
-/* A calendar day-note record is identified by its historical rem- id and day
-   key. This recognizes the v2 files that placed these records in `boards`. */
+/* A calendar day-note record is identified by its rem- id and day key. This
+   also recognizes v2 files that placed these records in `boards`. */
 function isDayNoteRecord(raw) {
   return !!raw && typeof raw === 'object' && typeof raw.id === 'string' &&
     raw.id.startsWith('rem-') && typeof raw.day === 'string';
@@ -905,15 +899,14 @@ function normalizeImportedDayNote(raw) {
   return note.day ? note : null;
 }
 
-/* Merge-import (the owner's ruling, issue #140): a board whose id already
-   exists is OVERWRITTEN by the file's copy; new ids are ADDED. A backup-
-   restore in miniature — the file's board is the truth for that id, the
-   device keeps every board the file never mentions. B123 extends the same
-   ruling to calendar events, type-aware: a v2 file carries them in the
-   top-level `calendarEvents` array; a v1 file — whose exporter swept events
-   into `boards`, where board normalization dropped every one (issue #231) —
-   is salvaged by filtering the raw `boards` array through `eventsOf` BEFORE
-   board normalization touches it. Events import by the same merge rule:
+/* Merge-import: a board whose id already exists is OVERWRITTEN by the file's
+   copy; new ids are ADDED. A backup-restore in miniature — the file's board
+   is the truth for that id, the device keeps every board the file never
+   mentions. B123 extends the same rule to calendar events, type-aware: a v2
+   file carries them in the top-level `calendarEvents` array; a v1 file,
+   whose exporter put events in `boards` where board normalization drops
+   every one, is salvaged by filtering the raw `boards` array through
+   `eventsOf` BEFORE board normalization touches it. Events import by the same merge rule:
    overwrite by id, the device keeps every event the file never mentions. */
 export async function importBoardsJson(file) {
   let payload;
@@ -961,7 +954,7 @@ export async function importBoardsJson(file) {
   for (const ev of incomingEvents) await idbPut(ev);
   for (const note of incomingDayNotes) await idbPut(note);
   if (overwrittenCurrent) {
-    state.dirty = false;                      // current was replaced wholesale, exactly ensureCurrentValid's reading
+    state.dirty = false;                      // current was replaced wholesale, as ensureCurrentValid reads it
     renderBoard();
   }
   if (listOpen) await renderListSurface();
