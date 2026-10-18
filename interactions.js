@@ -32,9 +32,10 @@ function classifyTarget(target, press) {
   const clockBtn = target.closest('.note-clock');   // reminder toggle (B109)
   const tbBtn = target.closest('.note-tb-btn');
   if (clockBtn || tbBtn) {
-    // Chrome's touch-target adjustment retargets a press on the note's last
-    // text line to the NEAREST row tab, so the collar law (B139) is held here
-    // with real coordinates: a press above the tab's collar top is on the note.
+    // Chrome's touch-target slop retargets a press on the note's last text
+    // line to the NEAREST row tab, reaching past any CSS collar. So the collar
+    // law (B139) is held here, where the real coordinates are known: a press
+    // above the tab's collar top is on the note.
     const btn = clockBtn || tbBtn;
     const r = btn.getBoundingClientRect();
     const cs = getComputedStyle(btn, '::before');
@@ -88,7 +89,8 @@ function onPointerDown(e) {
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY });
 
   // Second pointer on a note → pinch, never on a group drag (scaling is
-  // single-selection only): the extra pointer is ignored (B19).
+  // single-selection only): the extra pointer is ignored (a touchscreen laptop
+  // can be desktop-mode, B19).
   if (pointers.size === 2 && g && g.target.type === 'note' && !g.group) {
     startPinch();
     return;
@@ -187,7 +189,9 @@ function commitOpenEditor(node) {
 
 /* Consequences commit on release (B81) behind B18's drop-guard: a second tap
    inside it is dropped, not queued, so a double-tap can't delete twice or
-   complete-then-uncomplete (B18d). Navigation and capture take no guard. */
+   complete-then-uncomplete (B18d). Navigation (menu open, swap, edit-entry)
+   and capture take no guard: they commit nothing a stray tap could duplicate,
+   and capture self-heals. */
 let pendingAction = null;
 
 export function commitAction(fn) {
@@ -218,8 +222,8 @@ function handleTap(target, x, y, shift) {
 /* Pending-link pre-check (B91): the next tap resolves an armed source. A
    DIFFERENT note toggles the link; anything else (canvas, lot, anchor, the
    source itself) cancels. Either way the tap is consumed. The write and the
-   mode-exit run together in commitAction's drop-guard (B81); cancel runs
-   raw. */
+   mode-exit run together in commitAction's drop-guard (B81); cancel commits
+   nothing, so it runs raw. */
 function resolvePendingLink(target) {
   if (linkSource === null) return false;
   const src = linkSource;
@@ -517,7 +521,8 @@ function collectGroupMembers(startLogical) {
       note: n, node: memberNode, x0: n.x, y0: n.y,
       // Per-member bounds widened to admit the grab position, as in the single
       // path (B40). Differing clamps may compress the group at the sheet edge
-      // (accepted, B41).
+      // (accepted, B41): the alternative is a note the group can never park
+      // flush.
       minX: Math.min(0, n.x), maxX: Math.max(n.x, Math.max(0, LOGICAL_W - fw)),
       minY: Math.min(0, n.y), maxY: Math.max(n.y, Math.max(0, LOGICAL_H - fh)),
     });
@@ -544,12 +549,13 @@ function startDrag() {
   g.grabDX = startLogical.x - note.x;
   g.grabDY = startLogical.y - note.y;
   // Outer x range, fixed once and widened to admit the grab position (B40): a
-  // cross-frame note can arrive past the sheet edge, and the plain range would
-  // teleport it on the first move. Moving right tightens the cap and rewraps
-  // the text narrower and taller, so x admits the narrowest the note can
-  // become (the NOTE_MIN_W floor, or its whole footprint if narrower). y has no
-  // fixed upper bound: settleDragFoot derives it per move, less dragOverY (the
-  // bottom overhang the grab admitted).
+  // cross-frame note can arrive past the sheet edge, and the plain range
+  // [0, max(0, sheet - foot)] would teleport it on the first move. Moving
+  // right tightens the cap and rewraps the text narrower and taller, so x
+  // admits the narrowest the note can become (the NOTE_MIN_W floor, or its
+  // whole footprint if narrower). y has no fixed upper bound: settleDragFoot
+  // derives it per move, less dragOverY (the bottom overhang the grab
+  // admitted).
   const node = g.target.node;
   const footW = node.offsetWidth * note.scale, footH = node.offsetHeight * note.scale;
   g.dragMinX = Math.min(0, note.x);
@@ -569,16 +575,16 @@ function startDrag() {
 /* Shared tail of every drag move and the drop: cap at the current x, measure
    the rewrapped footprint, keep it on the sheet.
    - x: a still-overhanging foot means the cap is floored at NOTE_MIN_W, so
-     pulling x back to the edge makes the cap exact; the loop converges in one
-     pass, at worst at x = LOGICAL_W - NOTE_MIN_W*scale (rebased: effScale
-     == scale).
+     pulling x back to the edge makes the cap exact; the cap->rewrap->
+     smaller-foot cycle settles in one pass, at worst at
+     x = LOGICAL_W - NOTE_MIN_W*scale (rebased: effScale == scale).
    - y: the rewrap changes the height, so the bound is the live measure plus
      dragOverY (B40), keeping the admitted overhang; only overhang this drag's
      own rewrap creates is pulled back.
    The var write + offsetWidth read force layout per pointermove, so they are
    skipped while the cap provably can't bind (natural width below the applied
-   cap, new cap not below it). The drop passes force: the committed note must
-   wear the exact cap. */
+   cap, new cap not below that width). The drop passes force: the committed
+   note must wear the exact cap. */
 function settleDragFoot(note, node, force) {
   const cap = noteMaxW(note);
   if (force || g.dragW > g.dragCap - 1 || cap < g.dragW) {
@@ -680,7 +686,7 @@ function applyNoteScale(note, node, scale) {
 
 /* Widened gesture clamp (B40): bounds admit the start value, so a folded
    cross-frame scale outside [MIN_SCALE, MAX_SCALE] never snaps at gesture
-   start but can only move back into range. Shared by pinch and frame-drag
+   start but can never go further out of range. Shared by pinch and frame-drag
    resize (B22). */
 const gestureScale = (start, f) =>
   clamp(start * f, Math.min(MIN_SCALE, start), Math.max(MAX_SCALE, start));
@@ -797,7 +803,8 @@ function ensureSelectionEl() {
   selEl = document.createElement('div');
   selEl.id = 'selection';
   // Outline is visual only; hit-testing is four edge bands + corner handles so
-  // the interior stays clickable for a double-click's second click.
+  // the interior stays clickable for a double-click's second click (a parent's
+  // hit area can't be carved out).
   const ring = document.createElement('div');
   ring.className = 'sel-ring';
   selEl.appendChild(ring);
@@ -1042,9 +1049,10 @@ export function deleteNotes(ids) {
   });
 }
 
-/* Complete or restore every selected note. Each member is SET, not toggled
-   (direction from the primary's state), so a mixed selection lands uniform; one
-   save, like endDrag and deleteNotes. */
+/* Complete or restore every selected note. The note toolbar picks the direction
+   from the primary's state and passes `restore`; each member is SET, not
+   toggled, so a mixed selection lands uniform. One save, like endDrag and
+   deleteNotes. */
 export function setSelectedNotesState(restore) {
   for (const id of selectedNoteIds()) {
     const node = noteEls.get(id);
@@ -1186,13 +1194,14 @@ function onFocusOut(e) {
   // has no second chance (the keyboard's retraction resize only repeats it).
   //
   // B152: without navigator.virtualKeyboard (Gecko, WebKit) the layout viewport
-  // ITSELF shrinks under the keyboard (Chromium's interactive-widget=
-  // resizes-visual is ignored), so blur-by-tap with the keyboard still up would
-  // land the held frame against a shrunken innerHeight, the frame B64 keeps out
-  // of storage. The room is read against this edit's focus-in baseline, so a
-  // fold (width change) and Chromium (innerHeight stays full) fall through and
-  // blur-apply (B28/B80). When the gate holds the frame stays deferred: the
-  // keyboard's retraction resize lands it through the environment pass.
+  // ITSELF shrinks under the keyboard (those engines ignore Chromium's
+  // interactive-widget=resizes-visual), so blur-by-tap with the keyboard still
+  // up would land the held frame against a shrunken innerHeight, the frame B64
+  // keeps out of storage. The room is read against this edit's focus-in
+  // baseline, so a fold (width change) and Chromium (innerHeight stays full)
+  // fall through and blur-apply (B28/B80). When the gate holds the frame stays
+  // deferred: the keyboard's retraction resize lands it through the
+  // environment pass.
   const stillShrunken = state.editVP.startH && !state.isDesktop &&
     window.innerHeight < state.editVP.startH - KB_HIDE_SLOP;
   if (state.editVP.deferred && !stillShrunken) {
