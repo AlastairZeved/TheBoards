@@ -3400,6 +3400,121 @@ run(async () => {
     }
   }
 
+  console.log('\n[D37] A failing save retries the board it was for, not the board open by then (issue #473)');
+  {
+    // Storage is read raw (its own connection), never through idbGet: the
+    // app's reads may answer from the save queue, and this asserts the store.
+    const raw = (page, id) => page.evaluate((id) => new Promise((resolve, reject) => {
+      const req = indexedDB.open('boards-db');
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const q = req.result.transaction('boards').objectStore('boards').get(id);
+        q.onsuccess = () => { resolve(q.result || null); req.result.close(); };
+        q.onerror = () => reject(q.error);
+      };
+    }), id);
+    // Every store.put throws while the flag is up: a quota or lost-connection
+    // failure, as the save-error notice exists for. Deletes and reads still work.
+    const breakPuts = (page, on) => page.evaluate((on) => {
+      if (!window.__putOrig) {
+        window.__putOrig = IDBObjectStore.prototype.put;
+        IDBObjectStore.prototype.put = function (...a) {
+          if (window.__failPuts) throw new DOMException('test: put refused', 'QuotaExceededError');
+          return window.__putOrig.apply(this, a);
+        };
+      }
+      window.__failPuts = on;
+    }, on);
+    const texts = (rec) => (rec ? rec.notes || [] : []).map(n => n.text);
+    // Board A (open, holding 'kept') and board B (stored, never opened).
+    const setup = async () => {
+      const s = await newDesktopPage(browser);
+      await s.page.mouse.click(500, 200);
+      await s.page.waitForTimeout(500);
+      await s.page.keyboard.type('kept');
+      await s.page.evaluate(() => document.activeElement.blur());
+      await s.page.waitForTimeout(900);               // past SAVE_DEBOUNCE: 'kept' is stored
+      const ids = await s.page.evaluate(async () => {
+        const b = newBoardRecord(); b.title = 'Board B';
+        await idbPut(b);
+        return { a: state.current.id, b: b.id };
+      });
+      // Writes fail; type an edit on A (its save fails, a retry is scheduled),
+      // then leave A for B while A is still unsaved.
+      await breakPuts(s.page, true);
+      await s.page.mouse.click(700, 420);
+      await s.page.waitForTimeout(500);
+      await s.page.keyboard.type('unsaved');
+      await s.page.evaluate(() => document.activeElement.blur());
+      await s.page.waitForTimeout(900);
+      return { ...s, ids };
+    };
+
+    // 1. The retry lands A's edit on A, and leaves B as stored.
+    {
+      const { ctx, page, errors, ids } = await setup();
+      ok('the failed save shows the save-error notice', await page.evaluate(() =>
+        document.querySelector('#toast').dataset.mode === 'save'));
+      const b0 = await raw(page, ids.b);
+      await page.evaluate((id) => swapBoard(id), ids.b);
+      await page.waitForTimeout(700);                 // SWAP_MS + render
+      ok('board B is open', await page.evaluate((id) => state.current.id === id, ids.b));
+      await breakPuts(page, false);
+      await page.waitForTimeout(4500);                // the backed-off retries (1s, 2s) fire
+      const a1 = await raw(page, ids.a), b1 = await raw(page, ids.b);
+      ok('the retry wrote A\'s unsaved edit to A', texts(a1).includes('unsaved') && texts(a1).includes('kept'),
+         JSON.stringify(texts(a1)));
+      ok('B was not written in A\'s place', JSON.stringify(b1) === JSON.stringify(b0),
+         JSON.stringify({ b0, b1 }));
+      ok('the save-error notice clears once the retry lands', await page.evaluate(() =>
+        document.querySelector('#toast').dataset.mode !== 'save'));
+      await reopen(page, ids.a);
+      ok('after a reload, A opens with its edit', await page.evaluate(() =>
+        [...document.querySelectorAll('.note .note-text')].some(t => t.textContent === 'unsaved')));
+      ok('no page errors', errors.length === 0, errors.join(' | '));
+      await ctx.close();
+    }
+
+    // 2. Reopening A while its save is still failing shows the unsaved edit,
+    // not the stale stored copy, and a later edit on A keeps both.
+    {
+      const { ctx, page, errors, ids } = await setup();
+      await page.evaluate((id) => swapBoard(id), ids.b);
+      await page.waitForTimeout(700);
+      await page.evaluate((id) => swapBoard(id), ids.a);
+      await page.waitForTimeout(700);
+      ok('reopened mid-failure, A shows its unsaved edit', await page.evaluate(() =>
+        [...document.querySelectorAll('.note .note-text')].some(t => t.textContent === 'unsaved')),
+         JSON.stringify(await page.evaluate(() => state.current.notes.map(n => n.text))));
+      await breakPuts(page, false);
+      await page.mouse.click(900, 600);
+      await page.waitForTimeout(500);
+      await page.keyboard.type('later');
+      await page.evaluate(() => document.activeElement.blur());
+      await page.waitForTimeout(4500);
+      const a1 = await raw(page, ids.a);
+      ok('A\'s store holds every edit: kept, unsaved, later',
+         ['kept', 'unsaved', 'later'].every(t => texts(a1).includes(t)), JSON.stringify(texts(a1)));
+      ok('no page errors', errors.length === 0, errors.join(' | '));
+      await ctx.close();
+    }
+
+    // 3. A board deleted while its save is pending is not brought back by the retry.
+    {
+      const { ctx, page, errors, ids } = await setup();
+      await page.evaluate((id) => swapBoard(id), ids.b);
+      await page.waitForTimeout(700);
+      await page.evaluate((id) => idbDelete(id), ids.a);
+      await breakPuts(page, false);
+      await page.waitForTimeout(4500);
+      ok('the deleted board stays deleted', (await raw(page, ids.a)) === null);
+      ok('with nothing left to save, the save-error notice clears', await page.evaluate(() =>
+        document.querySelector('#toast').dataset.mode !== 'save'));
+      ok('no page errors', errors.length === 0, errors.join(' | '));
+      await ctx.close();
+    }
+  }
+
   await browser.close();
 
 });

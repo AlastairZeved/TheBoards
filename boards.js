@@ -240,9 +240,9 @@ function refocusCatAdd(host, cat) {
 
 /* A drop writes category + catStamp (= moved-to-top). Whole-record puts (B13)
    split the write: the open board mutates `current` and saves now (a snapshot
-   put would lose live edits); any other board is fetched fresh, so the
-   debounced persist can't clobber a record it never holds and a board deleted
-   mid-drag isn't resurrected. */
+   put would lose live edits); any other board is fetched fresh (idbGet
+   answers with its queued unsaved copy if it has one, and the put supersedes
+   that save, issue #473), so a board deleted mid-drag isn't resurrected. */
 async function dropBoardCard(b, cat) {
   boardUi.catPage[cat] = 0;                    // the dropped card lands first
   if (state.current && state.current.id === b.id) {
