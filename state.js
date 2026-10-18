@@ -10,10 +10,11 @@
 
 
 /* --- 1. Constants & copy ------------------------------------------------- */
-export const NOTE_MIN_W = 132;              // min rendered width (UIUX §4.5, B84): seats
+export const NOTE_MIN_W = 132;              // min width (§4.5, B84): seats
                                      // the 4-button toolbar. Also the noteMaxW
                                      // wrap-cap floor, .note-text min-width and
-                                     // drag/resize floor.
+                                     // drag/resize floor, so no note is ever
+                                     // narrower than its own row.
 export const MIN_SCALE = 0.5, MAX_SCALE = 2.0;
 /* The toolbar row's seat (B86): painted height 32 plus the 12 downward hit
    collar; UIUX §4.5's 44px. reflectToolbarSeat's raise relies on it (B139). */
@@ -123,21 +124,23 @@ export const COPY = {
   // its toggle face mirrors B83.
   calBoardTab: 'All', calendar: 'Calendar',
   // The calendar's exit control (B151): both rails' way off reads `Go Back`, no
-  // arrow glyph.
+  // arrow glyph. The `paneCollapse` key and `#pane-collapse` id keep the
+  // `Collapse` name; only the value changed.
   calToday: 'Today', calBack: 'Go Back',
   paneCollapse: 'Go Back',   // the expanded All-Boards rail's way off (B118, B151)
   // A day card's header: "Today" then the long date; future days read
   // weekday + MM/DD.
   calTitle: 'Calendar Board',
-  /* Calendar aria-labels. The pager words keep their trailing space: the date
-     is appended verbatim ("Previous 10/17 notes"). */
+  /* Calendar aria-labels, so no surface of the calendar carries a bare string.
+     The pager words keep their trailing space: the date is appended verbatim
+     ("Previous 10/17 notes"). */
   calAddNote: 'Add a note',
   calPagerPrev: 'Previous ', calPagerNext: 'Next ', calPagerUnit: ' notes',
   calMonthPrev: 'Previous month', calMonthNext: 'Next month',
   calHasEvents: ', has events',
   deleteBoard: 'Delete board',
-  /* The PDF's section words (UIUX §15); a completed item exports as the one
-     line pdfCompleted (B34). */
+  /* The PDF's section words (UIUX §15); a completed item keeps its place in
+     the order but exports as the one line pdfCompleted (B34). */
   pdfComponents: 'Components', pdfRequirements: 'Requirements',
   pdfParkingLot: 'Parking Lot', pdfCompleted: '— completed —',
 };
@@ -170,7 +173,8 @@ export const GLYPH = {
   clock:     MARK(16, '<circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/>'),
 };
 
-// contenteditable: plaintext-only (Chromium/Samsung Internet), else "true".
+// contenteditable: plaintext-only (Chromium/Samsung Internet), else "true" so
+// text still captures.
 export const CE = (() => {
   const d = document.createElement('div');
   try { d.contentEditable = 'plaintext-only'; } catch (e) { /* older engines throw */ }
@@ -182,9 +186,10 @@ export const CE = (() => {
    the rail. Capability, not width or UA, excludes tablets: iPadOS reports
    coarse/none even with a trackpad. CSS gates on html.desktop (touch/hover
    grammar) and html.wide (arrangement, B96). */
-/* Tablet (B103): one leg, `min-width: 744px` (iPad mini portrait), blind to
-   orientation; no phone or fold cover in portrait (366-480) crosses it. A
-   980x460 landscape cover takes the tablet arrangement. */
+/* Tablet (B103): one leg, `min-width: 744px`, blind to orientation. 744 is
+   iPad mini portrait's width, so every iPad and Android tablet qualifies in
+   either orientation; no phone or fold cover in portrait (366-480) crosses
+   it. A 980x460 landscape cover takes the tablet arrangement. */
 export const TABLET_MQ = window.matchMedia('(min-width: 744px)');
 
 export const DESKTOP_MQ = window.matchMedia(
@@ -294,8 +299,10 @@ export const makeDayNoteRecord = (day) => makeRecord('dayNote', {
 
    Line identity is positional in the mirror's own order (see syncMirror); a
    line outside the mirror's count is the reader's own and invisible to it.
-   Deleting the linked board unlinks its date; the events survive on their
-   records and the next event re-creates a board.
+   Reordering is presentation-only (events are read by identity, not
+   position). Deleting the linked board unlinks its date, no blocking, no
+   orphan: the events survive on their records and the next event re-creates
+   a board.
 
    Rolling windows are COMPUTED at render from today: no array stored, no
    midnight write. An event is { id, date: 'YYYY-MM-DD', text, state } (PRD
@@ -372,7 +379,8 @@ export function ensureLinkedBoard(all, dateKey) {
    the lines the mirror last wrote, so deleting an event can never demote an
    old mirror line to a "hand" line. Span lines are rewritten wholesale in
    event order; the rest is the reader's, carried through. Both surfaces land
-   here to converge (B106). Requirements is one string, \n-separated
+   here to converge (B106); the span decides what a write owns, so they can
+   never disagree. Requirements is one string, \n-separated
    (PRD §4.1). */
 export function syncMirror(board, events) {
   const lines = splitLines(board.requirements || '');
@@ -425,8 +433,8 @@ export const el = {
   importFile: document.getElementById('import-file'),       // the import tab's file dialog
   calView: document.getElementById('cal-view'),             // calendar screen
   calRail: document.getElementById('cal-rail'),             // the standing rail face (B99)
-  calBand: document.getElementById('cal-band'),             // the face's header band (B157)
-  calBandCard: document.getElementById('cal-band-card'),    // the band's title card (B157)
+  calBand: document.getElementById('cal-band'),             // header band (B157)
+  calBandCard: document.getElementById('cal-band-card'),    // band title card (B157)
   calDayhead: document.getElementById('cal-dayhead'),       // the day head: the date alone
   calBandAdd: document.getElementById('cal-band-add'),      // today's "+", band right
   calTodayBoard: document.getElementById('cal-today-board'),// the Today board body

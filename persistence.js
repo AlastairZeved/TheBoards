@@ -67,8 +67,9 @@ export function flushSave() {
   if (state.dirty) stampUpdated();
   persist();
 }
-/* The stamp is B69's order key. A save renders nothing, so the open board's
-   card may sit off the reader's page until they turn to page 1 (B42). */
+/* The stamp is B69's order key. It does NOT reset the section to page 1 (a
+   save renders nothing; B42 keeps the reader's place), so the open board's
+   card may sit off the reader's page until they turn to page 1. */
 function stampUpdated() {
   state.current.updatedAt = Date.now();
   state.dirty = false;

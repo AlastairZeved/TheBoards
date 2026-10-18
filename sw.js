@@ -45,7 +45,8 @@ self.addEventListener('activate', (e) => {
 /* Stale-while-revalidate, still cache-first: a warm hit returns without
    waiting on the network while a fetch overwrites the entry for the next
    launch. `install` re-runs only when this file's bytes change, so a missed
-   CACHE bump would otherwise be permanent; this is the net under the bump. */
+   CACHE bump would otherwise be permanent. The bump still stands: it lands an
+   update on the next launch, not the one after; this is the net under it. */
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;

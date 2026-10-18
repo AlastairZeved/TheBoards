@@ -30,12 +30,13 @@ function frameGuard() {
    without a Trusted* value. The only HTML sink input is developer-owned GLYPH
    SVG and the only script-URL sink is the 'sw.js' registration; the identity
    policy passes both, so no user-data path is touched. Created before boot():
-   its first render is the first sink write. Engines without Trusted Types
-   ignore the directive; the guard makes this a no-op there. */
+   its first render is the first sink write, and module imports evaluate
+   without writing any sink. Engines without Trusted Types ignore the
+   directive; the guard makes this a no-op there. */
 if (window.trustedTypes) {
   try {
     window.trustedTypes.createPolicy('default', {
-      createHTML: (s) => s,        // identity: only GLYPH strings hit an HTML sink
+      createHTML: (s) => s,        // identity: only GLYPH reaches an HTML sink
       createScriptURL: (s) => s,   // identity: only the 'sw.js' registration
     });
   } catch (_) { /* a default policy already exists: it governs, evaluation continues */ }
@@ -43,11 +44,11 @@ if (window.trustedTypes) {
 frameGuard();
 
 /* ONE environment pass. The resize listeners and MQ changes are triggers
-   only: each schedules this pass, and all of a fold's coalesce onto one
-   animation frame. The pass reads the environment once and derives tier and
-   frame from that read, so the frame is never computed against a stale tier:
-   engines fire window.resize, visualViewport.resize and the MQ change in no
-   fixed order (Gecko flushes MQ on layout, bugzilla 1451717). A pass that
+   only: each schedules this pass, and all of a fold's triggers coalesce onto
+   one animation frame. The pass reads the environment once and derives tier
+   and frame from that read, so the frame is never computed against a stale
+   tier: engines fire window.resize, visualViewport.resize and the MQ change in
+   no fixed order (Gecko flushes MQ on layout, bugzilla 1451717). A pass that
    finds neither tier nor viewport changed does nothing. B103: width is the
    classifier, foldable APIs are not read. */
 let envRaf = 0;
@@ -101,16 +102,17 @@ function applyTier(tier) {
   cancelGesture();
   pointers.clear();
   if (state.isWide && listOpen) returnToBoard();  // pops the whole list nav
-                                                  // (a drill is two deep, B74)
+                                                  // (B9; a drill is two deep)
   // B99: the rail survives every flip; only the mobile screen state and the
   // wide EXPANDED panel tear down (its squeeze must lift so the frame re-reads
   // the rail's 40px). A flip to wide re-enters through showCalRail below.
   if (state.calOpen || state.calExpanded) {
     tearDownCal({ popHistory: true });
   }
-  // A fold under a focused editor flips the tier but holds the frame:
-  // applyLayout defers (geometry.js:deferLayoutIfEditing) and the held frame
-  // lands on focusout (interactions.js:onFocusOut).
+  // A fold under a focused editor flips the tier but holds the frame (applying
+  // would move the board out from under the caret): applyLayout defers
+  // (geometry.js:deferLayoutIfEditing) and the held frame lands on focusout
+  // (interactions.js:onFocusOut).
   if (state.isWide) {
     collapsePane();                  // B118: re-enter wide collapsed
     renderPane();
@@ -146,7 +148,9 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => appl
 
 async function boot() {
   // Boot-order guard: each marker is emitted synchronously right before the
-  // step it names, ahead of any await; test/boot-order.js pins them.
+  // step it names, ahead of any await, so the observable order cannot race
+  // awaited work. Imports hoist, so no boot step may run at an imported
+  // module's top level; test/boot-order.js pins the markers.
   applyInitialMode();               // html classes before first render
   // B118: wide boots with the rail collapsed BEFORE any layout, migration or
   // render reads the frame (setPaneCollapsed skips its layout while
@@ -186,8 +190,9 @@ boot();
 
 /* Test bridge: the black-box suites read page globals via page.evaluate and
    module scope does not leak to window, so the entry re-exposes the observable
-   surface. Live getters, not snapshots (mutable lets are read at test time);
-   static, not eval(), which CSP forbids. */
+   surface (no import-based test layer). Live getters, not snapshots (mutable
+   lets are read at test time), published after boot() so the app is live;
+   static, not eval(), which CSP forbids and which is itself an XSS sink. */
 const SURFACE = {
   get ACTION_DELAY() { return ACTION_DELAY; },
   get EXPORT_GEO() { return EXPORT_GEO; },
@@ -262,17 +267,19 @@ if ('serviceWorker' in navigator) {
 
 /* Build handshake (B102): the layers above assume the browser's ask for a new
    sw.js reaches the server, but a cache between device and host can answer it.
-   So the app compares OWN_BUILD (stamped beside sw.js's CACHE) with sw.js
-   fetched via cache:'reload' (HTTP cache and SWR bypassed). On the second
-   consecutive mismatch it deletes every zeved-boards-v* cache (and the retired
-   todo-boards-v*), unregisters the worker and reloads once; the new worker
-   reinstalls from the network. Two strikes, so one bad response (captive
+   So the app compares OWN_BUILD (below; must match sw.js's CACHE suffix,
+   test/tokens.js) with sw.js fetched via cache:'reload' (HTTP cache and SWR
+   bypassed). On the second consecutive mismatch it deletes every
+   zeved-boards-v* cache (and the retired todo-boards-v*), unregisters the
+   worker and reloads once; install IS addAll over the network, so the new
+   worker reinstalls current. Two strikes, so one bad response (captive
    portal, proxy error page) cannot nuke a healthy install; the sessionStorage
    counter dies with the tab. Runs 20s after launch, off the critical path.
    Offline it does nothing: no authority to compare against.
 
    DATA IS NEVER TOUCHED: it deletes only Cache Storage and unregisters the
-   worker; boards live in IndexedDB, which the handshake never opens. */
+   worker; boards live in IndexedDB, which the handshake never opens, and
+   B21's read-site defaulting renders an old record under a new build. */
 const HANDSHAKE_MS = 20000;
 const OWN_BUILD = 'v162';
 if ('serviceWorker' in navigator && 'caches' in window) {
