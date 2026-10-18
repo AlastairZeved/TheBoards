@@ -412,11 +412,23 @@ function openBoardRowMenu(row, board, x, y) {
 }
 
 async function deleteBoard(id, row) {
-  const snapshot = await idbGet(id);
+  // Detach the open board BEFORE the first await (issue #479, as B131's ghost
+  // in launchTodayBoard): a debounced save or saveNow firing during the awaits
+  // would queue the still-current board behind the delete and bring it back.
+  // The in-memory copy is also the freshest Undo snapshot (unsaved edits ride
+  // it). `dirty` rides `current` (ensureCurrentValid): clear both together.
+  const wasCurrent = !!(state.current && state.current.id === id);
+  let snapshot;
+  if (wasCurrent) {
+    cancelPendingSave();
+    snapshot = state.current;
+    state.current = null;                                    // guard invalid current on return
+    state.dirty = false;
+  } else {
+    snapshot = await idbGet(id);
+  }
   await idbDelete(id);
   if (row) leave(row, () => row.remove());
-  const wasCurrent = state.current && state.current.id === id;
-  if (wasCurrent) state.current = null;                      // guard invalid current on return
   // Desktop has no list screen to heal a dead `current` on return; heal it now.
   if (state.isDesktop && wasCurrent) await ensureCurrentValid();
   if (listOpen) {

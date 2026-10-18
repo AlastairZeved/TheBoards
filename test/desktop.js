@@ -3563,6 +3563,81 @@ run(async () => {
     await ctx.close();
   }
 
+  console.log('\n[D39] Deleting the open board is not undone by its pending save (issue #479)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    // Storage is read raw (its own connection), never through idbGet.
+    const raw = (id) => page.evaluate((id) => new Promise((resolve, reject) => {
+      const req = indexedDB.open('boards-db');
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const q = req.result.transaction('boards').objectStore('boards').get(id);
+        q.onsuccess = () => { resolve(q.result || null); req.result.close(); };
+        q.onerror = () => reject(q.error);
+      };
+    }), id);
+    const texts = (rec) => (rec ? rec.notes || [] : []).map(n => n.text);
+    await expandRail(page);
+    await page.mouse.click(500, 200);
+    await page.waitForTimeout(500);
+    await page.keyboard.type('stays gone');
+    const id = await page.evaluate(() => state.current.id);
+    // The blur on clicking the delete control flushes the edit first, so the
+    // racing save is injected where it bit: after the delete is issued and
+    // before it completes. The delete's transaction is held open (page-side
+    // wrapper on store.delete, chained reads) and a save fires inside that
+    // window, exactly as the debounce or saveNow would: persist() of whatever
+    // is current. A put queued behind the delete wins, so the board came back.
+    await page.evaluate(() => {
+      window.__delOrig = IDBObjectStore.prototype.delete;
+      IDBObjectStore.prototype.delete = function (...a) {
+        const store = this, req = window.__delOrig.apply(this, a);
+        const end = Date.now() + 700;
+        const spin = () => { if (Date.now() < end) store.get('none').onsuccess = spin; };
+        req.onsuccess = spin;
+        setTimeout(() => { if (state.current) persist(); }, 250);
+        return req;
+      };
+    });
+    await page.click('.pane-row .pane-del');           // from the open board's own card
+    await page.waitForTimeout(1800);                   // past the held delete
+    await page.evaluate(() => { IDBObjectStore.prototype.delete = window.__delOrig; });
+    ok('the deleted board is absent from IndexedDB', (await raw(id)) === null,
+       JSON.stringify(texts(await raw(id))));
+    await page.reload();
+    await page.waitForTimeout(800);
+    ok('after a reload, the rail has no card for it', await page.evaluate((id) =>
+      !document.querySelector('.pane-card[data-id="' + id + '"]'), id));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+  {
+    // Undo restores the board with the text typed just before the delete.
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    await page.mouse.click(500, 200);
+    await page.waitForTimeout(500);
+    await page.keyboard.type('typed late');
+    const id = await page.evaluate(() => state.current.id);
+    await expandRail(page);
+    await page.click('.pane-row .pane-del');
+    await page.waitForTimeout(400);
+    await page.evaluate(() => document.querySelector('#toast button').click());
+    await page.waitForTimeout(1500);
+    const back = await page.evaluate((id) => new Promise((resolve, reject) => {
+      const req = indexedDB.open('boards-db');
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const q = req.result.transaction('boards').objectStore('boards').get(id);
+        q.onsuccess = () => { resolve(q.result ? q.result.notes.map(n => n.text) : null); req.result.close(); };
+        q.onerror = () => reject(q.error);
+      };
+    }), id);
+    ok('Undo restores the board with the just-typed text', back && back.includes('typed late'), JSON.stringify(back));
+    ok('and it is the open board again', await page.evaluate((id) => state.current && state.current.id === id, id));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   await browser.close();
 
 });
