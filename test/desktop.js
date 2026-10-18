@@ -3718,6 +3718,53 @@ run(async () => {
     await ctx.close();
   }
 
+  console.log('\n[D40] Undoing a board delete never fails silently (issue #480)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    // Storage is read raw (its own connection), never through idbGet: the
+    // app's reads may answer from the save queue, and this asserts the store.
+    const raw = (id) => page.evaluate((id) => new Promise((resolve, reject) => {
+      const req = indexedDB.open('boards-db');
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const q = req.result.transaction('boards').objectStore('boards').get(id);
+        q.onsuccess = () => { resolve(q.result || null); req.result.close(); };
+        q.onerror = () => reject(q.error);
+      };
+    }), id);
+    await expandRail(page);
+    await page.mouse.click(500, 200);
+    await page.waitForTimeout(500);
+    await page.keyboard.type('undo me');
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(900);                    // 'undo me' is stored
+    const id = await page.evaluate(() => state.current.id);
+    await page.click('.pane-row .pane-del');
+    await page.waitForTimeout(400);
+    // Writes fail from here: the Undo's idbPut rejects, as D37's put does.
+    await page.evaluate(() => {
+      window.__putOrig = IDBObjectStore.prototype.put;
+      IDBObjectStore.prototype.put = function () { throw new DOMException('test: put refused', 'QuotaExceededError'); };
+    });
+    await page.evaluate(() => document.querySelector('#toast button').click());
+    await page.waitForTimeout(700);
+    ok('a failed Undo shows the save-error notice', await page.evaluate(() => {
+      const t = document.querySelector('#toast');
+      return t.dataset.mode === 'save' && t.classList.contains('show');
+    }));
+    ok('the board is listed again from the queue', await page.evaluate((id) =>
+      !!document.querySelector('.pane-card[data-id="' + id + '"]'), id));
+    await page.evaluate(() => { IDBObjectStore.prototype.put = window.__putOrig; });
+    await page.waitForTimeout(4500);                   // the backed-off retries fire
+    const rec = await raw(id);
+    ok('the retry writes the restored board to IndexedDB', !!rec && (rec.notes || []).some(n => n.text === 'undo me'),
+       JSON.stringify(rec && rec.notes && rec.notes.map(n => n.text)));
+    ok('the save-error notice clears once the retry lands', await page.evaluate(() =>
+      document.querySelector('#toast').dataset.mode !== 'save'));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   await browser.close();
 
 });

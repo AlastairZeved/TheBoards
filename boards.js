@@ -448,7 +448,10 @@ async function deleteBoard(id, row) {
     renderPane();
   }
   showUndo(async () => {
-    await idbPut(snapshot);
+    // A failed restore must not vanish (issue #480): idbPut requeues only the
+    // save it superseded and a deleted board has none, so hand the snapshot to
+    // the save queue (backoff retry, save-error notice, reads answered from it).
+    try { await idbPut(snapshot); } catch (e) { persist(snapshot); }
     // Restore into the visible surface, reopening the board if it was current.
     if (listOpen) { renderListSurface(); return; }
     if (state.isWide) { if (wasCurrent) swapBoard(snapshot.id); else renderPane(); }
