@@ -12,7 +12,7 @@ import { cancelPendingSave, flushSave, idbDelete, idbGet, idbGetAll, idbPut, per
 import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze, setPaneCollapsed } from './geometry.js';
 import { applyBoardCat, linkedDate, LINKED_TITLE, renderBoard, seatAllNotes, syncViewTitle } from './render.js';
 import { commitAction, hideToast, leave, showUndo, undoTimer } from './interactions.js';
-import { buildMenu, closeMenu, syncBoardActions } from './menus.js';
+import { buildMenu, closeMenu, menuPoint, syncBoardActions } from './menus.js';
 import { exportBoardPdf } from './export.js';
 
 /* Two-level navigation since issue #112 / B74. `listOpen` is true for either
@@ -126,9 +126,7 @@ const boardUi = {
   catFilled: 0,                        // populated sections the last render measured
   catOpen: null,                       // B137: the tablet accordion's one expanded category (session state, not persisted)
 };
-const dragUi = {
-  dragCancel: null,                    // the live card-drag's teardown, if one is mid-flight
-};
+let dragCancel = null;                       // the live card-drag's teardown, if one is mid-flight
 
 /* The per-page card budget, measured — never a constant (B42, restated B68).
    `filled` is how many of the drawn sections hold at least one board: an empty
@@ -409,11 +407,7 @@ function makeListRow(b) {
   card.addEventListener('contextmenu', (ev) => {
     if (!state.isDesktop) return;              // mobile keeps its native context menu; the hold is the path
     ev.preventDefault();
-    let x = ev.clientX, y = ev.clientY;
-    if (!x && !y) {                      // Shift+F10 fires contextmenu at 0,0
-      const r = card.getBoundingClientRect();
-      x = r.left + r.width / 2; y = r.top + r.height / 2;
-    }
+    const { x, y } = menuPoint(ev, card);
     state.menuInvoker = card;                  // focus returns to the card on close
     openBoardRowMenu(row, b, x, y);
   });
@@ -453,7 +447,7 @@ function attachBoardCardGestures(card, row, b, opts) {
     if (ghost) { ghost.remove(); ghost = null; }
     row.classList.remove('card-dragging');
     if (over) { over.classList.remove('drop-target'); over = null; }
-    dragUi.dragCancel = null;
+    dragCancel = null;
   };
   card.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;        // right-click stays the contextmenu path
@@ -478,7 +472,7 @@ function attachBoardCardGestures(card, row, b, opts) {
       clearTimeout(t);                 // movement cancels the long-press (B29)
       // Register the teardown: a re-render mid-drag destroys this card and its
       // capture, so the render must be able to cancel the gesture.
-      dragUi.dragCancel = () => { down = false; dragging = false; clearDrag(); };
+      dragCancel = () => { down = false; dragging = false; clearDrag(); };
       row.classList.add('card-dragging');
       // The same "the gesture just changed mode" signal the hold gives.
       if (!state.isDesktop && navigator.vibrate) navigator.vibrate(10);
@@ -667,7 +661,7 @@ export async function renderPane() {
   if (!state.isWide || !el.paneCards) return;   // wide: the rail exists on tablet too (B96)
   // A re-render tears the captured card out from under a live drag — pointerup
   // would never arrive, stranding the fixed ghost on screen. Cancel it first.
-  if (dragUi.dragCancel) dragUi.dragCancel();
+  if (dragCancel) dragCancel();
   const all = await idbGetAll();
   const buckets = Object.fromEntries(BOARD_CATS.map((cat) => [cat, []]));
   // The open board buckets from memory, not the snapshot: `current` is
@@ -705,7 +699,7 @@ function makePaneRow(b) {
     // card only — deleting keeps the board's contents in front of you.
     const del = document.createElement('button');
     del.type = 'button'; del.className = 'pane-del';
-    del.setAttribute('aria-label', 'Delete board');
+    del.setAttribute('aria-label', COPY.deleteBoard);
     del.innerHTML = GLYPH.delete;                    // drawn mark (UIUX §13.3)
     del.addEventListener('click', () => commitAction(() => deleteBoard(b.id, row)));
     row.appendChild(del);
@@ -728,11 +722,7 @@ function makePaneRow(b) {
   // doesn't touch, and it collides with nothing else in the app.
   card.addEventListener('contextmenu', (ev) => {
     ev.preventDefault();              // scoped to the card; elsewhere stays native
-    let x = ev.clientX, y = ev.clientY;
-    if (!x && !y) {                   // Shift+F10 fires contextmenu at 0,0
-      const r = card.getBoundingClientRect();
-      x = r.left + r.width / 2; y = r.top + r.height / 2;
-    }
+    const { x, y } = menuPoint(ev, card);
     state.menuInvoker = card;               // focus returns to the card on close
     openBoardRowMenu(row, b, x, y);
   });
@@ -1029,7 +1019,7 @@ export function makeCalDay(day, dayNotes, board) {
   const add = document.createElement('button');
   add.type = 'button';
   add.className = 'cal-add';
-  add.setAttribute('aria-label', 'Add a note ' + calMD(day.date));
+  add.setAttribute('aria-label', COPY.calAddNote + ' ' + calMD(day.date));
   add.textContent = '+';
   add.addEventListener('click', () => addCalNote(day.key));
   dc.append(add);
@@ -1350,6 +1340,26 @@ function renderCalDayhead() {
    day cards, makeCalDay) own the adders now. */
 const CAL_PAGER = { prev: '‹', next: '›' };
 
+/* One calendar pager button (.mo-nav's grammar): a drawn guillemet out of
+   CAL_PAGER wearing the aria-label that says which way it pages. Three sites
+   wear it — a day card's notes pager at both ends, and the month head's two —
+   so the month head's finally reads the pager's own glyphs rather than
+   restating them.
+
+   `hideWhenOff` is the day-notes pager's alone: an end that cannot page drops
+   out of the row entirely (hidden, not merely disabled) rather than drawing a
+   button that does nothing. The month head always has a month to go to. */
+function calNavBtn(label, glyph, go, { hideWhenOff = false, off = false } = {}) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = hideWhenOff ? 'mo-nav cal-notes-nav' : 'mo-nav';
+  b.setAttribute('aria-label', label);
+  b.textContent = glyph;
+  if (hideWhenOff) { b.disabled = off; b.hidden = off; }
+  b.addEventListener('click', go);
+  return b;
+}
+
 function renderCalDayNotes(zone, day, recs) {
   const row = document.createElement('div');
   row.className = 'cal-notes-row';
@@ -1361,15 +1371,9 @@ function renderCalDayNotes(zone, day, recs) {
     if (row.querySelector('[contenteditable]')) return;  // an edit is open — don't throw the typing away
     row.textContent = '';
     if (hasPages) {
-      const prev = document.createElement('button');
-      prev.type = 'button';
-      prev.className = 'mo-nav cal-notes-nav';
-      prev.setAttribute('aria-label', 'Previous ' + calMD(day.date) + ' notes');
-      prev.textContent = CAL_PAGER.prev;
-      prev.disabled = page <= 0;
-      prev.hidden = page <= 0;
-      prev.addEventListener('click', () => { page--; calDayNotePage[day.key] = page; draw(); });
-      row.appendChild(prev);
+      row.appendChild(calNavBtn(COPY.calPagerPrev + calMD(day.date) + COPY.calPagerUnit,
+        CAL_PAGER.prev, () => { page--; calDayNotePage[day.key] = page; draw(); },
+        { hideWhenOff: true, off: page <= 0 }));
     }
     const grid = document.createElement('div');
     grid.className = 'cal-notes-grid';
@@ -1379,15 +1383,9 @@ function renderCalDayNotes(zone, day, recs) {
     }
     row.appendChild(grid);
     if (hasPages) {
-      const next = document.createElement('button');
-      next.type = 'button';
-      next.className = 'mo-nav cal-notes-nav';
-      next.setAttribute('aria-label', 'Next ' + calMD(day.date) + ' notes');
-      next.textContent = CAL_PAGER.next;
-      next.disabled = page >= pages - 1;
-      next.hidden = page >= pages - 1;
-      next.addEventListener('click', () => { page++; calDayNotePage[day.key] = page; draw(); });
-      row.appendChild(next);
+      row.appendChild(calNavBtn(COPY.calPagerNext + calMD(day.date) + COPY.calPagerUnit,
+        CAL_PAGER.next, () => { page++; calDayNotePage[day.key] = page; draw(); },
+        { hideWhenOff: true, off: page >= pages - 1 }));
     }
     // Issue #397: no add button here — the day card's "+" seats under the
     // date in makeCalDay (the row's right end is the third square's now),
@@ -1411,7 +1409,7 @@ function renderCalDayNotes(zone, day, recs) {
    nothing here — today's "+" keeps its B158 band seat. */
 function renderCalToday(today, recs) {
   const add = el.calBandAdd;
-  add.setAttribute('aria-label', 'Add a note ' + calMD(today.date));
+  add.setAttribute('aria-label', COPY.calAddNote + ' ' + calMD(today.date));
   add.textContent = '+';
   add.onclick = () => addCalNote(today.key);
   const zone = document.createElement('div');
@@ -1531,20 +1529,12 @@ function renderCalMonth(evDays) {
   const label = document.createElement('div');
   label.className = 'mo-label';
   label.textContent = a.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-  const back = document.createElement('button');
-  back.type = 'button';
-  back.className = 'mo-nav';
-  back.setAttribute('aria-label', 'Previous month');
-  back.textContent = '‹';
-  const fwd = back.cloneNode();
-  fwd.setAttribute('aria-label', 'Next month');
-  fwd.textContent = '›';
   const nav = (dy, dm) => () => {
     calMonthAnchor = new Date(a.getFullYear() + dy, a.getMonth() + dm, 1);
     renderCal();                       // re-fetches the events; the grid redraws
   };
-  back.addEventListener('click', nav(0, -1));
-  fwd.addEventListener('click', nav(0, 1));
+  const back = calNavBtn(COPY.calMonthPrev, CAL_PAGER.prev, nav(0, -1));
+  const fwd = calNavBtn(COPY.calMonthNext, CAL_PAGER.next, nav(0, 1));
   head.append(back, label, fwd);
   el.calMonth.appendChild(head);
   // The weekday letters, then the day grid: leading blanks to Sunday-align
@@ -1574,7 +1564,7 @@ function renderCalMonth(evDays) {
       + (evDays.has(key) ? ' ev' : '');                 // one dot per event-bearing day
     cell.setAttribute('aria-label',
       date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
-      + (evDays.has(key) ? ', has events' : ''));
+      + (evDays.has(key) ? COPY.calHasEvents : ''));
     const n = document.createElement('span');
     n.textContent = d;
     cell.appendChild(n);

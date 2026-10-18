@@ -1,14 +1,14 @@
 /* --- 7. Gesture recognizer ----------------------------------------------- */
 // issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-import { ACTION_DELAY, CE, clamp, COPY, DBLCLICK_MS, LEAVE_MS, LONGPRESS_MS, MAX_SCALE, MIN_SCALE, MOVE_THRESHOLD, noteRec, lotRec } from './state.js';
-import { NOTE_MIN_W, TOAST_HIDE_MS, UNDO_MS, anchorEls, el, makeRecord, state, uuid, KB_HIDE_SLOP } from './state.js';
+import { ACTION_DELAY, CE, clamp, COPY, COPY_NOTICE_MS, DBLCLICK_MS, LEAVE_MS, LONGPRESS_MS, MAX_SCALE, MIN_SCALE, MOVE_THRESHOLD, noteRec, lotRec } from './state.js';
+import { NOTE_BOTTOM_PAD, NOTE_MIN_W, TOAST_HIDE_MS, UNDO_MS, anchorEls, el, makeRecord, state, uuid, KB_HIDE_SLOP } from './state.js';
 import { saveNow, scheduleSave } from './persistence.js';
 import { LOGICAL_H, LOGICAL_W, applyLayout, applyNoteWidth, caretToEnd, effScale, noteMaxW, placeCaretAtPoint } from './geometry.js';
 import { rebaseNote, renderX, renderY, setHitInset, toLogical, updateBoardGeometry } from './geometry.js';
-import { applyCompleteA11y, boardLinks, clearLink, linkSource, lotEls, makeLotEl, makeNoteEl, noteEls } from './render.js';
+import { applyCompleteA11y, clearLink, linkSource, lotEls, makeLotEl, makeNoteEl, noteEls } from './render.js';
 import { paintRequirementsRead } from './render.js';
 import { runClockAction } from './render.js';
-import { reflectToolbarSeat, removeLinksForNote, runNoteToolbarAction, setCarriedUi, setReminderUi, syncViewTitle, toggleLink, updateLinks, updateNoteToolbar, ensureNoteTitleEl } from './render.js';
+import { reflectToolbarSeat, removeLinksFor, runNoteToolbarAction, setCarriedUi, setReminderUi, syncViewTitle, toggleLink, updateLinks, updateNoteToolbar, ensureNoteTitleEl } from './render.js';
 import { menuOpen, menuReturnFocus, openMenuFor } from './menus.js';
 import { renderCal, renderPane, updateActiveCardTitle, writeThroughRequirements } from './boards.js';
 
@@ -26,7 +26,7 @@ function classifyTarget(target, press) {
   // then the resize frame — both must win over the elements beneath them.
   const selBtn = target.closest('.sel-btn');
   if (selBtn) return { type: 'sel-btn', node: selBtn };
-  if (target.closest('#selection')) return { type: 'sel-frame', node: selUi.selEl };
+  if (target.closest('#selection')) return { type: 'sel-frame', node: selEl };
   // The board-action row (B83) needs no branch here: its tabs are native
   // buttons and onPointerDown returns before classify runs for anything inside
   // #board-actions (the #lot-menu passthrough's precedent), so the recognizer
@@ -222,15 +222,15 @@ function commitOpenEditor(node) {
    so B18a/b's `.tapped` beat and B18c's ghost are retired. Navigation (menu
    open, swap, edit-entry) and capture self-heal, so they take no guard at all —
    they call their work directly. */
-const actionUi = { pendingAction: null };
+let pendingAction = null;
 
 export function commitAction(fn) {
-  if (actionUi.pendingAction) return;
+  if (pendingAction) return;
   fn();
-  actionUi.pendingAction = setTimeout(() => { actionUi.pendingAction = null; }, ACTION_DELAY);
+  pendingAction = setTimeout(() => { pendingAction = null; }, ACTION_DELAY);
 }
 
-/* No blanket actionUi.pendingAction guard here (issue #13): commitAction carries its own
+/* No blanket pendingAction guard here (issue #13): commitAction carries its own
    drop-guard, so B18(d) holds exactly where a consequence fires — while inert
    taps (select, deselect) and navigation stay live regardless. */
 function handleTap(target, x, y, shift) {
@@ -240,7 +240,7 @@ function handleTap(target, x, y, shift) {
   if (resolvePendingLink(target)) return;
   switch (target.type) {
     case 'sel-btn': tapLotButton(target); break;
-    case 'note-tb-btn': tapNoteToolbar(target); break;   // B84 (keyboard path too, below)
+    case 'note-tb-btn': runNoteToolbarAction(target.node); break;   // B84 (keyboard path too, below)
     case 'note-clock': runClockAction(target.node); break;   // the reminder toggle (B109)
     case 'sel-frame': break;           // a motionless click on the ring does nothing
     case 'canvas': tapCanvas(x, y); break;
@@ -271,7 +271,7 @@ function resolvePendingLink(target) {
 }
 
 /* Lot rows only now (B84): notes act through their own bottom-edge, centred toolbar
-   (tapNoteToolbar). Every button commits on release through the B81
+   (runNoteToolbarAction). Every button commits on release through the B81
    drop-guard; Copy of a completed row is allowed — the record still holds
    the text (issue #59). */
 function tapLotButton(target) {
@@ -289,10 +289,6 @@ function tapLotButton(target) {
       updateSelectionUI();
     }
   });
-}
-
-function tapNoteToolbar(target) {
-  runNoteToolbarAction(target.node);
 }
 
 /* Creation surface (issues #12/#41/#54). Guard order is load-bearing:
@@ -321,6 +317,40 @@ function tapLot(x, y) {
   createLotItem();                 // capture is instant on both (B27, B81)
 }
 
+/* The desktop select-then-edit pair (issue #4): a click selects (inert,
+   instant); a second click on the ALREADY-SELECTED item inside the pairing
+   window runs `edit`. One law for notes and for lot rows, which differ only
+   in which selector the pair calls — the row's own branch has no shift path
+   (issue #55), and that is the whole of the difference.
+
+   The key carries the kind, so a click on a note can never pair with an
+   earlier click on a lot row. */
+function pairOrSelect(kind, id, edit) {
+  const key = kind + ':' + id, now = Date.now();
+  if (selected && selected.kind === kind && selected.id === id &&
+      lastTap.key === key && now - lastTap.t < DBLCLICK_MS) {
+    lastTap = { key: null, t: 0 };
+    edit();
+    return;
+  }
+  if (kind === 'note') selectNote(id); else selectLot(id);
+  lastTap = { key, t: now };
+}
+
+/* The pair's second click. Both drop the selection first — edit and selection
+   are mutually exclusive (B22) — then hand the node's text to editText with
+   no coordinates, which is B26's caret-at-the-end, the desktop precedent. A
+   note is raised as it opens (B27); a lot row has no z-order to raise. */
+function editNote(node) {
+  clearSelection();
+  surfaceNote(node);                                 // editing raises it (B27)
+  editText(node.querySelector('.note-text'));        // no coords → caret at end
+}
+function editLot(node) {
+  clearSelection();
+  editText(node.querySelector('.lot-text'));         // no coords → caret at end
+}
+
 /* Desktop: click selects (inert, instant); a second click within the pairing
    window edits with the caret at the end (issue #4); shift-click toggles
    multi-selection (issue #55). Mobile: two-tap grammar (issue #136, B90) —
@@ -340,25 +370,13 @@ function tapNote(target, shift) {
     // never pairs into the double-click window.
     if (shift) {
       toggleInSelection(note.id);
-      tapUi.lastTap = { key: null, t: 0 };
+      lastTap = { key: null, t: 0 };
       return;
     }
     // Click selects (instant, inert); a second click within the pairing
     // window edits with the caret at the end (issue #4). Completed notes
     // never edit — same guard as the mobile tap path.
-    const key = 'note:' + note.id, now = Date.now();
-    if (selected && selected.kind === 'note' && selected.id === note.id &&
-        tapUi.lastTap.key === key && now - tapUi.lastTap.t < DBLCLICK_MS) {
-      tapUi.lastTap = { key: null, t: 0 };
-      if (note.state === 'active') {
-        clearSelection();
-        surfaceNote(node);
-        editText(node.querySelector('.note-text'));   // no coords → caret at end
-      }
-    } else {
-      selectNote(note.id);
-      tapUi.lastTap = { key, t: now };
-    }
+    pairOrSelect('note', note.id, () => { if (note.state === 'active') editNote(node); });
     return;
   }
   // Mobile two-tap grammar (issue #136, B90): a first tap ENGAGES the note —
@@ -386,18 +404,11 @@ function tapLotItem(target, x, y) {
   if (!item) return;
   if (state.isDesktop) {
     if (commitOpenEditor(node)) return;
-    const key = 'lot:' + item.id, now = Date.now();
-    if (selected && selected.kind === 'lot' && selected.id === item.id &&
-        tapUi.lastTap.key === key && now - tapUi.lastTap.t < DBLCLICK_MS) {
-      tapUi.lastTap = { key: null, t: 0 };
-      if (item.state === 'active') {
-        clearSelection();
-        editText(node.querySelector('.lot-text'));    // no coords → caret at end
-      }
-    } else {
-      selectLot(item.id);
-      tapUi.lastTap = { key, t: now };
-    }
+    // Lot rows stay single-select (issue #55) — no shift path here, by
+    // design. The pair is otherwise a note's (issue #4): select, then a
+    // second click inside the window edits; a completed row never edits
+    // (UIUX §4.2).
+    pairOrSelect('lot', item.id, () => { if (item.state === 'active') editLot(node); });
     return;
   }
   if (item.state === 'active') editText(node.querySelector('.lot-text'), x, y);  // B27
@@ -466,7 +477,7 @@ function createNote(clientX, clientY) {
   // least a toolbar wide, so its left edge must leave that much room or the
   // frame would spill off the sheet. y keeps its 4px keep-on-page clamp.
   const note = makeRecord('note', { id: uuid(), text: '', x: clamp(pt.x, 0, Math.max(0, LOGICAL_W - NOTE_MIN_W)),
-    y: clamp(pt.y, 0, LOGICAL_H - 4), rw: LOGICAL_W, rh: LOGICAL_H, scale: 1.0, state: 'active' },
+    y: clamp(pt.y, 0, LOGICAL_H - NOTE_BOTTOM_PAD), rw: LOGICAL_W, rh: LOGICAL_H, scale: 1.0, state: 'active' },
     { logicalW: LOGICAL_W, logicalH: LOGICAL_H });
   state.current.notes.push(note);                          // top of z-order
   const node = makeNoteEl(note);
@@ -528,7 +539,7 @@ function removeNoteSilently(note, node) {
   node.remove(); noteEls.delete(note.id);
   // A husk discard takes its links with it — emptying a note deletes it (B8), and
   // deleting a note deletes its links (issue #142, B91). Silent, so no Undo.
-  if (removeLinksForNote(note.id).length) updateLinks();
+  if (removeLinksFor(new Set([note.id])).length) updateLinks();
   saveNow();
 }
 function commitLot(node) {
@@ -612,7 +623,7 @@ function collectGroupMembers(startLogical) {
 
 function startDrag() {
   if (!g.note) { g.mode = 'cancelled'; return; }   // a surfaced echo is not draggable (B109)
-  if (linkSource !== null) clearLink();   // dragging a note exits link mode (issue #142, B91)
+  clearLink();                           // dragging a note exits link mode (issue #142, B91)
   g.mode = 'drag';
   g.target.node.classList.add('pressed');
   surfaceNote(g.target.node);
@@ -815,8 +826,8 @@ function surfaceNote(node) {
    setPointerCapture retargets click, so native listeners inside #board are
    unreliable by construction. */
 export let selected = null;                 // { kind: 'note'|'lot', id }
-const tapUi = { lastTap: { key: null, t: 0 } };   // double-click pairing across taps
-const selUi = { selEl: null };        // the resize-frame overlay (ring + edges + handles); actions live on the note's toolbar (B84)
+let lastTap = { key: null, t: 0 };          // double-click pairing across taps
+let selEl = null;                 // the resize-frame overlay (ring + edges + handles); actions live on the note's toolbar (B84)
 // Mobile-only "engaged" note (issue #136, B90): the note whose toolbar is shown
 // after a first tap — WITHOUT a keyboard. It is the select step desktop already
 // has via `selected`, which mobile lacked (there, engaging a note WAS editing it).
@@ -824,13 +835,13 @@ const selUi = { selEl: null };        // the resize-frame overlay (ring + edges 
 // the toolbar is revealed by a `.engaged` class, not by :focus-within.
 export let engaged = null;                   // id of the mobile-engaged note, or null
 function setEngaged(node) {
-  const prev = el.board && el.board.querySelector('.note.engaged');
+  const prev = el.board.querySelector('.note.engaged');
   if (prev) prev.classList.remove('engaged');
   engaged = node.dataset.id;
   node.classList.add('engaged');
 }
 function clearEngaged() {
-  const prev = el.board && el.board.querySelector('.note.engaged');
+  const prev = el.board.querySelector('.note.engaged');
   if (prev) prev.classList.remove('engaged');
   engaged = null;
 }
@@ -893,29 +904,29 @@ function dropFromSelection(id) {
   const node = noteEls.get(id);
   if (node) node.classList.remove('multi-selected');
   if (multiSel.size === 1) multiSel.clear();
-  if (selUi.selEl) selUi.selEl.classList.toggle('multi', multiSel.size > 1);
+  if (selEl) selEl.classList.toggle('multi', multiSel.size > 1);
 }
 
 function ensureSelectionEl() {
-  if (selUi.selEl) return;
-  selUi.selEl = document.createElement('div');
-  selUi.selEl.id = 'selection';
+  if (selEl) return;
+  selEl = document.createElement('div');
+  selEl.id = 'selection';
   // The outline is visual only; hit-testing lives in four edge bands + the
   // corner handles, so the note's interior stays clickable for the second
   // click of a double-click (a parent's hit area can't be carved out).
   const ring = document.createElement('div');
   ring.className = 'sel-ring';
-  selUi.selEl.appendChild(ring);
+  selEl.appendChild(ring);
   for (const side of ['n', 's', 'w', 'e']) {
     const b = document.createElement('div');
     b.className = 'sel-edge ' + side;
-    selUi.selEl.appendChild(b);
+    selEl.appendChild(b);
   }
   for (const corner of ['tl', 'tr', 'bl', 'br']) {
     const h = document.createElement('div');
     h.className = 'sel-handle ' + corner;
     h.setAttribute('aria-hidden', 'true');
-    selUi.selEl.appendChild(h);
+    selEl.appendChild(h);
   }
   // The overlay is the resize frame only now (B84): the ring, four edge bands
   // and four corner handles. A selected note's actions moved onto its own
@@ -935,7 +946,7 @@ function selectNote(id) {
   selected = { kind: 'note', id };
   node.classList.add('selected');
   ensureSelectionEl();
-  el.board.appendChild(selUi.selEl);
+  el.board.appendChild(selEl);
   updateSelectionUI();
 }
 
@@ -964,7 +975,7 @@ function selectLot(id) {
 }
 
 export function clearSelection() {
-  if (linkSource !== null) clearLink();   // a board swap / new selection ends link mode (B91)
+  clearLink();                       // a board swap / new selection ends link mode (B91)
   // Rings first: the whole set goes when the selection goes (issue #55) —
   // the tier teardown and renderBoard's rebuild both land here.
   if (multiSel.size) {
@@ -978,7 +989,7 @@ export function clearSelection() {
   if (selected.kind === 'note') {
     const node = noteEls.get(selected.id);
     if (node) node.classList.remove('selected');
-    if (selUi.selEl) selUi.selEl.remove();
+    if (selEl) selEl.remove();
   } else {
     const node = lotEls.get(selected.id);
     if (node) {
@@ -991,7 +1002,7 @@ export function clearSelection() {
 }
 
 function setSelectionHidden(hidden) {  // drag/resize in flight: chrome steps aside
-  if (selUi.selEl) selUi.selEl.classList.toggle('hidden', hidden);
+  if (selEl) selEl.classList.toggle('hidden', hidden);
 }
 
 export function updateSelectionUI() {
@@ -999,20 +1010,20 @@ export function updateSelectionUI() {
   if (selected.kind === 'note') {
     const note = noteRec(selected.id);
     const node = noteEls.get(selected.id);
-    if (!note || !node || !selUi.selEl) return;
+    if (!note || !node || !selEl) return;
     const w = node.offsetWidth * effScale(note), h = node.offsetHeight * effScale(note);
     // Seat FIRST (issue #298): the note can be raised to make room for its row
     // below — the selection box must wrap the raised card, not the stored one.
     updateNoteToolbar(node, note);
     reflectToolbarSeat(node, note);
-    selUi.selEl.style.left = renderX(note) + 'px';
+    selEl.style.left = renderX(note) + 'px';
     const top = renderY(note);
-    selUi.selEl.style.top = top + 'px';
-    selUi.selEl.style.width = w + 'px';
-    selUi.selEl.style.height = h + 'px';
+    selEl.style.top = top + 'px';
+    selEl.style.width = w + 'px';
+    selEl.style.height = h + 'px';
     // Two or more selected: the overlay drops its resize grip (edges +
     // handles, hidden in CSS) — resize is single-selection only (issue #55).
-    selUi.selEl.classList.toggle('multi', multiSel.size > 1);
+    selEl.classList.toggle('multi', multiSel.size > 1);
     setSelectionHidden(false);
   } else {
     const node = lotEls.get(selected.id);
@@ -1082,16 +1093,19 @@ export function toggleHighlight(node) {
   if (!note) return;
   setNoteHighlight(node, !note.highlighted); saveNow();
 }
-function completeLot(node) {
+/* State + presentation together, no write: the two wrappers below add their
+   own saveNow, the way completeNote/restoreNote do for a note. The missing-
+   item guard is setNoteState's — a row the pre-act blur just discarded (B8)
+   has no record left to set. */
+function setLotState(node, complete) {
   const item = lotRec(node.dataset.id);
-  item.state = 'complete'; node.classList.add('complete');
-  applyCompleteA11y(node, true); saveNow();
+  if (!item) return;                   // a blank row the pre-act blur just discarded (B8)
+  item.state = complete ? 'complete' : 'active';
+  node.classList.toggle('complete', complete);
+  applyCompleteA11y(node, complete);
 }
-function restoreLot(node) {
-  const item = lotRec(node.dataset.id);
-  item.state = 'active'; node.classList.remove('complete');
-  applyCompleteA11y(node, false); saveNow();
-}
+function completeLot(node) { setLotState(node, true); saveNow(); }
+function restoreLot(node) { setLotState(node, false); saveNow(); }
 
 // One id through the batch path (issue #55): same snapshot, same splice, same
 // index-restoring Undo — one implementation to keep honest.
@@ -1129,8 +1143,7 @@ export function deleteNotes(ids) {
   // The deleted notes take their links with them (issue #142, B91). Capture them
   // FIRST so the one Undo restores exact prior state — the notes AND their
   // relationships (UIUX §9) — then drop them from the live board.
-  const removedLinks = boardLinks().filter(l => wanted.has(l.a) || wanted.has(l.b));
-  if (removedLinks.length) state.current.links = state.current.links.filter(l => !wanted.has(l.a) && !wanted.has(l.b));
+  const removedLinks = removeLinksFor(wanted);
   clearSelection();
   if (engaged && wanted.has(engaged)) clearEngaged();   // the engaged note is leaving (issue #136, B90)
   for (let i = snap.length - 1; i >= 0; i--) {       // descending: indices stay valid
@@ -1194,14 +1207,25 @@ export function leave(node, done) {
 }
 
 /* Undo toast (UIUX §9): 5s, restores exact state; a new delete finalizes prior. */
+/* The toast's one opening: stamp it with `mode`, put `text` in a .msg span,
+   and raise it on the next frame — the rise is the #toast translateY idiom
+   (UIUX §8). Both faces open this way: a plain notice's, and the undo's,
+   which then adds its button to the same row. */
+function raiseToast(mode, text) {
+  el.toast.dataset.mode = mode;
+  el.toast.textContent = '';
+  const msg = document.createElement('span'); msg.className = 'msg'; msg.textContent = text;
+  el.toast.appendChild(msg);
+  el.toast.hidden = false;
+  requestAnimationFrame(() => el.toast.classList.add('show'));
+}
 export let undoTimer = null;
 export function showUndo(undoFn, scope, label) {
   clearTimeout(undoTimer);
-  el.toast.dataset.mode = 'undo';                      // capture priority over save-error
   el.toast.dataset.scope = scope || 'item';            // item Undo belongs to the current board
-  el.toast.textContent = '';
-  // The caption defaults to "Deleted"; link create/toggle pass "Linked"/"Unlinked" (B91).
-  const msg = document.createElement('span'); msg.className = 'msg'; msg.textContent = label || COPY.deleted;
+  // 'undo' captures priority over a save-error; the caption defaults to
+  // "Deleted" — link create/toggle pass "Linked"/"Unlinked" (B91).
+  raiseToast('undo', label || COPY.deleted);
   const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = COPY.undo;
   // Clear the finalize timer only when the Undo actually commits — inside
   // commitAction's drop-guard (B81), not before it — so a tap dropped within
@@ -1211,9 +1235,7 @@ export function showUndo(undoFn, scope, label) {
   btn.addEventListener('click', () => {
     commitAction(() => { clearTimeout(undoTimer); hideToast(); undoFn(); });
   });
-  el.toast.appendChild(msg); el.toast.appendChild(btn);
-  el.toast.hidden = false;
-  requestAnimationFrame(() => el.toast.classList.add('show'));
+  el.toast.appendChild(btn);
   undoTimer = setTimeout(hideToast, UNDO_MS);          // timeout finalizes the delete
 }
 export function hideToast() {
@@ -1226,20 +1248,15 @@ export function hideToast() {
 /* A message with no action. `save` is persistent (hideSaveError clears it when
    the write lands); `export` and `copy` carry a ttl, because nothing later will
    come along to retract them. */
-const noticeUi = { noticeSeq: 0 };
+let noticeSeq = 0;
 export function showNotice(text, mode, ttl) {
   if (el.toast.dataset.mode === 'undo') return;        // never clobber a pending undo
   // Each notice stamps the toast; the ttl timer only hides its own stamp. A
   // mode check alone let a stale timer hide a newer same-mode notice early —
   // copying two items inside 1.5s (issue #59) is how that became observable.
-  const seq = String(++noticeUi.noticeSeq);
-  el.toast.dataset.mode = mode;
+  const seq = String(++noticeSeq);
+  raiseToast(mode, text);
   el.toast.dataset.seq = seq;
-  el.toast.textContent = '';
-  const msg = document.createElement('span'); msg.className = 'msg'; msg.textContent = text;
-  el.toast.appendChild(msg);
-  el.toast.hidden = false;
-  requestAnimationFrame(() => el.toast.classList.add('show'));
   if (ttl) setTimeout(() => {
     if (el.toast.dataset.mode === mode && el.toast.dataset.seq === seq) hideToast();
   }, ttl);
@@ -1251,7 +1268,7 @@ export function showSaveError() {
   showNotice(COPY.saveError, 'save');
 }
 export function hideSaveError() {
-  if (el.toast.dataset.mode === 'save') { delete el.toast.dataset.mode; hideToast(); }
+  if (el.toast.dataset.mode === 'save') hideToast();   // hideToast clears the mode
 }
 
 /* Copy an item's plain text — the record field, never the DOM (issue #59).
@@ -1275,12 +1292,12 @@ export function copyText(text) {
       done = document.execCommand('copy');
     } catch (err) { /* done stays false */ }
     finally { ta.remove(); }
-    if (done) showNotice(COPY.copied, 'copy', 1500);
+    if (done) showNotice(COPY.copied, 'copy', COPY_NOTICE_MS);
     else showNotice(COPY.copyError, 'copy', UNDO_MS);
   };
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text)
-      .then(() => showNotice(COPY.copied, 'copy', 1500), fallback);
+      .then(() => showNotice(COPY.copied, 'copy', COPY_NOTICE_MS), fallback);
   } else fallback();
 }
 
