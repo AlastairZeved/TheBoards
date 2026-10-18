@@ -390,13 +390,18 @@ export function updateNoteToolbar(node, note) {
   if (hl) hl.setAttribute('aria-label', note.highlighted ? COPY.unhighlight : COPY.highlight);
 }
 
+// The lowest top, logical, at which the note's row still fits on the sheet.
+function seatMaxY(node, note) {
+  const need = node.offsetHeight + TB_ROW_H * effScale(note); // card + row, logical
+  return Math.max(0, LOGICAL_H - need);
+}
+
 /* The row hangs below the note's bottom edge, centred (B120). It is a note
    child, so its logical height scales with effScale; if it would pass the
    sheet, the note is raised so the flush-below seat fits. Returns true when
    raised so callers can batch their save. */
 export function reflectToolbarSeat(node, note, save = true) {
-  const need = node.offsetHeight + TB_ROW_H * effScale(note); // card + row, logical
-  const maxY = Math.max(0, LOGICAL_H - need);
+  const maxY = seatMaxY(node, note);
   if (renderY(note) > maxY) {
     note.y = maxY / noteK(note);      // board units, so renderY(note) ≡ maxY
     node.style.top = maxY + 'px';
@@ -404,6 +409,22 @@ export function reflectToolbarSeat(node, note, save = true) {
     return true;
   }
   return false;
+}
+
+/* A group drop seats every member's row (B139) by lifting the whole group by
+   the largest overhang, so the members' arrangement holds; a member the lift
+   would carry past the sheet top parks at 0 instead (B41's accepted edge
+   compression). Members are { node, note }; the caller saves. */
+export function seatGroup(members) {
+  let lift = 0;
+  for (const { node, note } of members) lift = Math.max(lift, renderY(note) - seatMaxY(node, note));
+  if (lift <= 0) return false;
+  for (const { node, note } of members) {
+    const y = Math.max(0, renderY(note) - lift);
+    note.y = y / noteK(note);         // board units, so renderY(note) ≡ y
+    node.style.top = y + 'px';
+  }
+  return true;
 }
 
 /* A frame change re-seats every note (the seat is a law of the current frame);

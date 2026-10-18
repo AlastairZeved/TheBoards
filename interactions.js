@@ -7,7 +7,7 @@ import { rebaseNote, renderX, renderY, setHitInset, toLogical, updateBoardGeomet
 import { applyCompleteA11y, clearLink, linkSource, lotEls, makeLotEl, makeNoteEl, noteEls } from './render.js';
 import { paintRequirementsRead } from './render.js';
 import { runClockAction } from './render.js';
-import { reflectToolbarSeat, removeLinksFor, runNoteToolbarAction, setCarriedUi, setReminderUi, syncViewTitle, toggleLink, updateLinks, updateNoteToolbar, ensureNoteTitleEl } from './render.js';
+import { reflectToolbarSeat, removeLinksFor, seatGroup, runNoteToolbarAction, setCarriedUi, setReminderUi, syncViewTitle, toggleLink, updateLinks, updateNoteToolbar, ensureNoteTitleEl } from './render.js';
 import { menuOpen, menuReturnFocus, openMenuFor } from './menus.js';
 import { renderCal, renderPane, updateActiveCardTitle, writeThroughRequirements } from './boards.js';
 
@@ -631,6 +631,7 @@ function endDrag() {
       m.node.classList.remove('pressed');
     }
     g.target.node.classList.remove('pressed');
+    seatGroup(g.group);              // a drop near the sheet bottom lifts the group so every row fits below (B139)
     saveNow();
     updateLinks();                   // final settle: links land on the dropped notes (B91)
     if (state.isDesktop) updateSelectionUI();
