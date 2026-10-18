@@ -3612,6 +3612,41 @@ run(async () => {
     await ctx.close();
   }
   {
+    // A delete that fails leaves the board open and its later edits saved.
+    const { ctx, page } = await newDesktopPage(browser);
+    await expandRail(page);
+    await page.mouse.click(500, 200);
+    await page.waitForTimeout(500);
+    await page.keyboard.type('first');
+    await page.waitForTimeout(600);
+    const id = await page.evaluate(() => state.current.id);
+    await page.evaluate(() => {
+      window.__delOrig = IDBObjectStore.prototype.delete;
+      IDBObjectStore.prototype.delete = function () { throw new DOMException('test: delete refused', 'InvalidStateError'); };
+    });
+    await page.click('.pane-row .pane-del').catch(() => {});
+    await page.waitForTimeout(500);
+    await page.evaluate(() => { IDBObjectStore.prototype.delete = window.__delOrig; });
+    ok('a failed delete leaves the board current', await page.evaluate((id) =>
+      !!state.current && state.current.id === id, id));
+    await page.mouse.click(900, 600);
+    await page.waitForTimeout(500);
+    await page.keyboard.type('after failure');
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(900);
+    const got = await page.evaluate((id) => new Promise((resolve, reject) => {
+      const req = indexedDB.open('boards-db');
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const q = req.result.transaction('boards').objectStore('boards').get(id);
+        q.onsuccess = () => { resolve(q.result ? q.result.notes.map(n => n.text) : null); req.result.close(); };
+        q.onerror = () => reject(q.error);
+      };
+    }), id);
+    ok('a later edit still reaches IndexedDB', got && got.includes('after failure'), JSON.stringify(got));
+    await ctx.close();
+  }
+  {
     // Undo restores the board with the text typed just before the delete.
     const { ctx, page, errors } = await newDesktopPage(browser);
     await page.mouse.click(500, 200);

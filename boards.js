@@ -418,8 +418,9 @@ async function deleteBoard(id, row) {
   // The in-memory copy is also the freshest Undo snapshot (unsaved edits ride
   // it). `dirty` rides `current` (ensureCurrentValid): clear both together.
   const wasCurrent = !!(state.current && state.current.id === id);
-  let snapshot;
+  let snapshot, wasDirty = false;
   if (wasCurrent) {
+    wasDirty = state.dirty;
     cancelPendingSave();
     snapshot = state.current;
     state.current = null;                                    // guard invalid current on return
@@ -427,7 +428,15 @@ async function deleteBoard(id, row) {
   } else {
     snapshot = await idbGet(id);
   }
-  await idbDelete(id);
+  try { await idbDelete(id); } catch (e) {
+    // A failed delete must leave the board as it was (issue #479): reattach it
+    // and hand its unsaved edits back to the save queue (retry + notice).
+    if (wasCurrent && !state.current) {
+      state.current = snapshot;
+      if (wasDirty) scheduleSave();
+    }
+    throw e;
+  }
   if (row) leave(row, () => row.remove());
   // Desktop has no list screen to heal a dead `current` on return; heal it now.
   if (state.isDesktop && wasCurrent) await ensureCurrentValid();
