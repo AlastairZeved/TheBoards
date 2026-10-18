@@ -11,9 +11,11 @@ import { selected, updateSelectionUI } from './interactions.js';
    LOGICAL_W/(rw‖900), y goes through clamp(y·(LOGICAL_H/LEGACY_H), 0,
    LOGICAL_H − HIT_FLOOR), and rw/rh are stamped to the live frame, so noteK ≡ 1
    afterwards. The ratios agree by construction: on mobile LEGACY_H = 900·vh/vw
-   so the y-ratio equals the width ratio vw/900; on wide LEGACY_H = LOGICAL_H
-   and B20's min-anchored renderScale keeps the note put. The scale fold
-   mirrors rebaseNote. B21/B32's "stored y never mutated" is waived for THIS
+   so the y-ratio equals the width ratio vw/900 and min(LOGICAL_W/rw,
+   LOGICAL_H/LEGACY_H) picks it; on wide LEGACY_H = LOGICAL_H and B20's
+   min-anchored renderScale keeps the note put. The scale fold
+   mirrors rebaseNote (effScale before = (scale‖1)·widthRatio = scale after).
+   B21/B32's "stored y never mutated" is waived for THIS
    write alone (B93).
 
    writeRecord is injected by boot so geometry has no persistence dependency. */
@@ -42,10 +44,10 @@ export async function migrateLegacyBoards(all, writeRecord) {
 }
 
 // Module-scope layout state, written only from this region's layout math.
-export let LOGICAL_W = REF_W;                // mobile: = vw (B32); wide: derived per layout (B20)
+export let LOGICAL_W = REF_W;        // mobile: = vw (B32); wide: derived (B20)
 export let LOGICAL_H = REF_H;                // responsive: recomputed each layout to fill the viewport
-export let LEGACY_H = REF_H;                 // the pre-B32 frame height; read ONLY by
-                                     // migrateLegacyBoards (B93).
+// The pre-B32 frame height; read ONLY by migrateLegacyBoards (B93).
+export let LEGACY_H = REF_H;
 export let renderScale = 1;
 let offX = 0, offY = 0;
 export let calSqueeze = false;
@@ -71,7 +73,7 @@ export function applyLayout(vw, vh) {
   // from one read; a bare applyLayout() reads the live viewport.
   computeFrame(vw ?? window.innerWidth, vh ?? window.innerHeight);
   applyFrame();
-  return false;                               // applied: nothing held (B152 reads this)
+  return false;                      // applied: nothing held (B152)
 }
 
 /* The scale-to-fit half of applyLayout: chooses the frame. applyFrame
@@ -120,7 +122,9 @@ function applyFrame() {
   // measures #list-rows inside it. Unused on desktop (overlay stays inset:0).
   el.listView.style.setProperty('--list-panel-h', listPanelH() + 'px');
   // Re-derive each note's x, y and size (B64) and its hit area. The wrap cap
-  // reads stored fields only, so no layout change moves it (B64/B39).
+  // reads stored fields only, so no layout change moves it (B64/B39); it is
+  // written at creation (makeNoteEl) and by every gesture that changes x,
+  // scale or rw (rebaseNote, applyNoteScale, the drag): each must re-assert.
   noteEls.forEach((node, id) => {
     const note = noteRec(id);
     if (note) {
@@ -135,18 +139,19 @@ function applyFrame() {
   if (frameUi.frameReflow) frameUi.frameReflow();
 }
 
-/* B28's soft-keyboard deferral, one shared decision. The Android keyboard
-   fires a viewport resize and the mobile sheet's height tracks the viewport,
-   so recomputing would drag the page out from under the note being written;
-   the next tap would blur the invisible editor, B8 would discard the empty
-   frame, the keyboard would drop and resize again (the flap). It would also
-   corrupt storage: y is frame-relative (B32), so a grab under the shrunken
-   height would rebase and write rh permanently, and with one shared k (B64)
-   shrink x and SIZE too. So while an editor inside the board holds focus a
-   layout change is REMEMBERED, never applied; a real rotation or fold is
-   postponed, and the held frame lands on focusout (interactions.js:onFocusOut).
-   Every layout path routes through applyLayout, so the guard lives there.
-   Desktop has no soft keyboard and is unguarded (B19). Do not weaken it. */
+/* B28's soft-keyboard deferral, one shared decision. The Android keyboard fires
+   a viewport resize and the mobile sheet's height tracks the viewport, so
+   recomputing would drag the page out from under the note being written; the
+   next tap would blur the invisible editor, B8 would discard the empty frame,
+   the keyboard would drop and resize again (the flap). It would also corrupt
+   state: with one shared k (B64) a shrunken height would shrink x and SIZE at
+   render time, and y is frame-relative (B32), so a grab under it would rebase
+   and write the shrunken rh into storage permanently. So while an editor inside
+   the board holds focus a layout change is REMEMBERED, never applied; a real
+   rotation or fold is postponed, and the held frame lands on focusout
+   (interactions.js:onFocusOut). Every layout path routes through applyLayout,
+   so the guard lives there. Desktop has no soft keyboard and is unguarded
+   (B19). Do not weaken it. */
 export function deferLayoutIfEditing() {
   if (state.isDesktop || !editingInBoard()) return false;
   state.editVP.deferred = true;
@@ -219,11 +224,11 @@ export const toLogical = (clientX, clientY) => {
 
 /* The calendar squeeze (R6): with the panel open on wide, the sheet lays out
    with the panel's width removed, as B20 does for the left rail. Every k
-   changes with the frame (B64), so nothing is written (P3). frameUi.
-   LOGICAL_W_TRUE holds the TRUE frame while squeezed; toLogical un-maps into
-   it, so rebaseNote stamps rw/rh = the true frame (R6 clause 1). Export reads
-   storage and ignores the squeeze (R6 clause 2). Overlap during the squeeze is
-   accepted (R6). */
+   changes with the frame (B64), so nothing is written (P3: the squeeze is a
+   frame, not an edit). frameUi.LOGICAL_W_TRUE holds the TRUE frame while
+   squeezed; toLogical un-maps into it, so rebaseNote stamps rw/rh = the true
+   frame (R6 clause 1). Export reads storage and ignores the squeeze (R6 clause
+   2). Overlap during the squeeze is accepted (R6). */
 export function setCalSqueeze(on) {
   if (calSqueeze === on) return;
   calSqueeze = on;
@@ -247,7 +252,8 @@ export function setPaneCollapsed(collapsed) {
    carries its own rw/rh, so centering would differ per cohort and re-shear
    the arrangement (a grabbed note rebases to offset 0, its siblings would
    keep a nonzero one). Slack falls right/bottom. Stored geometry is never
-   mutated by a viewport change (B21/B32); only rebaseNote writes, at grab. k
+   mutated by a viewport change (B21/B32); only rebaseNote folds k into storage,
+   at grab. k
    is never clamped: MIN/MAX_SCALE bound the authored scale at gesture time.
 
    Screen uses noteK (LOGICAL_W/H), export uses exportK (EXPORT_W/H): one law,
@@ -296,9 +302,9 @@ export function rebaseNote(note) {
    authored units, stated directly (B64). Not (LOGICAL_W − renderX)/effScale,
    which would widen the cap whenever the height ratio binds and re-wrap a
    cap-wide note across a fold. Frame-invariant (same wrap on every device and
-   in the PDF, which calls this function); containment holds: renderX +
-   cap·effScale = rw·k ≤ LOGICAL_W. Floored at NOTE_MIN_W so an edge-adjacent
-   note stays a usable column. */
+   in the PDF, where exportNoteBox calls this function); containment holds:
+   renderX + cap·effScale = rw·k ≤ LOGICAL_W. Floored at NOTE_MIN_W so an
+   edge-adjacent note stays a usable column. */
 export const noteMaxW = (note) =>
   Math.max(NOTE_MIN_W, ((note.rw || REF_W) - note.x) / (note.scale || 1));
 
@@ -330,10 +336,12 @@ function bandRuleY() {
 }
 
 /* The Parking Lot's height is 34 + max(2 × 44, sum of the rows' offsetHeight)
-   (UIUX §3.2, B73): measured, so wrapped lines are never cut off and it
-   shrinks as well as grows (the clip lives on #lot-items). Empty, one row and
-   two single lines draw the same two-row shelf. A ceiling of half the sheet
-   keeps a runaway lot from swallowing the page; content past it is clipped. */
+   (UIUX §3.2, B73). Each .lot-item is content-sized and never clipped itself
+   (the clip lives on #lot-items), so summing offsetHeight reads true content:
+   wrapped lines are never cut off and the lot shrinks as well as grows. Empty,
+   one row and two single lines draw the same two-row shelf. A ceiling of half
+   the sheet keeps a runaway lot from swallowing the page; content past it is
+   clipped. */
 export const lotH = () => {
   let sum = 0;
   for (const node of lotEls.values()) sum += node.offsetHeight;

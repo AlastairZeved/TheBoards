@@ -17,7 +17,9 @@ export const lotEls = new Map();            // lotItem.id -> element
 function sanitizeBoard(board) {
   /* Skip the record whose editor is open: renderBoard can run inside the 300ms
      save debounce, when its text lives only in the DOM node and reads as a
-     whitespace husk from stale `current`. Notes and lot rows carry `id`. */
+     whitespace husk from stale `current`. The sweep is per-render, so a husk
+     that survives blur is swept on the next one. Notes and lot rows both
+     carry `id`. */
   const editingId = (() => {
     const ed = document.activeElement;
     if (!isEditing(ed)) return null;
@@ -40,7 +42,8 @@ function sanitizeBoard(board) {
 export function applyBoardCat() {
   el.board.dataset.cat = catOf(state.current);
   /* B130: #pane sits outside #board's scope, so it carries its own data-cat;
-     the ladder binds by direct id+attribute, so a child's never re-scopes. */
+     the ladder binds by direct id+attribute, so a child's own data-cat never
+     re-scopes the pane. */
   el.pane.dataset.cat = catOf(state.current);
 }
 
@@ -55,7 +58,7 @@ export const linkedDate = (calKey) => {
 };
 
 /* The tab/OS-window title follows the view; chrome only. Board view shows the
-   anchor's copy ('What's up?' when untitled); the picker and a drilled
+   anchor's copy (bare 'Zeved Boards' when untitled); the picker and a drilled
    category name themselves. */
 export function syncViewTitle() {
   const s = history.state;
@@ -155,7 +158,8 @@ export function renderBoard() {
 
 /* The text and scratch-out children (UIUX §4.3) shared by a note, a surfaced
    echo and a lot row. `editable` is false only for the echo, which is inert
-   (B109) and takes no role; a real text IS an editor (role=textbox, §12). */
+   (B109) and takes no role; a real text IS an editor (role=textbox, UIUX §12).
+   */
 function makeBody(node, cls, text, editable) {
   const body = document.createElement('div');
   body.className = cls + '-text';
@@ -186,7 +190,7 @@ export function makeNoteEl(note) {
   renderNoteTitle(node, note);                               // (B120)
   setCarriedUi(node, note);                                  // (B110)
   node.appendChild(makeNoteToolbar(note));                   // (B84)
-  setReminderUi(node, note);                                 // needs the row in place
+  setReminderUi(node, note);                                 // needs the row
   applyCompleteA11y(node, note.state === 'complete');
   // Both measure layout, so wait for the caller's appendChild (B120).
   requestAnimationFrame(() => { setHitInset(node, note); reflectToolbarSeat(node, note); });
@@ -367,7 +371,7 @@ function makeNoteToolbar(note) {
   mk('note-tb-complete', done ? GLYPH.restore : GLYPH.complete, done ? COPY.restore : COPY.complete);
   mk('note-tb-highlight', GLYPH.highlight, note.highlighted ? COPY.unhighlight : COPY.highlight);
   const clock = mk('note-clock', GLYPH.clock, note.reminder ? COPY.unremind : COPY.remind);
-  clock.setAttribute('aria-pressed', String(!!note.reminder));   // setReminderUi mirrors it
+  clock.setAttribute('aria-pressed', String(!!note.reminder));  // mirrored
   mk('note-tb-delete', GLYPH.delete, COPY.delete);           // last (UIUX §7)
   return bar;
 }
@@ -430,10 +434,10 @@ export function ensureNoteTitleEl(node) {
   if (tab) return tab;
   tab = document.createElement('div');
   tab.className = 'note-title';
-  tab.addEventListener('keydown', (e) => {           // single line: Enter commits
+  tab.addEventListener('keydown', (e) => {         // one line: Enter commits
     if (e.key === 'Enter') { e.preventDefault(); tab.blur(); }
   });
-  node.prepend(tab);                                 // before .note-text (paint order)
+  node.prepend(tab);                               // before .note-text
   return tab;
 }
 /* An empty title (B21 read-site default) renders no tab, reserves no space. */
@@ -454,7 +458,8 @@ function actionNoteIds(id) {
 
 /* Copy one note's text, or the whole desktop selection's, primary first, one
    \n between (B114). note.text is live off every keystroke, so Copy needs no
-   blur and leaves the note engaged. The caller supplies the commit. */
+   blur and leaves the note engaged. The caller supplies the commit
+   (buildMenu's commitAction drop-guard). */
 export function copyNoteTexts(anchorId) {
   const ids = actionNoteIds(anchorId);
   copyText(ids.map(id => {
@@ -476,7 +481,7 @@ export function runNoteToolbarAction(btn) {
   commitAction(() => {
     const ids = actionNoteIds(note.id);
     if (btn.classList.contains('note-tb-delete')) {
-      if (editingHere()) document.activeElement.blur();   // no editor in the leaving node
+      if (editingHere()) document.activeElement.blur();   // no leaving editor
       deleteNotes(ids);                                   // one commit → one Undo
     } else if (btn.classList.contains('note-tb-highlight')) {
       // The wash leaves the text editable, so Highlight keeps the note engaged.
@@ -527,7 +532,8 @@ export function applyCompleteA11y(node, complete) {
 // change or board swap (clearSelection).
 export let linkSource = null;
 
-export const boardLinks = () => (state.current && state.current.links) || [];   // B21
+// B21 read-default for legacy boards.
+export const boardLinks = () => (state.current && state.current.links) || [];
 const findLink = (a, b) =>
   boardLinks().find(l => (l.a === a && l.b === b) || (l.a === b && l.b === a));
 
@@ -633,11 +639,11 @@ export function updateLinks() {
 /* Region init: boot() calls registerRender(); no load-time work.
 
    Keyboard operability (UIUX §12 / UIUX §4.5): the recognizer captures the
-   pointer path, so Enter/Space on a focused tab is the one activation it never
-   sees. stopPropagation keeps it off the desktop note grammar, else Enter on a
-   selected note's tab would ALSO edit the note. The tabs are the keyboard
-   route to Complete/Highlight (B84); Copy rides the menu's focusable items
-   (B114). */
+   pointer path (setPointerCapture retargets native clicks), so Enter/Space on a
+   focused tab is the one activation it never sees. stopPropagation keeps it off
+   the desktop note grammar, else Enter on a selected note's tab would ALSO edit
+   the note. The tabs are the keyboard route to Complete/Highlight (B84); Copy
+   rides the menu's focusable items (B114). */
 export function registerRender() {
   el.board.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
