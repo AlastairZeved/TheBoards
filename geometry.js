@@ -13,10 +13,9 @@ import { selected, updateSelectionUI } from './interactions.js';
    afterwards. The ratios agree by construction: on mobile LEGACY_H = 900·vh/vw
    so the y-ratio equals the width ratio vw/900 and min(LOGICAL_W/rw,
    LOGICAL_H/LEGACY_H) picks it; on wide LEGACY_H = LOGICAL_H and B20's
-   min-anchored renderScale keeps the note put. The scale fold
-   mirrors rebaseNote (effScale before = (scale‖1)·widthRatio = scale after).
-   B21/B32's "stored y never mutated" is waived for THIS
-   write alone (B93).
+   min-anchored renderScale keeps the note put. The scale fold mirrors
+   rebaseNote (effScale before = (scale‖1)·widthRatio = scale after).
+   B21/B32's "stored y never mutated" is waived for THIS write alone (B93).
 
    writeRecord is injected by boot so geometry has no persistence dependency. */
 export async function migrateLegacyBoards(all, writeRecord) {
@@ -252,9 +251,9 @@ export function setPaneCollapsed(collapsed) {
    carries its own rw/rh, so centering would differ per cohort and re-shear
    the arrangement (a grabbed note rebases to offset 0, its siblings would
    keep a nonzero one). Slack falls right/bottom. Stored geometry is never
-   mutated by a viewport change (B21/B32); only rebaseNote folds k into storage,
-   at grab. k
-   is never clamped: MIN/MAX_SCALE bound the authored scale at gesture time.
+   mutated by a viewport change (B21/B32); only rebaseNote folds k into
+   storage, at grab. k is never clamped: MIN/MAX_SCALE bound the authored
+   scale at gesture time.
 
    Screen uses noteK (LOGICAL_W/H), export uses exportK (EXPORT_W/H): one law,
    not one number (B64). No note reaching here lacks rh: B93's boot migration
@@ -329,7 +328,8 @@ function bandRuleY() {
   let lines = 2;                       // the two-line floor
   for (const key of ['components', 'requirements']) {
     const node = anchorEls[key];
-    // The band anchor has no padding, so scrollHeight is whole line boxes.
+    // No padding, so scrollHeight is whole line boxes (its 44px min-height
+    // still rounds to 2).
     if (node) lines = Math.max(lines, Math.round(node.scrollHeight / BAND_LINE));
   }
   return bandRuleYFor(lines);

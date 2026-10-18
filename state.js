@@ -10,11 +10,11 @@
 
 
 /* --- 1. Constants & copy ------------------------------------------------- */
-export const NOTE_MIN_W = 132;              // min width (§4.5, B84): seats
-                                     // the 4-button toolbar. Also the noteMaxW
-                                     // wrap-cap floor, .note-text min-width and
-                                     // drag/resize floor, so no note is ever
-                                     // narrower than its own row.
+export const NOTE_MIN_W = 132;       // min width (UIUX §4.5, B84): seats the
+                                     // 4-button toolbar. Also the noteMaxW
+                                     // wrap-cap floor, .note-text min-width
+                                     // and drag/resize floor, so no note is
+                                     // ever narrower than its own row.
 export const MIN_SCALE = 0.5, MAX_SCALE = 2.0;
 /* The toolbar row's seat (B86): painted height 32 plus the 12 downward hit
    collar; UIUX §4.5's 44px. reflectToolbarSeat's raise relies on it (B139). */

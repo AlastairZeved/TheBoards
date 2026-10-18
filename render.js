@@ -158,8 +158,8 @@ export function renderBoard() {
 
 /* The text and scratch-out children (UIUX §4.3) shared by a note, a surfaced
    echo and a lot row. `editable` is false only for the echo, which is inert
-   (B109) and takes no role; a real text IS an editor (role=textbox, UIUX §12).
-   */
+   (B109) and takes no role; a real text IS an editor (role=textbox,
+   UIUX §12). */
 function makeBody(node, cls, text, editable) {
   const body = document.createElement('div');
   body.className = cls + '-text';

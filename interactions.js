@@ -190,8 +190,8 @@ function commitOpenEditor(node) {
 /* Consequences commit on release (B81) behind B18's drop-guard: a second tap
    inside it is dropped, not queued, so a double-tap can't delete twice or
    complete-then-uncomplete (B18d). Navigation (menu open, swap, edit-entry)
-   and capture take no guard: they commit nothing a stray tap could duplicate,
-   and capture self-heals. */
+   commits nothing a stray tap could duplicate, and capture self-heals (B8),
+   so neither takes the guard. */
 let pendingAction = null;
 
 export function commitAction(fn) {
@@ -668,8 +668,9 @@ function startPinch() {
 function applyNoteScale(note, node, scale) {
   note.scale = scale;
   node.style.transform = 'scale(' + scale + ')';
-  // Scale changes the unscaled cap, (LOGICAL_W - x)/scale: re-derive the width
-  // var before reading offsetWidth so growing near the edge rewraps narrower.
+  // Scale changes the unscaled cap, (rw - x)/scale (noteMaxW): re-derive the
+  // width var before reading offsetWidth so growing near the edge rewraps
+  // narrower.
   applyNoteWidth(node, note);
   const footW = node.offsetWidth * scale, footH = node.offsetHeight * scale;
   // A footprint can exceed the sheet only via a folded cross-frame scale

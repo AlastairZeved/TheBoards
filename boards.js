@@ -27,15 +27,16 @@ export let lotMenuOpen = false;
 const boardOrder = (a, b) => (b.createdAt - a.createdAt) ||
   (a.id < b.id ? 1 : a.id > b.id ? -1 : 0);
 
-// Shared card content: title, then a "Last Updated" line on every card (B82),
-// read from updatedAt (floored to createdAt). Both skins share this shape.
+// Shared card content: title, then a "Last Updated" line on every card (B82;
+// hidden on the mobile drilled row, B140), read from updatedAt (floored to
+// createdAt). Both skins share this shape.
 function fillRowContent(node, b) {
   node.textContent = '';
   const titled = !!(b.title && b.title.trim().length);
   const title = document.createElement('span'); title.className = 'row-title';
-  // The title is the pinned NAME; desktop appends .row-title-date (mobile CSS
-  // hides it: a colon-joined pair clips at <=360px, so the date rides
-  // .row-date rather than a taller card, LIST_CARD_H stays 76).
+  // The title is the pinned NAME plus .row-title-date, which CSS hides on the
+  // mobile drilled row (B140): a colon-joined pair clips at <=360px, so the
+  // date rides .row-date (LIST_CARD_H stays 76).
   if (b.cal) {
     title.textContent = LINKED_TITLE;
     const td = document.createElement('span'); td.className = 'row-title-date';
@@ -93,7 +94,7 @@ let dragCancel = null;                       // live card-drag teardown, if any
 
 /* The per-page card budget, measured, never a constant (B42, B68). `filled` =
    drawn sections holding a board (empty ones collapse to their head, B68);
-   `drawn` = sections on the surface (all four on the rail, 1 on a drill, B74). */
+   `drawn` = sections on the surface (four on the rail, 1 on a drill, B74). */
 export function catPageCap(filled, drawn) {
   // Measure the surface showing: wide (tablet too, B96) is #pane-cards, else
   // #list-rows. A hidden host (clientHeight 0) is never a measuring surface.
@@ -113,7 +114,7 @@ export function catPageCap(filled, drawn) {
     - head * (total - n);                      // collapsed: head row only
   // Whole rows per populated section (head above, pager below, B63). The pager
   // slot is reserved even when hidden, so the budget can't flap between one and
-  // many pages. Capacity = rows x columns, so the pager still counts cards (B42).
+  // many pages. Capacity = rows x columns, so the pager counts cards (B42).
   // Both surfaces budget against the one B82 card height.
   const rowH = LIST_CARD_H;
   const rows = Math.max(1, Math.floor((avail / n - head - pager) / (rowH + PANE_ROW_GAP)));
@@ -328,7 +329,7 @@ function formatMDY(ms) {
 /* One gesture law for a board card (B44). Pointer-based, never native DnD.
    Movement past MOVE_THRESHOLD drags (fixed clone, category under it frames
    itself); a motionless release is a tap; a mobile hold is the menu, which
-   movement cancels. Move-to-drag is safe on mobile because lists page, not scroll. */
+   movement cancels. Move-to-drag is safe on mobile: lists page, not scroll. */
 function attachBoardCardGestures(card, row, b, opts) {
   let down = false, dragging = false, longed = false, t = null;
   let sx = 0, sy = 0, gx = 0, gy = 0;
@@ -499,7 +500,9 @@ export async function swapBoard(id) {
   const rec = await idbGet(id);
   if (!rec) { swapping = false; renderPane(); return; }
   el.board.classList.add('swapping');
-  setTimeout(() => {         // not transitionend: reduced-motion (UIUX §8)
+  // not transitionend: reduced motion zeroes transitions, so it never fires
+  // (UIUX §8)
+  setTimeout(() => {
     state.current = rec;
     renderBoard();
     renderPane();
@@ -646,7 +649,8 @@ async function ensureCurrentValid() {
   renderBoard();
 }
 /* B82: mobile slides the panel down, then hides it on a setTimeout, never
-   transitionend (B24); a re-open re-adds .show, so the guard keeps it up.
+   transitionend (B24): reduced motion kills it and the hide must still land;
+   a re-open re-adds .show, so the guard keeps it up.
    Wide hides at once (no panel to fall); the wide tests expect an instant
    hide. */
 function hideListView() {
