@@ -26,7 +26,7 @@ function frameGuard() {
   throw new Error('frame-guard: framing origin not allowed (B125)');
 }
 
-/* --- Trusted Types default policy (issue #374) ----------------------------
+/* --- Trusted Types default policy ----------------------------
    index.html's CSP meta declares require-trusted-types-for 'script', which
    makes every DOM XSS sink (innerHTML, outerHTML, the eval family) and every
    script-URL assignment throw unless a write carries a Trusted* value. HTML
@@ -51,24 +51,21 @@ if (window.trustedTypes) {
 }
 frameGuard();
 
-// Test-observability bridge (issue #182): the black-box suites drive the page
-// through page.evaluate, which reads page globals. Module scope does not leak
-// to window, so the entry re-imports the observable surface and re-exposes it
-// as live getters after boot(). Settled ruling: attach to window, no
-// import-based test layer.
+// Test-observability bridge: the black-box suites drive the page through
+// page.evaluate, which reads page globals. Module scope does not leak to
+// window, so the entry re-imports the observable surface and re-exposes it as
+// live getters after boot(). No import-based test layer.
 
-// issue #182 module wiring — native ESM, no bundler (AGENTS.md).
-
-/* Issue #281 item 3: ONE environment pass. The two resize listeners and the
-   two media-query changes are TRIGGERS ONLY — each schedules this pass, and
-   the three a fold fires all coalesce onto one animation frame. The pass reads
-   the environment ONCE and derives the tier and the frame from that one read,
-   so the frame can never be computed against a tier that describes the room
-   before the flip: the engines fire window.resize, visualViewport.resize and
-   the MQ change in no fixed order (Gecko flushes MQ on layout, bugzilla
-   1451717), and every order now lands on the same single application. A pass
-   that finds neither the tier nor the viewport changed does nothing at all.
-   B103 stands: width stays the classifier — the foldable APIs are not read. */
+/* ONE environment pass. The two resize listeners and the two media-query
+   changes are TRIGGERS ONLY — each schedules this pass, and the three a fold
+   fires all coalesce onto one animation frame. The pass reads the environment
+   ONCE and derives the tier and the frame from that one read, so the frame is
+   never computed against a tier that describes the room before the flip: the
+   engines fire window.resize, visualViewport.resize and the MQ change in no
+   fixed order (Gecko flushes MQ on layout, bugzilla 1451717), and every order
+   lands on the same single application. A pass that finds neither the tier nor
+   the viewport changed does nothing. B103: width is the classifier — the
+   foldable APIs are not read. */
 let envRaf = 0;
 let lastEnv = null;                     // the environment the last pass applied
 function scheduleEnvironment() {
@@ -80,11 +77,11 @@ function applyEnvironment() {
   // B124 embed: a forced view pins the tier — the MQs say nothing. (The change
   // listeners below are unregistered when EMBED_MODE is set, so this guard is
   // for the resize path only.)
-  const { desktop, tablet, wide } = readTier();   // issue #409: one derivation, boot or flip
+  const { desktop, tablet, wide } = readTier();   // one derivation, boot or flip
   const tierChanged = wide !== state.isWide;
-  // B152 (issue #360): a focusout hold armed the pass — the keyboard-up
-  // resizes were consumed by the editing guard, so the retraction can read
-  // unchanged against lastEnv and still owe the held frame ONE application.
+  // B152: a focusout hold armed the pass — the keyboard-up resizes were
+  // consumed by the editing guard, so the retraction can read unchanged
+  // against lastEnv and still owe the held frame ONE application.
   const changed = !lastEnv || tierChanged || vw !== lastEnv.vw || vh !== lastEnv.vh ||
                   state.editVP.holdPending;
   state.editVP.holdPending = false;
@@ -93,28 +90,27 @@ function applyEnvironment() {
   inEnvironmentPass(true);
   try {
     if (tierChanged) applyTier({ desktop, tablet, wide });
-    // B152 (issue #360): an application discharges the focusout hold — the
-    // held frame has landed, so nothing is deferred and no stale baseline
-    // may outlive it (a future edit in a smaller room must re-baseline).
+    // B152: an application discharges the focusout hold — the held frame has
+    // landed, so nothing is deferred and no stale baseline may outlive it (a
+    // future edit in a smaller room must re-baseline).
     if (!applyLayout(vw, vh)) { state.editVP.deferred = false; state.editVP.startH = 0; }
   } finally {
     inEnvironmentPass(false);
   }
 }
 
-/* The tier half of a pass (issue #281 item 3; the mode path's old applyMode):
-   the flags, the html arrangement classes, and the teardown a flip owes. It
-   applies the tier the pass read — the same read the frame is computed from —
-   and never lays out itself: the pass applies one frame after it returns, so a
-   flip whose collapsePane changes the frame's rail width still costs exactly
-   one application (inEnvironmentPass keeps the rail setters from laying out
-   underneath it). */
+/* The tier half of a pass: the flags, the html arrangement classes, and the
+   teardown a flip owes. It applies the tier the pass read — the same read the
+   frame is computed from — and never lays out itself: the pass applies one
+   frame after it returns, so a flip whose collapsePane changes the frame's rail
+   width still costs exactly one application (inEnvironmentPass keeps the rail
+   setters from laying out underneath it). */
 function setTierClasses({ desktop, tablet, wide }) {
   state.isDesktop = desktop;
   state.isWide = wide;
   document.documentElement.classList.toggle('desktop', desktop);
-  // The wide class is the CSS arrangement gate — every `html.desktop` rule
-  // that draws the rail or the picker overlay is a wide rule now (B96).
+  // The wide class is the CSS arrangement gate for the rail and the picker
+  // overlay (B96).
   document.documentElement.classList.toggle('tablet', tablet);
   document.documentElement.classList.toggle('wide', wide);
 }
@@ -127,22 +123,21 @@ function applyTier(tier) {
   pointers.clear();
   if (state.isWide && listOpen) returnToBoard();  // pop the whole list nav → board (B9 intact;
                                                       // a drill is two levels deep, B74)
-  // The calendar across the flip (issue #145): the panel arrangement belongs
-  // to the wide grammar, so a flip while it is open closes it and pops its
-  // history entry (nothing typed is lost — calendar lines live in linked
-  // boards, not in the view). A flip TO a wide class re-enters via the tab.
-  // B99 (issue #158): on wide the calendar is FURNITURE — the rail survives
-  // every flip; only the mobile screen state and the wide EXPANDED panel
-  // tear down (the expanded panel's squeeze must lift so the frame re-reads
-  // the rail's 40px). Mobile, closed, hides the view outright as before.
+  // The calendar across the flip: the panel arrangement belongs to the wide
+  // grammar, so a flip while it is open closes it and pops its history entry
+  // (nothing typed is lost — calendar lines live in linked boards, not in the
+  // view). A flip TO a wide class re-enters via the tab.
+  // B99: on wide the calendar is FURNITURE — the rail survives every flip;
+  // only the mobile screen state and the wide EXPANDED panel tear down (the
+  // expanded panel's squeeze must lift so the frame re-reads the rail's 40px).
+  // Mobile, closed, hides the view outright.
   if (state.calOpen || state.calExpanded) {
     tearDownCal({ popHistory: true });
   }
-  // Issue #281 item 2: the mode path defers exactly as the resize path does. A
-  // fold flips the tier under a focused editor; applying here would move the
-  // board out from under the caret (measured: note left 60px → 75.3px mid-edit).
-  // The held frame lands on focusout (interactions.js:onFocusOut) — and the
-  // deferral still wins over this pass's frame: applyLayout is the gatekeeper
+  // The tier path defers exactly as the resize path does. A fold flips the tier
+  // under a focused editor; applying here would move the board out from under
+  // the caret. The held frame lands on focusout (interactions.js:onFocusOut) —
+  // and the deferral wins over this pass's frame: applyLayout is the gatekeeper
   // (geometry.js:deferLayoutIfEditing), so the tier flips with the frame held.
   if (state.isWide) {
     collapsePane();                  // B118: every return to wide re-enters through the collapsed face
@@ -164,9 +159,9 @@ function applyInitialMode() {
 }
 
 /* --- 12. Boot + service worker ------------------------------------------- */
-// The resize triggers (issue #281 item 3). onViewportResize owns the keyboard
-// laws (B28/B80, item 1's fold guard) and reports the event CONSUMED when it
-// handles it; anything it hands back schedules the one environment pass.
+// The resize triggers. onViewportResize owns the keyboard laws (B28/B80, the
+// fold guard) and reports the event CONSUMED when it handles it; anything it
+// hands back schedules the one environment pass.
 function onResize() {
   if (onViewportResize()) return;
   scheduleEnvironment();
@@ -176,22 +171,20 @@ if (window.visualViewport) window.visualViewport.addEventListener('resize', onRe
 
 /* Both sections are sized by the type they hold (B37/B47), and the type arrives
    late: the faces are font-display: swap (B50), so boot measures the fallback
-   and the real metrics land afterwards with nothing watching. Until B65 the
-   drift was invisible — a rule a pixel off. It is not any more: the handle is
-   pinned to the compartment's measured bottom edge, and a title that re-wraps
-   on the swap would leave a control floating off the corner it belongs to. One
-   re-measure when the faces land; a browser without the API keeps boot's. */
+   and the real metrics land afterwards with nothing watching. A title that
+   re-wraps on the swap would leave a control floating off the compartment edge
+   it is pinned to. One re-measure when the faces land; a browser without the
+   API keeps boot's. */
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => applyLayout());
 
 async function boot() {
-  // Boot-order characterization guard (issue #182): one marker per step, emitted
-  // SYNCHRONOUSLY immediately before the step it names — before any await, so the
-  // observable order cannot race the awaited work. These are permanent: they are
-  // the guard that makes the phase-2 module split verifiable (import hoisting must
-  // never reorder boot), not scaffolding to strip. test/boot-order.js pins them.
+  // Boot-order guard: one marker per step, emitted SYNCHRONOUSLY immediately
+  // before the step it names — before any await, so the observable order cannot
+  // race the awaited work. Import hoisting must never reorder boot;
+  // test/boot-order.js pins the markers.
   applyInitialMode();               // html arrangement classes (state is initialized)
-  // B118 (issue #211): wide boots into its resting arrangement — the All-Boards
-  // rail collapsed — BEFORE any layout, migration, or render reads the frame.
+  // B118: wide boots into its resting arrangement — the All-Boards rail
+  // collapsed — BEFORE any layout, migration, or render reads the frame.
   // setPaneCollapsed skips its layout here (state.current is still null); the
   // boot:layout applyLayout below computes the collapsed frame.
   if (state.isWide) collapsePane();
@@ -211,10 +204,10 @@ async function boot() {
                                                     // open or debounced yet
   let board;
   // Events ride the boards store (B105) with no `updatedAt` — `undefined >
-  // anything` is false, so an unfiltered reduce over the raw store returns
-  // its first record verbatim; a store whose lowest uuid is an event then
-  // boots an event as the board (renderBoard's crash, seen in CI). Boot
-  // opens a BOARD: the most-recent record that has a title.
+  // anything` is false, so an unfiltered reduce over the raw store returns its
+  // first record, and a store whose lowest uuid is an event would boot that
+  // event as the board and crash renderBoard. Boot opens a BOARD: the
+  // most-recent record that has a title (B112).
   const boards = boardsOf(all);
   if (!boards.length) { board = newBoardRecord(); await idbPut(board); }
   else { board = boards.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)); }  // launch → most recent
@@ -222,15 +215,15 @@ async function boot() {
   openBoardObj(board);
   console.debug('boot:pane-rail');
   if (state.isWide) renderPane();
-  // The standing calendar rail (issue #158, B99): furniture renders at boot on
-  // wide, no press required. The has-cal-rail class gates its CSS (the
-  // section must not render as a 40px sliver where the feature isn't armed).
-  // Mobile never sees it (its calendar stays the tab-driven full-screen view).
+  // The standing calendar rail (B99): furniture renders at boot on wide, no
+  // press required. The has-cal-rail class gates its CSS (the section must not
+  // render as a 40px sliver where the feature isn't armed). Mobile never sees
+  // it (its calendar stays the tab-driven full-screen view).
   if (state.isWide) {
     showCalRail();
   }
-  // The day-roll launch (issue #153, B105): if today carries events, the app
-  // opens the day's linked To-Do board instead of the last-touched one.
+  // The morning landing (B105, B107, B108): checkDayRoll opens today's linked
+  // To-Do board instead of the last-touched one.
   checkDayRoll();
 }
 boot();
@@ -238,8 +231,8 @@ boot();
 /* Publish the observable surface to window for the black-box suites.
    Getters, not snapshots: a mutable let is read at test time, exactly like the
    classic-script global it replaces. Runs after boot() so the app is live.
-   Static getters, not eval(): CSP forbids eval (audit #246 finding 1), and an
-   eval-based surface is itself an XSS sink. */
+   Static getters, not eval(): CSP forbids eval, and an eval-based surface is
+   itself an XSS sink. */
 const SURFACE = {
   get ACTION_DELAY() { return ACTION_DELAY; },
   get EXPORT_GEO() { return EXPORT_GEO; },
@@ -294,24 +287,19 @@ Object.defineProperties(window, Object.getOwnPropertyDescriptors(SURFACE));
 // awaits can resolve after 'load' has already fired — the listener would miss).
 //
 // Self-update (B79): a version-stamped cache only reaches an installed PWA if the
-// browser actually re-fetches sw.js — and it throttles that check hard, so an app
-// on the home screen can sit on an old build for up to a day (this stranded a real
-// device). Registration never asked for the check; now it does. reg.update() on
-// load and on every foreground (a relaunched PWA fires visibilitychange, not a
-// fresh load) pulls the new worker in; sw.js already skipWaiting()s + claim()s and
-// its stale-while-revalidate serves the new bytes on the next launch — so a deploy
-// lands within a launch or two instead of never. No forced mid-session reload: the
-// update arrives the next time the app opens, when the user expects it and never
-// mid-thought (and it keeps the update path identical to test/sw-update.js's).
+// browser actually re-fetches sw.js, and it throttles that check hard (an app on
+// the home screen can sit on an old build for up to a day). So reg.update() runs
+// on load and on every foreground (a relaunched PWA fires visibilitychange, not a
+// fresh load) to pull the new worker in; sw.js skipWaiting()s + claim()s and its
+// stale-while-revalidate serves the new bytes on the next launch. No forced
+// mid-session reload: the update arrives the next time the app opens, never
+// mid-thought (and the update path stays identical to test/sw-update.js's).
 if ('serviceWorker' in navigator) {
-  // B102 (issue #164 finding): the update check itself can be pinned. The
-  // browser may serve sw.js from its own HTTP cache (Firefox honors the
-  // script's max-age for SW script fetches; proxies on the path can do
-  // worse), so reg.update() re-checks against a stale copy and — with SWR
-  // returning the cached shell — an app can sit on an old build for days
-  // across browsers that never share code. updateViaCache:'none' makes the
-  // browser bypass its HTTP cache for the SW script ITSELF (the assets
-  // still ride SWR), removing the one cache layer this code did not own.
+  // B102: the update check itself can be pinned. The browser may serve sw.js
+  // from its own HTTP cache (Firefox honors the script's max-age for SW script
+  // fetches; proxies on the path can do worse), so reg.update() would re-check
+  // against a stale copy. updateViaCache:'none' makes the browser bypass its
+  // HTTP cache for the SW script ITSELF (the assets still ride SWR).
   const register = () => navigator.serviceWorker.register('sw.js',
     { updateViaCache: 'none' }).then((reg) => {
     reg.update().catch(() => {});
@@ -323,39 +311,34 @@ if ('serviceWorker' in navigator) {
   else window.addEventListener('load', register);
 }
 
-/* The build handshake (B102, issue #164's desktop half). Every layer above —
-   skipWaiting, claim, reg.update(), SWR, updateViaCache — assumes the browser
-   eventually ASKS the server whether anything changed. The one failure no
-   layer here owns is the ask itself being answered from a cache: the user's
-   devices sat on a v43 shell for six days across three engines while every
-   server-side check showed v46 live — the update check was being answered
-   from somewhere between the device and Pages. So the app verifies the
-   contract DIRECTLY: it knows its own build (stamped bump-adjacent to
-   sw.js's CACHE, the one string that names a build), fetches sw.js with
-   cache:'reload' — browser cache AND SWR both bypassed; the network is the
-   authority — and on the second consecutive mismatch deletes every
-   zeved-boards-v* cache (and any retired todo-boards-v* predecessor), unregisters the worker, and reloads once. Two strikes,
-   so one bad response (a captive portal, a proxy error page) cannot nuke a
-   healthy install; the sessionStorage counter dies with the tab. After the
-   reload the freshly-registered worker reinstalls from the network (install
-   IS addAll over the network) and the app is current whatever the in-between
-   layer does. Runs 20s after launch — off the critical path, once per
-   session, and only ever acts on device-vs-deploy disagreement. Offline it
-   does nothing: there is no authority to compare against.
+/* The build handshake (B102). Every layer above — skipWaiting, claim,
+   reg.update(), SWR, updateViaCache — assumes the browser eventually ASKS the
+   server whether anything changed, and none of them owns the ask itself being
+   answered from a cache somewhere between the device and the host. So the app
+   verifies the contract DIRECTLY: it knows its own build (stamped
+   bump-adjacent to sw.js's CACHE, the one string that names a build), fetches
+   sw.js with cache:'reload' — browser cache AND SWR both bypassed; the network
+   is the authority — and on the second consecutive mismatch deletes every
+   zeved-boards-v* cache (and any retired todo-boards-v* predecessor),
+   unregisters the worker, and reloads once. Two strikes, so one bad response
+   (a captive portal, a proxy error page) cannot nuke a healthy install; the
+   sessionStorage counter dies with the tab. After the reload the
+   freshly-registered worker reinstalls from the network (install IS addAll
+   over the network) and the app is current whatever the in-between layer does.
+   Runs 20s after launch — off the critical path (boot has settled, the first
+   render is long done), once per session, and only ever acts on
+   device-vs-deploy disagreement. Offline it does nothing: there is no
+   authority to compare against.
 
-   DATA IS NEVER TOUCHED. The self-heal deletes Cache Storage entries (the
-   `zeved-boards-v*` and any retired `todo-boards-v*` copies of the app shell) and unregisters the worker —
-   nothing else. The boards live in IndexedDB (`boards-db`, or
-   `boards-db-embed` in embed mode), a different store the handshake never
-   opens, and B21's read-site defaulting means an
-   old record renders correctly under a new build anyway. Worst case is the
-   app re-downloading its precached assets; a board cannot be lost to this
-   path by construction. */
-/* The handshake runs 20s after launch — off the critical path (boot has
-   settled, the first render is long done), once per session, and only ever
-   acting on device-vs-deploy disagreement. */
+   DATA IS NEVER TOUCHED. The self-heal deletes Cache Storage entries (the app
+   shell copies) and unregisters the worker — nothing else. The boards live in
+   IndexedDB (`boards-db`, or `boards-db-embed` in embed mode), a different
+   store the handshake never opens, and B21's read-site defaulting means an old
+   record renders correctly under a new build anyway. Worst case is the app
+   re-downloading its precached assets; a board cannot be lost to this path by
+   construction. */
 const HANDSHAKE_MS = 20000;
-const OWN_BUILD = 'v161';
+const OWN_BUILD = 'v162';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

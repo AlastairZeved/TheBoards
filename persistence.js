@@ -1,12 +1,10 @@
 /* --- 2. IndexedDB persistence -------------------------------------------- */
-// issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { SAVE_DEBOUNCE, EMBED, state } from './state.js';
 import { hideSaveError, showSaveError } from './interactions.js';
 
-// B124 embed: a throwaway namespace wiped before every open — the visitor's
-// real `boards-db` is never touched by the embed (separate name, not a rename).
-// B136 (issue #280) retires the wipe-at-boot clause: the embed's namespace
-// persists exactly like the plain app. The separate name itself survives.
+// B124 embed: its own namespace, so the visitor's real `boards-db` is never
+// touched. B136: the embed's database is never wiped at boot; it persists
+// exactly like the plain app.
 const DB_NAME = EMBED ? 'boards-db-embed' : 'boards-db', STORE = 'boards';
 
 function openDB() {
@@ -49,10 +47,10 @@ export async function idbGet(id) { return withStore('readonly', (store) => store
 
 /* --- 3. State + save queue ----------------------------------------------- */
 // Single-flight persist with exponential backoff; capture is never blocked.
-/* The backoff a failed save retries on: one second, doubled per failure, up to
-   sixteen. Long enough that a transient IndexedDB refusal heals itself, capped
-   so an unwritable device cannot spin on it — and the retry is
-   fire-and-forget, so nothing in the app ever waits behind it. */
+/* Failed-save backoff: one second, doubled per failure, up to sixteen. Long
+   enough that a transient IndexedDB refusal heals itself, capped so an
+   unwritable device cannot spin on it; the retry is fire-and-forget, so
+   nothing in the app waits behind it. */
 const RETRY_MS_MIN = 1000, RETRY_MS_MAX = 16000;
 let saveTimer = null, persisting = false, dirtyAgain = false, retryDelay = RETRY_MS_MIN;
 export function scheduleSave() { state.dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, SAVE_DEBOUNCE); }
@@ -64,23 +62,21 @@ export function saveNow() {
   persist();
 }
 /* Flush on the way OUT of a board (swapBoard, openBoardById, newBoardIn): the
-   pending edit is written, but `updatedAt` is stamped only if there was one. Leaving a board is
-   not updating it — and since B69 orders every listing by that stamp, an
-   unconditional stamp here would send the card you just LEFT to the top of its
-   section on desktop, while mobile (which never flushes) left it where it was:
-   one law, two skins, disagreeing. It would also outrank a board created in
-   that same moment, undoing B63's "the new card lands first". */
+   pending edit is written, but `updatedAt` is stamped only if there was one.
+   Leaving a board is not updating it: B69 orders every listing by that stamp,
+   so an unconditional stamp would float the card just left to the top of its
+   section (mobile never flushes) and outrank a board created in the same
+   moment (B63: the new card lands first). */
 export function flushSave() {
   clearTimeout(saveTimer);
   if (!state.current) return;
   if (state.dirty) stampUpdated();
   persist();
 }
-/* The stamp is the whole of B69's order key. It deliberately does NOT turn the
-   card's section back to page 1: a save renders nothing, and B42's page state
-   exists so a re-render keeps the reader's place. An edit can therefore leave
-   the open board's card on a page the reader is not looking at — as paging
-   away already could — until they turn to page 1 and find it at the front. */
+/* The stamp is the whole of B69's order key. It does NOT turn the card's
+   section back to page 1: a save renders nothing, and B42's page state keeps
+   the reader's place across a re-render. The open board's card can therefore
+   sit on a page the reader is not looking at until they turn to page 1. */
 function stampUpdated() {
   state.current.updatedAt = Date.now();
   state.dirty = false;
