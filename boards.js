@@ -430,11 +430,12 @@ async function deleteBoard(id, row) {
   }
   try { await idbDelete(id); } catch (e) {
     // A failed delete must leave the board as it was (issue #479): reattach it
-    // and hand its unsaved edits back to the save queue (retry + notice).
-    if (wasCurrent && !state.current) {
-      state.current = snapshot;
-      if (wasDirty) scheduleSave();
-    }
+    // if nothing replaced it meanwhile, and queue its unsaved edits directly
+    // (the debounce was cancelled; a swap landing during the await, or its
+    // timer after, would otherwise save the wrong board or nothing). The queue
+    // owns retry + notice, so `dirty` stays false.
+    if (wasCurrent && !state.current) state.current = snapshot;
+    if (wasCurrent && wasDirty) { snapshot.updatedAt = Date.now(); persist(snapshot); }
     throw e;
   }
   if (row) leave(row, () => row.remove());
