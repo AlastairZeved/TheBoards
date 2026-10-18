@@ -616,7 +616,7 @@ console.log('\n[6] The two-tone focus ring clears 3:1 on every ground by constru
   ok('the ring is the two-tone construction, not a hue',
     /outline:\s*2px\s+solid\s+var\(--ink-light\)/.test(css) &&
     /box-shadow:[^;}]*0\s+0\s+0\s+4px\s+var\(--ink-dark\)/.test(css));
-  ok('--focus-ring is retired (UIUX §16.2)', !/--focus-ring/.test(css));
+  ok('--focus-ring is retired (UIUX §2.3)', !/--focus-ring/.test(css));
   // Issue #439: the ring is written once per variant, as a grouped rule at the
   // end of the file (last, so each ring keeps winning the ties it won in place).
   ok('the outward ring is declared once — one grouped rule (UIUX §2.7, issue #439)',
@@ -642,14 +642,14 @@ console.log('\n[7] Dark-only: one theme, and the retired tokens stay retired (UI
   for (const dead of ['--paper', '--ink-rgb', '--ink-shadow', '--letterbox',
                       '--surface-raised', '--line', '--furniture',
                       '--sand-light', '--sand-base', '--sand-dark', '--sand-taupe']) {
-    ok(`${dead} is retired (UIUX §16.2)`, !css.includes(dead + ':') && !css.includes(`var(${dead})`));
+    ok(`${dead} is retired (UIUX §2.3)`, !css.includes(dead + ':') && !css.includes(`var(${dead})`));
   }
-  ok('--pane the token is retired (UIUX §16.2)', !/--pane\s*:/.test(css) && !/var\(--pane\)/.test(css));
+  ok('--pane the token is retired (UIUX §2.3)', !/--pane\s*:/.test(css) && !/var\(--pane\)/.test(css));
   ok('html keeps a plain black background — not a token (UIUX §2.2)',
     /html\s*(?:,[^{]*)?{[^}]*background:\s*#000\b/.test(css));
   ok('--elevation is 0 2px 8px rgb(0 0 0 / 0.45) (UIUX §2.4)',
     /--elevation:\s*0 2px 8px rgb\(0 0 0 \/ 0\.45\)/.test(css));
-  ok('--elevation-inset exists for #pane (UIUX §2.4, §16.2)',
+  ok('--elevation-inset exists for #pane (UIUX §2.4)',
     /--elevation-inset:\s*inset /.test(css) && /#pane\s*{[^}]*var\(--elevation-inset\)/s.test(css.replace(/html\.desktop /g, '')));
   ok('--elevation-up is --elevation reflected, and the risen list panel reads it (UIUX §2.4, issue #439)',
     /--elevation-up:\s*0 -2px 8px rgb\(0 0 0 \/ 0\.45\)/.test(css) &&
