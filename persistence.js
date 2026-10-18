@@ -38,17 +38,62 @@ function withStore(mode, operation) {
     }
   }));
 }
-export async function idbGetAll() { return withStore('readonly', (store) => store.getAll()); }
-export async function idbPut(rec) { return withStore('readwrite', (store) => store.put(rec)); }
-
-export async function idbDelete(id) { return withStore('readwrite', (store) => store.delete(id)); }
-export async function idbGet(id) { return withStore('readonly', (store) => store.get(id)); }
+const rawPut = (rec) => withStore('readwrite', (store) => store.put(rec));
+/* Reads answer from the save queue first (§3): a board left while its save is
+   failing reopens with the edits the store doesn't hold yet (issue #473). */
+export async function idbGetAll() {
+  const all = await withStore('readonly', (store) => store.getAll());
+  const ahead = unsaved();
+  if (!ahead.size) return all;
+  const out = all.map((r) => ahead.get(r.id) || r);
+  for (const [id, rec] of ahead) if (!all.some((r) => r.id === id)) out.push(rec);
+  return out;
+}
+export async function idbGet(id) {
+  const rec = await withStore('readonly', (store) => store.get(id));
+  return unsaved().get(id) || rec;
+}
+/* A direct write or delete of a board supersedes its queued save, so a later
+   retry can't write an older copy over it, or bring a deleted board back. A
+   failed put hands the superseded save back to the queue. */
+export async function idbPut(rec) {
+  const prev = supersede(rec.id);
+  try { return await rawPut(rec); } catch (e) { requeue(prev); throw e; }
+}
+export async function idbDelete(id) {
+  supersede(id);
+  return withStore('readwrite', (store) => store.delete(id));
+}
 
 /* --- 3. State + save queue ----------------------------------------------- */
 // Single-flight persist with exponential backoff; capture is never blocked.
 /* Failed-save backoff: 1s doubling to 16s; the retry is fire-and-forget. */
 const RETRY_MS_MIN = 1000, RETRY_MS_MAX = 16000;
-let saveTimer = null, persisting = false, dirtyAgain = false, retryDelay = RETRY_MS_MIN;
+let saveTimer = null, retryTimer = null, retryDelay = RETRY_MS_MIN;
+/* Each save carries the record it was issued for (issue #473): a retry, or a
+   save queued behind an in-flight one, writes THAT board, never whichever
+   board is open by then. One entry per board id, least recently saved
+   first; `flight` is the put in progress, `dead` once a direct write or
+   delete supersedes it. */
+const queue = new Map();
+let flight = null;
+function unsaved() {
+  const ahead = new Map();
+  if (flight && !flight.dead) ahead.set(flight.rec.id, flight.rec);
+  for (const [id, entry] of queue) ahead.set(id, entry.rec);
+  return ahead;
+}
+function supersede(id) {
+  const prev = queue.get(id) || (flight && !flight.dead && flight.rec.id === id ? flight : null);
+  queue.delete(id);
+  if (flight && flight.rec.id === id) flight.dead = true;
+  return prev;
+}
+function requeue(entry) {
+  if (!entry || queue.has(entry.rec.id)) return;   // a newer save of it is queued
+  queue.set(entry.rec.id, { rec: entry.rec });
+  if (!flight) { clearTimeout(retryTimer); retryTimer = setTimeout(drain, retryDelay); }
+}
 export function scheduleSave() { state.dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, SAVE_DEBOUNCE); }
 export function cancelPendingSave() { clearTimeout(saveTimer); }
 export function saveNow() {
@@ -74,17 +119,28 @@ function stampUpdated() {
   state.current.updatedAt = Date.now();
   state.dirty = false;
 }
-export function persist() {
-  if (!state.current) return;
-  if (persisting) { dirtyAgain = true; return; }
-  persisting = true;
-  const snapshot = state.current;
-  idbPut(snapshot).then(() => {
-    persisting = false; retryDelay = RETRY_MS_MIN; hideSaveError();
-    if (dirtyAgain) { dirtyAgain = false; persist(); }
+export function persist(rec = state.current) {
+  if (!rec) return;
+  queue.delete(rec.id);
+  queue.set(rec.id, { rec });
+  if (!flight) drain();
+}
+function drain() {
+  clearTimeout(retryTimer);
+  const entry = queue.values().next().value;
+  if (!entry) return;
+  queue.delete(entry.rec.id);
+  flight = entry;
+  rawPut(entry.rec).then(() => {
+    flight = null; retryDelay = RETRY_MS_MIN; hideSaveError();
+    drain();
   }).catch(() => {
-    persisting = false; showSaveError();
-    setTimeout(persist, retryDelay);
+    flight = null; showSaveError();
+    // Back in the queue unless a newer save, a direct write or a delete has
+    // superseded it.
+    if (!entry.dead && !queue.has(entry.rec.id)) queue.set(entry.rec.id, { rec: entry.rec });
+    clearTimeout(retryTimer);
+    retryTimer = setTimeout(drain, retryDelay);
     retryDelay = Math.min(retryDelay * 2, RETRY_MS_MAX);
   });
 }
