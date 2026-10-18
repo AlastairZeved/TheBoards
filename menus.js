@@ -55,10 +55,10 @@ export function fillBoardAction(btn, glyph, label) {
   btn.append(g, l);
 }
 /* The toggle wears the act it will perform (B43/B71): "All" on the board
-   (B95), "This board" (B83) while the All-Boards surface is up (mobile
-   lot-grid or drilled list). One mark (GLYPH.boards); only the label flips,
-   so state is never colour (UIUX §1). Called from renderBoard and every
-   list-state transition. */
+   (B95: the four-tab row's fit), "This board" (B83) while the
+   All-Boards surface is up (mobile lot-grid or drilled list). One mark
+   (GLYPH.boards); only the label flips, so state is never colour (UIUX §1).
+   Called from renderBoard and every list-state transition. */
 export function syncBoardActions() {
   const away = listOpen || lotMenuOpen;
   const l = el.actionBoards.querySelector('.label');
@@ -132,8 +132,9 @@ export function buildMenu(items, clientX, clientY) {
     }
   };
   document.addEventListener('keydown', menuKeyHandler, true);
-  // Dismissal is inert (B30): capture phase, so the closing press doesn't
-  // reach the recognizer and capture a note on the paper under the menu.
+  // Dismissal is inert (B30): capture phase, so this runs before the
+  // recognizer; swallowTap makes it drop the closing press instead of
+  // capturing a note on the paper under the menu.
   menuOutsideHandler = (ev) => {
     if (el.menu.contains(ev.target)) return;
     if (el.board.contains(ev.target)) {

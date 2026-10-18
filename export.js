@@ -265,8 +265,8 @@ function drawScratch(p, w, h) {
 
 /* ---- Document assembly --------------------------------------------------
    Object numbers are fixed: catalog 1, pages 2, fonts 3 and 4, then page/
-   content pairs from 5. Offsets are string indices, sound only because every
-   appended byte is ASCII (pdfStr guarantees it). */
+   content pairs from 5; offsets are counted off the string (see the ASCII
+   assertion below). */
 function pdfAssemble(streams, title) {
   const n = streams.length;
   const kids = [];
@@ -646,7 +646,7 @@ export async function exportCalPdf() {
     flushSave();
     const all = await idbGetAll();
     const events = eventsOf(all);
-    pdfLossy = false;                       // reported as in exportBoardPdf (B34)
+    pdfLossy = false;                // reported as in exportBoardPdf (B34)
     // Overflow is an error, not a page turn: this is one fixed sheet.
     const t = textPager({ overflow: 'error' });
     t.openPage();
@@ -716,7 +716,8 @@ export async function exportBoardPdf(board) {
       notes,
       parkingLot: (src.parkingLot || []).filter(keep)
         .map((item) => copyRecordFields('lot', item)),
-      // B91's links, only where both notes survive the sweep.
+      // B91's links, only where both notes survive the sweep: a link to a
+      // swept husk would dangle (exportLinks also skips danglers).
       links: (src.links || []).filter((l) =>
         notes.some((n) => n.id === l.a) && notes.some((n) => n.id === l.b)),
     });
@@ -738,11 +739,11 @@ function isDayNoteRecord(raw) {
     raw.id.startsWith('rem-') && typeof raw.day === 'string';
 }
 
-/* The whole library as one file; day notes are split out of `boards`, whose
-   legacy v2 location stays importable. flushSave() first: saves are debounced
-   (SAVE_DEBOUNCE), so idbGetAll() alone could read the open board stale. The
-   stamp lands only if an edit is pending, so exporting doesn't reorder the
-   list (B69). */
+/* The whole library as one file; day notes get their own array, and their
+   legacy v2 location in `boards` stays importable. flushSave() first: saves
+   are debounced (SAVE_DEBOUNCE), so idbGetAll() alone could read the open
+   board stale. The stamp lands only if an edit is pending, so exporting
+   doesn't reorder the list (B69). */
 export async function exportAllJson() {
   try {
     flushSave();
