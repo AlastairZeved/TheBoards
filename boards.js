@@ -285,9 +285,9 @@ function makePagerBtn(key, disabled, go) {
 }
 
 /* A re-render rebuilds every node — including a focused .cat-add, which lives
-   inside the rebuilt host. Both renderers
-   put focus back on its successor, goCatPage's stance exactly: a keyboard
-   user creates (and rides the follow-up re-render) without re-tabbing. */
+   inside the rebuilt host. Both renderers put focus back on its successor,
+   goCatPage's stance exactly: a keyboard user creates (and rides the
+   follow-up re-render) without re-tabbing. */
 function focusedCatAdd() {
   const a = document.activeElement;
   return a && a.classList && a.classList.contains('cat-add')
@@ -359,7 +359,7 @@ async function renderCat(cat) {
 /* The drilled category's rows are built by makeCatSection/makeListRow below. */
 
 /* The four category buttons, in the 2x2 clockwise order (GRID_ORDER). Fill the
-   mobile/tablet lot-grid (B100: the one picker), so every picker surface reads
+   mobile lot-grid (B100, B119: the one picker), so every picker surface reads
    as one menu in one nomenclature — each button names its section exactly as
    the section head does ("To-Do Boards", "Note Boards", "Learning Boards",
    "Idea Boards"). data-cat carries the family so the tray wears the board
@@ -725,19 +725,19 @@ export function updateActiveCardTitle() {
 
 export function goToList() {
   if (listOpen) return;
-  // B100: the picker is the lot-grid on every surface that has the tab (mobile
-  // and tablet — desktop's tab is retired, the rail is its all-boards
-  // surface). The grid opens over the lot without occluding the tab, so its
-  // focus is not stranded and is kept.
+  // B100/B119: the picker is the lot-grid on mobile, the one surface that has
+  // the tab (wide's tab is retired, the rail is its all-boards surface). The
+  // grid opens over the lot without occluding the tab, so its focus is not
+  // stranded and is kept.
   histPush({ v: 'list' });             // B124 embed: replaceState — no parent-history entries
   showList();
 }
-/* Level 1 — the All-Boards picker (B74, B100): the Parking Lot turned into the
-   2x2 grid on mobile AND tablet, drawn over the lot at its current height
+/* Level 1 — the All-Boards picker (B74, B100, B119): the Parking Lot turned
+   into the 2x2 grid on mobile only, drawn over the lot at its current height
    (openLotMenu), leaving the board and its parking-lot data untouched
-   beneath. Desktop has no picker and no #list-view at level 1: its All-boards
-   tab is retired (B100) — the left rail (B24) already lists every category
-   with every board. */
+   beneath. Wide (desktop and tablet) has no picker and no #list-view at level
+   1: the All tab is retired there (B119) — the left rail (B24) already lists
+   every category with every board. */
 function showList() {
   listOpen = true;
   catView = null;
@@ -771,7 +771,7 @@ async function showCat(cat) {
     if (listOpen && catView === cat) el.listView.classList.add('show');
   });
 }
-/* Mobile and tablet: the Parking Lot becomes the All-Boards menu (B74).
+/* Mobile only: the Parking Lot becomes the All-Boards menu (B74, B119).
    A transient overlay drawn over #lot at its current --lot-h — if the lot is
    expanded, so is the grid — filled by the four category buttons. It never
    touches current.parkingLot: the board's own lot data is only hidden, and it
