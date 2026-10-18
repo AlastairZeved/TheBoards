@@ -75,8 +75,10 @@ export async function idbPut(rec) {
   try { return await rawPut(rec); } catch (e) { requeue(prev); throw e; }
 }
 export async function idbDelete(id) {
-  supersede(id);
-  return withStore('readwrite', (store) => store.delete(id));
+  const prev = supersede(id);
+  // A failed delete leaves the board stored, so its superseded save is still
+  // unsaved work: hand it back, as idbPut does (issue #479).
+  try { return await withStore('readwrite', (store) => store.delete(id)); } catch (e) { requeue(prev); throw e; }
 }
 
 /* --- 3. State + save queue ----------------------------------------------- */

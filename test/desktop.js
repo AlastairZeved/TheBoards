@@ -3647,6 +3647,51 @@ run(async () => {
     await ctx.close();
   }
   {
+    // A failed delete does not drop the board's queued (failing) save: both
+    // writes are broken, then restored, and the edit still lands.
+    const { ctx, page } = await newDesktopPage(browser);
+    await expandRail(page);
+    await page.mouse.click(500, 200);
+    await page.waitForTimeout(500);
+    await page.keyboard.type('kept');
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(900);
+    const id = await page.evaluate(() => state.current.id);
+    await page.evaluate(() => {
+      window.__putOrig = IDBObjectStore.prototype.put;
+      window.__delOrig = IDBObjectStore.prototype.delete;
+      IDBObjectStore.prototype.put = function () { throw new DOMException('test: put refused', 'QuotaExceededError'); };
+    });
+    await page.mouse.click(700, 420);
+    await page.waitForTimeout(500);
+    await page.keyboard.type('queued edit');
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(900);
+    ok('the failed save shows the save-error notice', await page.evaluate(() =>
+      document.querySelector('#toast').dataset.mode === 'save'));
+    await page.evaluate(() => {
+      IDBObjectStore.prototype.delete = function () { throw new DOMException('test: delete refused', 'InvalidStateError'); };
+    });
+    await page.click('.pane-row .pane-del').catch(() => {});
+    await page.waitForTimeout(300);
+    await page.evaluate(() => {
+      IDBObjectStore.prototype.put = window.__putOrig;
+      IDBObjectStore.prototype.delete = window.__delOrig;
+    });
+    await page.waitForTimeout(4500);                  // the backed-off retry fires
+    const got = await page.evaluate((id) => new Promise((resolve, reject) => {
+      const req = indexedDB.open('boards-db');
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const q = req.result.transaction('boards').objectStore('boards').get(id);
+        q.onsuccess = () => { resolve(q.result ? q.result.notes.map(n => n.text) : null); req.result.close(); };
+        q.onerror = () => reject(q.error);
+      };
+    }), id);
+    ok('the queued edit still lands after both writes failed', got && got.includes('queued edit'), JSON.stringify(got));
+    await ctx.close();
+  }
+  {
     // Undo restores the board with the text typed just before the delete.
     const { ctx, page, errors } = await newDesktopPage(browser);
     await page.mouse.click(500, 200);
