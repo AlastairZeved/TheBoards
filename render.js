@@ -1,5 +1,4 @@
 /* --- 6. Rendering -------------------------------------------------------- */
-// issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import { COPY, GLYPH, TB_ROW_H, anchorEls, calKey, el, noteRec, state, uuid } from './state.js';
 import { idbGet, idbGetAll, idbPut, saveNow, scheduleSave } from './persistence.js';
 import { applyLayout, applyNoteWidth, effScale, LOGICAL_H, noteK, placeNote, renderX, renderY, setHitInset } from './geometry.js';
@@ -8,28 +7,26 @@ import { restoreNote, selected, selectedNoteIds, setSelectedNotesHighlight, setS
 import { syncBoardActions } from './menus.js';
 import { catOf } from './boards.js';
 
-// Element caches (render-owned, issue #182): every note/lot element lookup in
-// the app routes through these Maps. Declared at the region header so the
-// render module owns them and every other region imports the binding.
+// Element caches (render-owned): every note/lot element lookup in the app
+// routes through these Maps. Declared at the region header so the render
+// module owns them and every other region imports the binding.
 export const noteEls = new Map();           // note.id -> element
 export const lotEls = new Map();            // lotItem.id -> element
 
 /* B8 at rest, not only at blur: "no empty frames ever exist" (PRD §6.2). The
    blur discard covers a frame the user abandons; it cannot cover one whose
    editor never took focus, because no blur ever comes. Any such husk already
-   in storage is swept the next time its board is drawn, so old data heals
-   itself on first sight and the bug leaves nothing behind (B31). Rendering is
+   in storage is swept the next time its board is drawn (B31). Rendering is
    the right layer: it is the one choke point every board passes through, and
    it rebuilds the frames anyway. */
 function sanitizeBoard(board) {
-  /* The sweep must not eat what an open editor is still writing (issue #145
-     baseline prerequisite). renderBoard runs
-     on flows that can land inside the 300ms save debounce — a board swap, a
-     rail re-read, a visibility flip — and a record whose text still lives only
-     in its DOM node reads as a whitespace husk from stale `current`. Skip the
-     record whose editor is open this render; the sweep is per-render, so the
-     husk (if it survives blur) is swept on the next one. Same id for notes and
-     lot rows: both records carry `id`. */
+  /* The sweep must not eat what an open editor is still writing. renderBoard
+     runs on flows that can land inside the 300ms save debounce — a board swap,
+     a rail re-read, a visibility flip — and a record whose text still lives
+     only in its DOM node reads as a whitespace husk from stale `current`. Skip
+     the record whose editor is open this render; the sweep is per-render, so
+     the husk (if it survives blur) is swept on the next one. Same id for notes
+     and lot rows: both records carry `id`. */
   const editingId = (() => {
     const ed = document.activeElement;
     if (!isEditing(ed)) return null;
@@ -40,75 +37,73 @@ function sanitizeBoard(board) {
   const n = board.notes.length, l = board.parkingLot.length;
   board.notes = board.notes.filter(keep);
   board.parkingLot = board.parkingLot.filter(keep);
-  // A note swept here (an empty husk) takes its links with it (issue #142, B91).
+  // A note swept here (an empty husk) takes its links with it (B91).
   const linksChanged = pruneLinks(board);
   return board.notes.length !== n || board.parkingLot.length !== l || linksChanged;
 }
 
-/* The ladder rotates with the board type (issue #96 / B67). This attribute is
-   the whole of what app.js says about colour: styles.css rebinds the ladder's
-   token names under #board[data-cat=...], so every layer that draws the board
-   picks up the new hue through the var() it already reads. No hex belongs
-   here (UIUX §2.2 is the rendering authority). catOf() is the read-site
-   default, so a record without a category renders as a Note board — the same
-   bucket the list files it in, which is the agreement the card preview
-   depends on. Both call sites have already established `current`. */
+/* The ladder rotates with the board type (B67). This attribute is the whole of
+   what render.js says about colour: styles.css rebinds the ladder's token
+   names under #board[data-cat=...], so every layer that draws the board picks
+   up the new hue through the var() it already reads. No hex belongs here (UIUX
+   §2.2 is the rendering authority). catOf() is the read-site default, so a
+   record without a category renders as a Note board — the same bucket the list
+   files it in, which is the agreement the card preview depends on. Both call
+   sites have already established `current`. */
 export function applyBoardCat() {
   el.board.dataset.cat = catOf(state.current);
-  /* B130 (issue #249): the All-Boards rail wears the same ladder as the board
-     it stands on. #pane sits outside #board's scope, so it carries its own
-     data-cat — styles.css rebinds the same rungs under #pane[data-cat=...].
-     The rail's own children (.cat-button/.board-cat) carry data-cat too, but
-     the ladder binds by direct id+attribute, so a child's attribute never
-     re-scopes the pane. */
+  /* B130: the All-Boards rail wears the same ladder as the board it stands on.
+     #pane sits outside #board's scope, so it carries its own data-cat —
+     styles.css rebinds the same rungs under #pane[data-cat=...]. The rail's
+     own children (.cat-button/.board-cat) carry data-cat too, but the ladder
+     binds by direct id+attribute, so a child's attribute never re-scopes the
+     pane. */
   el.pane.dataset.cat = catOf(state.current);
 }
 
-/* The tab/OS-window title follows the view (issue #148 item 2). Chrome only —
-   nothing on the canvas reads or renders it; the views themselves stay exactly
-   as specified in UIUX §10. Board view shows the board's own title text (the
-   anchor's copy, 'What's up?' when untitled — the same rule renderBoard
-   applies to the anchor); the picker and a drilled category name themselves. */
-/* B133 (issue #273): the linked To-Do board's own title seat is the day's, not
-   the reader's. The name is the pinned string and the board's date rides on a
-   line beneath it, both generated HERE at render — never stored, so a linked
-   board already in a store shows them with no migration pass and its stored
-   `title` is simply ignored at this seat. The date reads MM/DD/YY straight off
-   the board's `cal` key (the reading `ensureLinkedBoard`'s retired title used:
-   zero-padded month/day, the year's last pair). Every other board keeps its
-   ordinary editable title. */
-// Exported for boards.js (issue #303): the card's title seat reads the same
-// pinned name + date pair — one authority, no second string or formatter.
+/* B133: the linked To-Do board's own title seat is the day's, not the
+   reader's. The name is the pinned string and the board's date rides on a line
+   beneath it, both generated HERE at render — never stored, so the board's
+   stored `title` is simply ignored at this seat. The date reads MM/DD/YY
+   straight off the board's `cal` key (zero-padded month/day, the year's last
+   pair). Every other board keeps its ordinary editable title. */
+// Exported for boards.js: the card's title seat reads the same pinned name +
+// date pair — one authority, no second string or formatter.
 export const LINKED_TITLE = "Today's To Do";
 export const linkedDate = (calKey) => {
   const p = calKey.split('-');                       // [YYYY, MM, DD]
   return p[1] + '/' + p[2] + '/' + p[0].slice(2);
 };
 
+/* The tab/OS-window title follows the view. Chrome only — nothing on the
+   canvas reads or renders it; the views themselves stay exactly as specified
+   in UIUX §10. Board view shows the board's own title text (the anchor's copy,
+   'What's up?' when untitled — the same rule renderBoard applies to the
+   anchor); the picker and a drilled category name themselves. */
 export function syncViewTitle() {
   const s = history.state;
   if (s && s.v === 'cat') document.title = `${COPY['cat' + s.cat[0].toUpperCase() + s.cat.slice(1)] || s.cat} · Zeved Boards`;
   else if (s && s.v === 'list') document.title = `All boards · Zeved Boards`;
   else {
     // B133: the tab carries the anchor's copy — on a linked board that copy is
-    // the pinned name, not the superseded stored title.
+    // the pinned name, not the stored title.
     const name = state.current && state.current.cal ? LINKED_TITLE
       : (state.current && state.current.title && state.current.title.trim()) || null;
     document.title = name ? `${name} · Zeved Boards` : 'Zeved Boards';
   }
 }
 
-/* Issue #393 (the owner's ruling of 2026-10-11): ONLY the linked To Do
-   board's MIRRORED Requirements lines render in read state as square blocks —
-   the calendar's .cal-note species, board-scoped (.req-squares/.req-square,
-   UIUX §2.2.2) — in the calendar ladder's own orange, deliberately apart
-   from this board's blue. The span is mirrorEventsOf's own law (state.js):
-   the first `calReq` lines are the mirror's, everything after them is the
-   reader's hand and stays plain pre-wrap text. A board that has never synced
-   carries no `calReq`, and `typeof !== 'number'` renders no squares — safe,
-   because syncMirror writes the span on its first run and the next render
-   converges (B21's read-site-default idiom, no migration). Non-linked boards
-   have no span and are untouched by this function entirely.
+/* ONLY the linked To Do board's MIRRORED Requirements lines render in read
+   state as square blocks — the calendar's .cal-note species, board-scoped
+   (.req-squares/.req-square, UIUX §2.2.2) — in the calendar ladder's own
+   orange, deliberately apart from this board's blue. The span is
+   mirrorEventsOf's own law (state.js): the first `calReq` lines are the
+   mirror's, everything after them is the reader's hand and stays plain
+   pre-wrap text. A board that has never synced carries no `calReq`, and
+   `typeof !== 'number'` renders no squares — safe, because syncMirror writes
+   the span on its first run and the next render converges (B21's
+   read-site-default idiom, no migration). Non-linked boards have no span and
+   are untouched by this function entirely.
 
    The string stays the single source of truth: this is READ-state rendering
    only. The `.req-mirrored` flag it leaves on the anchor is what lets
@@ -174,10 +169,10 @@ export function renderBoard() {
       node.removeAttribute('tabindex'); node.removeAttribute('contenteditable');
       continue;
     }
-    // Issue #393: the Requirements anchor's READ state is the mirror's
-    // squares on a linked board (paintRequirementsRead above); the .filled
-    // flag still reads the string, because squares or not it is the same
-    // one string that is filled or empty.
+    // The Requirements anchor's READ state is the mirror's squares on a
+    // linked board (paintRequirementsRead above); the .filled flag still reads
+    // the string, because squares or not it is the same one string that is
+    // filled or empty.
     if (key === 'requirements') paintRequirementsRead(node, state.current);
     else node.textContent = state.current[key] || '';
     node.classList.toggle('filled', !!(state.current[key] && state.current[key].length));
@@ -232,13 +227,13 @@ export function makeNoteEl(note) {
     + (note.highlighted ? ' highlight' : '');   // B71: an amber wash, toggled per note
   node.dataset.id = note.id;
   node.setAttribute('tabindex', '0');
-  applyNoteWidth(node, note);                               // wrap at the sheet edge (issue #53)
+  applyNoteWidth(node, note);                               // wrap at the sheet edge
   placeNote(node, note);                                    // left / top / the similarity (B64)
 
   makeBody(node, 'note', note.text, true);
   renderNoteTitle(node, note);                               // the Title tab (B120) — absent when empty
   setCarriedUi(node, note);                                  // the carried status shadow (B110)
-  node.appendChild(makeNoteToolbar(note));                   // the on-select action row (B84) — Remind included (issue #240)
+  node.appendChild(makeNoteToolbar(note));                   // the on-select action row (B84), Remind included
   setReminderUi(node, note);                                 // class + aria follow the record (needs the row in place)
   applyCompleteA11y(node, note.state === 'complete');
   // Both reads need layout, so they run once the node is in the DOM (the same
@@ -249,14 +244,14 @@ export function makeNoteEl(note) {
   return node;
 }
 
-/* --- 6.4 The reminder toggle (issue #169, B104/B109; the Remind tab, issue #240) --- */
+/* --- 6.4 The reminder toggle (B104/B109) ---------------------------------- */
 
-/* The clock toggle is now the toolbar's third tab (issue #240): one tap sets or
-   clears the reminder (B104) — no picker, no dialog, no time. Off the record
-   stays lean: clearing DELETES the key (B21's absence-is-off idiom), so a legacy
-   note and a cleared one are the same shape. makeNoteToolbar draws the tab with
-   the .note-clock class, so the toggle path (interactions.js) and the glow
-   selector (.note.reminder .note-clock) hold unchanged. */
+/* The clock toggle is the toolbar's third tab: one tap sets or clears the
+   reminder (B104) — no picker, no dialog, no time. Off the record stays lean:
+   clearing DELETES the key (B21's absence-is-off idiom), so a legacy note and
+   a cleared one are the same shape. makeNoteToolbar draws the tab with the
+   .note-clock class, which the toggle path (interactions.js) and the glow
+   selector (.note.reminder .note-clock) key on. */
 
 /* The clock's look follows the record (aria carries the state too — never
    colour alone, UIUX §1). Called from the render paths and the toggle. The
@@ -317,7 +312,7 @@ export function runClockAction(btn) {
   });
 }
 
-/* --- 6.5 Surfaced reminder cards (issue #169, B109) -----------------------
+/* --- 6.5 Surfaced reminder cards (B109) -----------------------------------
    A note with `reminder` set on ANY board other than today's linked To-Do
    renders an ECHO of itself there — one source of truth (the record never
    leaves its board; nothing is copied, so nothing can diverge), computed at
@@ -347,10 +342,10 @@ function makeSurfacedEl(note, srcBoard) {
   placeNote(node, note);
 
   makeBody(node, 'note', note.text, false);      // inert: no textbox role, no editor (B109)
-  /* B109's echo carries the Remind tab on its own one-tab row (issue #240):
-     the echo is inert to tap/drag/edit, but the clock's recognizer route writes
-     the SOURCE record through (toggleSurfacedReminder). aria mirrors the source
-     record — an active reminder always reads "Remove reminder". */
+  /* B109's echo carries the Remind tab on its own one-tab row: the echo is
+     inert to tap/drag/edit, but the clock's recognizer route writes the SOURCE
+     record through (toggleSurfacedReminder). aria mirrors the source record —
+     an active reminder always reads "Remove reminder". */
   const bar = document.createElement('div');
   bar.className = 'note-toolbar';
   bar.setAttribute('role', 'toolbar');
@@ -418,14 +413,14 @@ async function toggleSurfacedReminder(id) {
   renderBoard();                        // clock-off unsurfaces; nothing to re-add
 }
 
-/* The note's action toolbar (B84, issue #126; four tabs per issue #240, UIUX §4.5 / UIUX §14):
-   flat tabs on the note's bottom edge — Complete/Restore · Highlight · Remind ·
-   Delete, Delete last in --danger. It is a CHILD of the note, so it
-   scales with it (never wider than the note it belongs to) and rides the board's
-   renderScale like every other mark. It is drawn always but shown only on
-   select/focus (CSS); routed through the recognizer, not native clicks (B84,
-   like .sel-btn). The marks are GLYPH's own drawn SVG (UIUX §13.3), each SVG
-   aria-hidden with the label on the button for AT. */
+/* The note's action toolbar (B84, UIUX §4.5 / UIUX §14): flat tabs on the
+   note's bottom edge — Complete/Restore · Highlight · Remind · Delete, Delete
+   last in --danger. It is a CHILD of the note, so it scales with it (never
+   wider than the note it belongs to) and rides the board's renderScale like
+   every other mark. It is drawn always but shown only on select/focus (CSS);
+   routed through the recognizer, not native clicks (B84, like .sel-btn). The
+   marks are GLYPH's own drawn SVG (UIUX §13.3), each SVG aria-hidden with the
+   label on the button for AT. */
 function makeNoteToolbar(note) {
   const bar = document.createElement('div');
   bar.className = 'note-toolbar';
@@ -465,12 +460,11 @@ export function updateNoteToolbar(node, note) {
   if (hl) hl.setAttribute('aria-label', note.highlighted ? COPY.unhighlight : COPY.highlight);
 }
 
-/* The row hangs below the note's bottom edge, centred (issue #173, B120). The
-   row is a note child, so its board-logical height scales with the note
-   (effScale). If the row would extend past the sheet, issue #298 raises the
-   note itself so the flush-below seat still fits. renderY is stable across
-   fold/renderScale. */
-/* Returns true when the note was raised (so callers can batch their save). */
+/* The row hangs below the note's bottom edge, centred (B120). The row is a
+   note child, so its board-logical height scales with the note (effScale). If
+   the row would extend past the sheet, the note itself is raised so the
+   flush-below seat still fits. renderY is stable across fold/renderScale.
+   Returns true when the note was raised (so callers can batch their save). */
 export function reflectToolbarSeat(node, note, save = true) {
   const need = node.offsetHeight + TB_ROW_H * effScale(note); // card + row, logical
   const maxY = Math.max(0, LOGICAL_H - need);
@@ -483,9 +477,9 @@ export function reflectToolbarSeat(node, note, save = true) {
   return false;
 }
 
-/* Issue #298: a frame change (viewport, fold, URL-bar show/hide) re-seats every
-   note — the seat is a law of the current frame, never a stale verdict. Fired
-   from boards' frameReflow hook after layout reflows. */
+/* A frame change (viewport, fold, URL-bar show/hide) re-seats every note —
+   the seat is a law of the current frame, never a stale verdict. Fired from
+   boards' frameReflow hook after layout reflows. */
 export function seatAllNotes() {
   if (!state.current) return;
   let raised = false;
@@ -504,13 +498,13 @@ export function seatAllNotes() {
   if (raised) saveNow();              // one save for the whole pass, not one per note
 }
 
-/* The note's optional Title (issue #173, B120): a header-style tab peeking from
-   BEHIND the card's top-left corner. One element factory, two callers — the
-   render path (the record already carries a title) and the menu's edit path
-   (the tab is created empty for typing). It is a CHILD of the note, so it
-   scales with it; z-index 0 keeps it above the note's hit collar but under the
-   card body (.note-text, z-index 1), which covers the tab's tucked feet — the
-   peek reads as a note slid up from behind. */
+/* The note's optional Title (B120): a header-style tab peeking from BEHIND the
+   card's top-left corner. One element factory, two callers — the render path
+   (the record already carries a title) and the menu's edit path (the tab is
+   created empty for typing). It is a CHILD of the note, so it scales with it;
+   z-index 0 keeps it above the note's hit collar but under the card body
+   (.note-text, z-index 1), which covers the tab's tucked feet — the peek reads
+   as a note slid up from behind. */
 export function ensureNoteTitleEl(node) {
   let tab = node.querySelector('.note-title');
   if (tab) return tab;
@@ -532,22 +526,21 @@ function renderNoteTitle(node, note) {
 
 /* The ids one note act runs on: the whole desktop multi-selection when this
    note is its PRIMARY, else this note alone. Mobile has no selection, so it is
-   always the single note (issue #55). One definition for Copy and for the
-   toolbar's acts, so "which notes did that touch" cannot diverge between
-   them. */
+   always the single note. One definition for Copy and for the toolbar's acts,
+   so "which notes did that touch" cannot diverge between them. */
 function actionNoteIds(id) {
   const inMulti = selected && selected.kind === 'note' &&
                   multiSel.size > 1 && multiSel.has(id);
   return inMulti ? selectedNoteIds() : [id];
 }
 
-/* Copy one note's text — or, where the desktop multi-selection reaches the menu,
-   the whole selection's, primary first, one \n between (issue #171, B114). One
-   home for the act: the note menu's Copy item routes here (the toolbar branch it
-   moved out of retired with its tab), so the join expression has exactly one
-   definition. note.text is live off every keystroke (the input handler), so Copy
-   needs no blur — it copies the current text and leaves the note engaged. The
-   caller supplies the commit (buildMenu's commitAction drop-guard). */
+/* Copy one note's text — or, where the desktop multi-selection reaches the
+   menu, the whole selection's, primary first, one \n between (B114). One home
+   for the act: the note menu's Copy item routes here, so the join expression
+   has exactly one definition. note.text is live off every keystroke (the input
+   handler), so Copy needs no blur — it copies the current text and leaves the
+   note engaged. The caller supplies the commit (buildMenu's commitAction
+   drop-guard). */
 export function copyNoteTexts(anchorId) {
   const ids = actionNoteIds(anchorId);
   copyText(ids.map(id => {
@@ -578,8 +571,8 @@ export function runNoteToolbarAction(btn) {
       if (ids.length > 1) setSelectedNotesHighlight(!note.highlighted);
       else toggleHighlight(noteNode);                     // primary keys the direction
     } else {                                              // complete / restore
-      // #54's law: completing buries the text (UIUX §4.3), so an open editor on this
-      // note commits first — the veil never falls over a live caret.
+      // Completing buries the text (UIUX §4.3), so an open editor on this note
+      // commits first — the veil never falls over a live caret.
       if (editingHere()) document.activeElement.blur();
       if (ids.length > 1) setSelectedNotesState(note.state === 'complete');
       else if (note.state === 'complete') restoreNote(noteNode); else completeNote(noteNode);
@@ -610,7 +603,7 @@ export function applyCompleteA11y(node, complete) {
   }
 }
 
-/* --- 6.6 Note links (issue #142, B91) ------------------------------------
+/* --- 6.6 Note links (B91) ------------------------------------------------
    A relationship the user ASSERTS between two notes — the board's first
    inter-note structure, resolved against "relationships asserted not inferred"
    (PRD §1). Stored per board as unordered {id,a,b} pairs; drawn as a 1px
@@ -687,10 +680,9 @@ export function clearLink() {
 
 /* The link layer: one <svg> in board space, a sibling of the notes like
    #selection, so it rides #board's translate+scale and needs no screen-space
-   math. pointer-events:none (CSS) — hit-testing is target.closest()-based, so a
-   hittable line would steal note taps. z-index:1 (CSS): below the z:2 notes, and
-   — appended after the static furniture — above the z:1 furniture, the valid-
-   integer realization of the issue's "z-index: 1.5" (B91). */
+   math. pointer-events:none (CSS) — hit-testing is target.closest()-based, so
+   a hittable line would steal note taps. z-index:1 (CSS): below the z:2 notes
+   and, appended after the static furniture, above the z:1 furniture (B91). */
 const SVGNS = 'http://www.w3.org/2000/svg';
 let linkLayer = null;                  // the one <svg> the link lines ride in
 const linkLineEls = new Map();       // link.id -> <line>
@@ -737,16 +729,16 @@ export function updateLinks() {
   }
 }
 
+/* Region init: the keydown listener is attached by registerRender(), called
+   from boot() — no module does load-time work.
 
-/* Region init (issue #182): top-level side effects, explicit register()
-   call from boot() — no module does load-time work. */
-/* Keyboard operability (UIUX §12 / UIUX §4.5): the pointer path routes through the
-   recognizer (setPointerCapture retargets native clicks), so a keyboard Enter/
-   Space on a focused tab is the ONE activation the recognizer never sees. This
-   handles it, and stopPropagation keeps it off the desktop note grammar —
-   without it, Enter on a selected note's tab would ALSO edit the note. The tabs
-   are the keyboard route to Complete/Highlight the removed note menu used to
-   be (B84); Copy rides the menu's own focusable items since B114. */
+   Keyboard operability (UIUX §12 / UIUX §4.5): the pointer path routes through
+   the recognizer (setPointerCapture retargets native clicks), so a keyboard
+   Enter/Space on a focused tab is the ONE activation the recognizer never
+   sees. This handles it, and stopPropagation keeps it off the desktop note
+   grammar — without it, Enter on a selected note's tab would ALSO edit the
+   note. The tabs are the keyboard route to Complete/Highlight (B84); Copy
+   rides the menu's own focusable items (B114). */
 export function registerRender() {
   el.board.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
