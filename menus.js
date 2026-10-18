@@ -34,10 +34,10 @@ export function openMenuFor(target, clientX, clientY) {
   }
   if (!note) return;                    // a stale id (the record was discarded mid-press)
   // Copy (B114): the menu's FIRST item — the note's own state act before the
-  // relational acts, the echo menu's Complete-first precedent (B109). Not raw: a copy is a
-  // consequence, so it commits under buildMenu's drop-guard like every other
-  // item; copyNoteTexts joins the multi-selection primary-first when the
-  // desktop grammar reaches the menu with one live.
+  // relational acts, the echo menu's Complete-first precedent (B109). Not
+  // raw: a copy is a consequence, so it commits under buildMenu's drop-guard
+  // like every other item; copyNoteTexts joins the multi-selection
+  // primary-first when the desktop grammar reaches the menu with one live.
   items.push({ label: COPY.copy, glyph: GLYPH.copy, action: () => copyNoteTexts(id) });
   // The Title (B120): the menu's second kind of act, beside Copy
   // and Link. The toggle wears the act it will perform (B43/B71) — Add when
@@ -67,8 +67,9 @@ export function fillBoardAction(btn, glyph, label) {
 }
 /* The toggle wears the act it will perform (B43/B71's grammar, not a fixed
    noun): on the board it offers All boards; while the All-Boards surface is up
-   (the mobile lot-grid or a drilled list) it offers the way back to this one. One mark (GLYPH.boards, the boards domain), the label alone
-   flips, so state is never colour (UIUX §1). Called from renderBoard and every
+   (the mobile lot-grid or a drilled list) it offers the way back to this
+   one. One mark (GLYPH.boards, the boards domain), the label alone flips, so
+   state is never colour (UIUX §1). Called from renderBoard and every
    list-state transition. The resting label is the short "All" (B95, the
    four-tab row's fit); the other face is the full "This board" (B83). */
 export function syncBoardActions() {

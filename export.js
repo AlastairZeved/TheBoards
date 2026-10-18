@@ -1,4 +1,4 @@
-/* --- 10.5 PDF export -----------------------------------------
+/* --- 10.5 PDF export -------------------------------------------------------
    A board leaves the device as a .pdf, not a screenshot. PDF is a text format
    and the base-14 fonts need no embedding, so the whole exporter is written
    here rather than vendored: a library would be the app's first dependency and
@@ -803,7 +803,7 @@ export async function exportBoardPdf(board) {
   }
 }
 
-/* --- 10.6 JSON backup: export all, import merged (B92; payload v2 per B123) ---------------------------------------------- */
+/* --- 10.6 JSON backup: export all, import merged (B92; payload v2 per B123)  */
 
 /* A calendar day-note record is identified by its rem- id and day key. This
    also recognizes v2 files that placed these records in `boards`. */
@@ -902,12 +902,12 @@ function normalizeImportedDayNote(raw) {
 /* Merge-import: a board whose id already exists is OVERWRITTEN by the file's
    copy; new ids are ADDED. A backup-restore in miniature — the file's board
    is the truth for that id, the device keeps every board the file never
-   mentions. B123 extends the same rule to calendar events, type-aware: a v2
-   file carries them in the top-level `calendarEvents` array; a v1 file,
-   whose exporter put events in `boards` where board normalization drops
-   every one, is salvaged by filtering the raw `boards` array through
-   `eventsOf` BEFORE board normalization touches it. Events import by the same merge rule:
-   overwrite by id, the device keeps every event the file never mentions. */
+   mentions. B123 extends this to calendar events, type-aware: a v2 file
+   carries them in the top-level `calendarEvents` array; a v1 file, whose
+   exporter put events in `boards` where board normalization drops every
+   one, is salvaged by filtering the raw `boards` array through `eventsOf`
+   BEFORE board normalization touches it. Events overwrite by id too; the
+   device keeps every event the file never mentions. */
 export async function importBoardsJson(file) {
   let payload;
   try {
