@@ -380,10 +380,10 @@ export const effScale = (note) => (note.scale || 1) * noteK(note);
 export const renderY  = (note) => note.y * noteK(note);
 
 /* A note's on-sheet seat — left, top, and the similarity's scale (B64). The
-   one write every site that publishes a note's position makes: the render
-   paths (makeNoteEl, a surfaced echo), a frame change (applyFrame), and the
-   gestures' own tails when a note moves. Kept here, beside the three
-   coordinates it writes, so no caller restates the transform. */
+   one write the render paths (makeNoteEl, a surfaced echo), a frame change
+   (applyFrame), and seatAllNotes make. The drag and resize tails write raw
+   note.x/note.y and do not call it. Kept here, beside the three coordinates
+   it writes, so no caller restates the transform. */
 export function placeNote(node, note) {
   node.style.left = renderX(note) + 'px';
   node.style.top = renderY(note) + 'px';

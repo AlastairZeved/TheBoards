@@ -604,12 +604,9 @@ function exportNotes(p, rec) {
 /* ---- Page 2+: the text ---------------------------------------------------
    The board again, as prose — so the file is searchable and readable at a
    glance. Completed items keep their place in the order but not their words. */
-/* The page machinery exportTextPages runs on, extracted verbatim: opens and
-   closes A4 text pages and lays paragraphs under a running baseline. The
-   old closures become the returned object's members (`cur` is the live
-   canvas, `y` reads and writes the baseline). */
 /* The page machinery the two prose exports run on: opens and closes A4 text
-   pages and lays paragraphs under a running baseline.
+   pages and lays paragraphs under a running baseline. `cur` is the live
+   canvas; `y` reads and writes the baseline.
 
    `overflow` is what running out of page MEANS. 'paginate' (the board's
    default) simply opens another — a board's prose can be any length. 'error'
@@ -670,8 +667,6 @@ function pdfBullets(t, label, items, { mark = true } = {}) {
   if (label) t.heading(label);
   const indent = 14;
   for (const it of items) {
-    // A completed item keeps its place in the order but not its words —
-    // the same promise the scratch-out makes on page 1.
     const done = it.state === 'complete';
     const color = done ? PDF_SHADE : PDF_INK;
     const lines = pdfWrap(done ? COPY.pdfCompleted : it.text, false, 10, t.W - indent);
