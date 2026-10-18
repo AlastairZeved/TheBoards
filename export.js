@@ -16,7 +16,6 @@
    its own `1 0 0 -1` text matrix, which cancels the flip and leaves the scale.
    ---------------------------------------------------------------------- */
 
-// Native ESM, no bundler (AGENTS.md).
 import { BOARD_CATS, COPY, LOT_HEAD, LOT_MAX_FRAC, LOT_ROW, NOTE_MIN_W, REF_W, REF_H, UNDO_MS, calDayName, calEventsOf, calMD, calWindow, copyRecordFields, eventsOf, live, makeRecord, pad2, state, uuid } from './state.js';
 import { flushSave, idbGet, idbGetAll, idbPut } from './persistence.js';
 import { LOGICAL_H, LOGICAL_W, bandRuleYFor, noteKFor, noteMaxW } from './geometry.js';
@@ -700,7 +699,7 @@ export function buildBoardPdf(rec) {
                      rec.title || COPY.untitled);
 }
 
-/* ---- The calendar's 7-day reference sheet -------------------
+/* ---- The calendar's 7-day reference sheet ---------------------------------
    One text page: the rolling week as it renders — today first, one line per
    event, completed events reading "— completed —".
    Built from the same primitives as exportTextPages; reads STORAGE (the
@@ -803,7 +802,7 @@ export async function exportBoardPdf(board) {
   }
 }
 
-/* --- 10.6 JSON backup: export all, import merged (B92; payload v2 per B123)  */
+/* --- 10.6 JSON backup: export all, import merged (B92; payload v2 per B123) */
 
 /* A calendar day-note record is identified by its rem- id and day key. This
    also recognizes v2 files that placed these records in `boards`. */

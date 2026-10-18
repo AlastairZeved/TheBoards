@@ -74,8 +74,8 @@ the project has none.
    the module ownership table in `CLAUDE.md`.
 3. **IndexedDB is the only persistence**, through a debounced save queue
    (`scheduleSave`/`saveNow`). The standard namespace is `boards-db`; embed
-   mode uses `boards-db-embed` (`persistence.js:11`), with the same `boards`
-   store. No server round-trip anywhere.
+   mode uses `boards-db-embed` (`DB_NAME` in `persistence.js`), with the same
+   `boards` store. No server round-trip anywhere.
 4. **Actions commit on release, guarded against re-fire** (B18 → B81): every
    committing consequence runs through `commitAction()`, which briefly drops a
    second tap. Any new interactive consequence goes through it, not a bespoke

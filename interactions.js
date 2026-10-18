@@ -295,8 +295,9 @@ function tapCanvas(x, y) {
   // desktop click fell through and created a note on top of the dismissal.
   // The NEXT click creates.
   if (isEditing(document.activeElement)) { document.activeElement.blur(); return; }
-  // Creation surfaces deselect first: with a selection active a tap only dismisses; capture is only primary
-  // when nothing is selected or being edited.
+  // Creation surfaces deselect first: with a selection active a tap only
+  // dismisses; capture is only primary when nothing is selected or being
+  // edited.
   if (state.isDesktop && selected) { clearSelection(); return; }
   if (!state.isDesktop && engaged) { clearEngaged(); return; }   // mobile: tap-away deselects; a further tap creates (B90)
   createNote(x, y);                // capture is instant on both (B27, B81)
@@ -511,7 +512,8 @@ function commitNoteTitle(node) {
 }
 /* The menu's Add/Edit Title act (B120): the tab is created empty if the note
    has none, then the cursor lands in it with the keyboard ready. Editing
-   raises the note (B27) like every other edit entry. Arming is edit-entry — navigation, no drop-guard. */
+   raises the note (B27) like every other edit entry. Arming is edit-entry —
+   navigation, no drop-guard. */
 export function editNoteTitle(node) {
   const note = noteRec(node.dataset.id);
   if (!note) return;

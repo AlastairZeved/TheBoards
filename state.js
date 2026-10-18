@@ -159,8 +159,8 @@ export const COPY = {
   // there.
   calBoardTab: 'All', calendar: 'Calendar',
   // The calendar's exit control (B151): both rails' way off reads `Go Back`,
-  // no arrow glyph. The key and the element id keep the name `Collapse` once
-  // had.
+  // no arrow glyph. The `paneCollapse` key and `#pane-collapse` id keep the
+  // `Collapse` name; only the value changed.
   calToday: 'Today', calBack: 'Go Back',
   paneCollapse: 'Go Back',   // the expanded All-Boards rail's way off (B118, B151)
   // A day card's header: "Today" then the long date; the future days read
@@ -242,7 +242,8 @@ export const CE = (() => {
    A session is desktop iff the primary pointer is fine and can hover AND the
    window is wide enough for the rail. Capability — not width, not UA — is what
    excludes tablets: iPadOS reports coarse/none even with a trackpad. One flag +
-   one class are the single source of truth; CSS gates on html.desktop only. */
+   one class are the single source of truth; CSS gates on html.desktop (touch/hover grammar) and html.wide (arrangement,
+   B96). */
 /* Tablet (B103): ONE leg — `min-width: 744px` — orientation-blind. 744 is iPad
    mini portrait's width, so every iPad and Android tablet qualifies in either
    orientation and unfolded foldables qualify at every practical zoom; no phone

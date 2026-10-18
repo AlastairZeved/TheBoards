@@ -45,8 +45,8 @@ function sanitizeBoard(board) {
 /* The ladder rotates with the board type (B67). This attribute is the whole of
    what render.js says about colour: styles.css rebinds the ladder's token
    names under #board[data-cat=...], so every layer that draws the board picks
-   up the new hue through the var() it already reads. No hex belongs here (UIUX
-   §2.2 is the rendering authority). catOf() is the read-site default, so a
+   up the new hue through the var() it already reads. No hex belongs here
+   (UIUX §2.2 is the rendering authority). catOf() is the read-site default, so a
    record without a category renders as a Note board — the same bucket the list
    files it in, which is the agreement the card preview depends on. Both call
    sites have already established `current`. */
@@ -94,7 +94,8 @@ export function syncViewTitle() {
 }
 
 /* ONLY the linked To Do board's MIRRORED Requirements lines render in read
-   state as square blocks — the calendar's .cal-note species, board-scoped
+   state as square blocks (B163; the phone tier draws each as a one-line chip,
+   B164) — the calendar's .cal-note species, board-scoped
    (.req-squares/.req-square, UIUX §2.2.2) — in the calendar ladder's own
    orange, deliberately apart from this board's blue. The span is
    mirrorEventsOf's own law (state.js): the first `calReq` lines are the

@@ -26,7 +26,7 @@ function frameGuard() {
   throw new Error('frame-guard: framing origin not allowed (B125)');
 }
 
-/* --- Trusted Types default policy ----------------------------
+/* --- Trusted Types default policy ------------------------------------------
    index.html's CSP meta declares require-trusted-types-for 'script', which
    makes every DOM XSS sink (innerHTML, outerHTML, the eval family) and every
    script-URL assignment throw unless a write carries a Trusted* value. HTML
@@ -109,8 +109,8 @@ function setTierClasses({ desktop, tablet, wide }) {
   state.isDesktop = desktop;
   state.isWide = wide;
   document.documentElement.classList.toggle('desktop', desktop);
-  // The wide class is the CSS arrangement gate for the rail and the picker
-  // overlay (B96).
+  // The wide class is the CSS arrangement gate for the rail and the calendar
+  // panel (B96).
   document.documentElement.classList.toggle('tablet', tablet);
   document.documentElement.classList.toggle('wide', wide);
 }
@@ -126,7 +126,8 @@ function applyTier(tier) {
   // The calendar across the flip: the panel arrangement belongs to the wide
   // grammar, so a flip while it is open closes it and pops its history entry
   // (nothing typed is lost — calendar lines live in linked boards, not in the
-  // view). A flip TO a wide class re-enters via the tab.
+  // view). A flip TO a wide class re-enters through the rail (showCalRail below), not
+  // the tab.
   // B99: on wide the calendar is FURNITURE — the rail survives every flip;
   // only the mobile screen state and the wide EXPANDED panel tear down (the
   // expanded panel's squeeze must lift so the frame re-reads the rail's 40px).

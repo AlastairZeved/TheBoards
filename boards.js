@@ -523,9 +523,9 @@ async function deleteBoard(id, row) {
   // This holds whether the delete came from the rail or the desktop drilled view.
   if (state.isDesktop && wasCurrent) await ensureCurrentValid();
   if (listOpen) {
-    // Re-paginate the visible list overlay (the drill, either platform, or the
-    // desktop picker). The row's own leave() plays first, so a delete on a full
-    // page pulls the next board up instead of leaving a hole. The rail behind a
+    // Re-paginate the visible list overlay (the drill, on either platform).
+    // The row's own leave() plays first, so a delete on a full page pulls the
+    // next board up instead of leaving a hole. The rail behind a
     // desktop drill is hidden — rendering it here would leave the visible drill
     // with the hole.
     setTimeout(renderListSurface, LEAVE_MS);
@@ -810,8 +810,8 @@ async function ensureCurrentValid() {
    hides it once it has fallen — sequenced by setTimeout, never transitionend
    (B24): reduced-motion kills the transition and the hide still lands on the
    same clock, and a re-open before it fires re-adds .show so the guard leaves
-   the panel up. Desktop hides its full-screen overlay at once — there is no
-   panel to fall. */
+   the panel up. Wide hides its full-screen overlay at once — there is no
+   panel to fall, and its tests expect an instant hide. */
 function hideListView() {
   el.listView.classList.remove('show');
   if (state.isWide) { el.listView.hidden = true; return; }
@@ -1109,10 +1109,10 @@ async function launchTodayBoard(today) {
     rollDay = today;
     // The guarded body: everything after the stamp, unwound on failure.
     try {
-      // B131: the boot pick can BE a ghost (the most-recent record is often a
-      // future board with no notes). Detach it BEFORE flushSave — persist()
-      // early-returns on no current, so the ghost's snapshot never lands behind
-      // the sweep's delete and resurrects it.
+      // B131: the boot pick can BE a ghost (the most-recent record can be a
+      // future board with no notes, left by a pre-B131 build). Detach it BEFORE
+      // flushSave — persist() early-returns on no current, so the ghost's
+      // snapshot never lands behind the sweep's delete and resurrects it.
       if (state.current && state.current.cal > today &&
           !(state.current.notes || []).length) state.current = null;
       flushSave();
@@ -1407,8 +1407,8 @@ function makeCalNote(rec) {
   return block;
 }
 
-/* The one-zone editor. The commit is the blur and writes `next` — `rem` is no
-   longer rendered or edited and stays stored but unread. A commit that leaves
+/* The one-zone editor. The commit is the blur and writes `next` — `rem` is
+   neither rendered nor edited; it stays stored but unread. A commit that leaves
    both fields empty discards the record and the block (B8's rule: the frame
    must earn its keep). */
 function startCalNoteEdit(block, rec) {

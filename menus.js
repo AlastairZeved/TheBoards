@@ -1,5 +1,4 @@
 /* --- 10. Long-press menu ------------------------------------------------- */
-// Native ESM, no bundler (AGENTS.md).
 import { COPY, GLYPH, el, histPush, noteRec, state } from './state.js';
 import { beginLink, completeSurfaced, copyNoteTexts, linkSource, surfacedMap } from './render.js';
 import { commitAction, editNoteTitle, isEditing } from './interactions.js';
@@ -52,10 +51,10 @@ export function openMenuFor(target, clientX, clientY) {
   buildMenu(items, clientX, clientY);
 }
 
-/* The board-action row (B83; four tabs, B95): the board-level actions are
-   flat tabs above the Parking Lot, controls that state their own act rather
-   than a hidden gesture. Anchors carry no menu (B92): every action sits on a
-   visible tab. */
+/* The board-action row (B83): four tabs on mobile (B95); wide hides All and
+   Calendar (B119, B99). The board-level actions are flat tabs above the
+   Parking Lot, controls that state their own act rather than a hidden
+   gesture. Anchors carry no menu (B92): every action sits on a visible tab. */
 
 /* Fill a tab with its drawn mark (UIUX §13.3) and label. Built once at boot;
    the toggle only restates its label text afterwards (syncBoardActions). */

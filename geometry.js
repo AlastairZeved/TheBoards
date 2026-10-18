@@ -224,11 +224,11 @@ function editingInBoard() {
    retraction being real: the viewport's WIDTH is unchanged by this resize (a
    fold always changes width — that is what a fold is; the keyboard never does)
    and, where the engine reports it (Chromium/Android: navigator.virtualKeyboard),
-   the virtual keyboard is not still up. Either leg
-   failing means "not a retraction": defer, never blur. The comparison is
-   against the width of the PREVIOUS resize of this edit, not against the
-   floor's — folding back lands on the cover width the keyboard was up at, so a
-   floor-relative compare would read the fold-back as a retraction.
+   the virtual keyboard is not still up. Either leg failing means "not a
+   retraction": defer, never blur. The comparison is against the width of the
+   PREVIOUS resize of this edit, not against the floor's — folding back lands
+   on the cover width the keyboard was up at, so a floor-relative compare
+   would read the fold-back as a retraction.
    state.editVP.width is cleared with the floor on focusout so an edit never
    inherits the last one's width. */
 function keyboardStillUp() {
