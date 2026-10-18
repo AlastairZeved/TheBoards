@@ -575,13 +575,13 @@ export function runNoteToolbarAction(btn) {
     } else if (btn.classList.contains('note-tb-highlight')) {
       // The wash leaves the text editable, so Highlight keeps the note engaged
       // too (mobile can toggle it twice without re-tapping).
-      if (inMulti) setSelectedNotesHighlight(!note.highlighted);
+      if (ids.length > 1) setSelectedNotesHighlight(!note.highlighted);
       else toggleHighlight(noteNode);                     // primary keys the direction
     } else {                                              // complete / restore
       // #54's law: completing buries the text (UIUX §4.3), so an open editor on this
       // note commits first — the veil never falls over a live caret.
       if (editingHere()) document.activeElement.blur();
-      if (inMulti) setSelectedNotesState(note.state === 'complete');
+      if (ids.length > 1) setSelectedNotesState(note.state === 'complete');
       else if (note.state === 'complete') restoreNote(noteNode); else completeNote(noteNode);
     }
   });
