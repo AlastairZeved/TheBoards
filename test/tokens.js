@@ -617,6 +617,22 @@ console.log('\n[6] The two-tone focus ring clears 3:1 on every ground by constru
     /outline:\s*2px\s+solid\s+var\(--ink-light\)/.test(css) &&
     /box-shadow:[^;}]*0\s+0\s+0\s+4px\s+var\(--ink-dark\)/.test(css));
   ok('--focus-ring is retired (UIUX §16.2)', !/--focus-ring/.test(css));
+  // Issue #439: the ring is written once per variant, as a grouped rule at the
+  // end of the file (last, so each ring keeps winning the ties it won in place).
+  ok('the outward ring is declared once — one grouped rule (UIUX §2.7, issue #439)',
+    (cssBody.match(/outline-offset:\s*2px;\s*box-shadow:\s*0 0 0 4px var\(--ink-dark\);/g) || []).length === 1);
+  ok('the inset ring is declared once',
+    (cssBody.match(/box-shadow:\s*inset 0 0 0 4px var\(--ink-dark\);/g) || []).length === 1);
+  ok('the primary ring is declared once, keeping the control\'s own press-shadow',
+    (cssBody.match(/box-shadow:\s*0 0 0 4px var\(--ink-dark\), 0\.1em 0\.1em var\(--ink-dark\);/g) || []).length === 1);
+  ok('the grouped rings name every surface that wears one',
+    ['.anchor:focus', '.lot-text:focus', '.note-text:focus', '.note-title:focus',
+     '.board-action:focus-visible', '.note-tb-btn:focus-visible', '#toast button:focus-visible',
+     '.cat-button:focus-visible', '#pane-rail:focus-visible', '.cal-act:focus-visible',
+     '.mo-nav:focus-visible', '#cal-rail:focus-visible', '#menu button:focus-visible',
+     '.board-row:focus-visible', '.pane-card:focus-visible', '.pane-del:focus-visible',
+     '.primary-btn:focus-visible', '.pager-btn:focus-visible', '.sel-btn:focus-visible',
+    ].every(sel => cssBody.includes(sel + ',\n') || cssBody.includes(sel + ' {')));
 }
 
 console.log('\n[7] Dark-only: one theme, and the retired tokens stay retired (UIUX §2.1, B48, B58)');
@@ -635,6 +651,27 @@ console.log('\n[7] Dark-only: one theme, and the retired tokens stay retired (UI
     /--elevation:\s*0 2px 8px rgb\(0 0 0 \/ 0\.45\)/.test(css));
   ok('--elevation-inset exists for #pane (UIUX §2.4, §16.2)',
     /--elevation-inset:\s*inset /.test(css) && /#pane\s*{[^}]*var\(--elevation-inset\)/s.test(css.replace(/html\.desktop /g, '')));
+  ok('--elevation-up is --elevation reflected, and the risen list panel reads it (UIUX §2.4, issue #439)',
+    /--elevation-up:\s*0 -2px 8px rgb\(0 0 0 \/ 0\.45\)/.test(css) &&
+    /html:not\(\.desktop\) #list-view\s*{[^}]*box-shadow:\s*var\(--elevation-up\)/s.test(css) &&
+    !/box-shadow:\s*0 -2px 8px/.test(cssBody));
+  // Issue #439: the sections' falloff is ONE token, declared on the ladder
+  // ROOTS. A var() inside a custom property resolves where that property is
+  // declared, so a :root declaration would freeze the To-Do stop on every
+  // ladder — the home is the pin, not just the value (UIUX §2.8).
+  {
+    const falloffBlocks = cssBlocks.filter(([, body]) => /--water-falloff\s*:/.test(body));
+    ok('--water-falloff is declared exactly once (UIUX §2.8, issue #439)', falloffBlocks.length === 1);
+    const sel = falloffBlocks.length ? falloffBlocks[0][0] : '';
+    ok('--water-falloff lives on the ladder roots #board and #cal-view, never :root',
+      /(^|,\s*)#board(,|$)/.test(sel) && /(^|,\s*)#cal-view(,|$)/.test(sel) && !/:root/.test(sel), sel);
+    ok('--water-falloff is the radial falloff reading the ladder\'s own darkest stop',
+      /--water-falloff:\s*radial-gradient\(118% 76% at 50% 24%, rgb\(0 0 0 \/ 0\) 32%, rgb\(var\(--water-bot-a\) \/ 0\.72\) 128%\)/.test(css));
+    ok('the falloff is written once — #band-fill, #lot and #cal-band read the token',
+      (cssBody.match(/radial-gradient\(118%/g) || []).length === 1 &&
+      ['#band-fill', '#lot', '#cal-band'].every(id =>
+        new RegExp(id.replace(/[#.]/g, '\\$&') + '\\s*{[^}]*var\\(--water-falloff\\)', 's').test(cssBody)));
+  }
   // B58: the canvas is the deep, flat under its dither; the falloff died with
   // the water it drew a bound in.
   ok('the canvas is var(--deep), not a field',
@@ -992,7 +1029,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
      /#cal-view\.rail-open #cal-today-board,/.test(css)));
   ok('today wears the to-do boards\' water fall; the current week gets the pale ink-light band (issue #191)',
     /\.mo-cell\.today \{[^}]*linear-gradient\(180deg, var\(--water-top\) 0%, var\(--water-mid\) 46%, var\(--water-bot\) 100%\)/.test(css) &&
-    /\.mo-cell\.wk \{ background: rgb\(244 245 241 \/ \.08\); \}/.test(css));
+    /\.mo-cell\.wk \{ background: rgb\(var\(--ink-a\) \/ \.08\); \}/.test(css));
+  ok('the month cells read the surface\'s ink channels — --ink-a is declared twice (:root, .on-dark) and composed nowhere else (UIUX §2.3, issue #439)',
+    /\.mo-cell:hover \{ background: rgb\(var\(--ink-a\) \/ \.14\); \}/.test(css) &&
+    (cssBody.match(/244 245 241/g) || []).length === 2);
   ok('the tap swaps the week view to the tapped date\'s Sunday-first week; both windows share calWindow (issues #191, #398, #432)',
     /export function calWindow\(count = 7, start = new Date\(\)\)/.test(app) &&
     /function calWeekOf\(anchor\)[\s\S]*?return calWindow\(7, start\)/.test(app) &&

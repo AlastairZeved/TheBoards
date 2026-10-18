@@ -101,7 +101,16 @@
   --carried:         #E1BE26;
   --reminder-glow:   #c6a400;   /* the reminder card-frame bloom (B132): the carried amber's hue held, one more rung down (Y 0.5297 → 0.3847) */
   --elevation:       0 2px 8px rgb(0 0 0 / 0.45);
+  --elevation-up:    0 -2px 8px rgb(0 0 0 / 0.45);   /* --elevation reflected for a bottom sheet: the lift lands on the top seam (UIUX §2.4) */
   --elevation-inset: inset -3px 0 8px rgb(0 0 0 / 0.16), inset 0 2px 4px rgb(0 0 0 / 0.10);
+  /* The touch floor (UIUX §6) — = HIT_FLOOR in state.js. Read by every row and
+     control that IS the floor by ruling (B68), not only by the hit collars. */
+  --hit-floor:       44px;
+  /* Motion (UIUX §8): one curve, two durations — paired with LEAVE_MS and
+     SWAP_MS in state.js (PRD §9.5). */
+  --ease:            cubic-bezier(0.22, 0.61, 0.36, 1);
+  --leave-ms:        200ms;
+  --swap-ms:         260ms;
 }
 
 /* The ink pole flips at the surface boundary and inherits downward
@@ -204,6 +213,14 @@
   --frame:       #b48158;
   --tab-complete: #dbc8b3;
   --note:        #e3c6aa;
+}
+/* The sections' falloff (UIUX §2.8) — one token, three readers (#band-fill,
+   #lot, #cal-band). Declared on the ladder ROOTS, not :root: a var() inside a
+   custom property resolves where that property is declared, so on :root the
+   token would carry the To-Do stop onto every ladder. On #board / #cal-view it
+   reads each ladder's own --water-bot-a, rebound above. */
+#board, #cal-view {
+  --water-falloff: radial-gradient(118% 76% at 50% 24%, rgb(0 0 0 / 0) 32%, rgb(var(--water-bot-a) / 0.72) 128%);
 }
 /* A list/rail card is a small rendering of what it names (UIUX §10), so it
    previews its board's hue. Since issue #107 (B72) a section is a framed,
@@ -368,7 +385,7 @@ body {
   z-index: 1;
   box-sizing: border-box;
   padding: 2px 0 4px;
-  min-height: 44px;                   /* long-pressable even when empty (PRD §6.1) */
+  min-height: var(--hit-floor);       /* long-pressable even when empty (PRD §6.1) */
   color: var(--ink);
   caret-color: var(--ink);
   white-space: pre-wrap;
@@ -382,13 +399,6 @@ body {
 .anchor:not(.filled):not(:focus)::before {
   content: attr(data-placeholder);
   color: var(--ink);
-}
-/* Editing wears UIUX §2.7's two-tone ring: no single hue works on six
-   grounds, so the doubled ring clears 3:1 everywhere by construction. */
-.anchor:focus {
-  outline: 2px solid var(--ink-light);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark);
 }
 
 /* ---- UIUX §3.1 The top band (B33/B38; resettled B47) --------------------
@@ -411,7 +421,7 @@ body {
   /* The band takes the water (B58): the fall under the sections' own
      falloff, light from above, darkening to the rule. */
   background:
-    radial-gradient(118% 76% at 50% 24%, rgb(0 0 0 / 0) 32%, rgb(var(--water-bot-a) / 0.72) 128%),
+    var(--water-falloff),
     linear-gradient(180deg, var(--water-top) 0%, var(--water-mid) 46%, var(--water-bot) 100%);
   z-index: 0;                          /* above the canvas, below the zones */
   pointer-events: none;
@@ -442,7 +452,7 @@ body {
 .band-zone .anchor {
   left: 0; right: 0; top: var(--band-top);
   width: auto;
-  min-height: 44px;                    /* stays long-pressable when empty (PRD §6.1) */
+  min-height: var(--hit-floor);        /* stays long-pressable when empty (PRD §6.1) */
   padding: 0;                          /* the box is the type: B47's formula counts lines, nothing else */
   pointer-events: auto;
   font-size: 15px; font-weight: 600;
@@ -639,7 +649,7 @@ html:not(.wide) #board-actions {
   text-align: center;
   white-space: nowrap;
   cursor: pointer;
-  transition: filter 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: filter var(--leave-ms) var(--ease);
 }
 /* Drawn marks (UIUX §13.3): the GLYPH SVG in currentColor, sized to sit with
    the 13px label rather than the menu's 16px. */
@@ -666,11 +676,6 @@ html:not(.wide) #board-actions {
   .board-action:hover { filter: brightness(1.1); }
 }
 .board-action:active { filter: brightness(0.92); }
-.board-action:focus-visible {
-  outline: 2px solid var(--ink-light);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark);
-}
 
 /* ---- UIUX §3.2 / PRD §6.5 Parking Lot (resettled B47: a section, not a box)
    Full-bleed — left 0, right 0, bottom 0 — with its CONTENT still on the
@@ -692,7 +697,7 @@ html:not(.wide) #board-actions {
      reach meets the deep at 3.32:1, so this seam separates by fill and the
      rule above stays a section mark. */
   background:
-    radial-gradient(118% 76% at 50% 24%, rgb(0 0 0 / 0) 32%, rgb(var(--water-bot-a) / 0.72) 128%),
+    var(--water-falloff),
     linear-gradient(180deg, var(--water-top) 0%, var(--water-mid) 46%, var(--water-bot) 100%);
   background-size: 100% 100%;
 }
@@ -747,7 +752,7 @@ html:not(.wide) #board-actions {
 /* Unframed text lines — the one place text is never framed (UIUX §4.4 / PRD §6.5). */
 .lot-item {
   position: relative;
-  min-height: 44px;                    /* full-width hit row (UIUX §6) */
+  min-height: var(--hit-floor);        /* full-width hit row (UIUX §6) */
   display: flex;
   align-items: center;
 }
@@ -763,11 +768,6 @@ html:not(.wide) #board-actions {
   overflow-wrap: break-word;
   outline: none;
   padding: 2px 0;
-}
-.lot-text:focus {
-  outline: 2px solid var(--ink-light);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark);
 }
 
 /* ============================================================================
@@ -826,12 +826,6 @@ html:not(.wide) #board-actions {
   border-color: transparent;
   background: transparent;
 }
-/* Creating/editing: UIUX §2.7's two-tone ring + caret (never color alone). */
-.note-text:focus {
-  outline: 2px solid var(--ink-light);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark);
-}
 
 /* ---- UIUX §4 The note's Title tab (issue #173, B120) --------------------
    A header-style tab peeking from BEHIND the card's top-left corner — a note
@@ -859,11 +853,6 @@ html:not(.wide) #board-actions {
   text-align: left;
   outline: none;
 }
-.note-title:focus {                    /* the two-tone ring (UIUX §2.7), same as the note */
-  outline: 2px solid var(--ink-light);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark);
-}
 
 /* ---- UIUX §4.5 The note's action toolbar (B84, issue #126) --------------
    A real minimum rendered width, so a note is always at least a toolbar wide.
@@ -890,7 +879,7 @@ html:not(.wide) #board-actions {
   gap: 3px;
   z-index: 3;                          /* above the note's text and scratch */
   opacity: 0; visibility: hidden;      /* shown by the select/focus rule below */
-  transition: opacity 200ms cubic-bezier(0.22, 0.61, 0.36, 1), visibility 0s 200ms;
+  transition: opacity var(--leave-ms) var(--ease), visibility 0s var(--leave-ms);
 }
 /* The row NEVER sits inside the card (issue #298 ruling): the flip re-aim was
    removed; when there is no room below, reflectToolbarSeat raises the note
@@ -939,11 +928,6 @@ html:not(.wide) #board-actions {
   position: absolute;
   left: 0; right: 0; top: 0; bottom: -12px;   /* 44px tap target under the taller tab (issue #132, B86; re-aimed by #301) */
 }
-.note-tb-btn:focus-visible {           /* the two-tone ring (UIUX §2.7), same as the note */
-  outline: 2px solid var(--ink-light);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark);
-}
 /* Shown by the same state that draws the resize frame, and hidden while the note
    is picked up (a drag/pinch/resize is not the moment to act). Desktop selects;
    mobile engages by focus (an active note edits, a completed one takes frame
@@ -952,7 +936,7 @@ html.desktop .note.selected:not(.pressed) .note-toolbar,
 html:not(.desktop) .note.engaged:not(.pressed) .note-toolbar,
 html:not(.desktop) .note:focus-within:not(.pressed) .note-toolbar {
   opacity: 1; visibility: visible;
-  transition: opacity 200ms cubic-bezier(0.22, 0.61, 0.36, 1), visibility 0s;
+  transition: opacity var(--leave-ms) var(--ease), visibility 0s;
 }
 /* A selected note rises so its toolbar clears any note overlapping its bottom
    edge (mobile surfaces the engaged note; desktop selection does not, B22). */
@@ -1080,11 +1064,6 @@ html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so 
   text-align: left;
   cursor: pointer;
 }
-#menu button:focus-visible {
-  outline: 2px solid var(--ink-light);
-  outline-offset: -2px;                          /* inset row (UIUX §2.7) */
-  box-shadow: inset 0 0 0 4px var(--ink-dark);
-}
 /* The marks are drawn, not typed (UIUX §13.3): inline SVG in currentColor at
    the note's own stroke weight and corner radius, from app.js's GLYPH map. */
 #menu .glyph { flex: 0 0 20px; display: flex; align-items: center; justify-content: center; }
@@ -1122,11 +1101,6 @@ html:not(.desktop) .note.engaged { z-index: 3; }   /* the engaged note rises so 
   font: inherit; font-size: 16px; font-weight: 600;
   text-decoration: underline;
   cursor: pointer;
-}
-#toast button:focus-visible {
-  outline: 2px solid var(--ink-light);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark);
 }
 
 /* ============================================================================
@@ -1167,9 +1141,9 @@ html:not(.desktop) #list-view {
      reflected for a bottom sheet. On the deep ground the --frame rule above does
      most of the separating (the Lot/band's own idiom); this is the transient
      surface's hint of lift over it. */
-  box-shadow: 0 -2px 8px rgb(0 0 0 / 0.45);
+  box-shadow: var(--elevation-up);
   transform: translateY(100%);         /* parked below the fold */
-  transition: transform 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: transform var(--leave-ms) var(--ease);
 }
 html:not(.desktop) #list-view.show { transform: translateY(0); }
 /* While the drilled panel is risen, the board behind it is context, not a
@@ -1192,7 +1166,7 @@ html:not(.desktop):has(#list-view.show) #board { pointer-events: none; }
    control. Instant (UIUX §8). Worn by every category's own New board control
    (.cat-add), on both surfaces; the globals it dressed are gone. */
 .primary-btn {
-  min-height: 44px;                    /* UIUX §6 */
+  min-height: var(--hit-floor);        /* UIUX §6 */
   padding: 0 18px;
   background: var(--accent-page);
   color: var(--ink-dark);
@@ -1213,11 +1187,6 @@ html:not(.desktop):has(#list-view.show) #board { pointer-events: none; }
 .primary-btn:active {
   transform: translate(0.05em, 0.05em);
   box-shadow: 0.05em 0.05em var(--ink-dark);
-}
-.primary-btn:focus-visible {
-  outline: 2px solid var(--ink-light);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark), 0.1em 0.1em var(--ink-dark);
 }
 #list-rows {
   flex: 1 1 auto;
@@ -1252,7 +1221,7 @@ html:not(.desktop):has(#list-view.show) #board { pointer-events: none; }
   align-items: center;
   justify-content: center;
   text-align: center;
-  min-height: 44px;                    /* the touch floor (UIUX §6) */
+  min-height: var(--hit-floor);        /* the touch floor (UIUX §6) */
   padding: 12px;
   background: linear-gradient(180deg, var(--water-top), var(--water-mid));  /* the family's water field, as its list cards (issue #135, B89) */
   outline: 2px solid var(--frame);     /* the family's inset frame (B72) */
@@ -1267,11 +1236,6 @@ html:not(.desktop):has(#list-view.show) #board { pointer-events: none; }
   cursor: pointer;
 }
 .cat-button:active { background: var(--frame); color: var(--ink-dark); }
-.cat-button:focus-visible {
-  outline: 2px solid var(--ink-light);           /* the two-tone ring (UIUX §2.7) */
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark);
-}
 /* A row is a card now, not a list line: it can be picked up and carried to
    another category, so it has to read as a discrete object with its own edge
    (issue #74) — which is the hairline and the water fill, not the height, so
@@ -1284,7 +1248,7 @@ html:not(.desktop):has(#list-view.show) #board { pointer-events: none; }
   align-items: baseline;
   gap: 16px;
   width: 100%;
-  min-height: 44px;                    /* = PANE_ROW_H in app.js; = HIT_FLOOR (UIUX §6) */
+  min-height: var(--hit-floor);        /* = PANE_ROW_H in app.js; = HIT_FLOOR (UIUX §6) */
   padding: 8px 16px;
   background: linear-gradient(180deg, var(--water-top), var(--water-mid));
   border: 1px solid var(--hairline);
@@ -1293,11 +1257,6 @@ html:not(.desktop):has(#list-view.show) #board { pointer-events: none; }
   font: inherit;
   text-align: left;
   cursor: pointer;
-}
-.board-row:focus-visible {
-  outline: 2px solid var(--ink-light);
-  outline-offset: -2px;                          /* inset row (UIUX §2.7) */
-  box-shadow: inset 0 0 0 4px var(--ink-dark);
 }
 .board-row-wrap { display: flex; align-items: stretch; flex: 0 0 auto; }
 .board-row .row-title {
@@ -1398,7 +1357,7 @@ html:not(.desktop) .board-row .row-last-updated { display: none; }
   min-height: 0;
   display: grid;
   grid-template-columns: 1fr auto;
-  grid-template-rows: 44px 1fr 44px;   /* = LIST_CAT_ROW in app.js, twice */
+  grid-template-rows: var(--hit-floor) 1fr var(--hit-floor); /* = LIST_CAT_ROW in app.js, twice */
   grid-template-areas: "head add" "cards cards" "pager pager";
   align-items: center;
   column-gap: 8px;                     /* the label never touches the control */
@@ -1409,7 +1368,7 @@ html:not(.desktop) .board-row .row-last-updated { display: none; }
 }
 .board-cat.empty {
   flex: 0 0 auto;
-  grid-template-rows: 44px 0 0;        /* = LIST_CAT_ROW; the head row alone */
+  grid-template-rows: var(--hit-floor) 0 0; /* = LIST_CAT_ROW; the head row alone */
 }
 /* B137 (issue #286): the tablet rail's one-open accordion folds a section to
    its head row — the exact reclaim B68's empty collapse makes, so .folded
@@ -1417,7 +1376,7 @@ html:not(.desktop) .board-row .row-last-updated { display: none; }
    (.cat-fold); on desktop and mobile no section ever wears it. */
 .board-cat.folded {
   flex: 0 0 auto;
-  grid-template-rows: 44px 0 0;        /* = LIST_CAT_ROW; the head row alone */
+  grid-template-rows: var(--hit-floor) 0 0; /* = LIST_CAT_ROW; the head row alone */
 }
 .cat-fold { cursor: pointer; }
 /* Mid-drag landing frame: the section under the pointer is where the board
@@ -1434,7 +1393,7 @@ html:not(.desktop) .board-row .row-last-updated { display: none; }
   padding-inline-start: 16px;          /* clears the tray's inset frame; aligns the
                                           label with the card titles' left edge
                                           (issue #254) */
-  min-height: 44px;                    /* one box with the control beside it (B63) */
+  min-height: var(--hit-floor);        /* one box with the control beside it (B63) */
   font-size: 21px;                     /* the display step (UIUX §13.1, B63; re-tuned
                                           down by B74 so the longest name — "Learning
                                           Boards" — keeps its whole self beside the
@@ -1466,7 +1425,7 @@ html:not(.desktop) .board-row .row-last-updated { display: none; }
 .cat-add {
   grid-area: add;
   position: relative;
-  min-height: 44px;
+  min-height: var(--hit-floor);
   padding: 0 12px;
   font-size: 14px;
 }
@@ -1522,8 +1481,8 @@ html.wide .cat-cards { grid-template-columns: minmax(0, 1fr); }
 /* The pager (UIUX §14): --accent-page as a fill carrying --ink-dark, in the
    UIUX §14 construction — disabled says so at opacity, not with a mid-grey. */
 .pager-btn {
-  min-width: 44px;                     /* = HIT_FLOOR (PRD §5.3, UIUX §6) */
-  min-height: 44px;
+  min-width: var(--hit-floor);         /* = HIT_FLOOR (PRD §5.3, UIUX §6) */
+  min-height: var(--hit-floor);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1540,11 +1499,6 @@ html.wide .cat-cards { grid-template-columns: minmax(0, 1fr); }
 }
 .pager-btn svg { display: block; }
 .pager-btn:disabled { opacity: 0.4; cursor: default; }
-.pager-btn:focus-visible {
-  outline: 2px solid var(--ink-light);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark), 0.1em 0.1em var(--ink-dark);
-}
 /* Mid-drag: the origin row dims but holds its slot; a fixed clone of the card
    rides the pointer. pointer-events:none keeps the hit-test seeing the
    categories under the pointer, never the ghost itself. */
@@ -1633,7 +1587,9 @@ html.wide #pane.rail-open #pane-collapse { display: none; }
   font: inherit;
   cursor: pointer;
 }
-#pane-rail .vlabel {
+/* The rails' vertical label — one species on both rails (issue #439). */
+#pane-rail .vlabel,
+#cal-rail .vlabel {
   writing-mode: vertical-rl;
   font-size: 12px; font-weight: 600;
   letter-spacing: .18em;
@@ -1641,11 +1597,6 @@ html.wide #pane.rail-open #pane-collapse { display: none; }
   color: var(--ink-light);
 }
 #pane-rail:hover { filter: brightness(1.1); }
-#pane-rail:focus-visible {
-  outline: 2px solid var(--ink-light);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark);
-}
 /* B134 (issue #259): the pane's collapse control sits at the pane's
    BOTTOM-RIGHT corner (it renders last in #pane, after #pane-cards).
    B151 (issue #353): it reads `Go Back`, text alone — B135's mirrored
@@ -1719,11 +1670,6 @@ html.wide .pager-btn + .pager-btn { margin-left: 0; }
   text-align: left;
   cursor: pointer;
 }
-.pane-card:focus-visible {
-  outline: 2px solid var(--ink-light);
-  outline-offset: -2px;                          /* inset row (UIUX §2.7) */
-  box-shadow: inset 0 0 0 4px var(--ink-dark);
-}
 /* Structural active mark: ink weight, not color alone; padding compensates. */
 .pane-card.active { border: 2px solid var(--ink); padding: 5px 11px 5px 15px; cursor: default; }
 /* The rail card takes the drilled-list card's two-line title + bottom-right
@@ -1753,7 +1699,7 @@ html.wide .pager-btn + .pager-btn { margin-left: 0; }
    chrome with --danger for its mark: an accent as text on a near-black
    ground (UIUX §2.6). */
 .pane-del {
-  flex: 0 0 44px;
+  flex: 0 0 var(--hit-floor);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1767,11 +1713,6 @@ html.wide .pager-btn + .pager-btn { margin-left: 0; }
   cursor: pointer;
 }
 .pane-del svg { display: block; }
-.pane-del:focus-visible {
-  outline: 2px solid var(--ink-light);
-  outline-offset: -2px;                          /* inset row (UIUX §2.7) */
-  box-shadow: inset 0 0 0 4px var(--ink-dark);
-}
 
 /* ---- Note links (issue #142, B91): one SVG layer in board space, a sibling of
    the notes like #selection below, so it rides #board's translate+scale and its
@@ -1849,11 +1790,6 @@ html.wide .pager-btn + .pager-btn { margin-left: 0; }
 .sel-btn.sel-complete { background: var(--accent-restore); }
 .sel-btn.sel-copy     { background: var(--chrome); color: var(--ink-light); }
 .sel-btn.sel-delete   { background: var(--danger); }
-.sel-btn:focus-visible {
-  outline: 2px solid var(--ink-light);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark), 0.1em 0.1em var(--ink-dark);
-}
 
 /* ---- Multi-selection (issue #55): the primary keeps the full #selection
    chrome; every OTHER member wears an outline ring in ink — the outline rides
@@ -1901,19 +1837,19 @@ html.desktop .lot-item.selected { outline: 2px solid var(--ink); outline-offset:
    one long deceleration. Paired JS constants: LEAVE_MS, SWAP_MS,
    TOAST_HIDE_MS (PRD §9.5).
    ========================================================================== */
-#menu            { transition: opacity 200ms cubic-bezier(0.22, 0.61, 0.36, 1); }
+#menu            { transition: opacity var(--leave-ms) var(--ease); }
 .note-scratch,
-.lot-scratch     { transition: opacity 200ms cubic-bezier(0.22, 0.61, 0.36, 1); }
-#toast           { transition: opacity 200ms cubic-bezier(0.22, 0.61, 0.36, 1),
-                               transform 200ms cubic-bezier(0.22, 0.61, 0.36, 1); }
+.lot-scratch     { transition: opacity var(--leave-ms) var(--ease); }
+#toast           { transition: opacity var(--leave-ms) var(--ease),
+                               transform var(--leave-ms) var(--ease); }
 .note.leaving,
 .lot-item.leaving,
 .board-row-wrap.leaving,
-.pane-row.leaving  { transition: opacity 200ms cubic-bezier(0.22, 0.61, 0.36, 1); opacity: 0; }
+.pane-row.leaving  { transition: opacity var(--leave-ms) var(--ease); opacity: 0; }
 /* Board swap (issue #4 "minimalist animation"): a 260ms crossfade, desktop
    only, sequenced by timeout in JS so reduced-motion (below) degrades cleanly
    to an instant swap. */
-html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1); }
+html.desktop #board { transition: opacity var(--swap-ms) var(--ease); }
 #board.swapping     { opacity: 0; }
 
 /* --- UIUX §3.4 The calendar view (issue #145) -----------------------------
@@ -1951,7 +1887,7 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
   font-size: 15px; font-weight: 600; line-height: 1.3;
   white-space: nowrap;
   cursor: pointer;
-  transition: filter 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: filter var(--leave-ms) var(--ease);
 }
 .cal-act .glyph { display: flex; }
 .cal-act .glyph svg { display: block; width: 22px; height: 22px; }  /* B98: legible at rest, not a guess — mark + label state the act */
@@ -1974,11 +1910,6 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
   .cal-act:hover { filter: brightness(1.1); }
 }
 .cal-act:active { filter: brightness(0.92); }
-.cal-act:focus-visible {
-  outline: 2px solid var(--ink-light);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark);
-}
 #cal-back  { margin-right: auto; }     /* anchored left — the view's bottom-left corner since B134 (issue #259) */
 #cal-today { margin-left: auto; }      /* anchored right — B148 (issue #342) */
 #cal-stack {
@@ -2045,7 +1976,7 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
   height: 61px;                        /* --rule-y's two-line floor (UIUX §3.1) */
   margin: -10px -12px 0;               /* the view's own padding, spent */
   background:
-    radial-gradient(118% 76% at 50% 24%, rgb(0 0 0 / 0) 32%, rgb(var(--water-bot-a) / 0.72) 128%),
+    var(--water-falloff),
     linear-gradient(180deg, var(--water-top) 0%, var(--water-mid) 46%, var(--water-bot) 100%);
 }
 #cal-view.panel #cal-band { margin: -12px -12px 0; }   /* the panel's 12px padding, spent the same way */
@@ -2156,7 +2087,7 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
   display: flex;
   align-items: stretch;
   gap: 6px;
-  min-height: 44px;                     /* the row clears the touch floor even when empty */
+  min-height: var(--hit-floor);         /* the row clears the touch floor even when empty */
 }
 .cal-notes-row {
   flex: 1;
@@ -2226,7 +2157,7 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
   border-radius: 4px;
   overflow: hidden;
   flex: 0 0 auto;                      /* issue #170: the card is its content's size, not the viewport's — with the stack bottom-anchored (issue #293), the freed height falls out the TOP as intended whitespace above the day list */
-  min-height: 44px;
+  min-height: var(--hit-floor);
   display: grid;
   grid-template-columns: 84px 1fr;     /* date card left-anchored, one timeline zone (v2 refinement) */
 }
@@ -2262,7 +2193,7 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
   font: inherit; font-size: 14px; font-weight: 600; line-height: 1;
   padding: 0;
   cursor: pointer;
-  transition: filter 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: filter var(--leave-ms) var(--ease);
 }
 /* Issue #397 (B165): the day card's "+" seats UNDER the day/date, inside the
    date compartment's own centred column — no longer on the event bar's
@@ -2329,15 +2260,10 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
   font: inherit; font-size: 18px; font-weight: 600; line-height: 1;
   min-width: 36px; min-height: 32px;
   cursor: pointer;
-  transition: filter 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: filter var(--leave-ms) var(--ease);
 }
 @media (hover: hover) { .mo-nav:hover { opacity: 1; } }
 .mo-nav:active { filter: brightness(0.92); }
-.mo-nav:focus-visible {
-  outline: 2px solid var(--ink-light);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark);
-}
 .mo-label { flex: 1; text-align: center; font-size: 12px; font-weight: 600; color: var(--ink-light); }
 .mo-grid {
   display: grid;
@@ -2361,14 +2287,14 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
   padding: 0 2px 6px;
   cursor: pointer;
 }
-@media (hover: hover) { .mo-cell:hover { background: rgb(244 245 241 / .14); } }
+@media (hover: hover) { .mo-cell:hover { background: rgb(var(--ink-a) / .14); } }
 .mo-cell:focus-visible {
   outline: 2px solid var(--ink-light);
   outline-offset: -2px;
 }
 /* The pale band across the current week's row (one class per cell; no column
    gap, so the cells' fills read as one continuous highlight). */
-.mo-cell.wk { background: rgb(244 245 241 / .08); }
+.mo-cell.wk { background: rgb(var(--ink-a) / .08); }
 /* Today: the to-do boards' own water fall — the palette blue of the boards. */
 .mo-cell.today {
   background: linear-gradient(180deg, var(--water-top) 0%, var(--water-mid) 46%, var(--water-bot) 100%);
@@ -2441,13 +2367,6 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
   font: inherit;
   cursor: pointer;
 }
-#cal-rail .vlabel {
-  writing-mode: vertical-rl;
-  font-size: 12px; font-weight: 600;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  color: var(--ink-light);
-}
 #cal-rail .cdot, #pane-rail .cdot {
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--highlight);        /* the aperture: today is lit in the rail too */
@@ -2462,11 +2381,6 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
   opacity: .55;
 }
 #cal-rail:hover { filter: brightness(1.1); }
-#cal-rail:focus-visible {
-  outline: 2px solid var(--ink-light);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ink-dark);
-}
 /* B100 (issue #157) as widened by B119 (issue #212): wide (desktop ∪ tablet)
    has no All-Boards tab — the left board rail (B24) is the one All-Boards
    surface on wide, on tablet from behind B118's collapsed face. Same mechanism
@@ -2475,7 +2389,7 @@ html.desktop #board { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1
 html.wide #action-boards { display: none; }
 html.wide #action-calendar { display: none; }   /* the rail replaces the tab (B99) */
 html.wide:not(.has-cal-rail) #cal-view { display: none; }
-html.wide #board.swapping { transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1); }
+html.wide #board.swapping { transition: opacity var(--swap-ms) var(--ease); }
 
 .row-cal-mark { display: flex; }
 .row-cal-mark svg { width: 14px; height: 14px; display: block; }
@@ -2484,6 +2398,51 @@ html.wide .pane-card .row-cal-mark svg { width: 12px; height: 12px; }
    onto its own line — anchored to the card's top-right corner instead, out of
    the bottom-right stamp's way (issue #254). */
 .pane-card > .row-cal-mark { position: absolute; top: 8px; right: 12px; }
+
+/* ============================================================================
+   UIUX §2.7 Focus — the two-tone ring, written once per variant. No single
+   hue reads on every ground; --ink-light outside --ink-dark clears 3:1 on
+   all of them by construction. Grouped here, LAST in the file, so each ring
+   keeps winning the ties it won in place — the primary controls' :active
+   shadow precedes their ring in the cascade (issue #439).
+   ========================================================================== */
+/* The ring, offset outward: editing surfaces (:focus) and the controls that
+   stand clear of their neighbours (:focus-visible). */
+.anchor:focus,
+.lot-text:focus,
+.note-text:focus,
+.note-title:focus,
+.board-action:focus-visible,
+.note-tb-btn:focus-visible,
+#toast button:focus-visible,
+.cat-button:focus-visible,
+#pane-rail:focus-visible,
+.cal-act:focus-visible,
+.mo-nav:focus-visible,
+#cal-rail:focus-visible {
+  outline: 2px solid var(--ink-light);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--ink-dark);
+}
+/* The inset ring: rows and cards whose neighbours sit flush, so the ring is
+   drawn inside the box (UIUX §2.7, "-2px on inset rows"). */
+#menu button:focus-visible,
+.board-row:focus-visible,
+.pane-card:focus-visible,
+.pane-del:focus-visible {
+  outline: 2px solid var(--ink-light);
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 4px var(--ink-dark);
+}
+/* The primary ring: the ring plus the control's own offset shadow (UIUX §14's
+   tactile signature), so focus never erases the press-shadow. */
+.primary-btn:focus-visible,
+.pager-btn:focus-visible,
+.sel-btn:focus-visible {
+  outline: 2px solid var(--ink-light);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--ink-dark), 0.1em 0.1em var(--ink-dark);
+}
 
 /* Mandatory global kill-switch (UIUX §8). */
 @media (prefers-reduced-motion: reduce) {

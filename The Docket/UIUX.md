@@ -4,6 +4,15 @@
 `styles.css` and `DECISIONS.md` have cited as `UIUX §x` since the first commit,
 written down for the first time.
 
+**Reader and purpose.** Written for whoever is about to change `styles.css`,
+`app.js` or one of the modules, or to judge a render against the record — the
+owner, or an agent working this repository. That reader knows CSS, the DOM the
+modules build and `PRD.md`'s intent; they do not know which value a surface must
+render, or why it holds that value. This document pins every rendered value —
+hex, ratio, size, radius, duration, threshold, ARIA contract — so a change can
+be checked against it. Its values come from the owner's rulings (`DECISIONS.md`,
+cited as `B<n>`) and from the renders those rulings ratified.
+
 **How to read this with the other records.** `PRD.md` says what the product is
 and what it must do; this says what it looks like and how it behaves under the
 hand. Where the two disagree about a rendering decision, **this document wins** —
@@ -332,14 +341,19 @@ the crossover while no text ground may.
 
 ### §2.4 Elevation
 
-Transient surfaces only: `#menu`, `#toast`, `.pane-drag-ghost`.
+Transient surfaces only: `#menu`, `#toast`, `.pane-drag-ghost`, and the risen
+list panel (§10).
 
 ```css
---elevation: 0 2px 8px rgb(0 0 0 / 0.45);
+--elevation:    0 2px 8px rgb(0 0 0 / 0.45);
+--elevation-up: 0 -2px 8px rgb(0 0 0 / 0.45);   /* the same lift, cast upward */
 ```
 
-The desktop rail is the inverse — an **inset** shadow, because it is embedded in
-the page rather than floating over it. **Notes take no shadow** (§1).
+`--elevation-up` is `--elevation` reflected: the mobile list panel is flush to
+the viewport floor, where a downward cast would fall off-screen, so its lift
+lands on its top seam — the one edge that adjoins the board (§10). The desktop rail is the inverse — an **inset** shadow
+(`--elevation-inset`), because it is embedded in the page rather than floating
+over it. **Notes take no shadow** (§1).
 
 ### §2.5 Edges, rules and hairlines — the separation rule
 
@@ -549,8 +563,21 @@ bump — table above); `--tab-remind`'s `#e6c2c9` is the rung's reference value.
 ```css
 outline: 2px solid var(--ink-light);
 box-shadow: 0 0 0 4px var(--ink-dark);
-outline-offset: 2px;      /* -2px on inset rows */
+outline-offset: 2px;
 ```
+
+The ring is written **once per variant**, as one grouped rule each, at the end
+of `styles.css` (issue #439):
+
+| Variant | Who wears it | Differs from the block above by |
+|---|---|---|
+| outward | editing surfaces (`:focus`) and the controls that stand clear of their neighbours (`:focus-visible`) | nothing |
+| inset | `#menu` rows, `.board-row`, `.pane-card`, `.pane-del` — neighbours sit flush, so the ring draws inside the box | `outline-offset: -2px; box-shadow: inset 0 0 0 4px var(--ink-dark)` |
+| primary | `.primary-btn`, `.pager-btn`, `.sel-btn` | the ring **plus** the control's own `0.1em 0.1em var(--ink-dark)` press-shadow (§14), so focus never erases it |
+
+The group sits last in the stylesheet so each ring keeps winning the cascade
+ties it won in place — the primary controls' `:active` shadow precedes their
+ring.
 
 No single colour works on every ground — `--ink-light` is 1.48:1 on the note,
 `--ink-dark` is 1.04:1 on the deep. The two are exactly complementary, so the
@@ -589,6 +616,16 @@ depth, and each of its layers holds a job or it comes out (§1):
    scene died with the water canvas (a near-black ground has nothing darker
    to fall to); within the sections it keeps the water reading as depth
    rather than as two flat strips.
+
+   ```css
+   --water-falloff: radial-gradient(118% 76% at 50% 24%, rgb(0 0 0 / 0) 32%, rgb(var(--water-bot-a) / 0.72) 128%);
+   ```
+
+   One token, read by `#band-fill`, `#lot` and `#cal-band` (issue #439). It is
+   declared on the ladder roots (`#board`, `#cal-view`), **not** `:root`: a
+   `var()` inside a custom property resolves where that property is declared,
+   so a `:root` declaration would carry the To-Do stop onto every ladder
+   (§2.2.2).
 3. **Dither** — noise at anti-banding amplitude over the sections' ramps,
    which an 8-bit panel would otherwise band. On the deep between, it is the
    grain the ratified render carries (B58) — the canvas is flat by value,
@@ -1223,6 +1260,15 @@ cannot be a fixed padding: each note carries a computed `--hit` inset on a
 transparent `::before`, sized so that `inset × scale × renderScale ≥ 44px`
 physical (B7). **The hit area expands; the visual frame does not.**
 
+```css
+--hit-floor: 44px;        /* = HIT_FLOOR in state.js */
+```
+
+Every row and control that *is* the floor by ruling reads the token (issue
+#439): the list's head and pager rows (B68), `.primary-btn`, `.cat-button`,
+`.board-row`, `.pager-btn`, `.pane-del`, the lot's rows, the calendar's day
+cards and note rows, and the anchors' empty-state height (PRD §6.1).
+
 On desktop the floor is 24px (WCAG 2.5.8 AA, pointer-appropriate) — a 44px collar
 swallows dismiss clicks (B23). The 44px floor stands on touch.
 
@@ -1311,6 +1357,15 @@ Curve: a long deceleration — `cubic-bezier(0.22, 0.61, 0.36, 1)`. The duration
 lengthen from v1's 120/150ms because §1.1 argues for a water-like settle, and a
 120ms fade reads as a flicker rather than a movement.
 
+```css
+--ease:     cubic-bezier(0.22, 0.61, 0.36, 1);
+--leave-ms: 200ms;        /* = LEAVE_MS in state.js */
+--swap-ms:  260ms;        /* = SWAP_MS in state.js */
+```
+
+Every transition in the table reads these three tokens, named after the JS
+constants they are paired with (PRD §9.5; issue #439).
+
 **The set grew once, by ruling, and is closed at eight (B173).** Nothing else
 animates. Two things stay instant and are not candidates:
 
@@ -1370,7 +1425,7 @@ page heading** (B66): the category head says where you are. The panel's height i
 `--list-panel-h` — never a CSS `vh`, so the soft keyboard (which moves only the
 visual viewport, B28) does not drag it. The rise is the toast's `translateY`
 idiom on §8's one 200ms curve, degrading to instant under reduced-motion; its
-top edge is the Parking Lot's own `--frame` rule, rounded and on `--elevation`
+top edge is the Parking Lot's own `--frame` rule, rounded and on `--elevation-up`
 as the transient surface it is (§2.4).
 
 **Desktop:** a collapsible 300px rail (B24, B118) — **sunken, not floating** (§2.4),

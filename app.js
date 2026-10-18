@@ -355,7 +355,7 @@ if ('serviceWorker' in navigator) {
    settled, the first render is long done), once per session, and only ever
    acting on device-vs-deploy disagreement. */
 const HANDSHAKE_MS = 20000;
-const OWN_BUILD = 'v159';
+const OWN_BUILD = 'v160';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {
