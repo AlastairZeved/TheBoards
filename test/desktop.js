@@ -3289,6 +3289,117 @@ run(async () => {
     await ctx.close();
   }
 
+  console.log('\n[D36] A group drop near the sheet bottom seats every member\'s row, lifting the group together (issue #441)');
+  {
+    // Every member's row is measured, shown or not: only the primary shows
+    // its row, but an unseated member jumps when it is next selected (B139).
+    const geo = (page) => page.evaluate(() => {
+      const sheet = document.querySelector('#board').getBoundingClientRect();
+      const px = sheet.height / LOGICAL_H;           // render scale, screen px per logical unit
+      const out = {};
+      for (const n of document.querySelectorAll('.note')) {
+        const r = n.getBoundingClientRect();
+        const tb = n.querySelector('.note-toolbar').getBoundingClientRect();
+        const rec = state.current.notes.find(x => x.id === n.dataset.id);
+        out[n.querySelector('.note-text').textContent] = {
+          cx: r.x + r.width / 2, cy: r.y + r.height / 2, top: r.top, tbBottom: tb.bottom,
+          // The seat line: card bottom plus TB_ROW_H (44, the row's collar) at the note's scale.
+          seatBottom: r.bottom + 44 * (rec.scale || 1) * px,
+          y: rec.y,
+        };
+      }
+      return { sheetBottom: sheet.bottom, notes: out };
+    });
+    const setup = async () => {
+      const s = await newDesktopPage(browser);
+      const make = async (x, y, t) => {
+        await s.page.mouse.click(x, y);
+        await s.page.waitForTimeout(500);
+        await s.page.keyboard.type(t);
+        await s.page.evaluate(() => document.activeElement.blur());
+        await s.page.waitForTimeout(150);
+      };
+      await make(500, 200, 'upper');
+      await make(800, 300, 'lower');
+      // Select lower, shift-click upper: upper is the primary, so the member
+      // that overhangs (lower) is one whose row stays hidden.
+      let g0 = await geo(s.page);
+      await s.page.mouse.click(g0.notes.lower.cx, g0.notes.lower.cy);
+      await s.page.waitForTimeout(150);
+      await s.page.keyboard.down('Shift');
+      await s.page.mouse.click(g0.notes.upper.cx, g0.notes.upper.cy);
+      await s.page.keyboard.up('Shift');
+      await s.page.waitForTimeout(150);
+      return s;
+    };
+    const dragPrimary = async (page, toY) => {
+      const g0 = await geo(page);
+      await page.mouse.move(g0.notes.upper.cx, g0.notes.upper.cy);
+      await page.mouse.down();
+      await page.mouse.move(g0.notes.upper.cx, toY, { steps: 12 });
+      await page.mouse.up();
+      await page.waitForTimeout(400);
+    };
+
+    // 1. Unclamped: the lower member's card fits but its row would pass the
+    // sheet. The group lifts by that one overhang, rigidly.
+    {
+      const { ctx, page, errors } = await setup();
+      const g0 = await geo(page);
+      ok('two notes selected, upper primary', await page.evaluate(() =>
+        document.querySelector('.note.selected .note-text').textContent === 'upper' &&
+        document.querySelectorAll('.note.multi-selected').length === 1));
+      // Land the lower card's bottom ~12px above the sheet bottom: its row
+      // (~29px tall) overhangs, the card does not clamp.
+      const lowerBottom = g0.notes.lower.top + (g0.notes.lower.cy - g0.notes.lower.top) * 2;
+      const dy = (g0.sheetBottom - 12) - lowerBottom;
+      await dragPrimary(page, g0.notes.upper.cy + dy);
+      const g1 = await geo(page);
+      ok('every member\'s row sits on the sheet',
+         Object.values(g1.notes).every(n => n.seatBottom <= g1.sheetBottom + 0.5), JSON.stringify(g1));
+      const gap0 = g0.notes.lower.top - g0.notes.upper.top;
+      const gap1 = g1.notes.lower.top - g1.notes.upper.top;
+      ok('the group lifts together: the members\' spacing is unchanged',
+         Math.abs(gap1 - gap0) < 1, JSON.stringify({ gap0, gap1 }));
+      ok('the lift is the overhang, no more: the lower member\'s seat meets the sheet bottom',
+         Math.abs(g1.notes.lower.seatBottom - g1.sheetBottom) < 1, JSON.stringify(g1.notes.lower));
+      // Selecting the lower member must not move it: its seat was written at drop.
+      await page.mouse.click(g1.notes.lower.cx, g1.notes.lower.cy);
+      await page.waitForTimeout(200);
+      const g2 = await geo(page);
+      ok('selecting the other member afterwards does not move it',
+         Math.abs(g2.notes.lower.top - g1.notes.lower.top) < 0.5 && g2.notes.lower.y === g1.notes.lower.y,
+         JSON.stringify({ before: g1.notes.lower, after: g2.notes.lower }));
+      ok('no page errors', errors.length === 0, errors.join(' | '));
+      await ctx.close();
+    }
+
+    // 2. Clamped: dragged past the sheet bottom, both members park on the
+    // clamp (B41's accepted compression); the lift then seats them both.
+    {
+      const { ctx, page, errors } = await setup();
+      await dragPrimary(page, 2000);
+      const g1 = await geo(page);
+      ok('clamped drop: every member\'s row sits on the sheet',
+         Object.values(g1.notes).every(n => n.seatBottom <= g1.sheetBottom + 0.5), JSON.stringify(g1));
+      await page.mouse.click(g1.notes.lower.cx, g1.notes.lower.cy);
+      await page.waitForTimeout(200);
+      const g2 = await geo(page);
+      ok('clamped drop: selecting the other member does not move it',
+         Math.abs(g2.notes.lower.top - g1.notes.lower.top) < 0.5,
+         JSON.stringify({ before: g1.notes.lower, after: g2.notes.lower }));
+      // The seat is committed state: a reload must not move anything either.
+      const ids = await page.evaluate(() => state.current.id);
+      await reopen(page, ids);
+      const g3 = await geo(page);
+      ok('clamped drop: a reload moves no member',
+         Object.keys(g1.notes).every(t => Math.abs(g3.notes[t].top - g1.notes[t].top) < 0.5),
+         JSON.stringify({ before: g1.notes, after: g3.notes }));
+      ok('no page errors', errors.length === 0, errors.join(' | '));
+      await ctx.close();
+    }
+  }
+
   await browser.close();
 
 });
