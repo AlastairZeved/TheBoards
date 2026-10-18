@@ -71,7 +71,7 @@ the project has none.
    drives tap-to-capture, drag, pinch, and the desktop grammar alike; a live
    `matchMedia` switch (`isDesktop`) branches inline. There is no separate
    desktop code path. The code is split into eight native modules; see
-   `CLAUDE.md` for ownership and `state.js:1-19` for the original section map.
+   the module ownership table in `CLAUDE.md`.
 3. **IndexedDB is the only persistence**, through a debounced save queue
    (`scheduleSave`/`saveNow`). The standard namespace is `boards-db`; embed
    mode uses `boards-db-embed` (`persistence.js:11`), with the same `boards`
@@ -90,7 +90,7 @@ the project has none.
    gesture works (B9) — never intercept or shadow it.
 
 The app is split across `app.js` and eight native ES modules; see the module
-ownership table in `CLAUDE.md`. The original section map is at `state.js:1-19`.
+ownership table in `CLAUDE.md`.
 `styles.css` remains sectioned against `The Docket/UIUX.md`: every top-level
 `§` marker is a UIUX section number, and its header block is that document's
 table of contents.
