@@ -17,8 +17,8 @@ export let g = null;                        // active gesture context
 
 /* Notes open a menu by mobile long-press or desktop right-click. The current
    note menu carries Copy, Title, and Link; the note toolbar carries its state
-   actions. Anchors lost their menu in B92, and the lot/canvas do not arm one. */
-const HAS_MENU = new Set(['note']);   // anchors lost theirs to B92
+   actions. Anchors carry no menu (B92), and the lot/canvas do not arm one. */
+const HAS_MENU = new Set(['note']);
 
 function classifyTarget(target, press) {
   // Selection chrome first: action buttons (notes and lot rows share .sel-btn),
@@ -759,10 +759,10 @@ function applyNoteScale(note, node, scale) {
   applyNoteWidth(node, note);
   const footW = node.offsetWidth * scale, footH = node.offsetHeight * scale;
   // A footprint can exceed the sheet only via a folded cross-frame scale
-  // (B40); there the old [0, max(0, sheet − foot)] range degenerates to [0,0]
+  // (B40); there the plain [0, max(0, sheet − foot)] range degenerates to [0,0]
   // and pins the note to the corner. Min/max of the same pair inverts the
   // constraint instead — sheet-inside-note where note-inside-sheet is
-  // impossible. For a fitting note this is the old clamp unchanged.
+  // impossible. For a fitting note this reduces to the plain clamp.
   note.x = clamp(note.x, Math.min(0, LOGICAL_W - footW), Math.max(0, LOGICAL_W - footW));
   note.y = clamp(note.y, Math.min(0, LOGICAL_H - footH), Math.max(0, LOGICAL_H - footH));
   node.style.left = note.x + 'px';
@@ -806,7 +806,7 @@ function surfaceNote(node) {
    inert, reversible state: it commits nothing, so it is instant and opens no
    acknowledged window (B18 governs actions). It never calls surfaceNote — that
    would write, and the overlay renders above every note regardless.
-   Notes wear a #selection overlay — the resize frame only now (ring + edges +
+   Notes wear a #selection overlay — the resize frame only (ring + edges +
    handles, B84) — a sibling of the notes in board space: it inherits renderScale
    but never note.scale, so the frame stays constant-weight at any note size.
    The note's actions live on its own bottom-edge, centred toolbar (makeNoteToolbar), shown
@@ -1217,8 +1217,8 @@ export function showUndo(undoFn, scope, label) {
   // Clear the finalize timer only when the Undo actually commits — inside
   // commitAction's drop-guard (B81), not before it — so a tap dropped within
   // ACTION_DELAY of the delete leaves the timer running and the toast still
-  // auto-hides by UNDO_MS. A late Undo (≈4.6s+) that commits
-  // still clears on the click, so it can't be finalized out from under it.
+  // auto-hides by UNDO_MS. A late Undo (after UNDO_MS − ACTION_DELAY) that
+  // commits still clears on the click, so it can't be finalized out from under it.
   btn.addEventListener('click', () => {
     commitAction(() => { clearTimeout(undoTimer); hideToast(); undoFn(); });
   });
@@ -1240,7 +1240,7 @@ export function showNotice(text, mode, ttl) {
   if (el.toast.dataset.mode === 'undo') return;        // never clobber a pending undo
   // Each notice stamps the toast; the ttl timer only hides its own stamp. A
   // mode check alone would let a stale timer hide a newer same-mode notice
-  // early — copying two items inside 1.5s is the observable case.
+  // early.
   const seq = String(++noticeSeq);
   raiseToast(mode, text);
   el.toast.dataset.seq = seq;
@@ -1289,9 +1289,7 @@ export function copyText(text) {
 }
 
 
-/* Region init: top-level side effects sit behind an explicit register() call
-   from boot() — no module does load-time work. registerInteractions registers
-   the board pointer handlers first, then the document-level listeners. */
+/* Region init: registerInteractions is called from boot(); no load-time work. */
 
 /* Commit-on-blur for every editable region; empty new notes/items are discarded. */
 function onFocusOut(e) {
