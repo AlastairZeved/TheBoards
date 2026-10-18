@@ -1,6 +1,6 @@
 /* Service worker — cache-first app shell, fully offline (PRD §3 / §6.8).
    Version-stamped cache; old caches are cleaned on activate. */
-const CACHE = 'zeved-boards-v161';       // bump when shipped app.js/styles.css or any module changes
+const CACHE = 'zeved-boards-v162';       // bump when shipped app.js/styles.css or any module changes
 const ASSETS = [
   '.',
   'index.html',
@@ -42,16 +42,11 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-/* Stale-while-revalidate. Still cache-first — a warm hit is returned without
-   ever waiting on the network, so offline behaviour and cold-start latency are
-   unchanged — but the fetch now runs *alongside* the hit rather than only when
-   there isn't one, and overwrites the entry. So the next launch is current.
-
-   Why: CACHE is version-stamped and `install` only re-runs when this file's own
-   bytes change, which made a missed bump permanent rather than temporary. Two
-   shipped changes (072a15e, 9ace6d6) never reached an installed app because of
-   it. The bump discipline above still stands — it is what makes an update land
-   on the *next* launch instead of the one after — this is the net under it. */
+/* Stale-while-revalidate, still cache-first: a warm hit returns without
+   waiting on the network while a fetch overwrites the entry for the next
+   launch. `install` re-runs only when this file's bytes change, so a missed
+   CACHE bump would otherwise be permanent. The bump still stands: it lands an
+   update on the next launch, not the one after; this is the net under it. */
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
@@ -68,8 +63,7 @@ self.addEventListener('fetch', (e) => {
         if (req.mode === 'navigate') return caches.match('index.html');
         return Response.error();
       });
-      // Revalidation is deliberately not awaited: `hit` wins the race whenever
-      // there is one. e.waitUntil keeps the worker alive to finish the write.
+      // Not awaited: `hit` wins; waitUntil keeps the worker alive to write.
       if (hit) e.waitUntil(net.catch(() => {}));
       return hit || net;
     })

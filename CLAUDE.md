@@ -9,7 +9,7 @@ Codex, Cursor, …).
 `app.js` is the module entry (boot + service worker + the test-observability
 bridge). The app's code is split into eight dependency-region modules:
 
-| File | Owns (AGENTS.md's section map) |
+| File | Owns (§ numbers are each file's `--- N.` section markers) |
 |---|---|
 | `state.js` | graph root, imports nothing — constants and pure utilities (`clamp`), copy, GLYPH, DOM plumbing (`el`/`anchorEls`), MQ consts, the shared `state` carrier, calendar data helpers |
 | `persistence.js` | §2 IndexedDB wrappers + §3 save queue; imports interactions only for save-error notices |

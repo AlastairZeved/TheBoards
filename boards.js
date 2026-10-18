@@ -1,5 +1,4 @@
 /* --- 11. Board list + routing -------------------------------------------- */
-// issue #182 module wiring — native ESM, no bundler (AGENTS.md).
 import {
   BOARD_CATS, CALKEY_DATE, CAT_SEC_GAP, CE, COPY, GRID_ORDER, GLYPH, LEAVE_MS,
   LIST_CARD_COLS, LIST_CARD_H, LIST_CAT_ROW, LONGPRESS_MS, MOVE_THRESHOLD,
@@ -15,42 +14,29 @@ import { commitAction, hideToast, leave, showUndo, undoTimer } from './interacti
 import { buildMenu, closeMenu, menuPoint, syncBoardActions } from './menus.js';
 import { exportBoardPdf } from './export.js';
 
-/* Two-level navigation since issue #112 / B74. `listOpen` is true for either
-   level; `catView` names the drilled category (level 2) or is null at the
-   picker (level 1); `lotMenuOpen` is true only on mobile, where the level-1
-   picker is the Parking Lot turned into the grid rather than a screen of its
-   own. History carries {v:'list'} for the picker and {v:'cat',cat} for a drill,
-   so the OS back gesture returns drill -> picker -> board (B9, never shadowed). */
+/* Two-level navigation (B74). `listOpen` covers both levels; `catView` is the
+   drilled category (level 2) or null at the picker (level 1); `lotMenuOpen`
+   is mobile only (the picker is the lot turned into a grid). History carries
+   {v:'list'} / {v:'cat',cat} so back goes drill -> picker -> board (B9). */
 export let listOpen = false;
 export let catView = null;
 export let lotMenuOpen = false;
 
-// Creation order, newest first, with an id tiebreak so equal-millisecond
-// creates can't reorder between renders (issue #14). Since issue #97 this is
-// no longer what orders a listing — catOrder sorts by last touch, and B69
-// supersedes B24's immutable-slot clause — but it stays catOrder's final
-// tiebreak, which is what keeps that sort a total order. boot() and
-// ensureCurrentValid() read updatedAt for a different job and are untouched:
-// updatedAt selects which board to open (continuity), not where its card sits.
+// Creation order, newest first; the id tiebreak keeps equal-millisecond
+// creates stable. Only catOrder's final tiebreak (B69), not a listing order.
 const boardOrder = (a, b) => (b.createdAt - a.createdAt) ||
   (a.id < b.id ? 1 : a.id > b.id ? -1 : 0);
 
-// Shared row/card content: the title (or untitled placeholder), then a
-// "Last Updated" line on EVERY card (B82, issue #125) — where before only an
-// untitled card carried a bare creation date. The date is the record's own
-// updatedAt (floored to createdAt for a record that predates the stamp), so no
-// new field persists (B69 already writes updatedAt on every committing action).
-// One shape, both skins: styles.css lays the line inline on the rail, and
-// bottom-right under a two-line title on the mobile drilled-list card.
+// Shared card content: title, then a "Last Updated" line on every card (B82;
+// hidden on the mobile drilled row, B140), read from updatedAt (floored to
+// createdAt). Both skins share this shape.
 function fillRowContent(node, b) {
   node.textContent = '';
   const titled = !!(b.title && b.title.trim().length);
   const title = document.createElement('span'); title.className = 'row-title';
-  // Issue #303, owner ruling (Option 2): the title is the pinned NAME only —
-  // the colon-joined pair clipped at ≤360px (two-line clamp), so the date
-  // rides the existing .row-date line instead of a taller card (LIST_CARD_H
-  // stays 76). Desktop keeps the colon-joined pair on one line via the
-  // .row-title-date span (hidden on mobile by the skin's CSS).
+  // The title is the pinned NAME plus .row-title-date, which CSS hides on the
+  // mobile drilled row (B140): a colon-joined pair clips at <=360px, so the
+  // date rides .row-date (LIST_CARD_H stays 76).
   if (b.cal) {
     title.textContent = LINKED_TITLE;
     const td = document.createElement('span'); td.className = 'row-title-date';
@@ -61,16 +47,8 @@ function fillRowContent(node, b) {
   else { title.textContent = COPY.untitled; title.classList.add('untitled'); }
   node.appendChild(title);
   const date = document.createElement('span'); date.className = 'row-date';
-  // Mobile skin: the board's cal date carries the line alone (issue #307,
-  // owner ruling: "Kill the Last Updated stamp for mobile only. B82 survives
-  // for desktop."). The B82 stamp rides in its own span so the mobile skin
-  // can hide it — a bare text node cannot be hidden. The middot is dropped
-  // rather than relocated: with the stamp hidden on mobile a separator would
-  // be a dangling orphan, and desktop renders .row-board-date as
-  // display:none, so no surface needs it. The stamp had to go because
-  // 'Last Updated: 09/28/26' alone is ~187px of 10px text in a 72–85px
-  // column — no string carries both dates there. The desktop date line
-  // renders 'Last Updated: …' exactly as before.
+  // The stamp gets its own span so mobile CSS can hide it (a text node can't
+  // be); no middot, which would dangle once hidden.
   if (b.cal) {
     const bd = document.createElement('span'); bd.className = 'row-board-date';
     bd.textContent = linkedDate(b.cal);
@@ -80,12 +58,7 @@ function fillRowContent(node, b) {
   lu.textContent = COPY.lastUpdated + formatMDY(b.updatedAt || b.createdAt);
   date.appendChild(lu);
   node.appendChild(date);
-  // The calendar mark (issue #145): a linked board announces its link
-  // where its name is read — far right on the card, on both surfaces the
-  // card renders (the desktop rail and the All-Boards views). Drawn, not
-  // typed (UIUX §13.3): the same mark the Calendar tab wears. State is never
-  // colour alone; this is a mark, not a state — aria-hidden because the
-  // link is identity, not an action the card offers.
+  // Calendar mark (UIUX §13.3): aria-hidden; the link is identity, not action.
   if (b.cal) {
     const mark = document.createElement('span');
     mark.className = 'row-cal-mark';
@@ -95,54 +68,36 @@ function fillRowContent(node, b) {
   }
 }
 
-/* The category lists, order and fallback are shared from state.js; only the
-   display-copy map belongs to this renderer. */
+/* Category lists, order and fallback live in state.js; only the copy map is
+   here. */
 export { BOARD_CATS, GRID_ORDER, catOf, calMD, calDayName, eventsOf };
 const CAT_COPY = { todo: 'catTodo', idea: 'catIdea', unsorted: 'catUnsorted', learning: 'catLearning' };
-/* In-category order is last touch, newest first (issue #97 / B69, superseding
-   B24's immutable slot): a board you just edited comes back to the top of its
-   section. Two writes are a touch and both have a claim on the first slot —
-   updatedAt, stamped by saveNow() on every committing action, and catStamp,
-   stamped by a drop or a create (= moved-to-top) — so the key is whichever
-   happened later, with createdAt as the floor. Read-site defaulted, the B21
-   idiom (catOf's pattern): a record missing either field orders by what it
-   does have, so nothing migrates and no DB version moves. boardOrder closes
-   it, leaving no tie unresolved — the sort must be total or a card could
-   change slots between two renders of the same data. */
+/* In-category order is last touch, newest first (B69): the later of updatedAt
+   (saveNow) and catStamp (drop/create), floored at createdAt. Read-site
+   defaulted (B21), so no migration. boardOrder makes the sort total, or cards
+   could swap slots between renders. */
 const touchedAt = (b) =>
   Math.max(b.updatedAt || 0, b.catStamp || 0, b.createdAt || 0);
 export const catOrder = (a, b) => (touchedAt(b) - touchedAt(a)) || boardOrder(a, b);
 
-/* Pagination (issue #58): overflow turns pages, never scrolls. Page state is
-   per-category and module-level so a re-render keeps the reader's place, and
-   it is shared by the rail and the list because the two are never on screen at
-   once (a flip's tier teardown pops the list state on the way to desktop) — each renderer
-   clamps every render, so a differing capacity heals itself. boardUi.catCap is the
-   budget the last render used, and boardUi.catFilled the fill state it measured
-   against — applyLayout compares both. */
+/* Overflow turns pages, never scrolls. Page state is per-category and shared
+   by rail and list (never on screen together); each render clamps it.
+   catCap / catFilled are the last render's budget and fill; applyLayout
+   compares both. */
 const boardUi = {
   catPage: Object.fromEntries(BOARD_CATS.map((cat) => [cat, 0])),
   catCap: 0,                           // 0 = never rendered; the capacity check waits
   catFilled: 0,                        // populated sections the last render measured
-  catOpen: null,                       // B137: the tablet accordion's one expanded category (session state, not persisted)
+  catOpen: null,                       // B137: tablet accordion's open category
 };
-let dragCancel = null;                       // the live card-drag's teardown, if one is mid-flight
+let dragCancel = null;                       // live card-drag teardown, if any
 
-/* The per-page card budget, measured — never a constant (B42, restated B68).
-   `filled` is how many of the drawn sections hold at least one board: an empty
-   section collapses to its head row alone (B68), so the cards and pager slots
-   it is not using come back to the sections that have something to show.
-   `drawn` is how many sections are on the surface — BOARD_CATS.length for the
-   desktop rail (all four stacked), 1 for a single-category drill screen (issue
-   #112 / B74): the drill shows one category alone, so it must not subtract the
-   furniture of three sections that are not there. */
+/* The per-page card budget, measured, never a constant (B42, B68). `filled` =
+   drawn sections holding a board (empty ones collapse to their head, B68);
+   `drawn` = sections on the surface (four on the rail, 1 on a drill, B74). */
 export function catPageCap(filled, drawn) {
-  // Branch on the surface ACTUALLY SHOWING (#286 defect fix, #281's one-read-
-  // per-surface discipline): wide renders the 300px pane — on tablet too
-  // (B96) — so wide measures #pane-cards; only a non-wide surface shows
-  // #list-rows. The old `state.isDesktop` grammar axis measured the retired
-  // hidden #list-rows on tablet (clientHeight 0), clamping the rail to the
-  // mobile drill's 3-column count. A hidden host is never a measuring surface.
+  // Measure the surface showing: wide (tablet too, B96) is #pane-cards, else
+  // #list-rows. A hidden host (clientHeight 0) is never a measuring surface.
   const wide = state.isWide;
   const host = wide ? el.paneCards : el.listRows;
   if (!host) return 1;
@@ -150,31 +105,24 @@ export function catPageCap(filled, drawn) {
   const head = wide ? PANE_CAT_HEAD : LIST_CAT_ROW;
   const pager = wide ? PANE_PAGER_H : LIST_CAT_ROW;
   const n = Math.max(1, Math.min(total, filled | 0));
-  // The content box, not clientHeight: the list's own bottom padding sits
-  // inside clientHeight and outside the flex line, and at B68's row heights
-  // that 12px is most of a card. Measure what the sections actually get.
+  // Content box, not clientHeight: the list's bottom padding sits inside it and
+  // is most of a card.
   const cs = getComputedStyle(host);
   const avail = host.clientHeight
     - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
-    - CAT_SEC_GAP * (total - 1)                // every drawn section: the gaps all stand
-    - head * (total - n);                      // a collapsed section still keeps its head row
-  // A populated section's share, minus its own furniture, in whole rows. Both
-  // surfaces stack the head row above the cards and the pager row below (B63
-  // unmerges B44's strip). The pager's slot is reserved even when a single page
-  // hides it, so the budget cannot flap between one- and many-page states.
-  // Rows are what the height buys; columns are what a row holds. Capacity is
-  // their product, so the pager still counts cards and B42's law is untouched.
-  // The mobile list card is taller than the UIUX §6 floor (B82: two title lines +
-  // the Last Updated line), and since issue #254 the rail card wears the same
-  // B82 shape — so both surfaces budget against the one 76px row height.
+    - CAT_SEC_GAP * (total - 1)
+    - head * (total - n);                      // collapsed: head row only
+  // Whole rows per populated section (head above, pager below, B63). The pager
+  // slot is reserved even when hidden, so the budget can't flap between one and
+  // many pages. Capacity = rows x columns, so the pager counts cards (B42).
+  // Both surfaces budget against the one B82 card height.
   const rowH = LIST_CARD_H;
   const rows = Math.max(1, Math.floor((avail / n - head - pager) / (rowH + PANE_ROW_GAP)));
   return rows * (wide ? 1 : LIST_CARD_COLS);
 }
 
-/* One section, both surfaces: head, add, cards, pager — the same four children
-   everywhere, so the two skins are a CSS grid decision and not a second DOM
-   shape. `makeCard` is what differs (a rail card or a list row). */
+/* One section, both surfaces: head, add, cards, pager. Only `makeCard`
+   differs. */
 function makeCatSection(cat, boards, cap, makeCard) {
   const pages = Math.max(1, Math.ceil(boards.length / cap));
   boardUi.catPage[cat] = Math.max(0, Math.min(boardUi.catPage[cat], pages - 1));
@@ -182,27 +130,19 @@ function makeCatSection(cat, boards, cap, makeCard) {
 
   const sec = document.createElement('div');
   sec.className = 'board-cat'; sec.dataset.cat = cat;
-  // A section with nothing in it collapses to its head row (B68, superseding
-  // B44's two empty thirds): the label and its own New board control stay —
-  // it is still a place to create in, and that row is still the .board-cat
-  // rect the drop hit-test finds — and only the cards and pager slots go back
-  // to the populated sections.
+  // Empty section collapses to its head row (B68); the .board-cat rect stays
+  // the drop hit-test target.
   if (!boards.length) sec.classList.add('empty');
-  // B137: on tablet the rail is a one-open accordion — every section but the
-  // open one folds to its head row (the same reclaim B68's empty collapse
-  // makes, so .folded rides that machinery), all folded on load. The mobile
-  // drill never runs on wide, so this branch is the tablet pane alone.
+  // B137: tablet rail is a one-open accordion; .folded rides B68's collapse.
   const folded = state.isWide && !state.isDesktop && boardUi.catOpen !== cat;
   if (folded) sec.classList.add('folded');
   sec.setAttribute('role', 'group');
-  // Page state rides the group label — the visual indicator is aria-hidden and
-  // a rebuilt node can't announce, so this is where AT hears the page.
+  // The page indicator is aria-hidden, so the group label carries the page.
   const name = COPY[CAT_COPY[cat]];
   sec.setAttribute('aria-label',
     pages > 1 ? name + ', page ' + (page + 1) + ' of ' + pages : name);
 
-  // Visual head only — the group's aria-label already says it (the band-label
-  // pattern), so AT doesn't hear every section twice.
+  // Visual only: the group's aria-label already names the section.
   const head = document.createElement('div');
   head.className = 'cat-head'; head.setAttribute('aria-hidden', 'true');
   const label = document.createElement('span');
@@ -210,11 +150,9 @@ function makeCatSection(cat, boards, cap, makeCard) {
   head.appendChild(label);
   sec.appendChild(head);
 
-  // B137: the tablet accordion's toggle IS the head row — one tap expands
-  // (collapsing the open one), tapping the open head folds it. Raw
-  // navigation, no commit (B81). On desktop/mobile the head stays inert.
+  // B137: on the tablet accordion the head row is the toggle. Raw nav (B81).
   if (state.isWide && !state.isDesktop) {
-    head.removeAttribute('aria-hidden');       // it is a real toggle here, AT hears it
+    head.removeAttribute('aria-hidden');       // a real toggle here
     head.setAttribute('role', 'button');
     head.setAttribute('tabindex', '0');
     head.setAttribute('aria-expanded', String(!folded));
@@ -224,7 +162,7 @@ function makeCatSection(cat, boards, cap, makeCard) {
       boardUi.catPage[cat] = 0;
       await renderPane();
       const again = el.paneCards.querySelector('.board-cat[data-cat="' + cat + '"] .cat-fold');
-      if (again) again.focus();                // goCatPage's stance: re-render ≠ lost focus
+      if (again) again.focus();                // as goCatPage
     };
     head.addEventListener('click', toggle);
     head.addEventListener('keydown', (e) => {
@@ -232,10 +170,8 @@ function makeCatSection(cat, boards, cap, makeCard) {
     });
   }
 
-  // The category's own create control (issue #88 / B63): a grid sibling of
-  // the head, never a child — .cat-head is aria-hidden, and a button inside
-  // it would be unreachable to AT. Its name is generic three times over, like
-  // the pager's: the group's aria-label says which section it makes boards in.
+  // The create control (B63) is a sibling of the head, never a child: .cat-head
+  // is aria-hidden. Its name is generic; the group's aria-label names it.
   const add = document.createElement('button');
   add.type = 'button'; add.className = 'primary-btn cat-add';
   add.textContent = COPY.catNew;
@@ -248,10 +184,7 @@ function makeCatSection(cat, boards, cap, makeCard) {
     cards.appendChild(makeCard(b));
   sec.appendChild(cards);
 
-  // The n/m indicator sits between ‹ and › rather than beside the label: it
-  // states which page the arrows are on, so it belongs with them — and one
-  // page then says nothing (UIUX §10) through the pager's own `hidden`,
-  // rather than through a second guard that has to agree with it.
+  // n/m sits between the arrows; one page hides the whole pager (UIUX §10).
   const pager = document.createElement('div');
   pager.className = 'cat-pager'; pager.hidden = pages === 1 || folded;
   pager.appendChild(makePagerBtn('pageFirst', page === 0, () => goCatPage(cat, 0, 'pageFirst')));
@@ -267,16 +200,11 @@ function makeCatSection(cat, boards, cap, makeCard) {
   return sec;
 }
 
-/* Inert navigation, like selection (B22): a page turn commits nothing, so
-   B18's window does not apply — the pager responds on the click. The render
-   replaces the clicked button, so focus is put back on its successor (or the
-   nearest enabled sibling) — a keyboard reader pages without re-tabbing. */
+/* Inert navigation (B22): commits nothing. The render replaces the clicked
+   button, so focus moves to its successor or nearest enabled sibling. */
 async function goCatPage(cat, p, key) {
   boardUi.catPage[cat] = p;
-  // Page the surface that is actually showing this category: the drilled screen
-  // (#list-rows, either platform) when the list overlay is open, else the
-  // desktop rail (#pane-cards). Paging the hidden rail behind an open drill
-  // would move focus onto an occluded button (issue #112 review).
+  // Page the visible surface; the rail behind an open drill is occluded.
   if (listOpen) await renderCat(cat); else await renderPane();
   const host = listOpen ? el.listRows : el.paneCards;
   const sec = host && host.querySelector('.board-cat[data-cat="' + cat + '"]');
@@ -292,16 +220,14 @@ function makePagerBtn(key, disabled, go) {
   b.setAttribute('aria-label', COPY[key]);
   b.disabled = disabled;
   const g = document.createElement('span');
-  g.setAttribute('aria-hidden', 'true'); g.innerHTML = GLYPH[key];   // drawn mark (UIUX §13.3)
+  g.setAttribute('aria-hidden', 'true'); g.innerHTML = GLYPH[key];   // UIUX §13.3
   b.appendChild(g);
   b.addEventListener('click', go);
   return b;
 }
 
-/* A re-render rebuilds every node — including a focused .cat-add, which lives
-   inside the rebuilt host unlike the retired global buttons. Both renderers
-   put focus back on its successor, goCatPage's stance exactly: a keyboard
-   user creates (and rides the follow-up re-render) without re-tabbing. */
+/* A re-render rebuilds a focused .cat-add; both renderers refocus its
+   successor, as goCatPage does. */
 function focusedCatAdd() {
   const a = document.activeElement;
   return a && a.classList && a.classList.contains('cat-add')
@@ -312,18 +238,17 @@ function refocusCatAdd(host, cat) {
   if (b) b.focus();
 }
 
-/* The drop writes category + catStamp = Date.now() — which IS moved-to-top,
-   by the sort key. Whole-record puts (B13) make the write site two-headed:
-   the open board mutates `current` and saves now (putting any snapshot would
-   lose live edits); any other board is fetched fresh and put directly — the
-   debounced persist can't clobber a record it never holds, and a fresh get
-   can't resurrect a board deleted mid-drag. */
+/* A drop writes category + catStamp (= moved-to-top). Whole-record puts (B13)
+   split the write: the open board mutates `current` and saves now (a snapshot
+   put would lose live edits); any other board is fetched fresh, so the
+   debounced persist can't clobber a record it never holds and a board deleted
+   mid-drag isn't resurrected. */
 async function dropBoardCard(b, cat) {
-  boardUi.catPage[cat] = 0;                    // the dropped card lands first — show it
+  boardUi.catPage[cat] = 0;                    // the dropped card lands first
   if (state.current && state.current.id === b.id) {
     state.current.category = cat;
     state.current.catStamp = Date.now();
-    applyBoardCat();                   // the open board's ladder rotates with it (B67)
+    applyBoardCat();                   // B67
     saveNow();
   } else {
     const rec = await idbGet(b.id);
@@ -332,54 +257,34 @@ async function dropBoardCard(b, cat) {
   if (state.isWide) renderPane(); else renderListSurface();
 }
 
-/* Since issue #112 / B74 the All-Boards menu is a category PICKER, and the
-   boards live on their own per-category screens reached by drilling into a
-   picker button. renderListSurface() draws whatever #list-rows is currently
-   showing (the picker's four category buttons, or one drilled category's
-   boards) — the single site the re-render callers (a delete, a page turn, a
-   capacity change) go through, so they don't each have to know the level.
-   The level-1 picker is not #list-rows at all on any surface (B100): it is
-   the Parking Lot turned into the grid (openLotMenu), which is static
-   furniture with no board data to rebuild, so renderListSurface has nothing
-   to do there. */
+/* The single re-render entry for the list overlay (B74): a drilled category
+   redraws; the level-1 picker is the static lot-grid (B100, openLotMenu), so
+   there is nothing to rebuild. */
 export async function renderListSurface() {
   if (!listOpen) return;
   if (catView) { await renderCat(catView); return; }
-  // Level 1 is the lot-grid (B100): static furniture with no board data to
-  // rebuild, so renderListSurface has nothing to do there — on any surface.
 }
 
-/* One drilled category on its own screen (issue #112 / B74): the same section
-   the rail draws (head, New board, cards, pager), but alone, so catPageCap is
-   told exactly one section is drawn and the whole screen height is its budget.
-   The open board buckets from memory, not the snapshot, for renderPane's
-   reason: `current` is authoritative for it. */
+/* One drilled category (B74): the rail's section, alone, so catPageCap gets
+   drawn=1. Buckets the open board from memory, as renderPane does. */
 async function renderCat(cat) {
   const all = await idbGetAll();
   const boards = all
     .map(live)
     .filter(b => catOf(b) === cat);
   boardUi.catFilled = 1;
-  boardUi.catCap = catPageCap(1, 1);                  // one section drawn: it takes the whole surface
+  boardUi.catCap = catPageCap(1, 1);
   const focusCat = focusedCatAdd();
   el.listView.classList.remove('picker');
-  el.listRows.setAttribute('role', 'list');   // a list of board rows (restored from the picker's menu)
+  el.listRows.setAttribute('role', 'list');
   el.listRows.textContent = '';
   el.listRows.appendChild(
     makeCatSection(cat, boards.sort(catOrder), boardUi.catCap, makeListRow));
   refocusCatAdd(el.listRows, focusCat);
 }
 
-/* The drilled category's rows are built by makeCatSection/makeListRow below.
-   (The level-1 picker's own fill was buildCatButtons into #list-rows until
-   B100 retired it — the lot-grid's fill is the same buildCatButtons.) */
-
-/* The four category buttons, in the 2x2 clockwise order (GRID_ORDER). Fill the
-   mobile/tablet lot-grid (B100: the one picker), so every picker surface reads
-   as one menu in one nomenclature — each button names its section exactly as
-   the section head does ("To-Do Boards", "Note Boards", "Learning Boards",
-   "Idea Boards"). data-cat carries the family so the tray wears the board
-   type's hue (B72/B67). */
+/* The lot-grid's four category buttons in GRID_ORDER (B100, B119), named as the
+   section heads are. data-cat gives the tray the board type's hue (B72/B67). */
 function buildCatButtons(host) {
   for (const cat of GRID_ORDER) {
     const b = document.createElement('button');
@@ -400,15 +305,12 @@ function makeListRow(b) {
   row.appendChild(card);
   attachBoardCardGestures(card, row, b,
     { container: el.listRows, onTap: () => openBoardById(b.id) });
-  // Since issue #112 / B74 the drilled category screen is a desktop surface too.
-  // Mobile summons the row menu by long-press (attachBoardCardGestures); desktop
-  // reaches the same Export/Delete menu by right-click, exactly as the rail card
-  // does (makePaneRow), so a board can be exported or deleted from the drill.
+  // Desktop reaches the row menu by right-click, as makePaneRow does.
   card.addEventListener('contextmenu', (ev) => {
-    if (!state.isDesktop) return;              // mobile keeps its native context menu; the hold is the path
+    if (!state.isDesktop) return;      // off desktop, the hold is the path
     ev.preventDefault();
     const { x, y } = menuPoint(ev, card);
-    state.menuInvoker = card;                  // focus returns to the card on close
+    state.menuInvoker = card;
     openBoardRowMenu(row, b, x, y);
   });
   return row;
@@ -418,26 +320,16 @@ export function formatDate(ms) {
   const d = new Date(ms);
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
-// The card's "Last Updated" stamp reads MM/DD/YY (B82, issue #125, UIUX §10):
-// zero-padded month and day, a two-digit year, compact enough for the narrow
-// three-across card. Local time, like formatDate. formatDate itself stays the
-// PDF export's long form from export.js — this is a second formatter, not a change.
+// MM/DD/YY local time (B82, UIUX §10); formatDate is export.js's long form.
 function formatMDY(ms) {
   const d = new Date(ms);
   return pad2(d.getMonth() + 1) + '/' + pad2(d.getDate()) + '/' + pad2(d.getFullYear() % 100);
 }
 
-/* One gesture law for a board card, on either surface (issue #74 / B44).
-   Pointer-based, never native HTML5 DnD — that fights the cards' button
-   semantics and paints its own ghost. Movement past MOVE_THRESHOLD turns the
-   press into a drag: the origin row dims in place, a fixed clone rides the
-   pointer, and the category under it frames itself in --accent-page — where
-   the board will land. A motionless release is the old tap (open, or swap);
-   a motionless mobile *hold* is the board's menu, which movement cancels.
-
-   Mobile can afford move-to-drag only because the list pages instead of
-   scrolling: there is no vertical pan left for the gesture to be confused
-   with. See B44. */
+/* One gesture law for a board card (B44). Pointer-based, never native DnD.
+   Movement past MOVE_THRESHOLD drags (fixed clone, category under it frames
+   itself); a motionless release is a tap; a mobile hold is the menu, which
+   movement cancels. Move-to-drag is safe on mobile: lists page, not scroll. */
 function attachBoardCardGestures(card, row, b, opts) {
   let down = false, dragging = false, longed = false, t = null;
   let sx = 0, sy = 0, gx = 0, gy = 0;
@@ -456,8 +348,7 @@ function attachBoardCardGestures(card, row, b, opts) {
     const r = card.getBoundingClientRect();
     gx = sx - r.left; gy = sy - r.top; // grab point, so the ghost doesn't jump
     card.setPointerCapture(e.pointerId);
-    // Mobile summons the board menu by hold; desktop reaches the same menu by
-    // right-click, on the card's own contextmenu listener (B24).
+    // Desktop uses the contextmenu listener instead (B24).
     if (!state.isDesktop) t = setTimeout(() => {
       longed = true;
       if (navigator.vibrate) navigator.vibrate(10);
@@ -470,19 +361,15 @@ function attachBoardCardGestures(card, row, b, opts) {
       if (Math.hypot(e.clientX - sx, e.clientY - sy) < MOVE_THRESHOLD) return;
       dragging = true;
       clearTimeout(t);                 // movement cancels the long-press (B29)
-      // Register the teardown: a re-render mid-drag destroys this card and its
-      // capture, so the render must be able to cancel the gesture.
+      // A re-render mid-drag destroys the card and its capture; it must be
+      // able to cancel.
       dragCancel = () => { down = false; dragging = false; clearDrag(); };
       row.classList.add('card-dragging');
-      // The same "the gesture just changed mode" signal the hold gives.
       if (!state.isDesktop && navigator.vibrate) navigator.vibrate(10);
       ghost = card.cloneNode(true);
       ghost.classList.add('card-drag-ghost');
-      // The ghost is fixed to the viewport off document.body, which takes it
-      // out of its section's [data-cat] token scope — so it carries the scope
-      // with it (B67). Without this the card lifts off green and turns blue
-      // mid-drag, because .board-row/.pane-card's water would resolve against
-      // :root. The attribute is the same one styles.css binds the ladder on.
+      // The ghost sits on document.body, outside its section's [data-cat] token
+      // scope, so it carries the scope itself (B67).
       ghost.dataset.cat = catOf(b);
       const r = card.getBoundingClientRect();
       ghost.style.width = r.width + 'px'; ghost.style.height = r.height + 'px';
@@ -509,17 +396,13 @@ function attachBoardCardGestures(card, row, b, opts) {
     const spent = dragging || longed;  // a drag or a menu consumed this press
     dragging = false;
     clearDrag();
-    // A drop is a completed gesture like endDrag — saved immediately.
-    // Releasing over the section the card already lives in is a change of
-    // mind, not a move: no write, no reorder-to-top, no page reset.
+    // Dropping on the card's own section is no move: no write, no reorder.
     if (target && target !== catOf(b)) dropBoardCard(b, target);
-    else if (!spent && opts.onTap) opts.onTap();   // swap commits a view, not a consequence — instant (B81)
+    else if (!spent && opts.onTap) opts.onTap();   // swap: instant (B81)
   });
   card.addEventListener('pointercancel', () => { down = false; dragging = false; clearDrag(); });
 }
-// Order (A1 / UIUX §7): non-destructive first, destructive last, hairline
-// between. One call site, so this lights up on both the mobile long-press and
-// the desktop right-click.
+// Order (A1 / UIUX §7): non-destructive first, destructive last.
 function openBoardRowMenu(row, board, x, y) {
   buildMenu([
     { label: COPY.export, glyph: GLYPH.export, action: () => exportBoardPdf(board) },
@@ -534,60 +417,43 @@ async function deleteBoard(id, row) {
   if (row) leave(row, () => row.remove());
   const wasCurrent = state.current && state.current.id === id;
   if (wasCurrent) state.current = null;                      // guard invalid current on return
-  // On desktop the board view has no list screen to heal a dead `current` on
-  // return, so heal it now before the next interaction dereferences current.notes.
-  // This holds whether the delete came from the rail or the desktop drilled view.
+  // Desktop has no list screen to heal a dead `current` on return; heal it now.
   if (state.isDesktop && wasCurrent) await ensureCurrentValid();
   if (listOpen) {
-    // Re-paginate the visible list overlay (the drill, either platform, or the
-    // desktop picker). The row's own leave() plays first, so a delete on a full
-    // page pulls the next board up instead of leaving a hole (issue #74). The
-    // rail behind a desktop drill is hidden — rendering it here would leave the
-    // visible drill with the hole (issue #112 review).
+    // After the row's leave(), so the next board pulls up; the rail behind a
+    // drill is hidden.
     setTimeout(renderListSurface, LEAVE_MS);
   } else if (state.isWide) {
     renderPane();
   }
   showUndo(async () => {
     await idbPut(snapshot);
-    // Restore into the visible surface: the open list overlay (drill/picker,
-    // either platform), else the desktop rail — reopening the board there if it
-    // was the one showing (issue #112 review).
+    // Restore into the visible surface, reopening the board if it was current.
     if (listOpen) { renderListSurface(); return; }
     if (state.isWide) { if (wasCurrent) swapBoard(snapshot.id); else renderPane(); }
   }, 'board');
 }
 
 async function openBoardById(id) {
-  finalizeItemUndo();                                   // clear board-bound Undo first
-  flushSave();                                          // the mobile twin of swapBoard's
-                                                        // flush: one law, two skins (B69)
+  finalizeItemUndo();
+  flushSave();                                          // as swapBoard (B69)
   const rec = await idbGet(id);
   if (!rec) return;
   state.current = rec;
-  returnToBoard();                                      // pop the nav stack → board (B9)
+  returnToBoard();                                      // B9
 }
 
-/* Pop the list nav back to the board, however deep (issue #112 / B74). A board
-   is opened from a drilled category (level 2, {v:'cat'}), so both its own state
-   and the picker's below it come off in one go — history.go(-2) fires a single
-   popstate with the board's null state. A one-level open (a guard for the
-   picker, though it holds no boards) pops once. B9 is untouched: this is the
-   back gesture's own machinery, never a shadow of it.
+/* Pop the list nav back to the board (B74): history.go(-2) from a drill, one
+   pop otherwise (B9).
 
-   `history.go` is async and NOT idempotent: two calls before its popstate lands
-   pop twice, and the second pop takes the board's own entry — out of the app.
-   `goToList` guards its twin with a synchronous `listOpen` check, but `listOpen`
-   is not cleared until this pop's popstate runs, so a re-entrancy flag is what
-   makes the "This board" toggle (mobile, where the tab is not blurred) safe
-   against a fast double-tap (B83). Cleared on the next popstate, when the nav
-   this began has landed. */
+   `history.go` is async and NOT idempotent: a second call before the popstate
+   lands pops the board's own entry, out of the app. `listOpen` clears only on
+   that popstate, so this flag guards a fast double-tap on "This board" (B83).
+   Cleared on the next popstate. */
 export let popping = false;
 export function returnToBoard() {
   if (popping) return;
-  // B124 embed: nothing was pushed, so there is nothing to pop — land on the
-  // board directly (exactly what the popstate handler would do) instead of
-  // popping the parent page's session history.
+  // B124 embed: nothing was pushed; popping would hit the parent's history.
   if (EMBED) { showBoardFromList(); return; }
   popping = true;
   const depth = (history.state && history.state.v === 'cat') ? 2 : 1;
@@ -599,39 +465,28 @@ export function openBoardObj(board) {
   renderBoard();
 }
 
-/* Creation lives in the categories (issue #88 / B63): each section's own New
-   board control writes the category it sits in — explicitly, 'unsorted'
-   included (dropBoardCard's precedent; catOf stays a read-site default) — and
-   stamps catStamp so the new board lands first, like a drop. The board opens
-   at once, on either surface: a control that made something you then had to
-   go find would tax the very moment it exists to serve. */
+/* B63: writes the section's category explicitly ('unsorted' included; catOf
+   stays a read-site default) and stamps catStamp so the board lands first. */
 export async function newBoardIn(cat) {
-  finalizeItemUndo();                                   // clear board-bound Undo first
-  flushSave();                                          // stamp any pending edit BEFORE the
-                                                        // new board's own, so B63's "lands
-                                                        // first" holds under B69's order
+  finalizeItemUndo();
+  flushSave();            // BEFORE the new board's stamp: lands first (B63, B69)
   const board = newBoardRecord();
   board.category = cat;
-  board.catStamp = Date.now();                          // lands first by catOrder, like a drop
+  board.catStamp = Date.now();
   await idbPut(board);
-  boardUi.catPage[cat] = 0;                                     // the new card's page — show it
-  // The branch is the routing invariant, not the mode: history.back() is only
-  // lawful while the list's pushed state is still on the stack. An OS back
-  // gesture or a mode flip clears listOpen before this fires — then the swap
-  // opens the board without popping an entry the
-  // list no longer owns (B9 untouched; the swap's renderPane no-ops off-desktop).
+  boardUi.catPage[cat] = 0;
+  // Pop only while the list's pushed state is still on the stack: a back
+  // gesture or mode flip clears listOpen first (B9).
   if (!listOpen) { swapBoard(board.id); return; }
   state.current = board;
-  returnToBoard();                                      // page-turn back to the board (B9)
+  returnToBoard();
 }
 
-/* --- 11.5 Desktop board pane (issues #9 / #10 / #14) ---------------------- */
-export let swapping = false;                // async re-entrancy guard beyond the commit drop-guard
+/* --- 11.5 Desktop board pane ------------------------------------------- */
+export let swapping = false;                // async re-entrancy guard
 
-/* A pending note/lot Undo splices into whatever board is `current` at undo
-   time — switching boards would resurrect it onto the wrong board. Board
-   swaps finalize it (the delete is already persisted). Board-scoped Undo is
-   cross-board-safe and survives. */
+/* A pending note/lot Undo splices into the then-current board, so a board swap
+   finalizes it. Board-scoped Undo survives. */
 function finalizeItemUndo() {
   if (el.toast.dataset.scope === 'item') { clearTimeout(undoTimer); hideToast(); }
 }
@@ -641,12 +496,14 @@ export async function swapBoard(id) {
   if (state.current && state.current.id === id) return;
   finalizeItemUndo();
   swapping = true;
-  flushSave();                        // persist() snapshots `current` synchronously — safe
+  flushSave();                        // persist() snapshots `current` synchronously
   const rec = await idbGet(id);
   if (!rec) { swapping = false; renderPane(); return; }
   el.board.classList.add('swapping');
-  setTimeout(() => {                  // setTimeout, not transitionend: the reduced-motion
-    state.current = rec;                    // kill-switch zeroes transitions (UIUX §8)
+  // not transitionend: reduced motion zeroes transitions, so it never fires
+  // (UIUX §8)
+  setTimeout(() => {
+    state.current = rec;
     renderBoard();
     renderPane();
     el.board.classList.remove('swapping');
@@ -654,27 +511,22 @@ export async function swapBoard(id) {
   }, SWAP_MS);
 }
 
-/* The rail renders the shared four categories (UIUX §10): same paging, drag,
-   and head/add/cards/pager grid as the mobile list — the
-   rail's skin only tightens the row heights and the control's label. */
+/* The rail: the same four categories as the mobile list (UIUX §10). */
 export async function renderPane() {
-  if (!state.isWide || !el.paneCards) return;   // wide: the rail exists on tablet too (B96)
-  // A re-render tears the captured card out from under a live drag — pointerup
-  // would never arrive, stranding the fixed ghost on screen. Cancel it first.
+  if (!state.isWide || !el.paneCards) return;   // B96
+  // Cancel first: the re-render kills the captured card, so pointerup would
+  // never come and the ghost would strand.
   if (dragCancel) dragCancel();
   const all = await idbGetAll();
   const buckets = Object.fromEntries(BOARD_CATS.map((cat) => [cat, []]));
-  // The open board buckets from memory, not the snapshot: `current` is
-  // authoritative for it (the export takes the same stance), and a drop's
-  // write can still be behind the debounced persist when this getAll runs.
+  // The open board buckets from memory: `current` is authoritative, and its
+  // write may still be behind the debounced persist.
   for (const b of all) {
     const rec = live(b);
     buckets[catOf(rec)].push(rec);
   }
   boardUi.catFilled = BOARD_CATS.filter(c => buckets[c].length).length;
-  // B137: the tablet rail is a one-open accordion — only the expanded section
-  // shows cards, so its budget is one populated section's share of the pane
-  // (the three folded heads reclaim theirs). Desktop keeps all four expanded.
+  // B137: tablet shows cards in one section only; desktop keeps all four open.
   const accordion = state.isWide && !state.isDesktop;
   boardUi.catCap = catPageCap(accordion ? 1 : boardUi.catFilled);
   const focusCat = focusedCatAdd();
@@ -695,42 +547,33 @@ function makePaneRow(b) {
   const isActive = state.current && b.id === state.current.id;
   if (isActive) {
     card.classList.add('active');
-    // Deletion path (a), issue #10: a permanent control on the open board's
-    // card only — deleting keeps the board's contents in front of you.
+    // Deletion path (a): a permanent control on the open board's card only.
     const del = document.createElement('button');
     del.type = 'button'; del.className = 'pane-del';
     del.setAttribute('aria-label', COPY.deleteBoard);
-    del.innerHTML = GLYPH.delete;                    // drawn mark (UIUX §13.3)
+    del.innerHTML = GLYPH.delete;                    // UIUX §13.3
     del.addEventListener('click', () => commitAction(() => deleteBoard(b.id, row)));
     row.appendChild(del);
   }
-  // Pointer path (issue #58): press-and-move past MOVE_THRESHOLD drags the
-  // card between categories; a motionless release keeps the old click
-  // behavior (inactive → swap). Replaces the bare `click`
-  // listener so a drag's release can't also swap boards. The active card
-  // drags like any other, but has nothing to swap to.
+  // Pointer path, not a bare `click`: a drag's release would also swap boards.
   attachBoardCardGestures(card, row, b, {
     container: el.paneCards, onTap: isActive ? null : () => swapBoard(b.id),
   });
-  // Keyboard activation still arrives as a `click` with no pointer sequence
-  // (detail 0) — the swap stays reachable without a mouse.
+  // Keyboard activation is a `click` with detail 0.
   if (!isActive) card.addEventListener('click', (ev) => {
-    if (ev.detail === 0) swapBoard(b.id);   // navigation — instant, no guard (B81)
+    if (ev.detail === 0) swapBoard(b.id);   // B81
   });
-  // Deletion path (b), issue #10: right-click any card → the board menu
-  // (Export, then Delete). The one summoning gesture "remove click-and-hold"
-  // doesn't touch, and it collides with nothing else in the app.
+  // Deletion path (b): right-click any card.
   card.addEventListener('contextmenu', (ev) => {
-    ev.preventDefault();              // scoped to the card; elsewhere stays native
+    ev.preventDefault();
     const { x, y } = menuPoint(ev, card);
-    state.menuInvoker = card;               // focus returns to the card on close
+    state.menuInvoker = card;               // focus returns here on close
     openBoardRowMenu(row, b, x, y);
   });
   return row;
 }
 
-/* Live title (issue #14): the active card updates in place per keystroke; a
-   full renderPane on commit reconciles the untitled date line. */
+/* Per-keystroke title update; renderPane on commit reconciles the date line. */
 export function updateActiveCardTitle() {
   const card = el.paneCards && el.paneCards.querySelector('.pane-card.active');
   if (!card || !state.current) return;
@@ -743,63 +586,46 @@ export function updateActiveCardTitle() {
 
 export function goToList() {
   if (listOpen) return;
-  // B100 (issue #157): the picker is the lot-grid on every surface that has
-  // the tab (mobile and tablet — desktop's tab is retired, the rail is its
-  // all-boards surface). The grid opens over the lot without occluding the
-  // tab, so its focus is not stranded and is kept.
-  histPush({ v: 'list' });             // B124 embed: replaceState — no parent-history entries
+  // B100/B119: the picker is the mobile lot-grid; wide has none.
+  histPush({ v: 'list' });             // B124 embed: replaceState
   showList();
 }
-/* Level 1 — the All-Boards picker (issue #112 / B74; issue #157 / B100): the
-   Parking Lot turned into the 2x2 grid on mobile AND tablet, drawn over the
-   lot at its current height (openLotMenu), leaving the board and its
-   parking-lot data untouched beneath. Desktop has no picker and no #list-view
-   at level 1: its All-boards tab is retired (B100) — the left rail (B24)
-   already lists every category with every board. */
+/* Level 1 picker (B74, B100, B119): the lot turned into a 2x2 grid on mobile
+   only; the board and its lot data stay untouched beneath. */
 function showList() {
   listOpen = true;
   catView = null;
-  syncViewTitle();                    // the picker names itself (issue #148 item 2)
-  syncBoardActions();                 // the tab stays visible above the grid — flip it to "This board" (B83)
+  syncViewTitle();
+  syncBoardActions();                 // B83: the tab flips to "This board"
   openLotMenu();
 }
-/* Drilling a picker button opens that category's own screen — level 2. It is a
-   navigation, inert like the pager (B22), so no B18 window. The mobile grid is
-   dismissed as the drill screen takes over; the board's real lot returns when
-   the whole stack pops back. */
+/* Level 2: a picker button opens its category's screen. Inert nav (B22). */
 export function drillCat(cat) {
-  histPush({ v: 'cat', cat });         // B124 embed: replaceState — no parent-history entries
+  histPush({ v: 'cat', cat });         // B124 embed: replaceState
   showCat(cat);
 }
 async function showCat(cat) {
   listOpen = true;
   catView = cat;
-  syncViewTitle();                    // the drill names itself (issue #148 item 2)
-  closeLotMenu();                     // B100: the drill is a screen; the grid steps aside, on every surface
-  el.listView.classList.remove('show'); // mobile: start below the fold; inert on desktop
+  syncViewTitle();
+  closeLotMenu();                     // B100
+  el.listView.classList.remove('show'); // mobile: start below the fold
   el.listView.hidden = false;
-  await renderCat(cat);                // measures the panel's real height BEFORE the rise
-  // The rise (B82, issue #125): the #toast translateY idiom — one rAF so the
-  // below-the-fold frame paints before .show flips it to translateY(0), on UIUX §8's
-  // one 200ms curve. Reduced-motion kills the transition (UIUX §8), so it
-  // lands instant. Desktop #list-view has no panel transform: .show is a no-op
-  // there and the full-screen overlay is already shown. The guard skips a rise
-  // whose navigation was superseded before the frame arrived.
+  await renderCat(cat);                // measure the panel BEFORE the rise
+  // The rise (B82, UIUX §8): one rAF so the below-the-fold frame paints before
+  // .show; the guard skips a navigation superseded meanwhile.
   requestAnimationFrame(() => {
     if (listOpen && catView === cat) el.listView.classList.add('show');
   });
 }
-/* Mobile only: the Parking Lot becomes the All-Boards menu (issue #112 / B74).
-   A transient overlay drawn over #lot at its current --lot-h — if the lot is
-   expanded, so is the grid — filled by the four category buttons. It never
-   touches current.parkingLot: the board's own lot data is only hidden, and it
-   returns intact the moment the picker is dismissed. */
+/* Mobile only (B74, B119): an overlay over #lot at its --lot-h. It never
+   touches current.parkingLot; the lot data is only hidden. */
 function openLotMenu() {
   lotMenuOpen = true;
   el.lotMenu.textContent = '';
   buildCatButtons(el.lotMenu);
   el.lotMenu.hidden = false;
-  el.lot.classList.add('menu-open');   // hides the lot's own rule/header/items
+  el.lot.classList.add('menu-open');
 }
 function closeLotMenu() {
   if (!lotMenuOpen) return;
@@ -810,26 +636,23 @@ function closeLotMenu() {
 }
 async function ensureCurrentValid() {
   if (state.current) { const still = await idbGet(state.current.id); if (still) return; }
-  // The board being replaced is gone from storage; drop its pending debounce
-  // with it, or the timer would fire against its successor and stamp a board
-  // nobody edited — which under B69 would move that card (`state.dirty` rides
-  // whatever `current` is, so it is cleared wherever `current` is replaced).
+  // Drop the dead board's pending debounce, or it would stamp its successor
+  // and move that card (B69). `state.dirty` rides `current`: clear it (and
+  // cancel the pending save) wherever `current` is replaced.
   cancelPendingSave(); state.dirty = false;
   const all = await idbGetAll();
-  // Events ride the boards store (B105) with no `updatedAt` — same reduce
-  // hazard as boot's most-recent pick: an event-first store would open an
-  // event as the board. Current is a BOARD.
+  // Events share the store (B105) with no `updatedAt`; filter them or one
+  // could open as the board.
   const boards = boardsOf(all);
   state.current = boards.length ? boards.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)) : newBoardRecord();
   if (!boards.length) await idbPut(state.current);
   renderBoard();
 }
-/* Put the #list-view away (B82, issue #125). Mobile slides the drilled panel
-   back down and hides it once it has fallen — sequenced by setTimeout, never
-   transitionend (B24): reduced-motion kills the transition and the hide still
-   lands on the same clock, and a re-open before it fires re-adds .show so the
-   guard leaves the panel up. Desktop hides its full-screen overlay at once —
-   there is no panel to fall, and its own tests expect an instant hide. */
+/* B82: mobile slides the panel down, then hides it on a setTimeout, never
+   transitionend (B24): reduced motion kills it and the hide must still land;
+   a re-open re-adds .show, so the guard keeps it up.
+   Wide hides at once (no panel to fall); the wide tests expect an instant
+   hide. */
 function hideListView() {
   el.listView.classList.remove('show');
   if (state.isWide) { el.listView.hidden = true; return; }
@@ -840,44 +663,35 @@ function hideListView() {
 async function showBoardFromList() {
   listOpen = false;
   catView = null;
-  closeLotMenu();                      // mobile: the grid steps aside, the real lot returns
-  hideListView();                      // slide the drilled panel down, then hide (B82)
+  closeLotMenu();
+  hideListView();
   if (!state.current) { await ensureCurrentValid(); }
   else { renderBoard(); }
-  if (state.isWide) renderPane();         // a board opened from the #list-view drill lights its rail card
+  if (state.isWide) renderPane();
 }
 
-/* --- 11.6 The rolling temporal calendar (issue #145) ----------------------
-   The third screen uses a rolling 30-day window computed at render (issue #398).
-   Events mirror into their linked To-Do boards (state.js §1.7). Go Back is the
-   visible mobile exit (B134/B151) and pops the history entry (B9); Today is the
-   second row control (B148), while All Boards and Export remain elsewhere.
-   The stack scrolls vertically on overflow (issue #391, B161), while the view
-   itself remains a bounded page. */
+/* --- 11.6 The rolling temporal calendar ------------------------------------
+   A rolling 30-day window computed at render; events mirror into their linked
+   To-Do boards (state.js §1.7). Go Back is the mobile exit (B134/B151, B9);
+   Today is the second row control (B148). The stack scrolls on overflow; the
+   view itself stays a bounded page (B161). */
 
 export function goCalBack() {
-  // B124 embed: nothing was pushed, so there is nothing to pop — close the
-  // calendar directly (the popstate off-{v:'cal'} branch's act).
+  // B124 embed: nothing was pushed, so close directly.
   if (EMBED) { hideCal(); return; }
-  history.back();                      // pop {v:'cal'} → the board (B9's route, visible)
+  history.back();                      // pop {v:'cal'} (B9)
 }
 
-/* --- The standing rail (issue #158, B99) ----------------------------------
-   Wide's calendar is FURNITURE, not navigation: the 40px rail renders at
-   boot (and on every flip to wide), reading "Calendar Board" vertically with
-   today's date and a lit dot when today carries events (the mockup's
-   aperture). Tapping it expands the panel, which squeezes the board beside it,
-   and the panel's own Go Back control (B134, issue #259; B151,
-   issue #353) returns the rail. The rail commits
-   nothing (B81: navigation runs raw); no history is pushed on wide, and the
-   rail stays outside the screen-grammar branches for a pushed calendar view. */
+/* --- The standing rail (B99) ----------------------------------------------
+   Wide's calendar is furniture, not navigation: a 40px rail rendered at boot
+   and on every flip to wide. Tapping expands the panel (squeezing the board);
+   Go Back (B134, B151) returns the rail. No commit (B81), no history pushed. */
 function renderCalRail() {
   if (!state.isWide) return;
-  el.calView.hidden = false;          // the rail is standing furniture: never hidden on wide
+  el.calView.hidden = false;
   const today = new Date();
   el.calRail.querySelector('.cdate').textContent =
     calDayName(today).slice(0, 3) + ' ' + calMD(today);
-  // The dot is the aperture (mockup 6): lit iff today carries events.
   flushSave();
   idbGetAll().then((all) => {
     const lit = calEventsOf(eventsOf(all), calKey(today)).length > 0;
@@ -894,7 +708,7 @@ export function showCalRail() {
   el.calView.hidden = false;
   el.calView.classList.add('rail-open');
   el.calView.classList.remove('panel');
-  setCalSqueeze(false);               // collapsed: the 40px reservation only
+  setCalSqueeze(false);
   el.calRail.hidden = false;
   el.calRail.setAttribute('aria-expanded', 'false');
   renderCalRail();
@@ -912,9 +726,9 @@ function expandCalRail() {
   el.calView.classList.add('panel');
   el.calRail.hidden = true;
   el.calRail.setAttribute('aria-expanded', 'true');
-  state.calExpanded = true;                 // the screen-grammar state rides the PANEL, not the rail
-  setCalSqueeze(true);                // the board reflows beside the panel
-  renderCal();                        // the expanded face: the rolling 30-day stack
+  state.calExpanded = true;                 // state rides the PANEL, not the rail
+  setCalSqueeze(true);
+  renderCal();
 }
 
 function collapseCalRail() {
@@ -923,27 +737,21 @@ function collapseCalRail() {
   el.calRail.hidden = false;
   el.calRail.setAttribute('aria-expanded', 'false');
   state.calExpanded = false;
-  setCalSqueeze(false);               // the squeeze lifts; the board returns
+  setCalSqueeze(false);
   renderCalRail();
 }
 
-/* --- 11.6 The collapsible All-Boards rail (issue #211, B118) ---------------
-   The left rail mirrors B99's calendar-rail grammar: on wide it boots
-   COLLAPSED to the 40px face (#pane-rail, the pane's own name reading
-   vertically), one tap expands it to the 300px pane — renderPane's cards,
-   unchanged — and the expanded pane's control (#pane-collapse) folds it back,
-   seated at the pane's bottom-right corner since B134 (issue #259), renamed
-   `Go Back` with no arrow glyph by B151 (issue #353). It is the pane's
-   way off (the pane has none of its own). Raw navigation both ways (B81/B24): no
-   history is pushed, nothing is committed. The board reflows through the
-   frame: the collapsed face frees the sheet, and the expanded pane reserves it
-   using the same frame-reservation rule as setPaneCollapsed. */
+/* --- 11.6 The collapsible All-Boards rail (B118) ---------------------------
+   Mirrors B99: on wide it boots collapsed to a 40px face (#pane-rail); a tap
+   expands the 300px pane and #pane-collapse (B134, B151) folds it back. Raw
+   navigation (B81/B24): no history, no commit. The frame reserves width via
+   setPaneCollapsed. */
 function expandPane() {
   el.pane.classList.remove('rail-open');
   el.paneRail.hidden = true;
   el.paneRail.setAttribute('aria-expanded', 'true');
   el.paneCollapse.hidden = false;
-  setPaneCollapsed(false);            // the frame re-reserves the pane's 300px
+  setPaneCollapsed(false);
   renderPane();
 }
 
@@ -952,36 +760,32 @@ export function collapsePane() {
   el.paneRail.hidden = false;
   el.paneRail.setAttribute('aria-expanded', 'false');
   el.paneCollapse.hidden = true;
-  setPaneCollapsed(true);             // the 40px face only; the board fills the freed width
+  setPaneCollapsed(true);
 }
 
 export function showCal() {
-  // Wide enters through the standing rail (B99); mobile keeps the pushed
-  // full-screen view (B95's mobile path, unchanged).
+  // Wide uses the standing rail (B99); mobile the pushed full view (B95).
   if (state.isWide) { showCalRail(); return; }
   state.calOpen = true;
   closeLotMenu();
   hideListView();
   listOpen = false; catView = null;
   syncBoardActions();
-  // The squeeze is the desktop/tablet arrangement: the panel takes
-  // real width beside the board; on mobile the calendar is the full screen.
   el.calView.classList.toggle('panel', state.isWide);
   setCalSqueeze(state.isWide);
   renderCal();
 }
 
-/* The popstate branch: {v:'cal'} re-shows the calendar (an OS-forward onto
-   it); leaving it lands on the board and restores the action row. */
+/* Closes the calendar state; hideCal restores the action row and board. */
 export function tearDownCal({ popHistory = false } = {}) {
   if (!state.calOpen && !state.calExpanded) return false;
   state.calOpen = false;
   state.calExpanded = false;
-  el.calView.hidden = !state.isWide;       // wide: the rail face remains (furniture, B99)
-  el.calView.classList.remove('panel');   // the expanded face lifts
+  el.calView.hidden = !state.isWide;       // wide: the rail remains (B99)
+  el.calView.classList.remove('panel');
   el.calView.classList.toggle('rail-open', state.isWide);
   el.calRail.hidden = !state.isWide;
-  setCalSqueeze(false);              // the squeeze lifts; the frame returns
+  setCalSqueeze(false);
   if (popHistory && !EMBED && history.state && history.state.v === 'cal') history.back();
   return true;
 }
@@ -995,9 +799,8 @@ function hideCal() {
 
 export function makeCalDay(day, dayNotes, board) {
   const card = document.createElement('div');
-  // Issue #385 (B159): Saturday and Sunday cards carry the weekend class —
-  // the Calendar palette and title-card squares. Issue #398 adds a distinct
-  // Sunday marker for the divider; today's card never renders in the stack.
+  // Weekend cards get the weekend class (B159); Sundays also 'sunday' for the
+  // divider. Today never renders in the stack.
   card.className = 'cal-day' + (day.today ? ' today'
     : (day.date.getDay() === 0 || day.date.getDay() === 6 ? ' weekend' : '')
       + (day.date.getDay() === 0 ? ' sunday' : '')
@@ -1009,13 +812,7 @@ export function makeCalDay(day, dayNotes, board) {
   const d2 = document.createElement('div'); d2.className = 'cal-d2';
   d2.textContent = calMD(day.date);
   dc.append(d1, d2);
-  // Issue #397 (B165): the day's "+" seats UNDER the day/date, in the card's
-  // date compartment — no longer on the event bar's right-most side. The
-  // .cal-add treatment (the 28px bounded box, B158's correction) stands; only
-  // the seat moves. The freed row space holds the day's third square before
-  // the pager. Issue #384's row-side seat ("+" rightmost) retires here —
-  // renderCalDayNotes no longer builds an add button; today's own "+"
-  // stays on the band (el.calBandAdd, B158's seat, untouched).
+  // The day's "+" seats under the date (B165); today's is on the band (B158).
   const add = document.createElement('button');
   add.type = 'button';
   add.className = 'cal-add';
@@ -1023,9 +820,6 @@ export function makeCalDay(day, dayNotes, board) {
   add.textContent = '+';
   add.addEventListener('click', () => addCalNote(day.key));
   dc.append(add);
-  // Issue #363: the day's own zone is its day-note squares — the calendar
-  // events that used to render as text lines here no longer render at all;
-  // the sync machinery keeps syncing, the card shows only the squares.
   const zone = document.createElement('div');
   zone.className = 'cal-notes on-dark';
   renderCalDayNotes(zone, day, dayNotes);
@@ -1033,8 +827,7 @@ export function makeCalDay(day, dayNotes, board) {
   return card;
 }
 
-/* Re-sync a date's whole mirror after any event write: the board's span is
-   rewritten from the live event list (one writer). */
+/* Re-sync a date's mirror after any event write (one writer). */
 export async function syncDateMirror(dateKey) {
   const all = await idbGetAll();
   const boards = boardsOf(all);
@@ -1043,25 +836,17 @@ export async function syncDateMirror(dateKey) {
   if (syncMirror(board, calEventsOf(eventsOf(all), dateKey))) await idbPut(board);
 }
 
-/* The REVERSE direction of the retired calendar-side line editor (issue
-   #154, B106): a board-side
-   Requirements commit writes through to the event records the mirror's span
-   mirrors, then resyncs. Within the span the BOARD is the word now — each
-   span line rewrites its positional event (mirrorEventsOf's law, span line
-   i ↔ event i), a deleted span line deletes its event (event-deletion
-   semantics, never demotion), and lines after the span are hand lines this
-   path never touches. Board-side additions land after the span as hand lines
-   (insertion inside the span is ambiguous, B106). The resync runs syncMirror
-   on the LIVE board object, not a fresh store read — the commit's own
-   saveNow is racing the same record, and one object cannot disagree with
-   itself. Fire-and-forget async, like every consequence in this file.
+/* The reverse mirror (B106): a Requirements commit writes through to the
+   events. In the span the BOARD wins: span line i rewrites event i
+   (mirrorEventsOf), a deleted span line deletes its event (never demotes
+   it), and hand lines after the span are never touched. Board-side additions
+   land after the span as hand lines (insertion inside it is ambiguous,
+   B106). syncMirror runs on the LIVE board object because the commit's
+   saveNow races the same record.
 
-   `before` is the pre-edit text (snapshotted at edit entry, interactions.js):
-   a plain-text anchor cannot say WHICH line was deleted, but a prefix/suffix
-   diff can — a pure deletion (the middle collapsed to nothing) removes the
-   deleted lines' events and never lets a hand line slide up into the span.
-   Any mixed edit/delete falls to the positional law, which converges: the
-   board's span text is the word, position by position. */
+   `before` is the pre-edit text (interactions.js): a prefix/suffix diff
+   identifies a pure deletion, so a hand line never slides up into the span.
+   Mixed edit/delete falls to the positional law. */
 export async function writeThroughRequirements(board, before) {
   if (!board || !board.cal) return;
   const all = await idbGetAll();
@@ -1074,7 +859,7 @@ export async function writeThroughRequirements(board, before) {
   const o = (before || '').length ? before.split('\n') : [];
   let p = 0;   // common prefix — the lines both texts agree on, from the top
   while (p < o.length && p < lines.length && o[p] === lines[p]) p++;
-  let s = 0;   // common suffix — from the bottom, never overlapping the prefix
+  let s = 0;   // common suffix, never overlapping the prefix
   while (s < o.length - p && s < lines.length - p &&
          o[o.length - 1 - s] === lines[lines.length - 1 - s]) s++;
   if (o.length > lines.length && lines.length === p + s) {
@@ -1084,38 +869,27 @@ export async function writeThroughRequirements(board, before) {
     const kept = mine.filter((_, i) => i < p || i >= o.length - s);
     board.calReq = span - (hi - lo);         // the span follows its deletions
     syncMirror(board, kept);
-    await idbPut(board);                     // always: saveNow raced the span move
+    await idbPut(board);                     // always: saveNow raced the move
     return;
   }
   const keep = Math.min(span, lines.length);
-  // Span-line edits: line i writes through to event i.
   for (const { event, text } of mirrorEventsOf(board, all)) {
     if (event.text !== text) { event.text = text; await idbPut(event); }
   }
-  // A shrunken span deletes its surplus events.
   for (let i = keep; i < span && i < mine.length; i++) await idbDelete(mine[i].id);
-  if (keep !== span) board.calReq = keep;    // the span follows the board's deletion
+  if (keep !== span) board.calReq = keep;    // span follows the deletion
   if (syncMirror(board, mine.slice(0, keep)) || keep !== span) {
     await idbPut(board);                     // saveNow raced the span move
   }
 }
 
-/* --- The day-roll launch (issue #153, B105) + the morning lifecycle (B108) --
-   Each morning's first load, TODAY's linked To-Do board exists — created by
-   `ensureLinkedBoard` even with zero events (B107's unconditional landing,
-   superseding B105's events-exist-only morning condition) — and boot lands
-   on it, carrying forward yesterday's incomplete notes (below). The check
-   still runs ONCE PER DAY KEY: at boot, and at renderCal only when the
-   today key changed since the last check (the open-past-midnight case) —
-   never per render, so it cannot steal focus mid-interaction.
-   B162 (issue #394) makes the MID-SESSION roll the full morning routine in
-   both cases — the day's board is ensured, yesterday's incompletes carry,
-   and the app lands on the new day, eventless or not — superseding
-   B105/B108's "navigates only when the day carries events and carries
-   nothing forward" mid-session clause; and the day key is STAMPED INSIDE
-   the consequence, so a launch dropped by commitAction's guard (B81) is
-   retried at the next check instead of losing the day. */
-let rollDay = null;                     // the day key the roll check last ran for
+/* --- The day-roll launch (B105) + the morning lifecycle (B108) -------------
+   Today's linked board exists even with zero events (B107, ensureLinkedBoard),
+   boot lands on it, and yesterday's incomplete notes carry forward. The check
+   runs once per day key (boot, and renderCal when the key changed), never per
+   render, so it can't steal focus. A mid-session roll runs the full routine
+   (B162). The key is stamped inside the consequence (see launchTodayBoard). */
+let rollDay = null;                     // day key the roll last ran for
 
 export function checkDayRoll() {
   const today = calKey(new Date());
@@ -1124,48 +898,28 @@ export function checkDayRoll() {
 }
 
 async function launchTodayBoard(today) {
-  commitAction(async () => {            // creating the board is a consequence
-                                        // (ensureLinkedBoard's contract, B81) —
-                                        // same wrap as the retired event-add chain's
-    // B162 (issue #394): the day is stamped HERE, inside the consequence —
-    // not at the check. A stamp before this point was lost with a dropped
-    // launch (commitAction's guard is a hard silent drop), and the
-    // once-per-day guard then refused every later retry, stranding the day
-    // until the OS restarted the page. Stamped here, a dropped launch
-    // leaves the day unstamped and the next check retries it whole.
-    // The stamp RESETS on a throw: an IDB rejection mid-consequence
-    // (idbGetAll, the sweep's deletes, the carry's put) must not strand the
-    // day either — rollDay returns to null so the next keyed check retries
-    // the routine whole, the same promise the drop path makes.
+  commitAction(async () => {            // a consequence (B81)
+    // B162: stamp HERE, not at the check: commitAction silently drops a guarded
+    // launch, and an earlier stamp would refuse every retry. A throw un-stamps.
     rollDay = today;
-    // The guarded body: everything after the stamp, unwound on failure.
     try {
-      // B131: the boot pick can BE a ghost (the most-recent record is often a
-      // future board the pre-fix build created). Detach it BEFORE flushSave —
-      // persist() early-returns on no current, so the ghost's snapshot never
-      // lands behind the sweep's delete and resurrects it.
+      // B131: the boot pick can be a future ghost board. Detach it BEFORE
+      // flushSave: persist() early-returns on no current, so the ghost's
+      // snapshot can't land behind the sweep's delete and resurrect it.
       if (state.current && state.current.cal > today &&
           !(state.current.notes || []).length) state.current = null;
       flushSave();
       const all = await idbGetAll();
       const boards = boardsOf(all);
       const { board } = ensureLinkedBoard(boards, today);
-      // B162: this block is no longer the morning's alone — the mid-session
-      // roll (the open-past-midnight case) runs the same routine: the mirror
-      // span defaults, the B131 sweep, and the carry, then the landing below.
-      // The old mid-session early-return for an eventless day is gone.
       if (board.calReq === undefined) {
-        // B131 (issue #250): the first sync (the retired event-add's job) no longer does for a
-        // future-dated event's board — the span is the events it already had.
+        // B131: a future-dated event's board has no first sync to set the span.
         board.calReq = calEventsOf(eventsOf(all), today).length;
       }
-      // B131 migration sweep: linked boards already created for future dates
-      // by the pre-fix build are derived empty state — delete them once (the
-      // event records survive; they live in the store separately).
+      // B131 sweep: empty future-dated linked boards are derived state; the
+      // events survive.
       for (const b of boards.slice()) {
-        // No current-board guard: the sweep runs before the landing swaps
-        // current to today's board, and the most-recent pick could BE a ghost
-        // — skipping it would defeat the sweep.
+        // No current-board guard: current may be the ghost being swept.
         if (b !== board && b.cal > today && !(b.notes || []).length) {
           boards.splice(boards.indexOf(b), 1);
           await idbDelete(b.id);
@@ -1175,27 +929,21 @@ async function launchTodayBoard(today) {
       if (state.current && state.current.id === board.id) persist();
       else await idbPut(board);
       await syncDateMirror(today);
-      // Step off the calendar first — mobile pops the pushed {v:'cal'} (B9),
-      // wide collapses the expanded panel to its rail — then the plain swap.
+      // Step off the calendar first (mobile pops {v:'cal'}, B9), then swap.
       if (state.calOpen) goCalBack();
       else if (state.calExpanded) collapseCalRail();
       swapBoard(board.id);
     } catch (e) {
-      rollDay = null;                 // un-stamp: the day is not yet served
-      throw e;                        // fire-and-forget per file idiom — the
-    }                                 // next keyed check retries it whole
+      rollDay = null;   // un-stamp: the next check retries whole
+      throw e;          // fire-and-forget, as elsewhere in this file
+    }
   });
 }
 
-/* Carry-forward (issue #169, B108): yesterday's linked board's INCOMPLETE
-   notes MOVE onto today's board at their same logical x/y — MOVE, not copy
-   (History is retrospective reference; the carried notes' absence from
-   yesterday's board is the owner's accepted ruling). Each carried note
-   wears `carriedOn` = today's date key: the daily marker the carried
-   indicator reads (self-clearing by date comparison — no cleanup pass; the
-   flag is set again, to the new today, by each later carry). Completing a
-   note clears it (interactions.js setNoteState). Idempotent: a same-day
-   reload finds yesterday's board already empty of incomplete notes. */
+/* Carry-forward (B108): yesterday's incomplete notes MOVE (not copy) onto
+   today's board at the same x/y, stamped `carriedOn` = today's key (compared
+   by date, so no cleanup; interactions.js setNoteState clears it).
+   Idempotent: a same-day reload finds nothing left to move. */
 async function carryForward(boards, todayBoard, today) {
   const y = new Date(); y.setDate(y.getDate() - 1);
   const yb = calBoardOf(boards, calKey(y));
@@ -1204,96 +952,61 @@ async function carryForward(boards, todayBoard, today) {
   if (!moving.length) return;
   for (const n of moving) { n.carriedOn = today; todayBoard.notes.push(n); }
   yb.notes = yb.notes.filter(n => n.state === 'complete');
-  // yb may BE state.current (boot landed on it last session): mutate it
-  // live and let swapBoard's flushSave persist it; otherwise write it now.
+  // yb may be state.current: persist it live, else write it now.
   if (state.current && yb.id === state.current.id) persist();
   else await idbPut(yb);
 }
 
 export function renderCal() {
-  checkDayRoll();                // the day-roll launch (B105): once per day key
+  checkDayRoll();                // B105
   el.calView.hidden = false;
   flushSave();
   idbGetAll().then(paintCal);
 }
 
-/* The expanded face's one painter, synchronous on a store read: the day
-   cards (issue #363: each card is its day-note squares) and the month view.
-   renderCal is its caller after the fetch; addCalNote paints directly so the
-   new block is in the DOM the moment its editor arms — no race with the
-   async fetch. */
+/* The expanded face's one painter, synchronous on a store read: addCalNote
+   calls it directly so the new block is in the DOM when its editor arms. */
 function paintCal(all) {
   el.calStack.textContent = '';
-  // Issue #343: the day head rode inside #cal-stack as its first child,
-  // where the stack's bottom-anchor seated it directly above the day rows.
-  // Issue #382 (B157): the head moved into the header band — a static child
-  // of #cal-band-card in index.html, above the stack. Issue #384: the band
-  // keeps B157's anatomy verbatim (bar, rule, overhanging card); today's day
-  // card leaves the stack and becomes the deep-orange body BELOW the band
-  // (#cal-today-board, renderCalToday), and the rolling window's future dates
-  // render in the stack (issue #398: the next 30 days).
+  // The day head is in the header band (B157); today's body sits below it
+  // (renderCalToday, B158).
   renderCalDayhead();
-  // UIUX §6/B7's collar on the exit row (issue #156, B98; retargeted by B134,
-  // issue #259): the row's tab draws at the floor as a visible frame now, and
-  // the collar tops up the width where geometry is tight — spent
-  // edge-ward/downward since the row reseated at the view's bottom, never up
-  // into the month view above it. The calendar is an unscaled surface, so the
-  // draw scale k is 1 — the same arithmetic, one caller shape fewer than the
-  // board row (no renderScale term). isDesktop inside hitInset picks the
-  // 44px touch floor vs the 24px pointer floor, so B96's tablet tier
-  // inherits the right one. Half-pixel headroom, per the board row's note.
+  // UIUX §6/B7 collar on the exit row (B98, B134), spent edge-ward/downward.
+  // The calendar is unscaled, so k is 1; +0.5 is the board row's headroom.
   el.calTop.style.setProperty('--hit', (hitInset(el.calTop, 1) + 0.5) + 'px');
   const days = calWeekAnchor ? calWeekOf(calWeekAnchor) : calWindow(CAL_FUTURE_DAYS + 1);
-  const events = eventsOf(all);      // event records ride the boards store (state.js §1.7)
-  const notes = calNoteRecords(all); // the day-note records (issue #363: per day)
+  const events = eventsOf(all);      // state.js §1.7
+  const notes = calNoteRecords(all);
   const today = days.find((d) => d.today);
   if (today) renderCalToday(today, notes.filter((r) => r.day === today.key));
   for (const day of days) {
-    if (day.today) continue;         // issue #384: today renders in the body below the band, not the stack
+    if (day.today) continue;         // B158
     const board = calBoardOf(all, day.key);
     el.calStack.appendChild(makeCalDay(day, notes.filter((r) => r.day === day.key), board));
   }
   renderCalMonth(new Set(events.map((e) => e.date)));
-  seatCalAdds();                       // issue #384/#397: the band's "+" seat — the day "+" seats under the date, nothing to align
+  seatCalAdds();
 }
 
-/* The band "+" seat (issue #384, the owner's corrections): the button is
-   CENTERED in the band's right-of-card section. The card's width is
-   max-content (B37), so the section's centre is measured, not guessed: one
-   geometry read per paint sets the CSS var, and the CSS positions the box
-   from it. Issue #397 (B165) retires the second half of this measurement —
-   the day cards' push-over alignment (the retired row-side variable): the
-   day "+" seats under the date now, in the compartment's own centred
-   column, so nothing left to measure but the band. */
+/* Centres the band "+" in the right-of-card section (B158). The card is
+   max-content wide (B37), so the centre is measured and set as a CSS var. */
 function seatCalAdds() {
   const band = el.calBand.getBoundingClientRect();
   const card = el.calBandCard.getBoundingClientRect();
-  const mid = (card.right + band.right) / 2;           // the right-of-card section's centre, band-relative below
+  const mid = (card.right + band.right) / 2;
   el.calView.style.setProperty('--cal-add-x', (mid - band.left) + 'px');
 }
 
-/* --- The day-note squares (issue #363) -------------------------------------
-   The top section (#cal-frame, #cal-notes, issues #329/#331/#336) is DELETED
-   on every tier. Its stored records survive — the #323 disposition, nothing
-   migrated, nothing stripped — and re-render as the one-zone deep-orange
-   square blocks (issue #365) INSIDE each day card of the weekly stack: up to
-   three squares per
-   day, the card's own "+" to the right of the squares, and a ‹/› pager on the
-   card when a day holds more than three.
+/* --- The day-note squares --------------------------------------------------
+   Day-note records render as squares inside each day card, three per day with
+   a pager beyond. The `day` field (the card's calKey) binds a record to a
+   card; one without it stays stored but unreachable. Calendar events are
+   never read here. */
 
-   Per-day binding (the owner's ruling): the card's "+" writes a NEW `day`
-   field on the record — the day card's calKey, written on add. A record
-   without `day` (every record written before this ruling) has no day card to
-   render on and stays unreachable, exactly as the retired `next`-occurrence
-   value stayed stored-but-unread. CALENDAR EVENTS ARE NEVER READ HERE — the
-   events keep syncing with the linked To-Do boards' Requirements (the mirror
-   machinery untouched), they simply no longer render in the weekly stack:
-   the card shows only the day-note squares. */
+let calDayNotePage = {};             // day.key -> page
 
-let calDayNotePage = {};             // per-day pager position: day.key -> page
-
-const CAL_NOTE_PER_DAY = 3;          // the owner's cap: three squares per day
-const CAL_FUTURE_DAYS = 30;           // issue #398: rolling stack beyond today's separate body
+const CAL_NOTE_PER_DAY = 3;
+const CAL_FUTURE_DAYS = 30;
 
 function calNoteRecords(all) {
   return all.filter((r) => typeof r.rem === 'string' && typeof r.day === 'string'
@@ -1306,19 +1019,16 @@ function calNoteBody(r) {
   return CALKEY_DATE.test(n) ? '' : n;
 }
 
-// The day-of-month ordinal suffix: 1st, 2nd, 3rd, 4th … 11th/12th/13th, 21st…
 function calOrdinal(n) {
   const v = n % 100;
   return ['th', 'st', 'nd', 'rd'][(v - 20) % 10] || ['th', 'st', 'nd', 'rd'][v] || 'th';
 }
 
-/* The day head (issues #341/#343, unchanged composition): today, weekday +
-   month-day (no year) with the ordinal suffix as superscript. No add control. */
+/* The day head (B149): weekday + month-day, ordinal superscripted. */
 function renderCalDayhead() {
   const today = new Date();
   const head = el.calDayhead;
-  // The head is a flex row (gap 6px) — the date and its suffix ride in ONE
-  // span so they set as "3rd", not as two spaced flex items.
+  // One span: the head is a flex row, and two items would space "3" from "rd".
   const label = document.createElement('span');
   label.textContent =
     today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
@@ -1329,26 +1039,10 @@ function renderCalDayhead() {
   head.appendChild(label);
 }
 
-/* One day card's notes zone (issue #363; one-zone squares per issue #365):
-   the day's own records as square blocks — three shown (issue #397: the
-   row's right end no longer seats the "+"; it sits under the date in
-   makeCalDay, and the third square takes the space), the ‹/› pager on
-   the card when the day holds more than three (the .mo-nav grammar; page
-   state is per day, render-time only, nothing stored). Calendar events are
-   never read here. No add button is built here — issue #384's band seat
-   (today, el.calBandAdd) and issue #397's date-compartment seat (the six
-   day cards, makeCalDay) own the adders now. */
 const CAL_PAGER = { prev: '‹', next: '›' };
 
-/* One calendar pager button (.mo-nav's grammar): a drawn guillemet out of
-   CAL_PAGER wearing the aria-label that says which way it pages. Three sites
-   wear it — a day card's notes pager at both ends, and the month head's two —
-   so the month head's finally reads the pager's own glyphs rather than
-   restating them.
-
-   `hideWhenOff` is the day-notes pager's alone: an end that cannot page drops
-   out of the row entirely (hidden, not merely disabled) rather than drawing a
-   button that does nothing. The month head always has a month to go to. */
+/* A calendar pager button (.mo-nav). `hideWhenOff` (day-notes pager only)
+   hides an end that cannot page; the month head always has a month to go to. */
 function calNavBtn(label, glyph, go, { hideWhenOff = false, off = false } = {}) {
   const b = document.createElement('button');
   b.type = 'button';
@@ -1368,7 +1062,7 @@ function renderCalDayNotes(zone, day, recs) {
   let page = Math.min(Math.max(calDayNotePage[day.key], 0), pages - 1);
   const hasPages = recs.length > CAL_NOTE_PER_DAY;
   const draw = () => {
-    if (row.querySelector('[contenteditable]')) return;  // an edit is open — don't throw the typing away
+    if (row.querySelector('[contenteditable]')) return;  // keep an open edit
     row.textContent = '';
     if (hasPages) {
       row.appendChild(calNavBtn(COPY.calPagerPrev + calMD(day.date) + COPY.calPagerUnit,
@@ -1387,26 +1081,15 @@ function renderCalDayNotes(zone, day, recs) {
         CAL_PAGER.next, () => { page++; calDayNotePage[day.key] = page; draw(); },
         { hideWhenOff: true, off: page >= pages - 1 }));
     }
-    // Issue #397: no add button here — the day card's "+" seats under the
-    // date in makeCalDay (the row's right end is the third square's now),
-    // and today's "+" is the band's (el.calBandAdd, issue #384).
     zone.textContent = '';
     zone.appendChild(row);
   };
   draw();
 }
 
-/* Issue #384: the Today board body — today's day card leaves the weekly
-   stack and becomes the full-width deep-orange body directly below the band
-   (B157's band anatomy untouched: the bar keeps its water fall, the card
-   keeps its centred seat and 22px overhang, which lands on this body's top —
-   the card's own var(--card) fill, so card and body read as one board).
-   The body's zone is the .cal-notes row grammar — today's squares at the day
-   cards' own measure (the row is inset to the day card's date-compartment
-   width, 84px + the shared 6px, so the squares sit exactly where a day
-   card's squares sit), the ‹/› pager beyond three, and NO row "+": today's
-   adder is seated on the band's right (seated above). Issue #397 changed
-   nothing here — today's "+" keeps its B158 band seat. */
+/* Today's body (B158, B157): the full-width body below the band, not in the
+   stack. Its row is inset to the date-compartment width (84px + 6px) so the
+   squares sit where a day card's do; no row "+", the band owns it. */
 function renderCalToday(today, recs) {
   const add = el.calBandAdd;
   add.setAttribute('aria-label', COPY.calAddNote + ' ' + calMD(today.date));
@@ -1419,11 +1102,8 @@ function renderCalToday(today, recs) {
   el.calTodayBoard.appendChild(zone);
 }
 
-/* Add a day note to a date (the one consequence, under commitAction's guard):
-   the record is written with the NEW `day` field — the date's calKey, the
-   per-day binding the squares render from — and its editor opens on arrival,
-   the caret in the square's one zone (issue #365). The new record starts empty;
-   only text entered in the square is written to it. */
+/* Add a day note (a consequence, under commitAction's guard): written with
+   its `day` key, empty, and its editor opens on arrival. */
 async function addCalNote(dateKey) {
   commitAction(async () => {
     const rec = makeDayNoteRecord(dateKey);
@@ -1432,14 +1112,13 @@ async function addCalNote(dateKey) {
     const recs = calNoteRecords(all).filter((r) => r.day === dateKey);
     const idx = recs.findIndex((r) => r.id === rec.id);
     calDayNotePage[dateKey] = Math.floor(Math.max(0, idx) / CAL_NOTE_PER_DAY);
-    paintCal(all);                     // synchronous — the block is in the DOM now
+    paintCal(all);
     const block = [...document.querySelectorAll('.cal-notes-grid .cal-note')].find((b) => b.dataset.id === rec.id);
-    if (block) startCalNoteEdit(block, rec);          // the caret starts in the square's one zone
+    if (block) startCalNoteEdit(block, rec);
   });
 }
 
-/* One square block: ONE zone now (issue #365) — the band is gone, the fill
-   is one large body showing `next`. */
+/* One square block: one zone showing `next`. */
 function makeCalNote(rec) {
   const block = document.createElement('div');
   block.className = 'cal-note';
@@ -1449,9 +1128,7 @@ function makeCalNote(rec) {
   body.className = 'cal-note-text';
   body.textContent = calNoteBody(rec);
   block.append(body);
-  // A tap opens the entry's editor in the square's one zone (issue #365;
-  // the deferred re-assert lands the caret at the end whichever order the
-  // native caret placement fires in, #304).
+  // The deferred caretToEnd wins whichever order native caret placement fires.
   block.addEventListener('click', (e) => {
     if (body.hasAttribute('contenteditable')) return;
     e.preventDefault();
@@ -1461,10 +1138,8 @@ function makeCalNote(rec) {
   return block;
 }
 
-/* The one-zone editor (issue #365). The commit is the blur and writes `next`
-   — `rem` is no longer rendered or edited and stays stored-but-unread (the
-   #323 disposition). A commit that leaves both fields empty discards the
-   record and the block (B8's rule: the frame must earn its keep). */
+/* The commit is the blur and writes `next`; `rem` stays stored but unread.
+   A commit leaving both empty discards the record (B8). */
 function startCalNoteEdit(block, rec) {
   const body = block.querySelector('.cal-note-text');
   body.setAttribute('contenteditable', CE);
@@ -1477,7 +1152,7 @@ function startCalNoteEdit(block, rec) {
     committed = true;
     body.removeAttribute('contenteditable');
     const next = body.textContent.trim();
-    if (!rec.rem && !next) {                        // B8: an empty commit discards
+    if (!rec.rem && !next) {                        // B8
       await idbDelete(rec.id);
       block.remove();
       renderCal();
@@ -1493,27 +1168,21 @@ function startCalNoteEdit(block, rec) {
     commit();
   });
   body.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); body.blur(); }   // Enter ends the entry
+    if (e.key === 'Enter') { e.preventDefault(); body.blur(); }
   });
 }
 
-/* --- The month view (issue #191) ------------------------------------------
-   A compact month grid in the viewport space #170 freed at the stack's
-   bottom — no new rail, no new tab. Pure display: the only act a cell
-   carries is the tap that swaps the week view to that date's week, run raw
-   (navigation commits nothing, B81's rail precedent). Two anchors, both
-   render-time state, nothing stored: the month on show
-   (calMonthAnchor, starts at today's month) and the week the stack shows
-   (calWeekAnchor — null means the shipped rolling 30-future-day window; a tap
-   replaces it with the tapped date's Sunday-first week). */
+/* --- The month view ---------------------------------------------------------
+   A month grid at the stack's bottom; a cell tap swaps the stack to that
+   date's Sunday-first week, raw (B81). Two render-time anchors, nothing
+   stored: calMonthAnchor, and calWeekAnchor (null = the rolling window). */
 let calMonthAnchor = null;
 let calWeekAnchor = null;
 
 const MO_WDS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-/* The Sunday-first week containing `anchor`: seven consecutive days, today
-   flagged by key comparison (the flag is computed, not positional — the
-   tapped week usually does not contain today). */
+/* The Sunday-first week containing `anchor`; today is flagged by key, since
+   the tapped week usually lacks it. */
 function calWeekOf(anchor) {
   const start = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - anchor.getDay());
   return calWindow(7, start);
@@ -1523,7 +1192,6 @@ function renderCalMonth(evDays) {
   const now = new Date();
   const a = calMonthAnchor || now;
   el.calMonth.textContent = '';
-  // The head: back one month (left), the label, forward one month (right).
   const head = document.createElement('div');
   head.className = 'mo-head';
   const label = document.createElement('div');
@@ -1531,15 +1199,13 @@ function renderCalMonth(evDays) {
   label.textContent = a.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
   const nav = (dy, dm) => () => {
     calMonthAnchor = new Date(a.getFullYear() + dy, a.getMonth() + dm, 1);
-    renderCal();                       // re-fetches the events; the grid redraws
+    renderCal();
   };
   const back = calNavBtn(COPY.calMonthPrev, CAL_PAGER.prev, nav(0, -1));
   const fwd = calNavBtn(COPY.calMonthNext, CAL_PAGER.next, nav(0, 1));
   head.append(back, label, fwd);
   el.calMonth.appendChild(head);
-  // The weekday letters, then the day grid: leading blanks to Sunday-align
-  // the 1st; adjacent-month days are not drawn (the compact form, per the
-  // issue's structure-only template).
+  // Leading blanks Sunday-align the 1st; adjacent-month days are not drawn.
   const grid = document.createElement('div');
   grid.className = 'mo-grid';
   for (const wd of MO_WDS) {
@@ -1549,7 +1215,7 @@ function renderCalMonth(evDays) {
     grid.appendChild(c);
   }
   const tk = calKey(now);
-  const wkKeys = new Set(calWeekOf(now).map((d) => d.key));   // the current week's band
+  const wkKeys = new Set(calWeekOf(now).map((d) => d.key));
   const lead = new Date(a.getFullYear(), a.getMonth(), 1).getDay();
   const nDays = new Date(a.getFullYear(), a.getMonth() + 1, 0).getDate();
   for (let i = 0; i < lead; i++) grid.appendChild(document.createElement('div'));
@@ -1559,9 +1225,9 @@ function renderCalMonth(evDays) {
     const cell = document.createElement('button');
     cell.type = 'button';
     cell.className = 'mo-cell'
-      + (key === tk ? ' today' : '')                    // today wears the to-do boards' water blue
-      + (wkKeys.has(key) ? ' wk' : '')                  // the pale band across the current week
-      + (evDays.has(key) ? ' ev' : '');                 // one dot per event-bearing day
+      + (key === tk ? ' today' : '')
+      + (wkKeys.has(key) ? ' wk' : '')
+      + (evDays.has(key) ? ' ev' : '');
     cell.setAttribute('aria-label',
       date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
       + (evDays.has(key) ? COPY.calHasEvents : ''));
@@ -1576,30 +1242,21 @@ function renderCalMonth(evDays) {
     }
     cell.addEventListener('click', () => {
       calWeekAnchor = date;
-      renderCal();                       // the week view swaps to the tapped week
+      renderCal();
     });
     grid.appendChild(cell);
   }
   el.calMonth.appendChild(grid);
 }
 
-/* The back gesture drives the calendar, category drill, list and board states
-   via the History API (B9). The calendar state is checked first because it can
-   sit beneath the list when the picker is opened from the calendar. */
-
-
-/* Region init (issue #182): top-level side effects, explicit register()
-   call from boot() — no module does load-time work. */
+/* Region init: called from boot(); no module does load-time work. */
 export function registerBoards() {
 
-  // Frame-reflow (issue #182): a frame change can change the per-page
-  // card budget, so re-render and re-paginate the surface that is showing.
-  // Registered here (boards owns the surface state); geometry fires the
-  // hook from applyLayout without importing boards (cycle-break).
+  // A frame change can change the card budget, so re-paginate. geometry fires
+  // this hook from applyLayout without importing boards (cycle-break).
   onFrameReflow(() => {
-    seatAllNotes();              // issue #298: every frame change re-seats all notes
-    // B137: the tablet accordion budgets one expanded section, the same call
-    // renderPane makes — the re-paginate hook must not measure a stale fill.
+    seatAllNotes();
+    // B137: budget as renderPane does, or the fill measured is stale.
     const accordion = state.isWide && !state.isDesktop;
     if (boardUi.catCap && catPageCap(accordion ? 1 : boardUi.catFilled, catView ? 1 : undefined) !== boardUi.catCap) {
       if (listOpen) renderListSurface();
@@ -1607,55 +1264,46 @@ export function registerBoards() {
     }
   });
   el.calBack.addEventListener('click', () => {
-    // On wide, Go Back IS the collapse act (B99, renamed by B134, B151): the
-    // panel returns to the rail, the squeeze lifts — no history to pop (the
-    // rail pushed none). On mobile, Go Back pops the pushed {v:'cal'} state
-    // (B9's visible route).
+    // Wide: Go Back is the collapse (B99, B134, B151), nothing to pop; mobile
+    // pops {v:'cal'} (B9).
     if (state.isWide && state.calExpanded) { collapseCalRail(); return; }
     goCalBack();
   });
   el.calToday.addEventListener('click', () => {
-    // B148 (issue #342): Today resets both render-time anchors in one act —
-    // `calMonthAnchor = null` puts the month view back on the current month
-    // and `calWeekAnchor = null` returns the stack to its rolling 30-day
-    // window — then re-renders. Issue #363: the day-note squares ride
-    // the day cards renderCal re-draws, their per-day page positions
-    // (calDayNotePage) unmodified.
+    // B148: Today resets both anchors and the pager positions.
     calMonthAnchor = null;
     calWeekAnchor = null;
-    // Issue #363: the pager positions reset with the anchors — a reset to
-    // "today" shows the squares' first page on every card.
     calDayNotePage = {};
     renderCal();
   });
   el.calRail.addEventListener('click', () => {
-    // Furniture's one act: expand (B99). Pure navigation, no commit (B81).
+    // B99, B81
     if (!state.isWide || state.calExpanded) return;
     expandCalRail();
   });
   el.paneRail.addEventListener('click', () => {
-    // The face's one act: expand (B118). Raw navigation, no commit (B81).
+    // B118, B81
     if (!state.isWide) return;
     expandPane();
   });
   el.paneCollapse.addEventListener('click', collapsePane);
+  // Back drives the calendar, drill, list and board states via History (B9).
+  // The calendar is checked first: it can sit beneath the picker.
   window.addEventListener('popstate', () => {
-    popping = false;                     // the nav returnToBoard began has landed (B83)
+    popping = false;                     // B83
     closeMenu();
     const s = history.state;
-    // B99: on wide the calendar is furniture — the rail never enters this
-    // grammar (calOpen is mobile's screen flag). A stray {v:'cal'} landing on
-    // wide collapses the panel (the mobile-era entry has no wide meaning);
-    // mobile keeps its full-screen view.
+    // B99: on wide the rail never enters this grammar (calOpen is mobile's
+    // flag); a stray {v:'cal'} there collapses the panel.
     if (s && s.v === 'cal') { showCal(); }
-    else if (state.calOpen || state.calExpanded) { hideCal(); }     // landing anywhere else closes the calendar first
+    else if (state.calOpen || state.calExpanded) { hideCal(); }
     else if (s && s.v === 'cat') {
-      if (state.isDesktop) { showBoardFromList(); }   // B100: desktop has no drill either — a stray landing (old-build history) heals to the board
+      if (state.isDesktop) { showBoardFromList(); }   // B100: stray landing
       else { showCat(s.cat); }
     }
     else if (s && s.v === 'list') {
-      if (state.isDesktop) { showBoardFromList(); }   // B100: desktop pushes no {v:'list'} — a stray landing (old-build history) heals to the board
-      else { catView = null; hideListView(); showList(); }  // the drill's panel slides down as the grid returns (B82)
+      if (state.isDesktop) { showBoardFromList(); }   // B100: as above
+      else { catView = null; hideListView(); showList(); }  // B82
     }
     else { showBoardFromList(); }
   });
