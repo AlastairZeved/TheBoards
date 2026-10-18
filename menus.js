@@ -9,20 +9,15 @@ export let menuOpen = false;
 let menuKeyHandler = null, menuOutsideHandler = null;
 export let menuReturnFocus = false;         // true only inside closeMenu's synchronous focus return
 
-/* A regular note's menu carries Copy, Title, and Link; a surfaced echo has its
-   own Complete / Go to Board menu. Anchors carry no menu (B92), and neither does
-   the lot. The note toolbar carries its state actions, while Link remains the
-   relational action. These menu items are non-destructive, so no separator is
-   needed. */
+/* A note's menu carries Copy, Title and Link; a surfaced echo has its own
+   Complete / Go to Board menu. Anchors (B92) and the lot carry none. */
 export function openMenuFor(target, clientX, clientY) {
   if (target.type !== 'note') return;   // anchors (B92), lot and canvas have no menu
   const id = target.node.dataset.id;
   const note = noteRec(id);
-  // A surfaced echo (B109): its record lives on the source board,
-  // so its menu is its two acts — Complete here completes THERE (and the echo
-  // unsurfaces), Go to Board takes the plain swapBoard route (B9). Link arms
-  // against state.current's notes and would strand on a record that isn't
-  // there, so the echo's menu carries no Link.
+  // A surfaced echo (B109): its record lives on the source board, so Complete
+  // here completes THERE, Go to Board takes swapBoard (B9). No Link: it arms
+  // against state.current's notes and would strand on a record not there.
   const surf = !note && surfacedMap.get(id);
   const items = [];
   if (surf) {
@@ -32,45 +27,38 @@ export function openMenuFor(target, clientX, clientY) {
     return;
   }
   if (!note) return;                    // a stale id (the record was discarded mid-press)
-  // Copy (B114): the menu's FIRST item — the note's own state act before the
-  // relational acts, the echo menu's Complete-first precedent (B109). Not
-  // raw: a copy is a consequence, so it commits under buildMenu's drop-guard
-  // like every other item; copyNoteTexts joins the multi-selection
-  // primary-first when the desktop grammar reaches the menu with one live.
+  // Copy (B114), first: the note's own state act before the relational acts
+  // (B109's Complete-first precedent). Not raw: a copy is a consequence, so
+  // it commits under buildMenu's drop-guard; copyNoteTexts joins a live
+  // multi-selection primary-first.
   items.push({ label: COPY.copy, glyph: GLYPH.copy, action: () => copyNoteTexts(id) });
-  // The Title (B120): the menu's second kind of act, beside Copy
-  // and Link. The toggle wears the act it will perform (B43/B71) — Add when
-  // the note has no title, Edit when it carries one. Edit-entry is
-  // navigation, so it runs raw (B81), like Link.
+  // Title (B120): wears the act it will perform (B43/B71), Add or Edit.
+  // Edit-entry is navigation, so it runs raw (B81), like Link.
   items.push({ label: note.title ? COPY.editTitle : COPY.addTitle,
                glyph: GLYPH.title, action: () => editNoteTitle(target.node), raw: true });
-  // A note's one relational action (B91): Link arms link mode, then
-  // the next note tapped is connected (handleTap's linkSource branch). beginLink
-  // runs inside buildMenu's commitAction wrapper — arming is idempotent, fine.
+  // Link (B91) arms link mode; the next note tapped is connected (handleTap's
+  // linkSource branch). Raw (B81): arming is navigation, not a consequence.
   items.push({ label: COPY.link, glyph: GLYPH.link, action: () => beginLink(id), raw: true });
   buildMenu(items, clientX, clientY);
 }
 
 /* The board-action row (B83): four tabs on mobile (B95); wide hides All and
-   Calendar (B119, B99). The board-level actions are flat tabs above the
-   Parking Lot, controls that state their own act rather than a hidden
-   gesture. Anchors carry no menu (B92): every action sits on a visible tab. */
+   Calendar (B119, B99). Flat tabs above the Parking Lot that state their own
+   act; anchors carry no menu (B92). */
 
 /* Fill a tab with its drawn mark (UIUX §13.3) and label. Built once at boot;
-   the toggle only restates its label text afterwards (syncBoardActions). */
+   syncBoardActions restates only the label. */
 export function fillBoardAction(btn, glyph, label) {
   const g = document.createElement('span');
   g.className = 'glyph'; g.setAttribute('aria-hidden', 'true'); g.innerHTML = glyph;
   const l = document.createElement('span'); l.className = 'label'; l.textContent = label;
   btn.append(g, l);
 }
-/* The toggle wears the act it will perform (B43/B71's grammar, not a fixed
-   noun): on the board it offers All boards; while the All-Boards surface is up
-   (the mobile lot-grid or a drilled list) it offers the way back to this
-   one. One mark (GLYPH.boards, the boards domain), the label alone flips, so
-   state is never colour (UIUX §1). Called from renderBoard and every
-   list-state transition. The resting label is the short "All" (B95, the
-   four-tab row's fit); the other face is the full "This board" (B83). */
+/* The toggle wears the act it will perform (B43/B71): "All" on the board
+   (B95), "This board" (B83) while the All-Boards surface is up (mobile
+   lot-grid or drilled list). One mark (GLYPH.boards); only the label flips,
+   so state is never colour (UIUX §1). Called from renderBoard and every
+   list-state transition. */
 export function syncBoardActions() {
   const away = listOpen || lotMenuOpen;
   const l = el.actionBoards.querySelector('.label');
@@ -78,11 +66,9 @@ export function syncBoardActions() {
 }
 
 /* Where a context menu opens. A keyboard summon (Shift+F10) fires
-   `contextmenu` at 0,0 — there is no pointer under it, so a menu opened at
-   the event's own coordinates would land in the sheet's top-left corner,
-   away from the thing it acts on. The fallback is the target's own centre,
-   the same place a right-click on it lands. One definition for the three
-   summoning sites: a note (below), a rail card and a drilled row (boards.js). */
+   `contextmenu` at 0,0 with no pointer, so fall back to the target's centre,
+   where a right-click would land. Shared by the note, rail-card and
+   drilled-row summons (the latter two in boards.js). */
 export function menuPoint(ev, node) {
   if (ev.clientX || ev.clientY) return { x: ev.clientX, y: ev.clientY };
   const r = node.getBoundingClientRect();
@@ -103,11 +89,10 @@ export function buildMenu(items, clientX, clientY) {
     const g1 = document.createElement('span'); g1.className = 'glyph'; g1.setAttribute('aria-hidden', 'true'); g1.innerHTML = it.glyph;
     const lb = document.createElement('span'); lb.textContent = it.label;
     b.appendChild(g1); b.appendChild(lb);
-    // The menu closes and acts on release, with a drop-guard so a double-tap
-    // fires once. One site covers every menu action, board rows included — except
-    // an item flagged `raw` (Link or Title): entering those modes is navigation, not a
-    // consequence (B81), so it must NOT hold the 400ms guard, or a quick tap on
-    // the link target inside that window would be dropped by the same guard.
+    // Closes and acts on release under a drop-guard so a double-tap fires
+    // once. A `raw` item (Link, Title) skips it: entering those modes is
+    // navigation (B81), and holding the 400ms guard would drop a quick tap on
+    // the link target.
     b.addEventListener('click', () => {
       if (it.raw) { closeMenu(); it.action(); }
       else commitAction(() => { closeMenu(); it.action(); });
@@ -130,9 +115,9 @@ export function buildMenu(items, clientX, clientY) {
   if (buttons[0]) buttons[0].focus();
 
   menuKeyHandler = (ev) => {
-    // Escape pops the menu ONLY (B91): stopPropagation keeps it from reaching the
-    // desktop keydown grammar underneath, which — since a note's Link menu can
-    // open over a live selection — would otherwise also clear that selection.
+    // Escape pops the menu ONLY (B91): stopPropagation keeps it from the
+    // desktop keydown grammar, which would also clear a live selection (a
+    // note's Link menu can open over one).
     if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); closeMenu(); }
     else if (ev.key === 'Tab') {                        // trap focus while open
       ev.preventDefault();
@@ -147,9 +132,8 @@ export function buildMenu(items, clientX, clientY) {
     }
   };
   document.addEventListener('keydown', menuKeyHandler, true);
-  // Dismissal is inert (B30): this handler runs in the capture phase, so the
-  // very press that closes the menu would otherwise go on to reach the
-  // recognizer and capture a note on the paper the menu was covering.
+  // Dismissal is inert (B30): capture phase, so the closing press doesn't
+  // reach the recognizer and capture a note on the paper under the menu.
   menuOutsideHandler = (ev) => {
     if (el.menu.contains(ev.target)) return;
     if (el.board.contains(ev.target)) {
@@ -171,8 +155,8 @@ export function closeMenu() {
   menuKeyHandler = menuOutsideHandler = null;
   if (state.menuInvoker) {
     const m = state.menuInvoker; state.menuInvoker = null;
-    // focus() dispatches focusin synchronously; the flag scopes the multi-
-    // selection exemption to exactly this call.
+    // focus() dispatches focusin synchronously; the flag scopes the
+    // multi-selection exemption to exactly this call.
     menuReturnFocus = true; m.focus(); menuReturnFocus = false;
   }
 }
@@ -185,26 +169,23 @@ export function registerMenus() {
   fillBoardAction(el.actionImport, GLYPH.import, COPY.import);
   fillBoardAction(el.actionCalendar, GLYPH.calendar, COPY.calendar);
 
-  /* The calendar exit row (B98, B151) reads `Go Back`, text alone. Filling it
-     at boot gives the empty button its visible label and makes it operable. */
+  /* Calendar exit row (B98, B151): `Go Back`, text alone; filling it at boot
+     makes the empty button operable. */
   fillBoardAction(el.calBack, '', COPY.calBack);
-  // Today wears no mark (B148): text-only control, so its glyph span is empty
-  // and the label alone renders.
+  // Today wears no mark (B148): text-only, so its glyph span is empty.
   fillBoardAction(el.calToday, '', COPY.calToday);
-  fillBoardAction(el.paneCollapse, '', COPY.paneCollapse);  // B151: `Go Back`, text alone
+  fillBoardAction(el.paneCollapse, '', COPY.paneCollapse);
 
-  /* All Boards is pure navigation: it commits nothing a stray tap could
-     duplicate, so it runs raw, without commitAction (B81). goToList opens the
-     list / lot-grid; returnToBoard pops back however deep. */
+  /* All Boards is pure navigation: raw, without commitAction (B81). goToList
+     opens the list / lot-grid; returnToBoard pops back however deep. */
   el.actionBoards.addEventListener('click', () => {
     if (listOpen || lotMenuOpen) returnToBoard();
     else goToList();
   });
 
-  /* Export is a choice (B92): the tab opens the app's one menu
-     species, anchored at the pressed tab, with PDF and JSON as its two leaves.
-     The choice is navigation; each file-producing leaf takes the drop-guard
-     (B81). PDF reads `current`; JSON backs up every board. */
+  /* Export is a choice (B92): the tab opens the app's one menu species at the
+     pressed tab, PDF and JSON as leaves. The choice is navigation; each
+     file-producing leaf takes the drop-guard (B81). */
   el.actionExport.addEventListener('click', (e) => {
     const r = e.currentTarget.getBoundingClientRect();
     buildMenu([
@@ -213,8 +194,8 @@ export function registerMenus() {
     ], r.left, r.bottom);
   });
 
-  /* Import opens the platform file picker through the hidden input. The input
-     is reset before each open so choosing the same file fires `change` again. */
+  /* Import opens the file picker via the hidden input, reset first so choosing
+     the same file fires `change` again. */
   el.actionImport.addEventListener('click', () => {
     commitAction(() => {
       el.importFile.value = '';
@@ -226,31 +207,29 @@ export function registerMenus() {
     if (file) importBoardsJson(file);
   });
 
-  /* Calendar is the fourth mobile board-action tab (B95). It commits nothing,
-     pushes its own history state on mobile (B9), and exits through Go Back
-     (B151); wide screens enter through the standing rail (B99). */
+  /* Calendar is the fourth mobile tab (B95); it commits nothing. Wide enters
+     through the standing rail (B99). */
   el.actionCalendar.addEventListener('click', () => {
     if (state.calOpen) return;
-    // The rail is wide's entry (B99); the tab is mobile's and pushes its own
-    // history state { v: 'cal' }: the OS back gesture returns from it (B9),
-    // and Go Back is the always-visible in-view route (B151).
+    // Mobile pushes its own history state so the OS back gesture returns (B9);
+    // Go Back is the in-view route (B151).
     if (state.isWide) { showCal(); return; }
     histPush({ v: 'cal' });            // B124 embed: replaceState — no parent-history entries
     showCal();
   });
 
-  /* The tabs are focusable inside #board, while the desktop keyboard grammar
-     keys off `selected` rather than focus. Swallow those keys on the row so
-     Delete cannot reach a selected note; Enter's first press still clicks the
-     tab, while preventing repeats stops a held key from firing repeatedly. */
+  /* The tabs are focusable inside #board but the desktop keyboard grammar
+     keys off `selected`, not focus: swallow these keys on the row so Delete
+     can't reach a selected note. Enter's first press still clicks; preventing
+     repeats stops a held key re-firing. */
   el.boardActions.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== 'Delete' && e.key !== 'Backspace') return;
     e.stopPropagation();
     if (e.repeat) e.preventDefault();
   });
 
-  /* Desktop right-click opens the note menu (Copy, Title, Link); anchors,
-     canvas, lot rows, and editing notes retain the browser's native menu. */
+  /* Desktop right-click opens the note menu; anchors, canvas, lot rows and
+     editing notes keep the native menu. */
   el.board.addEventListener('contextmenu', (ev) => {
     if (!state.isDesktop) return;                           // off desktop, long-press arms Link
     if (linkSource) { ev.preventDefault(); return; }  // already arming: left-click a note to finish
@@ -258,9 +237,8 @@ export function registerMenus() {
     if (!noteNode || isEditing(ev.target)) return;    // non-note / text edit keeps the native menu
     ev.preventDefault();
     const { x, y } = menuPoint(ev, noteNode);
-    // No menuInvoker: closeMenu's focus-return would run the focusin Tab-selects
-    // rule and stray-select the source note. The mouse user finishes
-    // the link by clicking the target, so no focus return is needed.
+    // No menuInvoker: closeMenu's focus return would run the focusin
+    // Tab-selects rule and stray-select the source note.
     openMenuFor({ type: 'note', node: noteNode }, x, y);
   });
 }
