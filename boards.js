@@ -33,8 +33,9 @@ function fillRowContent(node, b) {
   node.textContent = '';
   const titled = !!(b.title && b.title.trim().length);
   const title = document.createElement('span'); title.className = 'row-title';
-  // Mobile title is the pinned NAME only: a colon-joined pair clips at <=360px,
-  // so the date rides .row-date; desktop shows it via .row-title-date.
+  // The title is the pinned NAME; desktop appends .row-title-date (mobile CSS
+  // hides it: a colon-joined pair clips at <=360px, so the date rides
+  // .row-date rather than a taller card, LIST_CARD_H stays 76).
   if (b.cal) {
     title.textContent = LINKED_TITLE;
     const td = document.createElement('span'); td.className = 'row-title-date';
@@ -46,7 +47,7 @@ function fillRowContent(node, b) {
   node.appendChild(title);
   const date = document.createElement('span'); date.className = 'row-date';
   // The stamp gets its own span so mobile CSS can hide it (a text node can't
-  // be); no middot, which would dangle once the stamp is hidden.
+  // be); no middot, which would dangle once hidden.
   if (b.cal) {
     const bd = document.createElement('span'); bd.className = 'row-board-date';
     bd.textContent = linkedDate(b.cal);
@@ -56,7 +57,7 @@ function fillRowContent(node, b) {
   lu.textContent = COPY.lastUpdated + formatMDY(b.updatedAt || b.createdAt);
   date.appendChild(lu);
   node.appendChild(date);
-  // Calendar mark (UIUX §13.3): aria-hidden, the link is identity not an action.
+  // Calendar mark (UIUX §13.3): aria-hidden; the link is identity, not action.
   if (b.cal) {
     const mark = document.createElement('span');
     mark.className = 'row-cal-mark';
@@ -66,7 +67,8 @@ function fillRowContent(node, b) {
   }
 }
 
-/* Category lists, order and fallback live in state.js; only the copy map is here. */
+/* Category lists, order and fallback live in state.js; only the copy map is
+   here. */
 export { BOARD_CATS, GRID_ORDER, catOf, calMD, calDayName, eventsOf };
 const CAT_COPY = { todo: 'catTodo', idea: 'catIdea', unsorted: 'catUnsorted', learning: 'catLearning' };
 /* In-category order is last touch, newest first (B69): the later of updatedAt
@@ -85,7 +87,7 @@ const boardUi = {
   catPage: Object.fromEntries(BOARD_CATS.map((cat) => [cat, 0])),
   catCap: 0,                           // 0 = never rendered; the capacity check waits
   catFilled: 0,                        // populated sections the last render measured
-  catOpen: null,                       // B137: tablet accordion's open category, not persisted
+  catOpen: null,                       // B137: tablet accordion's open category
 };
 let dragCancel = null;                       // live card-drag teardown, if any
 
@@ -93,8 +95,8 @@ let dragCancel = null;                       // live card-drag teardown, if any
    drawn sections holding a board (empty ones collapse to their head, B68);
    `drawn` = sections on the surface (all four on the rail, 1 on a drill, B74). */
 export function catPageCap(filled, drawn) {
-  // Measure the surface actually showing: wide (tablet too, B96) is #pane-cards,
-  // else #list-rows.
+  // Measure the surface showing: wide (tablet too, B96) is #pane-cards, else
+  // #list-rows. A hidden host (clientHeight 0) is never a measuring surface.
   const wide = state.isWide;
   const host = wide ? el.paneCards : el.listRows;
   if (!host) return 1;
@@ -102,13 +104,13 @@ export function catPageCap(filled, drawn) {
   const head = wide ? PANE_CAT_HEAD : LIST_CAT_ROW;
   const pager = wide ? PANE_PAGER_H : LIST_CAT_ROW;
   const n = Math.max(1, Math.min(total, filled | 0));
-  // Content box, not clientHeight: the list's bottom padding sits inside it
-  // and is most of a card.
+  // Content box, not clientHeight: the list's bottom padding sits inside it and
+  // is most of a card.
   const cs = getComputedStyle(host);
   const avail = host.clientHeight
     - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
     - CAT_SEC_GAP * (total - 1)
-    - head * (total - n);                      // collapsed sections keep their head row
+    - head * (total - n);                      // collapsed: head row only
   // Whole rows per populated section (head above, pager below, B63). The pager
   // slot is reserved even when hidden, so the budget can't flap between one and
   // many pages. Capacity = rows x columns, so the pager still counts cards (B42).
@@ -118,7 +120,8 @@ export function catPageCap(filled, drawn) {
   return rows * (wide ? 1 : LIST_CARD_COLS);
 }
 
-/* One section, both surfaces: head, add, cards, pager. Only `makeCard` differs. */
+/* One section, both surfaces: head, add, cards, pager. Only `makeCard`
+   differs. */
 function makeCatSection(cat, boards, cap, makeCard) {
   const pages = Math.max(1, Math.ceil(boards.length / cap));
   boardUi.catPage[cat] = Math.max(0, Math.min(boardUi.catPage[cat], pages - 1));
@@ -126,14 +129,14 @@ function makeCatSection(cat, boards, cap, makeCard) {
 
   const sec = document.createElement('div');
   sec.className = 'board-cat'; sec.dataset.cat = cat;
-  // Empty section collapses to its head row (B68); the .board-cat rect stays the
-  // drop hit-test target.
+  // Empty section collapses to its head row (B68); the .board-cat rect stays
+  // the drop hit-test target.
   if (!boards.length) sec.classList.add('empty');
   // B137: tablet rail is a one-open accordion; .folded rides B68's collapse.
   const folded = state.isWide && !state.isDesktop && boardUi.catOpen !== cat;
   if (folded) sec.classList.add('folded');
   sec.setAttribute('role', 'group');
-  // The page indicator is aria-hidden, so the group label carries the page for AT.
+  // The page indicator is aria-hidden, so the group label carries the page.
   const name = COPY[CAT_COPY[cat]];
   sec.setAttribute('aria-label',
     pages > 1 ? name + ', page ' + (page + 1) + ' of ' + pages : name);
@@ -146,7 +149,7 @@ function makeCatSection(cat, boards, cap, makeCard) {
   head.appendChild(label);
   sec.appendChild(head);
 
-  // B137: on the tablet accordion the head row is the toggle. Raw navigation (B81).
+  // B137: on the tablet accordion the head row is the toggle. Raw nav (B81).
   if (state.isWide && !state.isDesktop) {
     head.removeAttribute('aria-hidden');       // a real toggle here
     head.setAttribute('role', 'button');
@@ -167,7 +170,7 @@ function makeCatSection(cat, boards, cap, makeCard) {
   }
 
   // The create control (B63) is a sibling of the head, never a child: .cat-head
-  // is aria-hidden. Its name is generic; the group's aria-label gives the section.
+  // is aria-hidden. Its name is generic; the group's aria-label names it.
   const add = document.createElement('button');
   add.type = 'button'; add.className = 'primary-btn cat-add';
   add.textContent = COPY.catNew;
@@ -236,8 +239,9 @@ function refocusCatAdd(host, cat) {
 
 /* A drop writes category + catStamp (= moved-to-top). Whole-record puts (B13)
    split the write: the open board mutates `current` and saves now (a snapshot
-   put would lose live edits); any other board is fetched fresh, so a board
-   deleted mid-drag isn't resurrected. */
+   put would lose live edits); any other board is fetched fresh, so the
+   debounced persist can't clobber a record it never holds and a board deleted
+   mid-drag isn't resurrected. */
 async function dropBoardCard(b, cat) {
   boardUi.catPage[cat] = 0;                    // the dropped card lands first
   if (state.current && state.current.id === b.id) {
@@ -300,7 +304,7 @@ function makeListRow(b) {
   row.appendChild(card);
   attachBoardCardGestures(card, row, b,
     { container: el.listRows, onTap: () => openBoardById(b.id) });
-  // Desktop reaches the row menu by right-click, as makePaneRow does; mobile by hold.
+  // Desktop reaches the row menu by right-click, as makePaneRow does.
   card.addEventListener('contextmenu', (ev) => {
     if (!state.isDesktop) return;              // mobile: the hold is the path
     ev.preventDefault();
@@ -315,7 +319,7 @@ export function formatDate(ms) {
   const d = new Date(ms);
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
-// MM/DD/YY local time (B82, UIUX §10); formatDate is the long form export.js uses.
+// MM/DD/YY local time (B82, UIUX §10); formatDate is export.js's long form.
 function formatMDY(ms) {
   const d = new Date(ms);
   return pad2(d.getMonth() + 1) + '/' + pad2(d.getDate()) + '/' + pad2(d.getFullYear() % 100);
@@ -356,7 +360,8 @@ function attachBoardCardGestures(card, row, b, opts) {
       if (Math.hypot(e.clientX - sx, e.clientY - sy) < MOVE_THRESHOLD) return;
       dragging = true;
       clearTimeout(t);                 // movement cancels the long-press (B29)
-      // A re-render mid-drag destroys the card and its capture; it must be able to cancel.
+      // A re-render mid-drag destroys the card and its capture; it must be
+      // able to cancel.
       dragCancel = () => { down = false; dragging = false; clearDrag(); };
       row.classList.add('card-dragging');
       if (!state.isDesktop && navigator.vibrate) navigator.vibrate(10);
@@ -392,7 +397,7 @@ function attachBoardCardGestures(card, row, b, opts) {
     clearDrag();
     // Dropping on the card's own section is no move: no write, no reorder.
     if (target && target !== catOf(b)) dropBoardCard(b, target);
-    else if (!spent && opts.onTap) opts.onTap();   // swap commits a view, not a consequence — instant (B81)
+    else if (!spent && opts.onTap) opts.onTap();   // swap: instant (B81)
   });
   card.addEventListener('pointercancel', () => { down = false; dragging = false; clearDrag(); });
 }
@@ -447,7 +452,7 @@ async function openBoardById(id) {
 export let popping = false;
 export function returnToBoard() {
   if (popping) return;
-  // B124 embed: nothing was pushed; popping would hit the parent page's history.
+  // B124 embed: nothing was pushed; popping would hit the parent's history.
   if (EMBED) { showBoardFromList(); return; }
   popping = true;
   const depth = (history.state && history.state.v === 'cat') ? 2 : 1;
@@ -463,8 +468,7 @@ export function openBoardObj(board) {
    stays a read-site default) and stamps catStamp so the board lands first. */
 export async function newBoardIn(cat) {
   finalizeItemUndo();
-  flushSave();                                          // must stamp a pending edit BEFORE the
-                                                        // new board's, so it lands first (B63, B69)
+  flushSave();            // BEFORE the new board's stamp: lands first (B63, B69)
   const board = newBoardRecord();
   board.category = cat;
   board.catStamp = Date.now();
@@ -478,7 +482,7 @@ export async function newBoardIn(cat) {
 }
 
 /* --- 11.5 Desktop board pane ------------------------------------------- */
-export let swapping = false;                // async re-entrancy guard beyond the commit drop-guard
+export let swapping = false;                // async re-entrancy guard
 
 /* A pending note/lot Undo splices into the then-current board, so a board swap
    finalizes it. Board-scoped Undo survives. */
@@ -495,7 +499,7 @@ export async function swapBoard(id) {
   const rec = await idbGet(id);
   if (!rec) { swapping = false; renderPane(); return; }
   el.board.classList.add('swapping');
-  setTimeout(() => {                  // not transitionend: reduced-motion zeroes transitions (UIUX §8)
+  setTimeout(() => {         // not transitionend: reduced-motion (UIUX §8)
     state.current = rec;
     renderBoard();
     renderPane();
@@ -579,7 +583,7 @@ export function updateActiveCardTitle() {
 
 export function goToList() {
   if (listOpen) return;
-  // B100/B119: the picker is the mobile lot-grid; wide has none (the rail lists all).
+  // B100/B119: the picker is the mobile lot-grid; wide has none.
   histPush({ v: 'list' });             // B124 embed: replaceState
   showList();
 }
@@ -592,7 +596,7 @@ function showList() {
   syncBoardActions();                 // B83: the tab flips to "This board"
   openLotMenu();
 }
-/* Level 2: a picker button opens its category's screen. Inert navigation (B22). */
+/* Level 2: a picker button opens its category's screen. Inert nav (B22). */
 export function drillCat(cat) {
   histPush({ v: 'cat', cat });         // B124 embed: replaceState
   showCat(cat);
@@ -604,7 +608,7 @@ async function showCat(cat) {
   closeLotMenu();                     // B100
   el.listView.classList.remove('show'); // mobile: start below the fold
   el.listView.hidden = false;
-  await renderCat(cat);                // must measure the panel height BEFORE the rise
+  await renderCat(cat);                // measure the panel BEFORE the rise
   // The rise (B82, UIUX §8): one rAF so the below-the-fold frame paints before
   // .show; the guard skips a navigation superseded meanwhile.
   requestAnimationFrame(() => {
@@ -630,10 +634,12 @@ function closeLotMenu() {
 async function ensureCurrentValid() {
   if (state.current) { const still = await idbGet(state.current.id); if (still) return; }
   // Drop the dead board's pending debounce, or it would stamp its successor
-  // and move that card (B69); `state.dirty` rides `current`.
+  // and move that card (B69). `state.dirty` rides `current`: clear it (and
+  // cancel the pending save) wherever `current` is replaced.
   cancelPendingSave(); state.dirty = false;
   const all = await idbGetAll();
-  // Events share the store (B105) with no `updatedAt`; filter them or one could open as the board.
+  // Events share the store (B105) with no `updatedAt`; filter them or one
+  // could open as the board.
   const boards = boardsOf(all);
   state.current = boards.length ? boards.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a)) : newBoardRecord();
   if (!boards.length) await idbPut(state.current);
@@ -641,7 +647,8 @@ async function ensureCurrentValid() {
 }
 /* B82: mobile slides the panel down, then hides it on a setTimeout, never
    transitionend (B24); a re-open re-adds .show, so the guard keeps it up.
-   Wide hides at once. */
+   Wide hides at once (no panel to fall); the wide tests expect an instant
+   hide. */
 function hideListView() {
   el.listView.classList.remove('show');
   if (state.isWide) { el.listView.hidden = true; return; }
@@ -662,7 +669,8 @@ async function showBoardFromList() {
 /* --- 11.6 The rolling temporal calendar ------------------------------------
    A rolling 30-day window computed at render; events mirror into their linked
    To-Do boards (state.js §1.7). Go Back is the mobile exit (B134/B151, B9);
-   Today is the second row control (B148). The stack scrolls on overflow (B161). */
+   Today is the second row control (B148). The stack scrolls on overflow; the
+   view itself stays a bounded page (B161). */
 
 export function goCalBack() {
   // B124 embed: nothing was pushed, so close directly.
@@ -714,7 +722,7 @@ function expandCalRail() {
   el.calView.classList.add('panel');
   el.calRail.hidden = true;
   el.calRail.setAttribute('aria-expanded', 'true');
-  state.calExpanded = true;                 // screen-grammar state rides the PANEL, not the rail
+  state.calExpanded = true;                 // state rides the PANEL, not the rail
   setCalSqueeze(true);
   renderCal();
 }
@@ -752,7 +760,7 @@ export function collapsePane() {
 }
 
 export function showCal() {
-  // Wide uses the standing rail (B99); mobile the pushed full-screen view (B95).
+  // Wide uses the standing rail (B99); mobile the pushed full view (B95).
   if (state.isWide) { showCalRail(); return; }
   state.calOpen = true;
   closeLotMenu();
@@ -764,7 +772,7 @@ export function showCal() {
   renderCal();
 }
 
-/* The popstate branch: leaving {v:'cal'} lands on the board and restores the action row. */
+/* Closes the calendar state; hideCal restores the action row and board. */
 export function tearDownCal({ popHistory = false } = {}) {
   if (!state.calOpen && !state.calExpanded) return false;
   state.calOpen = false;
@@ -826,9 +834,11 @@ export async function syncDateMirror(dateKey) {
 
 /* The reverse mirror (B106): a Requirements commit writes through to the
    events. In the span the BOARD wins: span line i rewrites event i
-   (mirrorEventsOf), a deleted span line deletes its event, and hand lines
-   after the span are never touched. syncMirror runs on the LIVE board
-   object because the commit's saveNow races the same record.
+   (mirrorEventsOf), a deleted span line deletes its event (never demotes
+   it), and hand lines after the span are never touched. Board-side additions
+   land after the span as hand lines (insertion inside it is ambiguous,
+   B106). syncMirror runs on the LIVE board object because the commit's
+   saveNow races the same record.
 
    `before` is the pre-edit text (interactions.js): a prefix/suffix diff
    identifies a pure deletion, so a hand line never slides up into the span.
@@ -845,7 +855,7 @@ export async function writeThroughRequirements(board, before) {
   const o = (before || '').length ? before.split('\n') : [];
   let p = 0;   // common prefix — the lines both texts agree on, from the top
   while (p < o.length && p < lines.length && o[p] === lines[p]) p++;
-  let s = 0;   // common suffix — from the bottom, never overlapping the prefix
+  let s = 0;   // common suffix, never overlapping the prefix
   while (s < o.length - p && s < lines.length - p &&
          o[o.length - 1 - s] === lines[lines.length - 1 - s]) s++;
   if (o.length > lines.length && lines.length === p + s) {
@@ -855,7 +865,7 @@ export async function writeThroughRequirements(board, before) {
     const kept = mine.filter((_, i) => i < p || i >= o.length - s);
     board.calReq = span - (hi - lo);         // the span follows its deletions
     syncMirror(board, kept);
-    await idbPut(board);                     // always: saveNow raced the span move
+    await idbPut(board);                     // always: saveNow raced the move
     return;
   }
   const keep = Math.min(span, lines.length);
@@ -863,7 +873,7 @@ export async function writeThroughRequirements(board, before) {
     if (event.text !== text) { event.text = text; await idbPut(event); }
   }
   for (let i = keep; i < span && i < mine.length; i++) await idbDelete(mine[i].id);
-  if (keep !== span) board.calReq = keep;    // the span follows the board's deletion
+  if (keep !== span) board.calReq = keep;    // span follows the deletion
   if (syncMirror(board, mine.slice(0, keep)) || keep !== span) {
     await idbPut(board);                     // saveNow raced the span move
   }
@@ -884,13 +894,14 @@ export function checkDayRoll() {
 }
 
 async function launchTodayBoard(today) {
-  commitAction(async () => {            // creating the board is a consequence (B81)
+  commitAction(async () => {            // a consequence (B81)
     // B162: stamp HERE, not at the check: commitAction silently drops a guarded
     // launch, and an earlier stamp would refuse every retry. A throw un-stamps.
     rollDay = today;
     try {
       // B131: the boot pick can be a future ghost board. Detach it BEFORE
-      // flushSave, or persist() snapshots it behind the sweep's delete.
+      // flushSave: persist() early-returns on no current, so the ghost's
+      // snapshot can't land behind the sweep's delete and resurrect it.
       if (state.current && state.current.cal > today &&
           !(state.current.notes || []).length) state.current = null;
       flushSave();
@@ -920,7 +931,7 @@ async function launchTodayBoard(today) {
       swapBoard(board.id);
     } catch (e) {
       rollDay = null;                 // un-stamp: the next check retries whole
-      throw e;
+      throw e;                // fire-and-forget, as elsewhere in this file
     }
   });
 }
@@ -949,15 +960,15 @@ export function renderCal() {
   idbGetAll().then(paintCal);
 }
 
-/* The expanded face's one painter. addCalNote calls it directly so the new
-   block is in the DOM when its editor arms. */
+/* The expanded face's one painter, synchronous on a store read: addCalNote
+   calls it directly so the new block is in the DOM when its editor arms. */
 function paintCal(all) {
   el.calStack.textContent = '';
   // The day head is in the header band (B157); today's body sits below it
   // (renderCalToday, B158).
   renderCalDayhead();
   // UIUX §6/B7 collar on the exit row (B98, B134), spent edge-ward/downward.
-  // The calendar is unscaled, so k is 1; +0.5 is the board row's half-pixel headroom.
+  // The calendar is unscaled, so k is 1; +0.5 is the board row's headroom.
   el.calTop.style.setProperty('--hit', (hitInset(el.calTop, 1) + 0.5) + 'px');
   const days = calWeekAnchor ? calWeekOf(calWeekAnchor) : calWindow(CAL_FUTURE_DAYS + 1);
   const events = eventsOf(all);      // state.js §1.7
@@ -1113,7 +1124,7 @@ function makeCalNote(rec) {
   body.className = 'cal-note-text';
   body.textContent = calNoteBody(rec);
   block.append(body);
-  // The deferred caretToEnd wins whichever order the native caret placement fires in.
+  // The deferred caretToEnd wins whichever order native caret placement fires.
   block.addEventListener('click', (e) => {
     if (body.hasAttribute('contenteditable')) return;
     e.preventDefault();
@@ -1252,7 +1263,8 @@ export function registerBoards() {
     }
   });
   el.calBack.addEventListener('click', () => {
-    // Wide: Go Back is the collapse (B99, B134, B151), nothing to pop; mobile pops {v:'cal'} (B9).
+    // Wide: Go Back is the collapse (B99, B134, B151), nothing to pop; mobile
+    // pops {v:'cal'} (B9).
     if (state.isWide && state.calExpanded) { collapseCalRail(); return; }
     goCalBack();
   });
@@ -1283,7 +1295,7 @@ export function registerBoards() {
     if (s && s.v === 'cal') { showCal(); }
     else if (state.calOpen || state.calExpanded) { hideCal(); }
     else if (s && s.v === 'cat') {
-      if (state.isDesktop) { showBoardFromList(); }   // B100: a stray landing heals to the board
+      if (state.isDesktop) { showBoardFromList(); }   // B100: stray landing
       else { showCat(s.cat); }
     }
     else if (s && s.v === 'list') {
