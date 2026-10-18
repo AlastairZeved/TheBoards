@@ -17,15 +17,29 @@ function openDB() {
     req.onerror = () => reject(req.error);
   });
 }
+/* A cached handle must not outlive its connection (issue #478): a failed open,
+   a closed connection (eviction, Safari's "connection lost", another tab's
+   versionchange) would otherwise fail every save until reload. Each reset only
+   clears the promise it was made for, so a stale event can't drop a newer one. */
 let dbPromise;
+function forget(p) { if (dbPromise === p) dbPromise = undefined; }
 function db() {
-  if (!dbPromise) dbPromise = openDB();
+  if (!dbPromise) {
+    const p = dbPromise = openDB().then((database) => {
+      database.onversionchange = () => { database.close(); forget(p); };
+      database.onclose = () => forget(p);
+      return database;
+    }, (e) => { forget(p); throw e; });
+  }
   return dbPromise;
 }
 
 function withStore(mode, operation) {
-  return db().then((database) => new Promise((resolve, reject) => {
-    const tx = database.transaction(STORE, mode);
+  const p = db();
+  return p.then((database) => new Promise((resolve, reject) => {
+    let tx;
+    // A close() fires no `close` event, and transaction() then throws.
+    try { tx = database.transaction(STORE, mode); } catch (e) { forget(p); throw e; }
     const result = operation(tx.objectStore(STORE));
     if (mode === 'readonly') {
       result.onsuccess = () => resolve(result.result);

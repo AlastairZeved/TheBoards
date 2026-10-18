@@ -3515,6 +3515,54 @@ run(async () => {
     }
   }
 
+  console.log('\n[D38] A closed IndexedDB connection is reopened by the save retry (issue #478)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    // Capture every connection the app opens (init script, then reload so the
+    // boot-time open is wrapped), then close them: a lost connection whose
+    // transaction() throws InvalidStateError.
+    await ctx.addInitScript(() => {
+      window.__conns = [];
+      const open = IDBFactory.prototype.open;
+      IDBFactory.prototype.open = function (...a) {
+        const req = open.apply(this, a);
+        req.addEventListener('success', () => window.__conns.push(req.result));
+        return req;
+      };
+    });
+    await page.reload();
+    await page.waitForTimeout(800);
+    await page.mouse.click(500, 200);
+    await page.waitForTimeout(500);
+    await page.keyboard.type('first');
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(900);
+    await page.evaluate(() => { for (const c of window.__conns) c.close(); });
+    const conns = await page.evaluate(() => window.__conns.length);
+    await page.mouse.click(700, 420);
+    await page.waitForTimeout(500);
+    await page.keyboard.type('after-close');
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(900);
+    ok('the failed save shows the save-error notice', await page.evaluate(() =>
+      document.querySelector('#toast').dataset.mode === 'save'));
+    await page.waitForTimeout(3500);                  // the 1s, 2s retries
+    const texts = await page.evaluate(() => new Promise((resolve, reject) => {
+      const req = indexedDB.open('boards-db');
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const q = req.result.transaction('boards').objectStore('boards').getAll();
+        q.onsuccess = () => { resolve(q.result.flatMap(r => (r.notes || []).map(n => n.text))); req.result.close(); };
+      };
+    }));
+    ok('the edit made after the connection closed reached IndexedDB',
+       texts.includes('after-close') && texts.includes('first'), JSON.stringify({ texts, conns }));
+    ok('the save-error notice clears once the reopened connection saves', await page.evaluate(() =>
+      document.querySelector('#toast').dataset.mode !== 'save'));
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   await browser.close();
 
 });
