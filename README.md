@@ -2,140 +2,262 @@
 
 [![standard-readme compliant](https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/RichardLitt/standard-readme)
 
-Task tracking, creative ideation.
+A bounded page where a thought becomes a framed, movable, scalable note the
+instant it is typed.
 
-A personal, offline, installable web app for notes and tasks that works like a sketchbook page. You tap anywhere on a bounded canvas, a note box appears, and you type. You can drag notes around, resize them, and connect them. The position and size of a note are the organization; no folders, tags, search, filters, or settings. 
+Zeved Boards is a personal, offline, installable web app for tasks, ideas and
+notes that works like a sketchbook page. Tap anywhere on the page, a note
+appears, and you type. Drag notes around, resize them, link them. Where a note
+sits and how big it is *is* the organization: there are no folders, tags,
+search, filters or settings.
 
-Storage is local only through browser storage. Export/import of JSON for backups. Export to PDF (both spatially and list form) for sharing.  
+Everything stays on your device. Nothing is sent anywhere.
 
-Each board has four fixed areas: Title, Components, Requirements, and Parking Lot. Boards are grouped into To Do, Ideas, Notes, and Learning. On wide screens there’s also a calendar rail. For To Do Boards, Requirements is the only section with rules since it functions as a 2-way sync with the Calendar for any events on that day. 
+**Open it:** <https://alastairzeved.github.io/TheBoards/>
 
-It is also deliberately small. The app is five files of vanilla
-HTML/CSS/JavaScript with no frameworks, no build step, no package manager, and
-no backend. All data lives on-device in browser cache storage; nothing is sent anywhere,
-ever.
+## Table of Contents
 
-## Why it exists:
-Because most task apps force you to decide where something belongs before you’ve even written it down. This flips that: capture first, structure later by moving things around. It’s an external working memory. The page holds the thoughts so your head doesn’t have to. Whether you're in a hurry, just need to 'jot it down quick', or an outright fellow scatterbrain - capture first, organize second is the point. 
-
-This is not for teams, shared projects, cross-device sync, heavy task management, or anyone who needs search across a large archive.
+- [Background](#background)
+- [Install](#install)
+- [Usage](#usage)
+- [Security](#security)
+- [Design Philosophy](#design-philosophy)
+- [Development](#development)
+- [Maintainers](#maintainers)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Background
 
-This app started in a sketchbook, at a time when I wasn't physically able to use any screens. I still needed my to do list, my thoughts, my ideas; but a notepad just wasn't cutting it. Instead I just drew two lines and a title, then drew a box around the title. Then I'd write something on it, anywhere, and just draw a box around it to isolate it, to give the thought its own visual space. When I wasn't paying attention, it became my daily driver. The spatial-first organization is wonderful, but so is the simplicity. From thought to 'paper', I just open the app and it's already on the board waiting for me to tap anywhere on it and start typing. No pre-organizing, labeling, tagging, navigating to the right folder - just open, tap, type.
+Zeved Boards started in a sketchbook, at a time when its author couldn't use
+screens at all. A to-do list, ideas and loose thoughts still needed somewhere
+to live, and a plain notepad wasn't enough. So each page became the same
+drawing: two lines and a title with a box around it. A thought went down
+anywhere on the page and got a box of its own, giving it its own visual space.
+That page quietly became a daily driver, and this app is that page.
+
+Most task apps make you decide where something belongs before you've written
+it down. This one reverses that: capture first, organize later by moving
+things around. It is an external working memory. The page holds the thoughts
+so your head doesn't have to, whether you're in a hurry, just need to jot
+something down, or simply think in scattered pieces.
 
 The design draws on gestalt principles (Prägnanz in particular) and on
-Miller's working-memory research — a bounded page you can see all of, rather
-than an infinite canvas you have to navigate. For other tools like this, the wonderful community sits over at the Malleable Systems Collective.
+Miller's working-memory research: one bounded page you can see all of at
+once, rather than an infinite canvas you have to navigate.
 
-#How to use it:
+It is not for teams, shared projects, syncing across devices, heavy project
+management, or searching a large archive.
 
-pen the GitHub Pages URL (https://alastairzeved.github.io/TheBoards/) and/or install it as a PWA from the website. 
-Tap the empty canvas to create a note. 
-Type. Drag to move, pinch to resize. 
-Tap once to select, tap again to edit. 
-Long-press or right-click for the note menu. Link notes by choosing Link and then tapping another note. 
-Completing a note scratches it out instead of deleting it, and you get a 5-second undo. 
-Export/import JSON is your backup and transfer method. 
-On desktop, use the left rail to switch boards; on phone, the calendar becomes a full-screen view.
+## Install
 
-### Dependencies
+There is nothing to download or set up.
 
-None. No frameworks, no bundler, no package manager, no
-runtime dependencies. Fonts (Montserrat Alternates) are self-hosted in
-`fonts/`, and the PDF exporter is hand-rolled in `export.js` rather than pulled
-from a library.
+1. Open <https://alastairzeved.github.io/TheBoards/> in a browser.
+2. Optionally, install it to your home screen or desktop with your browser's
+   **Install** or **Add to Home Screen** option.
+
+Once it has loaded once, it works fully offline. It updates itself in the
+background when a new version is published, and your boards are never touched
+by an update.
+
+## Usage
+
+### The page
+
+Every board is one fixed page. It never scrolls, pans or zooms. If it's full,
+it's full, and that boundary is the point.
+
+Every board has four permanent areas:
+
+| Area | What it is for |
+|---|---|
+| **Title** | The board's name, in the box at the top. |
+| **Components** | The left side of the top band. Use it however you like. |
+| **Requirements** | The right side of the top band. Use it however you like. |
+| **Parking Lot** | Plain lines along the bottom, for questions that are blocking the board. Tap the empty lot to add one. |
+
+Everything between the top band and the Parking Lot is open space for notes.
+
+### Notes
+
+| To… | On a phone or tablet | On a computer |
+|---|---|---|
+| Make a note | Tap empty space, then type | Click empty space, then type |
+| Select a note | Tap it once | Click it once |
+| Edit a note | Tap it again | Double-click it, or press Enter |
+| Move a note | Drag it | Drag it |
+| Resize a note | Pinch it with two fingers | Drag the frame around the selected note |
+| Open the note menu | Press and hold | Right-click |
+
+- **Selecting** a note shows its toolbar underneath it, with Complete and
+  Delete among its buttons.
+- **Completing** a note scratches it out instead of removing it, so the work
+  you've done stays visible. **Restore** brings it back.
+- **Deleting** something shows an **Undo** for five seconds.
+- The **note menu** lets you copy a note, give it a small title, or **Link**
+  it. To link, choose Link, then tap another note. Tap a linked note the same
+  way to remove the link.
+
+### Boards
+
+Boards are sorted into four groups: **To Do**, **Notes**, **Learning** and
+**Ideas**. Each group has its own **New board** button.
+
+- **On a phone**, tap **All**, then tap a group to see its boards.
+- **On a tablet or computer**, open the board rail on the left edge.
+
+Each time the app starts, and when a new day begins, it opens today's To Do
+board and moves any unfinished notes from yesterday's To Do board onto it. A calendar sits on the right edge on
+a tablet or computer, and behind the **Calendar** tab on a phone.
+
+The rest is there to discover.
+
+### Backing up and sharing
+
+Your device holds the only copy of your boards, so back them up.
+
+- **Export → PDF** saves the current board as a printable reference sheet: a
+  drawing of the page, followed by the board written out as text.
+- **Export → JSON** saves a backup of every board.
+- **Import** loads a JSON backup and merges it in. Boards in the file replace
+  their matching boards on this device, boards that aren't on this device are
+  added, and anything not in the file is left as it is.
 
 ## Security
 
-Zeved Boards is client-only. There is no backend, no account, no sync, no
-analytics, and no network call anywhere in the app. Board data lives in the
-browser's storage itself and never leaves the device; the only ways data leaves are
-the exports you download yourself (a per-board PDF or a whole-library JSON
-backup under **Export**).
+Zeved Boards runs entirely in your browser. There is no backend, no account,
+no sync and no analytics. Your boards are stored in the browser's own database
+(IndexedDB) on your device and are never sent anywhere. The only network
+request the app makes is to its own site, to check for a newer version of
+itself.
 
-## How to Use
+Your data leaves the device only when you export it yourself.
 
-Everything happens on the one canvas; there is nothing behind it. Nothing
-scrolls: the board is one bounded sheet, and if it's full, it's full - that
-boundary is the point.
-
-Every board has the same four permanent regions: **Title**, **Components**,
-**Requirements**, and the **Parking Lot**. The Parking Lot is where I park a question - something blocking progress on the board. Requirements are calendar events for that day if there are any and 2-way syncs to the calendar view for the daily to-do boards, otherwise use Components/Requirements as you wish. 
-
-### Desktop, Tablet, Mobile
-
-Three different modes to use with three different views - all spatial first, meaning everything you need is visually available to you in the field of vision at all times. Long tap/right click menu and the note card button row are the only menus without a visual access point, but hopefully they feel as intuitive to you as they do to me. 
-
-Tablet mode is my favorite (tailored to work on foldables as tablets). 
-
-### For Everything Else
-
-Play around, discover it. Have fun taking notes.
+To report a security problem, open a private
+[security advisory](https://github.com/AlastairZeved/TheBoards/security/advisories/new)
+rather than a public issue. See [SECURITY.md](SECURITY.md).
 
 ## Design Philosophy
 
-The design is opinionated about cognition, and it states its own rules in
-[`The Docket/PRD.md`](The%20Docket/PRD.md) — every change to the interface is resolved
-against them. Five product principles govern every ruling in the repository:
+The app's rules are written down in [`The Docket/PRD.md`](The%20Docket/PRD.md),
+and every change to the interface is decided against them. Five principles
+govern every decision:
 
-1. **Capture precedes structure.** A thought must reach the page in the time
-   it takes to type it. Nothing — no mode, no dialog, no picker, no animation
-   — may stand between the intent to write and the caret.
-2. **Relationships are asserted, not inferred.** The app never groups, tags,
-   sorts, or suggests. Where a note sits and how big it is *is* the meaning,
-   and only the person who put it there decided that.
-3. **Positions are permanent.** A committed position is data. Rotating the
-   phone, resizing the window, opening the board on another device — these
-   render stored coordinates differently; they never rewrite them.
-4. **Zero cognitive tax.** The interface asks nothing. No settings, no
-   accounts, no onboarding, no empty states to interpret, no dialogs.
-   Everything that can be acted on is visible at once.
-5. **Work performed stays visible.** Completing something scratches it out; it
-   does not vanish.
+1. **Capture comes before structure.** A thought must reach the page in the
+   time it takes to type it. Nothing, whether a mode, a dialog, a picker or an
+   animation, may stand between wanting to write and the cursor.
+2. **Relationships are stated, not guessed.** The app never groups, tags,
+   sorts or suggests. Where a note sits and how big it is carries the
+   meaning, and only the person who put it there decides that.
+3. **Positions are permanent.** Where you put a note is data. Rotating a
+   phone, resizing a window or opening the board on another screen changes
+   how the page is drawn, never where the notes are.
+4. **The interface asks nothing.** No settings, no accounts, no onboarding,
+   no empty states to work out. Everything you can act on is visible at once.
+5. **Finished work stays visible.** Completing something scratches it out. It
+   does not disappear.
 
-And the governing design law, which the design system implements:
+And the rule the design system serves:
 
 > **If you have to think about the interface, it failed. Every pixel earns its
 > place.**
 
-Equally binding is what the app refuses to build: accounts, sync, sharing,
-tags, folders, search, filters, rich text, images, snapping, reminders, due
-dates, streaks, an infinite canvas, settings, and a theme switch. Each refusal
-is argued in the PRD's out-of-scope table — boundedness is the feature, and a
-framework or a backend would change what the product is.
+Just as deliberate is what the app will not build: accounts, sync, sharing,
+tags, folders, search, filters, rich text, images, snapping, due dates,
+streaks, an infinite canvas, settings, or a light/dark switch. Each refusal is
+argued in the PRD's out-of-scope table. Being bounded is the feature.
+
+## Development
+
+Zeved Boards is plain HTML, CSS and JavaScript. It has no framework, no build
+step, no package manager, no dependencies and no backend. The fonts
+(Montserrat Alternates) are stored in [`fonts/`](fonts/), and the PDF writer
+is written by hand in [`export.js`](export.js) rather than taken from a
+library.
+
+### Run it locally
+
+```sh
+python3 -m http.server 8000
+```
+
+Then open <http://localhost:8000>.
+
+### Files
+
+| File | Holds |
+|---|---|
+| `index.html`, `styles.css`, `manifest.json`, `sw.js` | The page, its styles, the install details and the offline service worker |
+| `app.js` | Start-up |
+| `state.js`, `persistence.js`, `geometry.js`, `render.js`, `interactions.js`, `menus.js`, `export.js`, `boards.js` | The app itself, split by job; [`CLAUDE.md`](CLAUDE.md) maps what each owns |
+| `test/` | The regression tests (not shipped to devices) |
+| `The Docket/` | The governing records, below |
+
+### Governing records
+
+Three documents in [`The Docket/`](The%20Docket/) outrank code comments. When
+a record and the code disagree, one of them is wrong, and the owner decides
+which:
+
+| Document | Decides |
+|---|---|
+| [`PRD.md`](The%20Docket/PRD.md) | What the app is, who it is for, and why |
+| [`UIUX.md`](The%20Docket/UIUX.md) | What it draws, down to every colour, size and timing |
+| [`DECISIONS.md`](The%20Docket/DECISIONS.md) | Every design and interaction ruling, numbered `B<n>`, in order; a later ruling wins |
+
+[`AGENTS.md`](AGENTS.md) is the working guide for AI coding agents.
+
+### Tests
+
+The tests drive the app in a real browser with
+[Playwright](https://playwright.dev), installed only on the developer's
+machine and never committed:
+
+```sh
+npm install playwright
+npx playwright install chromium
+python3 -m http.server 8000 &   # most suites load the app from here
+node test/tokens.js             # needs no server or browser
+node test/mobile.js
+```
+
+[`test/README.md`](test/README.md) lists every suite, what it covers, and
+which ones run automatically on each pull request.
 
 ## Maintainers
 
-- [AlastairZeved](https://github.com/AlastairZeved) — design, product, and
+- [AlastairZeved](https://github.com/AlastairZeved): design, product and
   direction.
 
 ## Contributing
 
 Questions and proposals go to
-[the GitHub issues](https://github.com/AlastairZeved/TheBoards/issues) — that
-is also where design questions are settled: a ruling made on an issue
-describes itself in the issue thread and lands in `DECISIONS.md`.
+[GitHub issues](https://github.com/AlastairZeved/TheBoards/issues). That is
+also where design questions are settled: each owner ruling is tied to an
+issue and recorded in `DECISIONS.md`.
 
-Pull requests are accepted. Requirements:ghjb
+Pull requests are welcome. They must meet these requirements:
 
-- **Behavior changes resolve against the governing records.** A PR that changes
-  gesture, layout, band/lot, menu, or routing behavior without a `B<n>` entry
-  will be asked to add one.
-- **All four test suites must pass**, and a change that pins what a suite
-  asserts rewrites that assertion deliberately — say so in the commit message.
-- **Commit subjects are short, imperative, and describe the outcome**, with
-  the driving issue number(s) in parentheses, e.g.
+- **Behaviour changes come with a ruling.** A change to gestures, layout, the
+  top band or Parking Lot, menus or navigation needs a `B<n>` entry in
+  `DECISIONS.md`, recorded from the owner's own words.
+- **The tests must pass.** Every suite that runs on pull requests must pass.
+  If a change alters what a test checks, rewrite that check on purpose and say
+  so in the commit message.
+- **Commit subjects are short and describe the outcome**, with the issue
+  number in brackets, e.g.
   `Wrap note text at the sheet's right edge (issue #53)`.
-- The service worker's `CACHE` string is bumped on every shipped change to
-  `app.js` or `styles.css`.
+- **Shipped code changes bump the version.** Any change to `app.js`,
+  `styles.css` or one of the eight modules bumps the `CACHE` version in
+  `sw.js`, and `OWN_BUILD` in `app.js` must match it. The tests check that
+  the two match.
 
 ## License
 
 [MIT](LICENSE) © AlastairZeved.
 
-Zeved Boards is released under the MIT License — the full text is in
-[`LICENSE`](LICENSE). The name Zeved Boards, the design, and the governing
-records remain the work of their author.
+The name Zeved Boards, the design and the governing records remain the work of
+their author.
 
-[Back to top](#theboards)
+[Back to top](#zeved-boards)
