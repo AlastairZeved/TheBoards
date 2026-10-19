@@ -2177,6 +2177,8 @@ run(async () => {
     });
     await page.evaluate(() => document.getElementById('anchor-requirements').blur());
     await page.waitForTimeout(500);
+    // Re-pinned deliberately for issue #484 (B179): the squares are the events,
+    // so the deletion is read off the day-note records (`day`/`next`).
     const afterDel = await page.evaluate(async () => {
       const key = calKey(new Date());
       const all = await idbGetAll();
@@ -2208,6 +2210,9 @@ run(async () => {
     });
     await page.evaluate(() => document.getElementById('anchor-requirements').blur());
     await page.waitForTimeout(500);
+    // Re-pinned deliberately for issue #484 (B179): the squares are the events,
+    // so "no record created" counts day-note records (`day`), not event records
+    // (`date`).
     const afterAdd = await page.evaluate(async () => {
       const key = calKey(new Date());
       const all = await idbGetAll();
@@ -2400,7 +2405,9 @@ run(async () => {
   //      board record and leaves the open board alone;
   //   3. a board-side edit never reaches a square beyond the board's own span
   //      (a past board whose date gained a square after its last sync), and
-  //      deleting one of its hand lines never splices such a square in.
+  //      deleting one of its hand lines never splices such a square in;
+  //   4. a square is ONE mirror line: a pasted two-line square mirrors as a
+  //      single line, however many times its date re-syncs.
   console.log('\n[D25d] Edges of the merged mirror (issue #484, B179)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
@@ -2428,7 +2435,7 @@ run(async () => {
       const all = await idbGetAll();
       const rec = (id) => all.find(r => r.id === id);
       return { t: rec(i.t), y: rec(i.y), e1: rec('rem-e1'), e2: rec('rem-e2'), e3: rec('rem-e3'),
-               e4: rec('rem-e4'),
+               e4: rec('rem-e4'), e5: rec('rem-e5'),
                open: { id: state.current.id, req: state.current.requirements || '' } };
     }, ids);
 
@@ -2493,6 +2500,49 @@ run(async () => {
        got.y.requirements === 'y one\nhand b' && got.y.calReq === 1 &&
        got.e3.next === 'y two' && got.e4.next === 'y three',
        JSON.stringify({ y: got.y.requirements, calReq: got.y.calReq, e3: got.e3.next, e4: got.e4.next }));
+
+    // 5. A pasted two-line square is still ONE mirror line (B179). Seed one on
+    // today's date, re-sync the date twice with unchanged calendar commits: the
+    // board holds a single "p1 p2" line for it, the span counts one line per
+    // square, and the second sync changes nothing.
+    await page.evaluate(() => idbPut({ id: 'rem-e5', rem: '', next: 'p1\np2', day: calKey(new Date()) }));
+    await page.click('#cal-rail');
+    await page.waitForTimeout(400);
+    const recommit = async () => {
+      const box = await page.evaluate(() => {
+        const n = [...document.querySelectorAll('#cal-today-board .cal-note')]
+          .find(x => x.querySelector('.cal-note-text').textContent === 'first square');
+        const r = n.getBoundingClientRect();
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      });
+      await page.mouse.click(box.x, box.y);
+      await page.waitForTimeout(150);
+      await page.evaluate(() => document.activeElement && document.activeElement.blur());
+      await page.waitForTimeout(800);
+    };
+    await recommit();
+    const firstSync = (await read()).t;
+    await recommit();
+    const secondSync = (await read()).t;
+    ok('a multi-line square mirrors as ONE line, and the span counts one line per square (B179)',
+       firstSync.requirements === 'first square\np1 p2\nfrom elsewhere\nhand only' && firstSync.calReq === 3,
+       JSON.stringify({ req: firstSync.requirements, calReq: firstSync.calReq }));
+    ok('a second sync of that date changes nothing — the tail is not repeated (B179)',
+       secondSync.requirements === firstSync.requirements && secondSync.calReq === 3,
+       JSON.stringify({ req: secondSync.requirements, calReq: secondSync.calReq }));
+
+    // A board-side commit leaves the square's own two lines alone: the unchanged
+    // "p1 p2" line is the square's mirror line, not a new text for it.
+    await page.evaluate(() => { document.getElementById('cal-back').click(); });
+    await page.waitForTimeout(400);
+    await page.evaluate((id) => swapBoard(id), ids.t);
+    await page.waitForTimeout(700);
+    await editRequirements('first square\np1 p2\nfrom elsewhere\nhand only EDITED');
+    got = await read();
+    ok('a board-side commit never rewrites a square that stores newlines (B179)',
+       got.e5.next === 'p1\np2' && got.t.calReq === 3 &&
+       got.t.requirements === 'first square\np1 p2\nfrom elsewhere\nhand only EDITED',
+       JSON.stringify({ e5: got.e5.next, req: got.t.requirements, calReq: got.t.calReq }));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();

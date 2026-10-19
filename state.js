@@ -371,6 +371,10 @@ export function squareText(r) {
   const n = typeof r.next === 'string' ? r.next : '';
   return CALKEY_DATE.test(n) ? '' : n;
 }
+// A square is one mirror line (B179): a run of CR/LF reads as one space.
+export function mirrorLine(r) {
+  return squareText(r).replace(/[\r\n]+/g, ' ');
+}
 
 /* Ensure a date's linked To-Do board exists (R5); returns it, already in
    `all`. Creating writes records, so every caller wraps this in
@@ -400,7 +404,7 @@ export function syncMirror(board, squares) {
   const lines = splitLines(board.requirements || '');
   const span = typeof board.calReq === 'number' ? board.calReq : 0;   // never synced: all hand
   const hand = lines.slice(span);              // lines the reader wrote
-  const mirrored = squares.map(squareText);
+  const mirrored = squares.map(mirrorLine);
   const next = mirrored.concat(hand).join('\n');
   board.calReq = mirrored.length;              // the span moves to the new write
   if (next !== (board.requirements || '')) {

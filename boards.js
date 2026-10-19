@@ -5,8 +5,8 @@ import {
   PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP, SWAP_MS, boardsOf, calBoardOf,
   calDayName, calEventsOf, calKey, calMD, calWindow, catOf, el, EMBED,
   ensureLinkedBoard, eventsOf, histPush, isSquare, live, makeDayNoteRecord,
-  mirrorSquaresOf, newBoardRecord, pad2, squareOrder, squareText, squaresOf,
-  state, syncMirror,
+  mirrorLine, mirrorSquaresOf, newBoardRecord, pad2, squareOrder, squareText,
+  squaresOf, state, syncMirror,
 } from './state.js';
 import { cancelPendingSave, flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, scheduleSave } from './persistence.js';
 import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze, setPaneCollapsed } from './geometry.js';
@@ -873,7 +873,7 @@ export async function writeThroughRequirements(board, before) {
   }
   const keep = Math.min(span, lines.length);
   for (const { square, text } of mirrorSquaresOf(board, all)) {
-    if (squareText(square) !== text) { square.next = text; await idbPut(square); }
+    if (mirrorLine(square) !== text) { square.next = text; await idbPut(square); }
   }
   for (let i = keep; i < span && i < mine.length; i++) await idbDelete(mine[i].id);
   if (keep !== span) board.calReq = keep;    // span follows the deletion
