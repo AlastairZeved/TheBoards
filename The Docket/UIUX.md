@@ -847,8 +847,8 @@ exit row sit outside `#cal-stack` and never move; `#cal-view` itself stays
 a fixed, bounded page. A day card is a
 two-column grid: the date card (`--card`, the day's name over MM/DD — with
 the card's `+` seated UNDER the date lines, centered in the compartment's
-own column, issue #397) beside the day's notes zone on the water's fall. Attention recedes with distance
-from now — days with notes near, empty days far (`brightness .6`). Scale and
+own column, issue #397) beside the day's **event chips** on the water's fall. Attention recedes with distance
+from now — days with events near, empty days far (`brightness .6`). Scale and
 luminance, never icons.
 
 **The face's header — the boards' top band in the calendar's own orange
@@ -872,16 +872,11 @@ supersedes B153's 21px display step for THIS title) — with `--ink-light` on
 the deep fill (16.62:1 on #251002, recomputed per §2.3's method), render-only;
 the card carries `pointer-events: none` (the bar and rule are inert ground
 already).
-Issue #384 adds ONE element to the band: the row's `+` (`#cal-band-add`,
-the `.cal-add` treatment) — today's adder, seated absolute at the bar's
-right, "to the right of today's date title card", above the card in z,
-writing the same `day`-field record (B153's binding; B153's per-card seat
-superseded for the today card — the other six day cards keep theirs).
-The band's own anatomy is otherwise untouched by #384.
+Issue #484 repurposes the band's `+` (`#cal-band-add`, the `.cal-add` treatment) to create an **event** for today — seated absolute at the bar's right, "to the right of today's date title card", above the card in z. The band's own anatomy is otherwise untouched.
 
-**Today board body.** Today's date and day-note squares form a full-width deep-orange board directly below the calendar band. The title card overhangs its top by 22px; the body has a 2px `--frame` bottom border. Squares use the weekly view's size and left-to-right order, and the collapsed rail hides the band and body.
+**Today board body.** Today's date and **event chips** form a full-width deep-orange board directly below the calendar band. The title card overhangs its top by 22px; the body has a 2px `--frame` bottom border. Chips use the weekly view's size and left-to-right order, and the collapsed rail hides the band and body.
 
-**Weekend cards.** Saturday and Sunday cards use the Calendar ladder's `--card` fill edge-to-edge; their day-note squares, date/event divider, spacing and near/far receding treatment remain unchanged.
+**Weekend cards.** Saturday and Sunday cards use the Calendar ladder's `--card` fill edge-to-edge; their **event chips**, date/event divider, spacing and near/far receding treatment remain unchanged.
 
 **The rolling weekly stack (issue #398, B168).** The default stack shows the
 next 30 dates after today; today remains in its separate body above. A date
@@ -892,11 +887,11 @@ window; the Today control restores the rolling window.
 
 ### §3.5 Calendar day cards
 
-The day-note strip is retired; one-zone square notes render inside each day card. They use the Calendar `--note` fill, `--ink-dark`, a 2px inset `--frame` outline, 4px radius and 12px/400/1.4 type; three render per day, with `‹`/`›` paging beyond three and a two-line clamp. The `+` for each of the six future cards sits centered below its date; today's `+` sits at the right of the band. Buttons are 28px with a 2px `--frame` border.
+**Events are the calendar item (issue #484, B171).** Day-notes are removed from the calendar; the existing `+` buttons in day cards and the band create events. Events render as **orange chips** (the req-square species from B163/B164: aspect-ratio 1/1 on desktop, 1fr column chips on phone; literal calendar orange `#e3c6aa` fill, `#031019` ink, `#b48158` inset frame, 12px/400/1.4 on 4px 6px padding) in the weekly stack and Today body. Three chips render per day, with `‹`/`›` paging beyond three and a two-line clamp on desktop. The `+` for each of the six future cards sits centered below its date; today's `+` sits at the right of the band. Buttons are 28px with a 2px `--frame` border.
 
-The squares write the record's `next` field; the `+` creates a `day` field keyed to that card's `calKey`. Legacy `calKey` values in `next` render as empty bodies; `rem` remains stored but unread, and records without `day` remain stored but unreachable. Calendar events do not render in the weekly stack; event records and their linked To-Do mirrors are unchanged.
+**Today's events are editable in the calendar (2-way sync with Requirements).** Tapping a chip on Today opens it for editing; blur commits the edit and writes through to the linked To-Do board's Requirements via the mirror machinery. Other days render events read-only from the calendar side (board→calendar mirror sync remains). Empty commits discard the event (B8).
 
-**Capture.** Tapping a card's `+` opens its square for immediate typing. Commit-on-blur writes the record; an empty commit is discarded (B8).
+**Capture.** Tapping a card's `+` opens its chip for immediate typing. Commit-on-blur writes the event record, ensures the linked board exists, syncs the mirror, and opens the editor for Today's new event; an empty commit is discarded (B8). Legacy day-note records (pre-B153, imported data) remain stored but no longer render in the calendar.
 
 ---
 

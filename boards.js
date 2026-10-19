@@ -1003,7 +1003,7 @@ function hideCal() {
   else renderCalRail();
 }
 
-export function makeCalDay(day, dayNotes, board) {
+export function makeCalDay(day, events, board) {
   const card = document.createElement('div');
   // Issue #385 (B159): Saturday and Sunday cards carry the weekend class —
   // the Calendar palette and title-card squares. Issue #398 adds a distinct
@@ -1011,7 +1011,7 @@ export function makeCalDay(day, dayNotes, board) {
   card.className = 'cal-day' + (day.today ? ' today'
     : (day.date.getDay() === 0 || day.date.getDay() === 6 ? ' weekend' : '')
       + (day.date.getDay() === 0 ? ' sunday' : '')
-      + (dayNotes.length ? ' near' : ' far'));
+      + (events.length ? ' near' : ' far'));
   const dc = document.createElement('div');
   dc.className = 'cal-date on-dark';
   const d1 = document.createElement('div'); d1.className = 'cal-d1';
@@ -1019,26 +1019,20 @@ export function makeCalDay(day, dayNotes, board) {
   const d2 = document.createElement('div'); d2.className = 'cal-d2';
   d2.textContent = calMD(day.date);
   dc.append(d1, d2);
-  // Issue #397 (B165): the day's "+" seats UNDER the day/date, in the card's
-  // date compartment — no longer on the event bar's right-most side. The
-  // .cal-add treatment (the 28px bounded box, B158's correction) stands; only
-  // the seat moves. The freed row space holds the day's third square before
-  // the pager. Issue #384's row-side seat ("+" rightmost) retires here —
-  // renderCalDayNotes no longer builds an add button; today's own "+"
-  // stays on the band (el.calBandAdd, B158's seat, untouched).
+  // Issue #484: the day's "+" creates an EVENT (not a day-note) for that date.
+  // The .cal-add treatment (the 28px bounded box, B158's correction) stands.
   const add = document.createElement('button');
   add.type = 'button';
   add.className = 'cal-add';
-  add.setAttribute('aria-label', 'Add a note ' + calMD(day.date));
+  add.setAttribute('aria-label', 'Add an event ' + calMD(day.date));
   add.textContent = '+';
-  add.addEventListener('click', () => addCalNote(day.key));
+  add.addEventListener('click', () => addCalEvent(day.key));
   dc.append(add);
-  // Issue #363: the day's own zone is its day-note squares — the calendar
-  // events that used to render as text lines here no longer render at all;
-  // the sync machinery keeps syncing, the card shows only the squares.
+  // Issue #484: the day's zone renders EVENTS as orange chips (req-square species),
+  // not day-notes. Calendar events render in the weekly stack.
   const zone = document.createElement('div');
   zone.className = 'cal-notes on-dark';
-  renderCalDayNotes(zone, day, dayNotes);
+  renderCalDayEvents(zone, day, events);
   card.append(dc, zone);
   return card;
 }
@@ -1228,9 +1222,9 @@ export function renderCal() {
 }
 
 /* The expanded face's one painter, synchronous on a store read: the day
-   cards (issue #363: each card is its day-note squares) and the month view.
-   renderCal is its caller after the fetch; addCalNote paints directly so the
-   new block is in the DOM the moment its editor arms — no race with the
+   cards (issue #484: each card is its event chips) and the month view.
+   renderCal is its caller after the fetch; addCalEvent paints directly so the
+   new chip is in the DOM the moment its editor arms — no race with the
    async fetch. */
 function paintCal(all) {
   el.calStack.textContent = '';
@@ -1255,13 +1249,12 @@ function paintCal(all) {
   el.calTop.style.setProperty('--hit', (hitInset(el.calTop, 1) + 0.5) + 'px');
   const days = calWeekAnchor ? calWeekOf(calWeekAnchor) : calWindow(CAL_FUTURE_DAYS + 1);
   const events = eventsOf(all);      // event records ride the boards store (state.js §1.7)
-  const notes = calNoteRecords(all); // the day-note records (issue #363: per day)
   const today = days.find((d) => d.today);
-  if (today) renderCalToday(today, notes.filter((r) => r.day === today.key));
+  if (today) renderCalToday(today, events.filter((e) => e.date === today.key));
   for (const day of days) {
     if (day.today) continue;         // issue #384: today renders in the body below the band, not the stack
     const board = calBoardOf(all, day.key);
-    el.calStack.appendChild(makeCalDay(day, notes.filter((r) => r.day === day.key), board));
+    el.calStack.appendChild(makeCalDay(day, events.filter((e) => e.date === day.key), board));
   }
   renderCalMonth(new Set(events.map((e) => e.date)));
   seatCalAdds();                       // issue #384/#397: the band's "+" seat — the day "+" seats under the date, nothing to align
@@ -1300,21 +1293,7 @@ function seatCalAdds() {
    machinery untouched), they simply no longer render in the weekly stack:
    the card shows only the day-note squares. */
 
-let calDayNotePage = {};             // per-day pager position: day.key -> page
-
-const CAL_NOTE_PER_DAY = 3;          // the owner's cap: three squares per day
 const CAL_FUTURE_DAYS = 30;           // issue #398: rolling stack beyond today's separate body
-
-function calNoteRecords(all) {
-  return all.filter((r) => typeof r.rem === 'string' && typeof r.day === 'string'
-    && CALKEY_DATE.test(r.day));
-}
-
-// The record's body text: `next`, unless it is a legacy calKey date.
-function calNoteBody(r) {
-  const n = typeof r.next === 'string' ? r.next : '';
-  return CALKEY_DATE.test(n) ? '' : n;
-}
 
 // The day-of-month ordinal suffix: 1st, 2nd, 3rd, 4th … 11th/12th/13th, 21st…
 function calOrdinal(n) {
@@ -1339,24 +1318,42 @@ function renderCalDayhead() {
   head.appendChild(label);
 }
 
-/* One day card's notes zone (issue #363; one-zone squares per issue #365):
-   the day's own records as square blocks — three shown (issue #397: the
-   row's right end no longer seats the "+"; it sits under the date in
-   makeCalDay, and the third square takes the space), the ‹/› pager on
-   the card when the day holds more than three (the .mo-nav grammar; page
-   state is per day, render-time only, nothing stored). Calendar events are
-   never read here. No add button is built here — issue #384's band seat
-   (today, el.calBandAdd) and issue #397's date-compartment seat (the six
-   day cards, makeCalDay) own the adders now. */
-const CAL_PAGER = { prev: '‹', next: '›' };
+/* Issue #384: the Today board body — today's day card leaves the weekly
+   stack and becomes the full-width deep-orange body directly below the band
+   (B157's band anatomy untouched: the bar keeps its water fall, the card
+   keeps its centred seat and 22px overhang, which lands on this body's top —
+   the card's own var(--card) fill, so card and body read as one board).
+   The body's zone renders EVENTS as orange chips (req-square species, issue #484),
+   the ‹/› pager beyond three, and NO row "+": today's adder is seated
+   on the band's right (seated above, issue #484: creates events). */
+function renderCalToday(today, events) {
+  const add = el.calBandAdd;
+  add.setAttribute('aria-label', 'Add an event ' + calMD(today.date));
+  add.textContent = '+';
+  add.onclick = () => addCalEvent(today.key);
+  const zone = document.createElement('div');
+  zone.className = 'cal-notes on-dark';
+  renderCalDayEvents(zone, today, events);
+  el.calTodayBoard.textContent = '';
+  el.calTodayBoard.appendChild(zone);
+}
 
-function renderCalDayNotes(zone, day, recs) {
+/* --- Issue #484: Calendar events as orange chips (req-square species) ------
+   Events render in the weekly stack and Today body as orange chips using the
+   same geometry as the Requirements mirror's .req-square species (B163/B164):
+   aspect-ratio 1/1 on desktop, 1fr column (chips) on phone; literal calendar
+   orange #e3c6aa fill, #031019 ink, #b48158 inset frame. The pager (‹/›)
+   appears when a day holds more than 3 events. */
+const CAL_EVENT_PER_DAY = 3;
+let calEventPage = {};
+
+function renderCalDayEvents(zone, day, events) {
   const row = document.createElement('div');
   row.className = 'cal-notes-row';
-  const pages = Math.max(1, Math.ceil(recs.length / CAL_NOTE_PER_DAY));
-  if (!calDayNotePage[day.key]) calDayNotePage[day.key] = 0;
-  let page = Math.min(Math.max(calDayNotePage[day.key], 0), pages - 1);
-  const hasPages = recs.length > CAL_NOTE_PER_DAY;
+  const pages = Math.max(1, Math.ceil(events.length / CAL_EVENT_PER_DAY));
+  if (!calEventPage[day.key]) calEventPage[day.key] = 0;
+  let page = Math.min(Math.max(calEventPage[day.key], 0), pages - 1);
+  const hasPages = events.length > CAL_EVENT_PER_DAY;
   const draw = () => {
     if (row.querySelector('[contenteditable]')) return;  // an edit is open — don't throw the typing away
     row.textContent = '';
@@ -1364,138 +1361,117 @@ function renderCalDayNotes(zone, day, recs) {
       const prev = document.createElement('button');
       prev.type = 'button';
       prev.className = 'mo-nav cal-notes-nav';
-      prev.setAttribute('aria-label', 'Previous ' + calMD(day.date) + ' notes');
+      prev.setAttribute('aria-label', 'Previous ' + calMD(day.date) + ' events');
       prev.textContent = CAL_PAGER.prev;
       prev.disabled = page <= 0;
       prev.hidden = page <= 0;
-      prev.addEventListener('click', () => { page--; calDayNotePage[day.key] = page; draw(); });
+      prev.addEventListener('click', () => { page--; calEventPage[day.key] = page; draw(); });
       row.appendChild(prev);
     }
     const grid = document.createElement('div');
     grid.className = 'cal-notes-grid';
     grid.setAttribute('role', 'list');
-    for (const r of recs.slice(page * CAL_NOTE_PER_DAY, page * CAL_NOTE_PER_DAY + CAL_NOTE_PER_DAY)) {
-      grid.appendChild(makeCalNote(r));
+    for (const e of events.slice(page * CAL_EVENT_PER_DAY, page * CAL_EVENT_PER_DAY + CAL_EVENT_PER_DAY)) {
+      grid.appendChild(makeCalEventChip(e, day.key === calKey(new Date())));
     }
     row.appendChild(grid);
     if (hasPages) {
       const next = document.createElement('button');
       next.type = 'button';
       next.className = 'mo-nav cal-notes-nav';
-      next.setAttribute('aria-label', 'Next ' + calMD(day.date) + ' notes');
+      next.setAttribute('aria-label', 'Next ' + calMD(day.date) + ' events');
       next.textContent = CAL_PAGER.next;
       next.disabled = page >= pages - 1;
       next.hidden = page >= pages - 1;
-      next.addEventListener('click', () => { page++; calDayNotePage[day.key] = page; draw(); });
+      next.addEventListener('click', () => { page++; calEventPage[day.key] = page; draw(); });
       row.appendChild(next);
     }
-    // Issue #397: no add button here — the day card's "+" seats under the
-    // date in makeCalDay (the row's right end is the third square's now),
-    // and today's "+" is the band's (el.calBandAdd, issue #384).
     zone.textContent = '';
     zone.appendChild(row);
   };
   draw();
 }
 
-/* Issue #384: the Today board body — today's day card leaves the weekly
-   stack and becomes the full-width deep-orange body directly below the band
-   (B157's band anatomy untouched: the bar keeps its water fall, the card
-   keeps its centred seat and 22px overhang, which lands on this body's top —
-   the card's own var(--card) fill, so card and body read as one board).
-   The body's zone is the .cal-notes row grammar — today's squares at the day
-   cards' own measure (the row is inset to the day card's date-compartment
-   width, 84px + the shared 6px, so the squares sit exactly where a day
-   card's squares sit), the ‹/› pager beyond three, and NO row "+": today's
-   adder is seated on the band's right (seated above). Issue #397 changed
-   nothing here — today's "+" keeps its B158 band seat. */
-function renderCalToday(today, recs) {
-  const add = el.calBandAdd;
-  add.setAttribute('aria-label', 'Add a note ' + calMD(today.date));
-  add.textContent = '+';
-  add.onclick = () => addCalNote(today.key);
-  const zone = document.createElement('div');
-  zone.className = 'cal-notes on-dark';
-  renderCalDayNotes(zone, today, recs);
-  el.calTodayBoard.textContent = '';
-  el.calTodayBoard.appendChild(zone);
+/* One event chip: the req-square species (B163/B164) — aspect-ratio 1/1 on
+   desktop, chip (1fr column) on phone; literal calendar orange #e3c6aa fill,
+   #031019 ink, #b48158 inset frame, 12px/400/1.4 on 4px 6px padding. */
+function makeCalEventChip(event, isToday) {
+  const chip = document.createElement('div');
+  chip.className = 'req-square';           // reuse the req-square species (B163/B164)
+  chip.setAttribute('role', 'listitem');
+  chip.dataset.id = event.id;
+  chip.textContent = event.text;
+  // Tap to edit on Today (2-way sync); other days are read-only from calendar side.
+  if (isToday) {
+    chip.style.cursor = 'text';
+    chip.addEventListener('click', (ev) => {
+      if (chip.hasAttribute('contenteditable')) return;
+      ev.preventDefault();
+      startCalEventEdit(chip, event);
+      setTimeout(() => caretToEnd(chip), 0);
+    });
+  } else {
+    chip.style.pointerEvents = 'none';
+  }
+  return chip;
 }
 
-/* Add a day note to a date (the one consequence, under commitAction's guard):
-   the record is written with the NEW `day` field — the date's calKey, the
-   per-day binding the squares render from — and its editor opens on arrival,
-   the caret in the square's one zone (issue #365). The new record starts empty;
-   only text entered in the square is written to it. */
-async function addCalNote(dateKey) {
+/* Add an event to a date (the one consequence, under commitAction's guard):
+   creates an event record, ensures the linked To-Do board exists, and syncs
+   the mirror. The new event's editor opens on arrival (Today only). */
+async function addCalEvent(dateKey) {
   commitAction(async () => {
-    const rec = makeDayNoteRecord(dateKey);
-    await idbPut(rec);
     const all = await idbGetAll();
-    const recs = calNoteRecords(all).filter((r) => r.day === dateKey);
-    const idx = recs.findIndex((r) => r.id === rec.id);
-    calDayNotePage[dateKey] = Math.floor(Math.max(0, idx) / CAL_NOTE_PER_DAY);
-    paintCal(all);                     // synchronous — the block is in the DOM now
-    const block = [...document.querySelectorAll('.cal-notes-grid .cal-note')].find((b) => b.dataset.id === rec.id);
-    if (block) startCalNoteEdit(block, rec);          // the caret starts in the square's one zone
+    const { board, created } = ensureLinkedBoard(all, dateKey);
+    if (created) await idbPut(board);
+    const rec = newCalEvent(dateKey, '');
+    await idbPut(rec);
+    // Sync the mirror immediately so the board's Requirements reflect the new event
+    if (syncMirror(board, calEventsOf(eventsOf(all), dateKey).concat(rec))) await idbPut(board);
+    paintCal(all);
+    // Open editor for Today's new event
+    if (dateKey === calKey(new Date())) {
+      const chip = [...document.querySelectorAll('.cal-notes-grid .req-square')].find((c) => c.dataset.id === rec.id);
+      if (chip) startCalEventEdit(chip, rec);
+    }
   });
 }
 
-/* One square block: ONE zone now (issue #365) — the band is gone, the fill
-   is one large body showing `next`. */
-function makeCalNote(rec) {
-  const block = document.createElement('div');
-  block.className = 'cal-note';
-  block.setAttribute('role', 'listitem');
-  block.dataset.id = rec.id;
-  const body = document.createElement('div');
-  body.className = 'cal-note-text';
-  body.textContent = calNoteBody(rec);
-  block.append(body);
-  // A tap opens the entry's editor in the square's one zone (issue #365;
-  // the deferred re-assert lands the caret at the end whichever order the
-  // native caret placement fires in, #304).
-  block.addEventListener('click', (e) => {
-    if (body.hasAttribute('contenteditable')) return;
-    e.preventDefault();
-    startCalNoteEdit(block, rec);
-    setTimeout(() => caretToEnd(body), 0);
-  });
-  return block;
-}
-
-/* The one-zone editor (issue #365). The commit is the blur and writes `next`
-   — `rem` is no longer rendered or edited and stays stored-but-unread (the
-   #323 disposition). A commit that leaves both fields empty discards the
-   record and the block (B8's rule: the frame must earn its keep). */
-function startCalNoteEdit(block, rec) {
-  const body = block.querySelector('.cal-note-text');
-  body.setAttribute('contenteditable', CE);
-  body.focus();
-  caretToEnd(body);
-  const inside = (n) => n && (n === body || block.contains(n));
+/* Calendar-side event editor for Today (2-way sync with Requirements).
+   Blur commits the edit and writes through to the linked board's Requirements.
+   Empty commit discards the event (B8). */
+function startCalEventEdit(chip, event) {
+  chip.setAttribute('contenteditable', CE);
+  chip.focus();
+  caretToEnd(chip);
+  const inside = (n) => n && (n === chip || chip.contains(n));
   let committed = false;
   const commit = async () => {
     if (committed) return;
     committed = true;
-    body.removeAttribute('contenteditable');
-    const next = body.textContent.trim();
-    if (!rec.rem && !next) {                        // B8: an empty commit discards
-      await idbDelete(rec.id);
-      block.remove();
+    chip.removeAttribute('contenteditable');
+    const text = chip.textContent.trim();
+    if (!text) {                        // B8: an empty commit discards
+      await idbDelete(event.id);
+      chip.remove();
       renderCal();
       return;
     }
-    rec.next = next;
-    await idbPut(rec);
+    event.text = text;
+    await idbPut(event);
+    // Write through to the linked board's Requirements (Today's board)
+    const all = await idbGetAll();
+    const board = calBoardOf(boardsOf(all), event.date);
+    if (board) await writeThroughRequirements(board, board.requirements);
     renderCal();
     scheduleSave();
   };
-  block.addEventListener('focusout', (e) => {
+  chip.addEventListener('focusout', (e) => {
     if (inside(e.relatedTarget)) return;
     commit();
   });
-  body.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); body.blur(); }   // Enter ends the entry
+  chip.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); chip.blur(); }
   });
 }
 
@@ -1628,14 +1604,14 @@ export function registerBoards() {
     // B148 (issue #342): Today resets both render-time anchors in one act —
     // `calMonthAnchor = null` puts the month view back on the current month
     // and `calWeekAnchor = null` returns the stack to its rolling 30-day
-    // window — then re-renders. Issue #363: the day-note squares ride
+    // window — then re-renders. Issue #484: the event chips ride
     // the day cards renderCal re-draws, their per-day page positions
-    // (calDayNotePage) unmodified.
+    // (calEventPage) unmodified.
     calMonthAnchor = null;
     calWeekAnchor = null;
-    // Issue #363: the pager positions reset with the anchors — a reset to
-    // "today" shows the squares' first page on every card.
-    calDayNotePage = {};
+    // Issue #484: the pager positions reset with the anchors — a reset to
+    // "today" shows the first page on every card.
+    calEventPage = {};
     renderCal();
   });
   el.calRail.addEventListener('click', () => {

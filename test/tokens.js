@@ -928,10 +928,10 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /#cal-today-board \{[^}]*border-bottom: 2px solid var\(--frame\);/.test(css) &&
     /#cal-view\.panel #cal-today-board \{ margin: 0 -12px 0; \}/.test(css) &&
     /#cal-stack \{ margin-top: 22px; \}/.test(css));
-  ok('today\'s squares fill FROM THE LEFT at the weekly view\'s own measure — the body\'s grid capped to the weekly construction\'s arithmetic (the 84px compartment + the 12px zone padding + the 26px add slot), anchored at the body\'s left edge, no row "+" of its own (issue #384: the squares fill left to right like the weekly view\'s, at the weekly square size, not stretched)',
-    /renderCalDayNotes\(zone, today, recs\)/.test(app) &&
-    /el\.calTodayBoard\.appendChild\(zone\)/.test(app) &&
-    /#cal-today-board \.cal-notes-grid \{ max-width: calc\(100% - 122px\); \}/.test(css));
+  ok("today's event chips fill FROM THE LEFT at the weekly view's own measure — the body's grid capped to the weekly construction's arithmetic (the 84px compartment + the 12px zone padding + the 26px add slot), anchored at the body's left edge, no row '+' of its own (issue #484: event chips fill left to right like the weekly view's, at the weekly chip size, not stretched)",
+      /renderCalDayEvents\(zone, today, events\)/.test(app) &&
+      /el\.calTodayBoard\.appendChild\(zone\)/.test(app) &&
+      /#cal-today-board \.cal-notes-grid \{ max-width: calc\(100% - 122px\); \}/.test(css));
   ok('the band is the expanded face only — the collapsed rail\'s hide list carries it (issue #382: the rail face untouched, B99)',
     /#cal-view\.rail-open #cal-band,/.test(css) &&
     /#cal-view\.rail-open #cal-band,\s*\n#cal-view\.rail-open #cal-top,\s*\n#cal-view\.rail-open #cal-stack,\s*\n#cal-view\.rail-open #cal-today-board,\s*\n#cal-view\.rail-open #cal-month \{ display: none; \}/.test(css));
@@ -958,22 +958,24 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /\.cal-note-text \{[^}]*padding: 4px 6px;/.test(css));
   ok('the fill\'s type is plain text — 12px, weight 400, line-height 1.4 (issue #365: the body\'s own type)',
     /\.cal-note-text \{[^}]*font-size: 12px; font-weight: 400; line-height: 1\.4;/.test(css));
-  ok('the card\'s "+" adds a DAY NOTE dated to the card — the record carries the new day field, the per-day filter renders the squares, nothing migrated (issue #363)',
-    /makeDayNoteRecord\(dateKey\)/.test(app) && /day: \(v\) => isDateKey\(v\)/.test(app) &&
-    /r\.day === day\.key/.test(app) &&
-    /function calNoteRecords\(all\)/.test(app) &&
-    /typeof r\.day === 'string'/.test(app));
-  ok('the per-day pager pages a day beyond three squares and the "+" sits rightmost in the row (issue #363)',
-    /CAL_NOTE_PER_DAY = 3/.test(app) &&
-    /cal-notes-nav/.test(css) && /calDayNotePage\[day\.key\]/.test(app));
-  ok('calendar events no longer render in the weekly stack — the line factory and the calendar-side add/edit path are gone, the sync machinery untouched (issue #363)',
-    !/function makeCalLine/.test(app) && !/function addCalEvent/.test(app) &&
-    !/function startCalLineEdit/.test(app) && !/cal-lines/.test(css) &&
-    /export async function syncDateMirror/.test(app));
+  ok("the card's '+' adds an EVENT dated to the card — the record carries the date field, the per-day filter renders the chips, the linked board is ensured, and the mirror syncs immediately (issue #484)",
+      /function addCalEvent\(dateKey\)/.test(app) &&
+      /ensureLinkedBoard\(all, dateKey\)/.test(app) &&
+      /newCalEvent\(dateKey, ''\)/.test(app) &&
+      /syncMirror\(board,/.test(app) &&
+      /date: \(v\) => isDateKey\(v\)/.test(app));
+  ok("the per-day pager pages a day beyond three event chips and the '+' seats under the date (issue #484)",
+    /CAL_EVENT_PER_DAY = 3/.test(app) &&
+    /cal-notes-nav/.test(css) && /calEventPage\[day\.key\]/.test(app));
+  ok("calendar events now render in the weekly stack as orange chips — the addCalEvent path exists, the sync machinery syncs, event chips use req-square species (issue #484)",
+    /function addCalEvent\(dateKey\)/.test(app) &&
+    /export async function syncDateMirror/.test(app) &&
+    /function renderCalDayEvents/.test(app) &&
+    /\.req-square/.test(css));
   // --- Issue #385 / B159: the weekend cards (To Do boards' blue palette) ---
   ok('makeCalDay stamps weekend on Saturday/Sunday cards alongside, never instead of, the near/far recede classes — today excluded by construction (issue #385, B159)',
     /getDay\(\) === 0 \|\| day\.date\.getDay\(\) === 6 \? ' weekend' : ''/.test(app) &&
-    /dayNotes\.length \? ' near' : ' far'/.test(app));
+    /events\.length \? ' near' : ' far'/.test(app));
   ok("the weekend fill is the title card's own deep orange — a flat var(--card) fill, the Calendar ladder's card rung #251002, no blue (issue #385, B160 superseding B159's palette clauses)",
     /\.cal-day\.weekend::before \{ background: var\(--card\); \}/.test(css) &&
     !/\.cal-day\.weekend::before \{\s*\n\s*radial-gradient/.test(css) &&
@@ -1096,14 +1098,13 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('the squeeze is render-time state: true frame kept, nothing stored (R6)',
     /let calSqueeze = false/.test(app) && /frameUi\.LOGICAL_W_TRUE/.test(app) &&
     /note\.rw = frameUi\.LOGICAL_W_TRUE \|\| LOGICAL_W/.test(app));
-  // --- Issue #152 / B97 on the #363 surface: the day-note squares are
-  // --- editable in place (the event lines they replaced are gone) ---
-  ok('an existing day-note square opens its editor on tap, with the caret re-asserted to the end after the native placement (issue #152, B97; #363 moved the surface, #365 made it one zone)',
-    /block\.addEventListener\('click', \(e\) => \{\s*\n\s*if \(body\.hasAttribute\('contenteditable'\)\) return;\s*\n\s*e\.preventDefault\(\);\s*\n\s*startCalNoteEdit\(block, rec\);\s*\n\s*setTimeout\(\(\) => caretToEnd\(body\), 0\);\s*\n\s*\}\)/.test(app));
+  // --- Issue #484: the event chips are editable in place on Today (2-way sync) ---
+  ok("an existing event chip on Today opens its editor on tap, with the caret re-asserted to the end after the native placement (issue #484)",
+    /chip\.addEventListener\('click', \(ev\) => \{\s*\n\s*if \(chip\.hasAttribute\('contenteditable'\)\) return;\s*\n\s*ev\.preventDefault\(\);\s*\n\s*startCalEventEdit\(chip, event\);\s*\n\s*setTimeout\(\(\) => caretToEnd\(chip\), 0\);\s*\n\s*\}\)/.test(app));
   ok('the editor always lands the caret at the end of the text (the issue expected behavior)',
-    /body\.focus\(\);\s*\n\s*caretToEnd\(body\);/.test(app));
+    /chip\.focus\(\);\s*\n\s*caretToEnd\(chip\);/.test(app));
   ok('the second tap while editing cannot re-arm a second editor (B81)',
-    /if \(body\.hasAttribute\('contenteditable'\)\) return;/.test(app));
+    /if \(chip\.hasAttribute\('contenteditable'\)\) return;/.test(app));
   const external = /https?:\/\//;
   ok('no CDN URL in styles.css', !external.test(css.replace(/http:\/\/www\.w3\.org/g, '')));
   // Social/AEO metadata (issue #244) carries absolute URLs by design — og:image,
