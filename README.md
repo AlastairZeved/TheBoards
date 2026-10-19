@@ -104,11 +104,11 @@ Everything between the top band and the Parking Lot is open space for notes.
 Boards are sorted into four groups: **To Do**, **Notes**, **Learning** and
 **Ideas**. Each group has its own **New board** button.
 
-- **On a phone**, tap **All** to see your boards.
+- **On a phone**, tap **All**, then tap a group to see its boards.
 - **On a tablet or computer**, open the board rail on the left edge.
 
-Each time you open the app, it opens today's To Do board, and any unfinished
-notes from yesterday's are moved onto it. A calendar sits on the right edge on
+Each time the app starts, and when a new day begins, it opens today's To Do
+board and moves any unfinished notes from yesterday's To Do board onto it. A calendar sits on the right edge on
 a tablet or computer, and behind the **Calendar** tab on a phone.
 
 The rest is there to discover.
@@ -120,13 +120,14 @@ Your device holds the only copy of your boards, so back them up.
 - **Export → PDF** saves the current board as a printable reference sheet: a
   drawing of the page, followed by the board written out as text.
 - **Export → JSON** saves a backup of every board.
-- **Import** loads a JSON backup. Boards in the file replace their matching
-  boards on this device, and everything else is left as it is.
+- **Import** loads a JSON backup and merges it in. Boards in the file replace
+  their matching boards on this device, boards that aren't on this device are
+  added, and anything not in the file is left as it is.
 
 ## Security
 
-Zeved Boards runs entirely in your browser. There is no server, no account, no
-sync and no analytics. Your boards are stored in the browser's own database
+Zeved Boards runs entirely in your browser. There is no backend, no account,
+no sync and no analytics. Your boards are stored in the browser's own database
 (IndexedDB) on your device and are never sent anywhere. The only network
 request the app makes is to its own site, to check for a newer version of
 itself.
@@ -195,8 +196,9 @@ Then open <http://localhost:8000>.
 
 ### Governing records
 
-Three documents in [`The Docket/`](The%20Docket/) outrank the code and its
-comments:
+Three documents in [`The Docket/`](The%20Docket/) outrank code comments. When
+a record and the code disagree, one of them is wrong, and the owner decides
+which:
 
 | Document | Decides |
 |---|---|
@@ -214,7 +216,9 @@ machine and never committed:
 
 ```sh
 npm install playwright
-node test/tokens.js
+npx playwright install chromium
+python3 -m http.server 8000 &   # most suites load the app from here
+node test/tokens.js             # needs no server or browser
 node test/mobile.js
 ```
 
@@ -230,7 +234,7 @@ which ones run automatically on each pull request.
 
 Questions and proposals go to
 [GitHub issues](https://github.com/AlastairZeved/TheBoards/issues). That is
-also where design questions are settled: the owner's ruling is made on the
+also where design questions are settled: each owner ruling is tied to an
 issue and recorded in `DECISIONS.md`.
 
 Pull requests are welcome. They must meet these requirements:
@@ -246,7 +250,8 @@ Pull requests are welcome. They must meet these requirements:
   `Wrap note text at the sheet's right edge (issue #53)`.
 - **Shipped code changes bump the version.** Any change to `app.js`,
   `styles.css` or one of the eight modules bumps the `CACHE` version in
-  `sw.js`, and `OWN_BUILD` in `app.js` must match it. The tests check this.
+  `sw.js`, and `OWN_BUILD` in `app.js` must match it. The tests check that
+  the two match.
 
 ## License
 
