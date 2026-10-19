@@ -1003,7 +1003,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('the per-day pager pages a day beyond three squares and the "+" sits rightmost in the row (issue #363)',
     /CAL_NOTE_PER_DAY = 3/.test(app) &&
     /cal-notes-nav/.test(css) && /calDayNotePage\[day\.key\]/.test(app));
-  ok('calendar events no longer render in the weekly stack — the line factory and the calendar-side add/edit path are gone, the sync machinery untouched (issue #363)',
+  ok('the event line factory and its add/edit path stay gone — squares are the events (B179)',
     !/function makeCalLine/.test(app) && !/function addCalEvent/.test(app) &&
     !/function startCalLineEdit/.test(app) && !/cal-lines/.test(css) &&
     /export async function syncDateMirror/.test(app));
@@ -1124,8 +1124,21 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /const CAL_FUTURE_DAYS = 30;/.test(read('boards.js')) &&
     /calWindow\(CAL_FUTURE_DAYS \+ 1\)/.test(read('boards.js')) &&
     /function calWindow\(count = 7, start = new Date\(\)\)[\s\S]*?new Date\(first\.getFullYear\(\), first\.getMonth\(\), first\.getDate\(\) \+ i\)/.test(read('state.js')));
+  // Re-pinned deliberately for issue #484 (B179): the mirror's source is the
+  // date's squares, so the writer's signature names them.
   ok('the mirror has one writer and a self-recorded span (R5\'s line identity)',
-    /function syncMirror\(board, events\)/.test(app) && /board\.calReq = mirrored\.length/.test(app));
+    /function syncMirror\(board, squares\)/.test(app) && /board\.calReq = mirrored\.length/.test(app));
+  // The squares feed the mirror both ways (B179): squaresOf is the one reader,
+  // both mirror writers call it, and a square's commit re-syncs its date and
+  // repaints a board that is on screen — on the discard path and the save path.
+  const syncDateFn = (app.match(/export async function syncDateMirror\(dateKey\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  const writeThroughFn = (app.match(/export async function writeThroughRequirements\(board, before\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  const calEditFn = (app.match(/function startCalNoteEdit\(block, rec\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  ok('the squares are the events: squaresOf is the one reader of a date\'s squares (syncDateMirror and writeThroughRequirements both call it), and a square\'s commit re-syncs its date\'s mirror then repaints the visible board, on the discard and the save path alike (B179)',
+    /export function squaresOf\(all, dateKey\)/.test(read('state.js')) &&
+    /squaresOf\(/.test(syncDateFn) && /squaresOf\(/.test(writeThroughFn) &&
+    (calEditFn.match(/await syncDateMirror\(rec\.day\);\s*repaintVisibleBoard\(\);/g) || []).length === 2,
+    [syncDateFn, writeThroughFn, calEditFn].map(f => f.slice(0, 50)).join(' | '));
   ok('the linked board\u2019s title seat is derived at render, pinned: "Today\u2019s To Do" + the date line off the cal key (B133, issue #273)',
     /function ensureLinkedBoard/.test(app) &&
     /const LINKED_TITLE = "Today's To Do"/.test(app) &&

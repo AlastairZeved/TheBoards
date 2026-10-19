@@ -3090,8 +3090,8 @@ run(async () => {
       const b = newBoardRecord();
       b.title = '09/02/26 To Do'; b.cal = key; b.calReq = 1;
       b.requirements = 'mobile seed line';
-      const ev = newCalEvent(key, 'mobile seed line');
-      await idbPut(b); await idbPut(ev);
+      await idbPut(b);
+      await idbPut({ id: 'rem-a-seed', rem: '', next: 'mobile seed line', day: key });
     });
     await page.reload();
     await page.waitForFunction(() =>
@@ -3101,12 +3101,12 @@ run(async () => {
     await page.evaluate(() => document.getElementById('action-calendar').click());
     await page.waitForTimeout(400);
 
-    // Commit a day-NOTE edit while the board is entirely covered (B153: the
-    // squares replaced the rendered lines; the edit writes the RECORD — the
-    // board's mirror is not a day-note writer, so the hidden board has
-    // nothing to repaint and nothing to fight hideCal over).
+    // Commit a square edit while the board is entirely covered (B179: the
+    // square is an event, so the commit syncs the board's mirror RECORD; the
+    // hidden board is not repainted, so nothing fights hideCal over it).
+    // `rem-b-cov` sorts after the seed: square order is id order.
     await page.evaluate(async () => {
-      await idbPut({ id: 'rem-cov', rem: '', next: 'mobile seed note', day: calKey(new Date()) });
+      await idbPut({ id: 'rem-b-cov', rem: '', next: 'mobile seed note', day: calKey(new Date()) });
       renderCal();
     });
     await page.waitForTimeout(400);
@@ -3132,20 +3132,34 @@ run(async () => {
          JSON.stringify(document.getElementById('anchor-requirements').textContent)));
     ok('the day-note commit wrote the RECORD (the store is the durable thing now, not a rendered line)',
        await page.evaluate(async () =>
-         (await idbGetAll()).some(r => r.id === 'rem-cov' &&
+         (await idbGetAll()).some(r => r.id === 'rem-b-cov' &&
            r.rem === '' && r.next === 'mobile seed note VIA-CAL' && r.day === calKey(new Date()))),
        'records: ' + await page.evaluate(async () =>
-         JSON.stringify((await idbGetAll()).filter(r => r.id === 'rem-cov'))));
+         JSON.stringify((await idbGetAll()).filter(r => r.id === 'rem-b-cov'))));
+    ok('the covered commit synced the board record (B179)',
+       await page.evaluate(async () => {
+         const board = (await idbGetAll()).find(r => r.cal === calKey(new Date()));
+         return board.requirements === 'mobile seed line\nmobile seed note VIA-CAL' &&
+           board.calReq === 2;
+       }),
+       'board: ' + await page.evaluate(async () => {
+         const board = (await idbGetAll()).find(r => r.cal === calKey(new Date()));
+         return JSON.stringify({ req: board.requirements, calReq: board.calReq });
+       }));
 
     // The navigation back still repaints the board from the settled store.
     await page.evaluate(() => document.getElementById('cal-back').click());
     await page.waitForTimeout(700);
-    ok('hideCal still repaints the board on the way back (mirror current, untouched by the note edit)',
+    // Re-pinned deliberately for issue #484 (B179): the covered commit synced
+    // the mirror, so hideCal's repaint now lands the new square as a chip.
+    ok('hideCal still repaints the board on the way back (the covered commit\'s square is now a chip)',
        await page.evaluate(() =>
-         document.getElementById('anchor-requirements').textContent ===
-           'mobile seed line'),
-       'anchor: ' + await page.evaluate(() =>
-         JSON.stringify(document.getElementById('anchor-requirements').textContent)));
+         JSON.stringify([...document.querySelectorAll('#anchor-requirements .req-square')]
+           .map(n => n.textContent)) ===
+           JSON.stringify(['mobile seed line', 'mobile seed note VIA-CAL'])),
+       'chips: ' + await page.evaluate(() =>
+         JSON.stringify([...document.querySelectorAll('#anchor-requirements .req-square')]
+           .map(n => n.textContent))));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
@@ -3163,10 +3177,9 @@ run(async () => {
       const b = newBoardRecord();
       b.title = '09/02/26 To Do'; b.cal = key; b.calReq = 2;
       b.requirements = 'mirror one\nmirror two\nhand line';
-      const now = Date.now();
-      const ev1 = newCalEvent(key, 'mirror one'); ev1.createdAt = now - 1000;
-      const ev2 = newCalEvent(key, 'mirror two'); ev2.createdAt = now;
-      await idbPut(b); await idbPut(ev1); await idbPut(ev2);
+      await idbPut(b);
+      await idbPut({ id: 'rem-a1', rem: '', next: 'mirror one', day: key });
+      await idbPut({ id: 'rem-a2', rem: '', next: 'mirror two', day: key });
     });
     await page.reload();
     await page.waitForFunction(() =>
@@ -3189,7 +3202,7 @@ run(async () => {
                  fs: cs.fontSize, fw: cs.fontWeight };
       });
     });
-    ok('two mirrored lines render as chips, in event order',
+    ok('two mirrored lines render as chips, in square order',
       squares.length === 2 && squares[0].text === 'mirror one' && squares[1].text === 'mirror two',
       JSON.stringify(squares));
     ok('every chip fills with the calendar\'s orange #e3c6aa, inks #031019 and frames #b48158 — the LITERAL calendar palette, not the board\'s own ladder (the blue-frame defect the owner caught on review)',

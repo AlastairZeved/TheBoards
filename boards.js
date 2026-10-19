@@ -1,11 +1,12 @@
 /* --- 11. Board list + routing -------------------------------------------- */
 import {
-  BOARD_CATS, CALKEY_DATE, CAT_SEC_GAP, CE, COPY, GRID_ORDER, GLYPH, LEAVE_MS,
+  BOARD_CATS, CAT_SEC_GAP, CE, COPY, GRID_ORDER, GLYPH, LEAVE_MS,
   LIST_CARD_COLS, LIST_CARD_H, LIST_CAT_ROW, LONGPRESS_MS, MOVE_THRESHOLD,
   PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP, SWAP_MS, boardsOf, calBoardOf,
   calDayName, calEventsOf, calKey, calMD, calWindow, catOf, el, EMBED,
-  ensureLinkedBoard, eventsOf, histPush, live, makeDayNoteRecord, mirrorEventsOf,
-  newBoardRecord, pad2, state, syncMirror,
+  ensureLinkedBoard, eventsOf, histPush, isSquare, live, makeDayNoteRecord,
+  mirrorSquaresOf, newBoardRecord, pad2, squareOrder, squareText, squaresOf,
+  state, syncMirror,
 } from './state.js';
 import { cancelPendingSave, flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, scheduleSave } from './persistence.js';
 import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze, setPaneCollapsed } from './geometry.js';
@@ -827,22 +828,22 @@ export function makeCalDay(day, dayNotes, board) {
   return card;
 }
 
-/* Re-sync a date's mirror after any event write (one writer). */
+/* Re-sync a date's mirror after any square write (one writer). */
 export async function syncDateMirror(dateKey) {
   const all = await idbGetAll();
   const boards = boardsOf(all);
   const board = calBoardOf(boards, dateKey);
   if (!board) return;
-  if (syncMirror(board, calEventsOf(eventsOf(all), dateKey))) await idbPut(board);
+  if (syncMirror(board, squaresOf(all, dateKey))) await idbPut(board);
 }
 
 /* The reverse mirror (B106): a Requirements commit writes through to the
-   events. In the span the BOARD wins: span line i rewrites event i
-   (mirrorEventsOf), a deleted span line deletes its event (never demotes
-   it), and hand lines after the span are never touched. Board-side additions
-   land after the span as hand lines (insertion inside it is ambiguous,
-   B106). syncMirror runs on the LIVE board object because the commit's
-   saveNow races the same record.
+   squares. In the span the BOARD wins: span line i rewrites square i
+   (mirrorSquaresOf), a deleted span line deletes its square (never demotes
+   it), and hand lines after the span are never touched; nor is a square
+   beyond the span (B179). Board-side additions land after the span as hand
+   lines (insertion inside it is ambiguous, B106). syncMirror runs on the LIVE
+   board object because the commit's saveNow races the same record.
 
    `before` is the pre-edit text (interactions.js): a prefix/suffix diff
    identifies a pure deletion, so a hand line never slides up into the span.
@@ -850,12 +851,10 @@ export async function syncDateMirror(dateKey) {
 export async function writeThroughRequirements(board, before) {
   if (!board || !board.cal) return;
   const all = await idbGetAll();
-  const mine = calEventsOf(eventsOf(all), board.cal);
   const lines = (board.requirements || '').length
     ? board.requirements.split('\n') : [];
-  const span = typeof board.calReq === 'number'
-    ? board.calReq
-    : Math.min(lines.length, mine.length);   // first sync on a legacy pair
+  const span = typeof board.calReq === 'number' ? board.calReq : 0;   // never synced: all hand
+  const mine = squaresOf(all, board.cal).slice(0, span);   // never beyond the span (B179)
   const o = (before || '').length ? before.split('\n') : [];
   let p = 0;   // common prefix — the lines both texts agree on, from the top
   while (p < o.length && p < lines.length && o[p] === lines[p]) p++;
@@ -873,8 +872,8 @@ export async function writeThroughRequirements(board, before) {
     return;
   }
   const keep = Math.min(span, lines.length);
-  for (const { event, text } of mirrorEventsOf(board, all)) {
-    if (event.text !== text) { event.text = text; await idbPut(event); }
+  for (const { square, text } of mirrorSquaresOf(board, all)) {
+    if (squareText(square) !== text) { square.next = text; await idbPut(square); }
   }
   for (let i = keep; i < span && i < mine.length; i++) await idbDelete(mine[i].id);
   if (keep !== span) board.calReq = keep;    // span follows the deletion
@@ -1000,23 +999,17 @@ function seatCalAdds() {
 /* --- The day-note squares --------------------------------------------------
    Day-note records render as squares inside each day card, three per day with
    a pager beyond. The `day` field (the card's calKey) binds a record to a
-   card; one without it stays stored but unreachable. Calendar events are
-   never read here. */
+   card; one without it stays stored but unreachable. A square is its date's
+   event (B179): its commit syncs that date's Requirements mirror. */
 
 let calDayNotePage = {};             // day.key -> page
 
 const CAL_NOTE_PER_DAY = 3;
 const CAL_FUTURE_DAYS = 30;
 
+// Every square in id order: the day cards and the Requirements chips share it.
 function calNoteRecords(all) {
-  return all.filter((r) => typeof r.rem === 'string' && typeof r.day === 'string'
-    && CALKEY_DATE.test(r.day));
-}
-
-// The record's body text: `next`, unless it is a legacy calKey date.
-function calNoteBody(r) {
-  const n = typeof r.next === 'string' ? r.next : '';
-  return CALKEY_DATE.test(n) ? '' : n;
+  return all.filter(isSquare).sort(squareOrder);
 }
 
 function calOrdinal(n) {
@@ -1126,7 +1119,7 @@ function makeCalNote(rec) {
   block.dataset.id = rec.id;
   const body = document.createElement('div');
   body.className = 'cal-note-text';
-  body.textContent = calNoteBody(rec);
+  body.textContent = squareText(rec);
   block.append(body);
   // The deferred caretToEnd wins whichever order native caret placement fires.
   block.addEventListener('click', (e) => {
@@ -1138,8 +1131,21 @@ function makeCalNote(rec) {
   return block;
 }
 
+/* The calendar→board half of the mirror: after a square commit, a board whose
+   Requirements anchor is ON SCREEN (the wide panel leaves it beside the
+   calendar) repaints in place (B179). The guard is what is actually shown, not
+   viewport width: the mobile push covers the board, and hideCal repaints on
+   the way back. Through renderBoard(), never a direct anchor write, so the
+   B133 pinned title and the 'filled' class survive. */
+function repaintVisibleBoard() {
+  if (state.calOpen && !state.isWide) return;   // the mobile push covers the board
+  const anchor = document.getElementById('anchor-requirements');
+  if (anchor && anchor.offsetParent !== null) renderBoard();
+}
+
 /* The commit is the blur and writes `next`; `rem` stays stored but unread.
-   A commit leaving both empty discards the record (B8). */
+   A commit leaving both empty discards the record (B8). Either way the date's
+   mirror re-syncs and a board on screen repaints (B179). */
 function startCalNoteEdit(block, rec) {
   const body = block.querySelector('.cal-note-text');
   body.setAttribute('contenteditable', CE);
@@ -1155,11 +1161,15 @@ function startCalNoteEdit(block, rec) {
     if (!rec.rem && !next) {                        // B8
       await idbDelete(rec.id);
       block.remove();
+      await syncDateMirror(rec.day);
+      repaintVisibleBoard();
       renderCal();
       return;
     }
     rec.next = next;
     await idbPut(rec);
+    await syncDateMirror(rec.day);
+    repaintVisibleBoard();
     renderCal();
     scheduleSave();
   };

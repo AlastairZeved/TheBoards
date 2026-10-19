@@ -292,20 +292,19 @@ export const makeDayNoteRecord = (day) => makeRecord('dayNote', {
 
 /* --- 1.7 The rolling temporal calendar (B95) -----------------------------
    The calendar is a VIEW over the To-Do boards (R5), not a record of its own.
-   A date with an event links to an ordinary To-Do board, created on the date's
-   first event and titled "MM/DD/YY To Do"; the link is `cal` (the date key) on
-   the board record, read-site defaulted (B21, no DB version bump; PRD §4.1).
-   The mirror writes one Requirements line per event, bidirectionally.
+   A date links to an ordinary To-Do board by `cal` (the date key) on the board
+   record, read-site defaulted (B21, no DB version bump; PRD §4.1). The date's
+   day-note squares ARE its events (B179): the mirror writes one Requirements
+   line per square, bidirectionally. The board itself materializes on its own
+   morning (B108, B131), so a square dated ahead waits in the store.
 
    Line identity is positional in the mirror's own order (see syncMirror); a
    line outside the mirror's count is the reader's own and invisible to it.
-   Reordering is presentation-only (events are read by identity, not
-   position). Deleting the linked board unlinks its date, no blocking, no
-   orphan: the events survive on their records and the next event re-creates
-   a board.
+   Squares keep id order (squareOrder). Deleting the linked board unlinks its
+   date, no blocking, no orphan: the squares survive on their records.
 
    Rolling windows are COMPUTED at render from today: no array stored, no
-   midnight write. An event is { id, date: 'YYYY-MM-DD', text, state } (PRD
+   midnight write. A square is { id, rem, next, day: 'YYYY-MM-DD' } (PRD
    §4.1). */
 
 const CAL_TITLE_SUFFIX = ' To Do';
@@ -332,9 +331,8 @@ export function calWindow(count = 7, start = new Date()) {
   return days;
 }
 
-/* One event record (PRD §4.1). `createdAt` is the mirror's order key. `time`
-   (B142) is split OUT of `text`: the mirror carries only `text`, never
-   `time`. */
+/* One event record (PRD §4.1); the mirror reads squares, not events (B179).
+   `time` (B142) is split OUT of `text`. */
 export function newCalEvent(dateKey, text) {
   return makeRecord('event', { id: uuid(), date: dateKey, text: text || '', time: '', state: 'active' });
 }
@@ -349,7 +347,7 @@ export function calBoardOf(all, dateKey) {
   return null;
 }
 
-/* Oldest first: creation order is the mirror's line order. */
+/* Oldest first. */
 export function calEventsOf(events, dateKey) {
   return events.filter(e => e.date === dateKey)
     .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0) || (a.id < b.id ? -1 : 1));
@@ -358,6 +356,21 @@ export function calEventsOf(events, dateKey) {
 export const boardsOf = (all) => all.filter((record) => record.title !== undefined);
 export const eventsOf = (all) => all.filter((record) =>
   typeof record.date === 'string' && typeof record.text === 'string' && record.title === undefined);
+
+/* The day-note squares (B179): records with `rem` and a `day` key. They read in
+   id order, the store's key order, so the day cards and the Requirements chips
+   share one order. */
+export const isSquare = (r) =>
+  typeof r.rem === 'string' && typeof r.day === 'string' && CALKEY_DATE.test(r.day);
+export const squareOrder = (a, b) => (a.id < b.id ? -1 : 1);
+export function squaresOf(all, dateKey) {
+  return all.filter((r) => isSquare(r) && r.day === dateKey).sort(squareOrder);
+}
+// A square's text: `next`, unless it is a legacy calKey date.
+export function squareText(r) {
+  const n = typeof r.next === 'string' ? r.next : '';
+  return CALKEY_DATE.test(n) ? '' : n;
+}
 
 /* Ensure a date's linked To-Do board exists (R5); returns it, already in
    `all`. Creating writes records, so every caller wraps this in
@@ -374,21 +387,20 @@ export function ensureLinkedBoard(all, dateKey) {
   return { board, created: true };
 }
 
-/* The Requirements mirror (R5): rewrite the mirror's lines to the events,
-   keeping every hand-typed line. The span is SELF-RECORDED: `calReq` counts
-   the lines the mirror last wrote, so deleting an event can never demote an
-   old mirror line to a "hand" line. Span lines are rewritten wholesale in
-   event order; the rest is the reader's, carried through. Both surfaces land
-   here to converge (B106); the span decides what a write owns, so they can
-   never disagree. Requirements is one string, \n-separated
-   (PRD §4.1). */
-export function syncMirror(board, events) {
+/* The Requirements mirror (R5): rewrite the mirror's lines to the date's
+   squares, keeping every hand-typed line. The span is SELF-RECORDED: `calReq`
+   counts the lines the mirror last wrote, so deleting a square can never
+   demote an old mirror line to a "hand" line. Span lines are rewritten
+   wholesale in square order; the rest is the reader's, carried through. A
+   board never synced has span 0: every line it holds is the reader's, and the
+   squares land above them. Both surfaces land here to converge (B106); the
+   span decides what a write owns, so they can never disagree. Requirements is
+   one string, \n-separated (PRD §4.1). */
+export function syncMirror(board, squares) {
   const lines = splitLines(board.requirements || '');
-  const span = typeof board.calReq === 'number'
-    ? board.calReq
-    : Math.min(lines.length, events.length);   // first sync on a legacy pair
+  const span = typeof board.calReq === 'number' ? board.calReq : 0;   // never synced: all hand
   const hand = lines.slice(span);              // lines the reader wrote
-  const mirrored = events.map(e => e.text);
+  const mirrored = squares.map(squareText);
   const next = mirrored.concat(hand).join('\n');
   board.calReq = mirrored.length;              // the span moves to the new write
   if (next !== (board.requirements || '')) {
@@ -399,16 +411,15 @@ export function syncMirror(board, events) {
 }
 
 /* Read the mirror back by position (the first lines are the mirror's), so a
-   READER's line edit writes through to its event. */
-export function mirrorEventsOf(board, events) {
+   READER's line edit writes through to its square. */
+export function mirrorSquaresOf(board, all) {
   const lines = splitLines(board.requirements || '');
   if (!board.cal) return [];
-  const mine = calEventsOf(events, board.cal);
-  const span = typeof board.calReq === 'number'
-    ? Math.min(board.calReq, lines.length) : mine.length;
+  const mine = squaresOf(all, board.cal);
+  const span = typeof board.calReq === 'number' ? Math.min(board.calReq, lines.length) : 0;
   return lines.slice(0, span)
-    .map((text, i) => ({ event: mine[i], text }))     // event may be undefined
-    .filter(m => m.event);
+    .map((text, i) => ({ square: mine[i], text }))    // square may be undefined
+    .filter(m => m.square);
 }
 
 // DOM plumbing: every surface the app draws into, shared by every module.

@@ -75,7 +75,7 @@ export function syncViewTitle() {
 /* ONLY the linked To Do board's MIRRORED Requirements lines render in read
    state as square blocks (B163; one-line chips on the phone tier, B164), in
    the calendar ladder's orange (.req-squares/.req-square, UIUX §2.2.2). The
-   span is mirrorEventsOf's (state.js): the first `calReq` lines are the
+   span is mirrorSquaresOf's (state.js): the first `calReq` lines are the
    mirror's, the rest is the reader's hand and stays plain pre-wrap text. No
    `calReq` (never synced) renders no squares; syncMirror writes it on its
    first run and the next render converges (B21's read-site default).
