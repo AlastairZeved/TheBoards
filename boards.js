@@ -5,8 +5,8 @@ import {
   PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP, SWAP_MS, boardsOf, calBoardOf,
   calDayName, calEventsOf, calKey, calMD, calWindow, catOf, el, EMBED,
   ensureLinkedBoard, eventsOf, histPush, isSquare, live, makeDayNoteRecord,
-  mirrorLine, mirrorSquaresOf, newBoardRecord, pad2, squareOrder, squareText,
-  squaresOf, state, syncMirror,
+  mirrorLine, mirrorSquaresOf, newBoardRecord, pad2, squareFromEvent, squareOrder,
+  squareText, squaresOf, state, syncMirror,
 } from './state.js';
 import { cancelPendingSave, flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, scheduleSave } from './persistence.js';
 import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze, setPaneCollapsed } from './geometry.js';
@@ -882,6 +882,25 @@ export async function writeThroughRequirements(board, before) {
   }
 }
 
+/* The event record retires (B179): each stored event becomes a square on its
+   date (squareFromEvent), then its record goes. The put comes first and the
+   id is deterministic, so an interrupted pass repeats onto the same record. An
+   event with no calKey date has no card to land on and stays stored,
+   unreachable. It runs before anything syncs a date's mirror (the launch, the
+   backup import), or the date's old event lines, still inside the span, would
+   be rewritten away. Returns the dates that gained a square. */
+export async function convertLegacyEvents() {
+  const days = new Set();
+  for (const ev of eventsOf(await idbGetAll())) {
+    const square = squareFromEvent(ev);
+    if (!square) continue;
+    await idbPut(square);
+    await idbDelete(ev.id);
+    days.add(square.day);
+  }
+  return [...days];
+}
+
 /* --- The day-roll launch (B105) + the morning lifecycle (B108) -------------
    Today's linked board exists even with zero events (B107, ensureLinkedBoard),
    boot lands on it, and yesterday's incomplete notes carry forward. The check
@@ -908,15 +927,12 @@ async function launchTodayBoard(today) {
       if (state.current && state.current.cal > today &&
           !(state.current.notes || []).length) state.current = null;
       flushSave();
+      await convertLegacyEvents();      // B179: before anything reads the squares
       const all = await idbGetAll();
       const boards = boardsOf(all);
       const { board } = ensureLinkedBoard(boards, today);
-      if (board.calReq === undefined) {
-        // B131: a future-dated event's board has no first sync to set the span.
-        board.calReq = calEventsOf(eventsOf(all), today).length;
-      }
       // B131 sweep: empty future-dated linked boards are derived state; the
-      // events survive.
+      // squares survive.
       for (const b of boards.slice()) {
         // No current-board guard: current may be the ghost being swept.
         if (b !== board && b.cal > today && !(b.notes || []).length) {

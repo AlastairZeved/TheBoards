@@ -375,6 +375,20 @@ export function squareText(r) {
 export function mirrorLine(r) {
   return squareText(r).replace(/[\r\n]+/g, ' ');
 }
+/* An old event as the square it becomes (B179); null when its `date` is no
+   calKey (no day card to land on). The id sorts before every app-made one
+   ('rem-' + base-36 ms starts at 'm'): rem-0, the RAW createdAt in base 36
+   padded to 9 (a missing one sorts first, as calEventsOf read it), then the
+   event's id, so creation order survives and a re-conversion lands on the same
+   record. Text stays untrimmed: a converted line equals its span line. */
+export function squareFromEvent(ev) {
+  if (!isDateKey(ev.date)) return null;
+  return makeRecord('dayNote', {
+    id: 'rem-0' + (Number.isFinite(ev.createdAt) ? Math.max(0, Math.floor(ev.createdAt)) : 0)
+      .toString(36).padStart(9, '0') + '-' + ev.id,
+    rem: '', next: typeof ev.text === 'string' ? ev.text : '', day: ev.date,
+  });
+}
 
 /* Ensure a date's linked To-Do board exists (R5); returns it, already in
    `all`. Creating writes records, so every caller wraps this in

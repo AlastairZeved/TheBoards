@@ -42,7 +42,7 @@ run(async () => {
     await page.goto(URL);                    // first load: creates today's (empty) board
     await page.waitForTimeout(1200);
     // Yesterday's linked board: two incomplete notes at pinned logical x/y,
-    // one completed; today gets three events (creation order pinned); a plain
+    // one completed; today gets three squares (id order pinned, B179); a plain
     // board is most recent so B105's old landing would have missed the day.
     await page.evaluate(async () => {
       const now = new Date();
@@ -56,12 +56,11 @@ run(async () => {
         { id: 'd1', text: 'already done', x: 300, y: 30, rw: 900, rh: 900, scale: 1.0, state: 'complete' },
       ];
       yb.updatedAt = Date.now() - 1000;
-      const evs = ['first event', 'second event', 'third event'].map((t, i) => {
-        const e = newCalEvent(tk, t); e.createdAt = 1000 + i; return e;
-      });
+      const squares = ['first event', 'second event', 'third event'].map((t, i) =>
+        ({ id: 'rem-m' + (i + 1), rem: '', next: t, day: tk }));
       const plain = newBoardRecord();
       plain.title = 'Sample board'; plain.updatedAt = Date.now() + 5000;   // launch → most recent, NOT the day board
-      await idbPut(yb); for (const e of evs) await idbPut(e); await idbPut(plain);
+      await idbPut(yb); for (const s of squares) await idbPut(s); await idbPut(plain);
     });
     await page.reload();                     // the morning load that carries
     await page.waitForTimeout(1500);
@@ -76,7 +75,7 @@ run(async () => {
                yNotes: yb && yb.notes.map(n => ({ id: n.id, state: n.state })) };
     }, today);
     ok('boot landed on today\'s board', got.curCal === today, JSON.stringify(got.curCal));
-    ok('Requirements lead with the three mirror lines, creation order',
+    ok('Requirements lead with the three squares, creation order',
       JSON.stringify(got.req && got.req.slice(0, 3)) === JSON.stringify(['first event', 'second event', 'third event']),
       JSON.stringify(got.req));
     ok('both incomplete notes carried, at their same logical x/y, with carriedOn = today',

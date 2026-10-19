@@ -1518,8 +1518,10 @@ run(async () => {
   // overwritten by the file's copy, new ids are added, boards and events the
   // file never mentions survive. A v1 file's events (which v1 swept into
   // `boards`) are salvaged. A file that is not the app's shape writes nothing
-  // and says so.
-  console.log('\n[D21b] JSON backup round-trip (issue #140, B92; v2 payload, B123)');
+  // and says so. Since issue #484 (B179) an event is a square: the import
+  // writes each incoming event as the square it converts to, the days it lands
+  // on re-sync their boards, and importing the same file twice adds nothing.
+  console.log('\n[D21b] JSON backup round-trip (issue #140, B92; v2 payload, B123; events arrive as squares, B179)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
     // Fixture: the open board stays as-is; a second board carries a note pair
@@ -1605,6 +1607,7 @@ run(async () => {
         overwritten: all.find(b => b.id === (all.find(x => (x.notes || []).some(n => n.id === 'bn1')) || {}).id),
         fresh: all.find(b => b.id === 'imported-board-c'),
         ev: all.find(r => r.id === 'cev1'),
+        evSquares: all.filter(r => r.id.endsWith('-cev1')),
         dayNote: all.find(r => r.id === 'rem-backup1'),
       };
     });
@@ -1616,14 +1619,30 @@ run(async () => {
        JSON.stringify(after.overwritten && after.overwritten.title));
     ok('the merge is exact: nothing lost, nothing duplicated', after.count === countBefore + 1,
        String(after.count) + ' vs ' + countBefore);
-    ok('the calendar event survived the v2 import round-trip',
-       !!after.ev && after.ev.text === 'BACKUP EVENT' && after.ev.date === '2026-09-16' &&
-       after.ev.state === 'active', JSON.stringify(after.ev || {}));
+    // Re-pinned deliberately for issue #484 (B179): the squares are the events,
+    // so the file's `cev1` lands as the square it converts to (no event record
+    // is written) and keeps its text and date.
+    ok('the calendar event survived the v2 import round-trip as a square on its date (B179)',
+       !after.ev && after.evSquares.length === 1 && after.evSquares[0].next === 'BACKUP EVENT' &&
+       after.evSquares[0].day === '2026-09-16' && after.evSquares[0].rem === '',
+       JSON.stringify(after.evSquares));
     ok('the day-note survived the v2 import round-trip', !!after.dayNote &&
        after.dayNote.rem === 'day-note text' && after.dayNote.next === 'second line' &&
        after.dayNote.day === '2026-09-17', JSON.stringify(after.dayNote || {}));
     ok('catStamp survives board import unchanged', after.overwritten.catStamp === 12345,
        String(after.overwritten && after.overwritten.catStamp));
+
+    // The same file again: the event's square has a deterministic id (the
+    // device's own copy converted to it, the file's copy overwrote it), so a
+    // second import adds nothing.
+    await page.setInputFiles('#import-file', importPath);
+    await page.waitForTimeout(500);
+    const twice = await page.evaluate(async () => {
+      const all = await idbGetAll();
+      return { count: all.length, evSquares: all.filter(r => r.id.endsWith('-cev1')).length };
+    });
+    ok('importing the same file twice makes no duplicates: the same record count, one square for the event (B179)',
+       twice.count === after.count && twice.evSquares === 1, JSON.stringify(twice) + ' vs ' + after.count);
 
     // A file that is not the app's shape writes nothing and says so.
     const badPath = path.join(os.tmpdir(), 'boards-import-bad.json');
@@ -1671,6 +1690,9 @@ run(async () => {
         { id: 'v1ev1', date: '2026-10-01', text: 'salvaged one', state: 'active', createdAt: 5 },
         { id: 'v1ev2', date: 'not-a-date', text: 'bad date', state: 'active', createdAt: 6 },
         { id: 'v1ev3', date: '2026-10-02', text: '  trimmed  ', state: 'complete', createdAt: 7 },
+        // Two events on one date whose ids sort AGAINST their creation order.
+        { id: 'zz-made-first', date: '2026-10-03', text: 'made first', state: 'active', createdAt: 8 },
+        { id: 'aa-made-second', date: '2026-10-03', text: 'made second', state: 'active', createdAt: 9 },
       ],
     }));
     await page.setInputFiles('#import-file', v1Path);
@@ -1681,18 +1703,53 @@ run(async () => {
     }));
     const salv = await page.evaluate(async () => {
       const all = await idbGetAll();
-      return { board: all.find(r => r.id === 'v1board'), ev1: all.find(r => r.id === 'v1ev1'),
-               ev2: all.find(r => r.id === 'v1ev2'), ev3: all.find(r => r.id === 'v1ev3') };
+      return { board: all.find(r => r.id === 'v1board'), sq1: await idbGet('rem-0000000005-v1ev1'),
+               sq2: all.filter(r => r.id.endsWith('-v1ev2')), ev2: await idbGet('v1ev2'),
+               sq3: all.find(r => r.id.endsWith('-v1ev3')),
+               order: all.filter(r => r.day === '2026-10-03').sort((a, b) => (a.id < b.id ? -1 : 1)).map(r => r.next),
+               events: all.filter(r => typeof r.date === 'string' && r.title === undefined).length };
     });
     ok('v1 salvage: the file\'s board imports as a board', !!salv.board && salv.board.title === 'V1 BOARD',
        JSON.stringify(salv.board || {}));
-    ok('v1 salvage: the event record swept into boards is restored as an event',
-       !!salv.ev1 && salv.ev1.date === '2026-10-01' && salv.ev1.text === 'salvaged one' &&
-       salv.ev1.state === 'active', JSON.stringify(salv.ev1 || {}));
-    ok('v1 salvage: an event with a non-date `date` is dropped at the door', !salv.ev2);
-    ok('v1 salvage: event fields are coerced (text trimmed, complete state kept)',
-       !!salv.ev3 && salv.ev3.text === 'trimmed' && salv.ev3.state === 'complete',
-       JSON.stringify(salv.ev3 || {}));
+    // Re-pinned deliberately for issue #484 (B179): the squares are the events,
+    // so a salvaged v1 event is restored as the square it converts to (its id
+    // carries the base-36 createdAt, 5), not as an event record.
+    ok('v1 salvage: the event record swept into boards is restored as a square on its date (B179)',
+       !!salv.sq1 && salv.sq1.next === 'salvaged one' && salv.sq1.day === '2026-10-01',
+       JSON.stringify(salv.sq1 || {}));
+    // Re-pinned deliberately for issue #484 (B179): a dropped event leaves
+    // neither an event record nor a square.
+    ok('v1 salvage: an event with a non-date `date` is dropped at the door — no square, no event (B179)',
+       salv.sq2.length === 0 && salv.ev2 === undefined, JSON.stringify(salv.sq2));
+    // Re-pinned deliberately for issue #484 (B179): squares have no done state,
+    // so a complete event comes over as an ordinary square with no `state`.
+    ok('v1 salvage: event fields are coerced (text trimmed) and the done state is not carried (B179)',
+       !!salv.sq3 && salv.sq3.next === 'trimmed' && !('state' in salv.sq3),
+       JSON.stringify(salv.sq3 || {}));
+    ok('v1 salvage: no event record is left in the store (B179)', salv.events === 0, String(salv.events));
+    // Square order is id order, so the converted ids must carry the creation
+    // order the mirror's lines had: createdAt first, the event id only as the tie-break.
+    ok('v1 salvage: events on one date keep their creation order whatever their ids (B179)',
+       JSON.stringify(salv.order) === JSON.stringify(['made first', 'made second']), JSON.stringify(salv.order));
+
+    // B179: an imported event for TODAY re-syncs today's board — it lands as a
+    // chip. Last, so no earlier count moves.
+    const todayKey = await page.evaluate(() => calKey(new Date()));
+    const todayPath = path.join(os.tmpdir(), 'boards-import-today.json');
+    fs.writeFileSync(todayPath, JSON.stringify({ app: 'the-boards', version: 2, boards: [],
+      calendarEvents: [{ id: 'todayev', date: todayKey, text: 'IMPORTED TODAY', state: 'active', createdAt: Date.now() }] }));
+    await page.setInputFiles('#import-file', todayPath);
+    await page.waitForTimeout(500);
+    const todayBoard = await page.evaluate(async () => {
+      const key = calKey(new Date());
+      return (await idbGetAll()).find(r => r.cal === key);
+    });
+    ok('an imported event for today re-syncs today\'s board: it lands as a chip (B179)',
+       !!todayBoard && todayBoard.requirements.split('\n').includes('IMPORTED TODAY') && todayBoard.calReq >= 1,
+       JSON.stringify(todayBoard && { req: todayBoard.requirements, calReq: todayBoard.calReq }));
+    ok('…and the open board repainted it in place, no reload (B179)',
+       await page.evaluate(() => [...document.querySelectorAll('#anchor-requirements .req-square')]
+         .some(n => n.textContent === 'IMPORTED TODAY')));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
@@ -2392,6 +2449,115 @@ run(async () => {
        JSON.stringify(viaCalDel.chips) === JSON.stringify(['mirror one D25B', 'mirror two VIA-CAL']) &&
        viaCalDel.req === 'mirror one D25B\nmirror two VIA-CAL\nhand line' &&
        viaCalDel.calReq === 2, JSON.stringify(viaCalDel));
+
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  // ---- D25c. old events become squares at boot (issue #484, B179) ------------
+  // The squares ARE the events, so a store written before the merge still holds
+  // event records the mirror no longer reads. The launch converts each one,
+  // once, into a square on its date whose id sorts ahead of every app-made
+  // square: the chips already on a board keep their places, the date's native
+  // squares join after them, hand lines stay last, and a past board is not
+  // rewritten (its NEXT write finds the chip's square). A second launch finds
+  // nothing left to convert.
+  console.log('\n[D25c] Old events become squares at boot; every chip stays put (issue #484, B179)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    // A pre-merge store, clean first (the first boot made today's own board,
+    // see D25): today's synced board and its event, a native square on the same
+    // date, yesterday's board and its event.
+    const seed = await page.evaluate(async () => {
+      for (const r of await idbGetAll()) await idbDelete(r.id);
+      const key = calKey(new Date());
+      const yd = new Date(); yd.setDate(yd.getDate() - 1);
+      const yk = calKey(yd);
+      const b = newBoardRecord();
+      b.title = '10/19/26 To Do'; b.cal = key; b.calReq = 1;
+      b.requirements = 'legacy chip\nhand line';
+      const e = newCalEvent(key, 'legacy chip'); e.createdAt = Date.now();
+      const yb = newBoardRecord();
+      yb.title = '10/18/26 To Do'; yb.cal = yk; yb.calReq = 1;
+      yb.requirements = 'old chip';
+      const ye = newCalEvent(yk, 'old chip');
+      await idbPut(b); await idbPut(e);
+      await idbPut({ id: 'rem-z-native', rem: '', next: 'native square', day: key });
+      await idbPut(yb); await idbPut(ye);
+      return { key, yk, b: b.id, yb: yb.id, e: e.id };
+    });
+    // The landed state: boot is on today's board and no event record is left.
+    // A timeout is the failure (the launch never converted), not a stale read.
+    // waitForFunction does not await a promise its predicate returns (a promise
+    // is truthy), so the store read parks its answer on the window and the
+    // predicate stays synchronous.
+    const launched = () => page.waitForFunction(() => {
+      if (!state.current || state.current.cal !== calKey(new Date())) return false;
+      idbGetAll().then((all) => {
+        window.noEventsLeft = !all.some(r => typeof r.date === 'string' && r.title === undefined);
+      });
+      return window.noEventsLeft === true;
+    }, null, { timeout: 10000, polling: 100 });
+    const read = () => page.evaluate(async (s) => {
+      const all = await idbGetAll();
+      const t = all.find(r => r.id === s.b), y = all.find(r => r.id === s.yb);
+      return {
+        events: all.filter(r => typeof r.date === 'string' && r.title === undefined).length,
+        sq: all.find(r => r.id.endsWith('-' + s.e)),
+        req: t.requirements, calReq: t.calReq,
+        yReq: y.requirements, yCalReq: y.calReq,
+        squareCount: all.filter(r => typeof r.day === 'string' && typeof r.rem === 'string').length,
+      };
+    }, seed);
+
+    await page.reload();
+    await launched();
+    await page.waitForTimeout(700);                   // the sync and the swap settle
+    const got = await read();
+    ok('no event record survives the boot conversion', got.events === 0, JSON.stringify(got));
+    ok('the event came back as a square on its date, id rem-0…-<event id>',
+       got.sq && got.sq.next === 'legacy chip' && got.sq.day === seed.key && got.sq.rem === '' &&
+       /^rem-0[0-9a-z]{9}-/.test(got.sq.id), JSON.stringify(got.sq || {}));
+    ok('today: the converted chip keeps its place, the native square joins after it, the hand line stays last',
+       got.req === 'legacy chip\nnative square\nhand line' && got.calReq === 2,
+       JSON.stringify({ req: got.req, calReq: got.calReq }));
+    ok('yesterday\'s board is byte-identical (past boards are not rewritten)',
+       got.yReq === 'old chip' && got.yCalReq === 1,
+       JSON.stringify({ yReq: got.yReq, yCalReq: got.yCalReq }));
+    await page.click('#cal-rail');
+    await page.waitForTimeout(400);
+    const todayBodyTexts = await page.evaluate(() =>
+      [...document.querySelectorAll('#cal-today-board .cal-note-text')].map(n => n.textContent).join('|'));
+    ok('the calendar shows today\'s squares in the same order',
+       todayBodyTexts === 'legacy chip|native square', todayBodyTexts);
+
+    await page.reload();
+    await launched();
+    await page.waitForTimeout(700);
+    const reloaded = await read();
+    ok('a second reload converts nothing more and moves nothing',
+       reloaded.req === got.req && reloaded.calReq === got.calReq &&
+       reloaded.yReq === got.yReq && reloaded.squareCount === got.squareCount,
+       JSON.stringify({ reloaded: { req: reloaded.req, calReq: reloaded.calReq, n: reloaded.squareCount },
+                        got: { req: got.req, calReq: got.calReq, n: got.squareCount } }));
+
+    // The point of converting: the NEXT write on a past board keeps its chip.
+    // Editing yesterday's hand lines runs the write-through, which reads the
+    // date's squares; the converted square is the span's line. Unconverted, the
+    // span line would pair with no square and the write would drop it.
+    await page.evaluate((id) => swapBoard(id), seed.yb);
+    await page.waitForTimeout(700);                   // SWAP_MS + render
+    await page.evaluate(() => document.getElementById('anchor-requirements').focus());
+    await page.evaluate(() => {
+      document.getElementById('anchor-requirements').textContent = 'old chip\nhand added';
+    });
+    await page.evaluate(() => document.getElementById('anchor-requirements').blur());
+    await page.waitForTimeout(800);
+    const edited = await read();
+    ok('the next write on a past board keeps its chip: the converted square is the span\'s line (B179)',
+       edited.yReq === 'old chip\nhand added' && edited.yCalReq === 1 &&
+       edited.squareCount === got.squareCount,
+       JSON.stringify({ yReq: edited.yReq, yCalReq: edited.yCalReq, n: edited.squareCount }));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();

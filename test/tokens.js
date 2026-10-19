@@ -1139,6 +1139,31 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /squaresOf\(/.test(syncDateFn) && /squaresOf\(/.test(writeThroughFn) &&
     (calEditFn.match(/await syncDateMirror\(rec\.day\);\s*repaintVisibleBoard\(\);/g) || []).length === 2,
     [syncDateFn, writeThroughFn, calEditFn].map(f => f.slice(0, 50)).join(' | '));
+  // The old events become squares (B179): once at the launch, and on every
+  // backup import, before anything reads the mirror's squares.
+  const launchFn = (app.match(/async function launchTodayBoard\(today\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  const importFn = (app.match(/export async function importBoardsJson\(file\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  const fromEventFn = (app.match(/export function squareFromEvent\(ev\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  ok('an old event converts to a square whose id sorts before every app-made one (rem-0, the raw createdAt in base 36 padded to 9, then the event id; a missing createdAt is 0, never makeRecord\u2019s now), its text carried untrimmed, and an event with no calKey date converts to nothing (B179)',
+    /'rem-0' \+ [^;]*\.padStart\(9, '0'\) \+ '-' \+ ev\.id/.test(fromEventFn) &&
+    /Number\.isFinite\(ev\.createdAt\)/.test(fromEventFn) && !/makeRecord\('event'/.test(fromEventFn) &&
+    /if \(!isDateKey\(ev\.date\)\) return null;/.test(fromEventFn) &&
+    /next: typeof ev\.text === 'string' \? ev\.text : ''/.test(fromEventFn),
+    fromEventFn.slice(0, 80));
+  const detachAt = launchFn.indexOf('state.current = null');
+  const flushAt = launchFn.indexOf('flushSave()');
+  const convertAt = launchFn.indexOf('await convertLegacyEvents()');
+  ok('the launch converts old events AFTER the ghost detach and flushSave (B131) and BEFORE it reads the store for the linked board, and no longer seeds calReq from the events (B179)',
+    detachAt > -1 && detachAt < flushAt && flushAt < convertAt &&
+    convertAt < launchFn.indexOf('await idbGetAll()') && convertAt < launchFn.indexOf('ensureLinkedBoard(') &&
+    !/calEventsOf/.test(launchFn),
+    JSON.stringify({ detachAt, flushAt, convertAt }));
+  ok('a backup import converts the device\u2019s events before its first write, writes the file\u2019s events as squares (never as events), and re-syncs the dates they land on (B179)',
+    /await convertLegacyEvents\(\)/.test(importFn) &&
+    importFn.indexOf('await convertLegacyEvents()') < importFn.indexOf('await idbPut(') &&
+    /\.map\(squareFromEvent\)/.test(importFn) && !/idbPut\(ev\)/.test(importFn) &&
+    /await syncDateMirror\(/.test(importFn),
+    importFn.slice(0, 60));
   ok('the linked board\u2019s title seat is derived at render, pinned: "Today\u2019s To Do" + the date line off the cal key (B133, issue #273)',
     /function ensureLinkedBoard/.test(app) &&
     /const LINKED_TITLE = "Today's To Do"/.test(app) &&

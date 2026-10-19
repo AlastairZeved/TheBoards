@@ -7,7 +7,7 @@ const { URL, ok, summary, launch, tap, tapWithMove, touchDragTo, newMobilePage, 
 run(async () => {
   const browser = await launch();
 
-  console.log('\n[R1] Fresh open, today has 2 events: lands on the day\'s linked board (B105)');
+  console.log('\n[R1] Fresh open, today has 2 squares (its events, B179): lands on the day\'s linked board (B105)');
   {
     const ctx = await browser.newContext({ serviceWorkers: 'block' });
     const page = await ctx.newPage();
@@ -16,17 +16,16 @@ run(async () => {
     await page.goto(URL);
     await page.waitForTimeout(500);
     const today = await page.evaluate(() => calKey(new Date()));
-    // Two events for today, creation order pinned; the most-recent BOARD is a
-    // plain one, so without the launch boot would land there, not on the day.
+    // Two squares for today, id order pinned (rem-r1 < rem-r2); the most-recent
+    // BOARD is a plain one, so without the launch boot would land there, not on
+    // the day.
     await page.evaluate(async () => {
       const key = calKey(new Date());
-      const e1 = newCalEvent(key, 'first event');
-      const e2 = newCalEvent(key, 'second event');
-      e2.createdAt = e1.createdAt + 1;
-      e1.updatedAt = 1; e2.updatedAt = 2;   // events must lose boot's most-recent pick
       const plain = newBoardRecord();
       plain.updatedAt = Date.now() + 2;      // launch → most recent, NOT the day board
-      await idbPut(e1); await idbPut(e2); await idbPut(plain);
+      await idbPut({ id: 'rem-r1', rem: '', next: 'first event', day: key });
+      await idbPut({ id: 'rem-r2', rem: '', next: 'second event', day: key });
+      await idbPut(plain);
     });
     await page.reload();                     // the fresh app open
     await page.waitForTimeout(1500);         // boot + SWAP_MS
@@ -43,7 +42,7 @@ run(async () => {
       JSON.stringify(got.curCal) + " want " + today);
     ok('title is the MM/DD/YY To Do species',
       /\/\d\d\/\d\d To Do$/.test(got.boardTitle || ''), got.boardTitle);
-    ok('Requirements lead with both events, creation order',
+    ok('Requirements lead with both squares, creation order',
       JSON.stringify(got.req && got.req.slice(0, 2)) === JSON.stringify(['first event', 'second event']),
       JSON.stringify(got.req));
     ok('no page errors', errors.length === 0, errors.join(' | '));
