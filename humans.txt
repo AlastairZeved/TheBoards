@@ -3,8 +3,8 @@
 
 /* Team */
 Name: Robert A.Z. Gregory
-Site: https://aboveaveragerob.github.io/TheBoards/
-GitHub: https://github.com/aboveaveragerob
+Site: https://alastairzeved.github.io/TheBoards/
+GitHub: https://github.com/AlastairZeved
 
 /* Site */
 Purpose: Zeved Boards — a spatial, offline-first PWA. A fixed, bounded page
