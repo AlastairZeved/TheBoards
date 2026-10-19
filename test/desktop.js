@@ -2728,6 +2728,25 @@ run(async () => {
        got.t.requirements === 'first square\np1 p2\nfrom elsewhere\nhand only EDITED',
        JSON.stringify({ e5: got.e5.next, req: got.t.requirements, calReq: got.t.calReq }));
 
+    // 6. The squares are the only marker (B179): today holds squares, yet the
+    // rail dot stays dim. Go Back only while the panel is open (a second one
+    // would pop history); the wait lets any lighting pass of the rail's render
+    // land before the read.
+    await page.evaluate(() => { if (state.calExpanded) document.getElementById('cal-back').click(); });
+    await page.waitForTimeout(400);
+    const dot = await page.evaluate(async () => {
+      const d = document.querySelector('#cal-rail .cdot');
+      const today = calKey(new Date());
+      return {
+        railShown: !document.getElementById('cal-rail').hidden,
+        squares: (await idbGetAll()).filter(r => typeof r.rem === 'string' && r.day === today).length,
+        lit: d.classList.contains('lit'),
+        opacity: getComputedStyle(d).opacity,
+      };
+    });
+    ok('the rail dot stays dim even with squares today (B179)',
+       dot.railShown && dot.squares > 0 && !dot.lit && dot.opacity === '0.35', JSON.stringify(dot));
+
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }

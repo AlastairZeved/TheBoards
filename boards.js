@@ -3,7 +3,7 @@ import {
   BOARD_CATS, CAT_SEC_GAP, CE, COPY, GRID_ORDER, GLYPH, LEAVE_MS,
   LIST_CARD_COLS, LIST_CARD_H, LIST_CAT_ROW, LONGPRESS_MS, MOVE_THRESHOLD,
   PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP, SWAP_MS, boardsOf, calBoardOf,
-  calDayName, calEventsOf, calKey, calMD, calWindow, catOf, el, EMBED,
+  calDayName, calKey, calMD, calWindow, catOf, el, EMBED,
   ensureLinkedBoard, eventsOf, histPush, isSquare, live, makeDayNoteRecord,
   mirrorLine, mirrorSquaresOf, newBoardRecord, pad2, squareFromEvent, squareOrder,
   squareText, squaresOf, state, syncMirror,
@@ -686,18 +686,14 @@ export function goCalBack() {
 /* --- The standing rail (B99) ----------------------------------------------
    Wide's calendar is furniture, not navigation: a 40px rail rendered at boot
    and on every flip to wide. Tapping expands the panel (squeezing the board);
-   Go Back (B134, B151) returns the rail. No commit (B81), no history pushed. */
+   Go Back (B134, B151) returns the rail. No commit (B81), no history pushed.
+   Its dot stays dim: the day's squares are the only marker (B179). */
 function renderCalRail() {
   if (!state.isWide) return;
   el.calView.hidden = false;
   const today = new Date();
   el.calRail.querySelector('.cdate').textContent =
     calDayName(today).slice(0, 3) + ' ' + calMD(today);
-  flushSave();
-  idbGetAll().then((all) => {
-    const lit = calEventsOf(eventsOf(all), calKey(today)).length > 0;
-    el.calRail.querySelector('.cdot').classList.toggle('lit', lit);
-  });
 }
 
 export function showCalRail() {
@@ -992,7 +988,6 @@ function paintCal(all) {
   // The calendar is unscaled, so k is 1; +0.5 is the board row's headroom.
   el.calTop.style.setProperty('--hit', (hitInset(el.calTop, 1) + 0.5) + 'px');
   const days = calWeekAnchor ? calWeekOf(calWeekAnchor) : calWindow(CAL_FUTURE_DAYS + 1);
-  const events = eventsOf(all);      // state.js §1.7
   const notes = calNoteRecords(all);
   const today = days.find((d) => d.today);
   if (today) renderCalToday(today, notes.filter((r) => r.day === today.key));
@@ -1001,7 +996,7 @@ function paintCal(all) {
     const board = calBoardOf(all, day.key);
     el.calStack.appendChild(makeCalDay(day, notes.filter((r) => r.day === day.key), board));
   }
-  renderCalMonth(new Set(events.map((e) => e.date)));
+  renderCalMonth();
   seatCalAdds();
 }
 
@@ -1203,7 +1198,8 @@ function startCalNoteEdit(block, rec) {
 /* --- The month view ---------------------------------------------------------
    A month grid at the stack's bottom; a cell tap swaps the stack to that
    date's Sunday-first week, raw (B81). Two render-time anchors, nothing
-   stored: calMonthAnchor, and calWeekAnchor (null = the rolling window). */
+   stored: calMonthAnchor, and calWeekAnchor (null = the rolling window). No
+   day is marked: the squares are the only marker (B179). */
 let calMonthAnchor = null;
 let calWeekAnchor = null;
 
@@ -1216,7 +1212,7 @@ function calWeekOf(anchor) {
   return calWindow(7, start);
 }
 
-function renderCalMonth(evDays) {
+function renderCalMonth() {
   const now = new Date();
   const a = calMonthAnchor || now;
   el.calMonth.textContent = '';
@@ -1254,20 +1250,12 @@ function renderCalMonth(evDays) {
     cell.type = 'button';
     cell.className = 'mo-cell'
       + (key === tk ? ' today' : '')
-      + (wkKeys.has(key) ? ' wk' : '')
-      + (evDays.has(key) ? ' ev' : '');
+      + (wkKeys.has(key) ? ' wk' : '');
     cell.setAttribute('aria-label',
-      date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
-      + (evDays.has(key) ? COPY.calHasEvents : ''));
+      date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' }));
     const n = document.createElement('span');
     n.textContent = d;
     cell.appendChild(n);
-    if (evDays.has(key)) {
-      const dot = document.createElement('span');
-      dot.className = 'mo-dot';
-      dot.setAttribute('aria-hidden', 'true');
-      cell.appendChild(dot);
-    }
     cell.addEventListener('click', () => {
       calWeekAnchor = date;
       renderCal();

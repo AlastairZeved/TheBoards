@@ -2,14 +2,15 @@
 //
 // The compact month grid lives in the viewport ground #170 freed below the
 // week stack. This suite drives the real page (mobile viewport — the tight
-// one) and asserts the issue's six features as shipped behaviour: one dot per
-// event-bearing day no matter the event count, the pale band across the
-// current week's row, today in the calendar's orange fall, the two month
-// nav buttons, and the tap that swaps the week view to the tapped date's
-// Sunday-first week. Pure display: nothing here writes records.
+// one) and asserts the issue's features as shipped behaviour: no dot on any
+// day, however many squares it holds (the squares are the only marker, B179),
+// the pale band across the current week's row, today in the calendar's orange
+// fall, the two month nav buttons, and the tap that swaps the week view to
+// the tapped date's Sunday-first week. Pure display: nothing here writes
+// records.
 //
-// Palette assertions read computed styles (the water fall's opaque stops and
-// --accent-page), so a palette drift fails here too.
+// Palette assertions read computed styles (the water fall's opaque stops), so
+// a palette drift fails here too.
 
 const { URL, ok, summary, launch, tap, tapWithMove, touchDragTo, newMobilePage, newDesktopPage, waitBoard, withErrors, run } = require('./lib');
 
@@ -34,29 +35,29 @@ async function monthReady(page, minCells = 1) {
 run(async () => {
   const browser = await launch();
 
-  console.log('\n[M1] Dots, today\'s cell, the current-week band (mobile)');
+  console.log('\n[M1] No dots, today\'s cell, the current-week band (mobile)');
   {
     const { ctx, page, errors } = await newPage(browser);
-    // Two events on today (the one-dot law's hard case), one on today+2.
+    // Two squares on today, one on today+2. Ids sort in the order written
+    // (square order is id order).
     await page.evaluate(async () => {
       const tk = calKey(new Date());
       const d2 = new Date(); d2.setDate(d2.getDate() + 2);
-      await idbPut(newCalEvent(tk, 'event one today'));
-      await idbPut(newCalEvent(tk, 'event two today'));
-      await idbPut(newCalEvent(calKey(d2), 'event on +2'));
+      await idbPut({ id: 'rem-d1', rem: '', next: 'square one today', day: tk });
+      await idbPut({ id: 'rem-d2', rem: '', next: 'square two today', day: tk });
+      await idbPut({ id: 'rem-d3', rem: '', next: 'square on +2', day: calKey(d2) });
       renderCal();
+    });
+    // The grid is painted in the same pass as the squares, so seeing all three
+    // squares drawn proves the "no dot" reads below follow a paint that held them.
+    await page.waitForFunction(() => {
+      const drawn = [...document.querySelectorAll('.cal-note-text')].map(n => n.textContent);
+      return ['square one today', 'square two today', 'square on +2'].every(t => drawn.includes(t));
     });
     await monthReady(page, 28);
     const m = await page.evaluate(() => {
       const now = new Date();
       const cells = [...document.querySelectorAll('.mo-cell')];
-      const dots = [...document.querySelectorAll('.mo-dot')];
-      const byDay = {};
-      for (const d of dots) {
-        const c = d.closest('.mo-cell');
-        const day = c.getAttribute('aria-label').replace(', has events', '');
-        byDay[day] = (byDay[day] || 0) + 1;
-      }
       const todays = cells.filter(c => c.classList.contains('today'));
       const wks = cells.filter(c => c.classList.contains('wk'));
       const rows = new Set(wks.map(c => c.offsetTop));
@@ -64,29 +65,30 @@ run(async () => {
       const colW = document.querySelector('.mo-grid').getBoundingClientRect().width / 7;
       // Cells touch: consecutive offsets differ by the column pitch (±2px rounding).
       const contiguous = cols.every((x, i) => i === 0 || Math.abs(x - cols[i - 1] - colW) <= 2);
-      const dotColor = dots.length ? getComputedStyle(dots[0]).backgroundColor : '';
       const todayBg = todays.length ? getComputedStyle(todays[0]).backgroundImage : '';
       const label = document.querySelector('.mo-label').textContent;
       const grid = document.querySelector('.mo-grid');
       const firstCol = Math.round((cells[0].getBoundingClientRect().left - grid.getBoundingClientRect().left) / colW);
-      // Expectations, computed in the page (the app's own locale + calendar).
-      const todayLabel = now.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
-      const d2 = new Date(); d2.setDate(d2.getDate() + 2);
       return {
-        nCells: cells.length, byDay, todays: todays.length,
+        nCells: cells.length, todays: todays.length,
         wkRows: [...rows], contiguous, nWk: wks.length,
-        dotColor, todayBg, label, firstCol,
+        todayBg, label, firstCol,
+        dots: document.querySelectorAll('.mo-dot').length,
+        marked: cells.filter(c => c.classList.contains('ev') ||
+          /has events/.test(c.getAttribute('aria-label'))).length,
+        // Expectations, computed in the page (the app's own locale + calendar).
         wantLabel: now.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
         wantCells: new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(),
         wantCol: new Date(now.getFullYear(), now.getMonth(), 1).getDay(),
-        todayLabel, otherLabel: d2.toLocaleDateString(undefined, { month: 'long', day: 'numeric' }),
       };
     });
     ok('the grid draws this month', m.label === m.wantLabel && m.nCells === m.wantCells, JSON.stringify(m));
     ok('the 1st sits on its true weekday column (Sunday-first grid)', m.firstCol === m.wantCol, 'col=' + m.firstCol);
-    ok('a day with TWO events wears exactly ONE dot', m.byDay[m.todayLabel] === 1 && m.byDay[m.otherLabel] === 1, JSON.stringify(m.byDay));
-    ok('two event-bearing days, two dots total', Object.keys(m.byDay).length === 2, JSON.stringify(m.byDay));
-    ok('the dot is --accent-page, the palette shade (rgb(109,156,176))', m.dotColor === 'rgb(109, 156, 176)', m.dotColor);
+    // Re-pinned deliberately for issue #484 (B179): the squares ARE the day's
+    // events and the only marker, so a day that holds squares wears no dot, no
+    // event class and no "has events" label.
+    ok('a day with squares draws no dot — the squares are the only marker (B179)', m.dots === 0, String(m.dots));
+    ok('no month cell carries the event class or the "has events" label (B179)', m.marked === 0, String(m.marked));
     ok('exactly one today cell', m.todays === 1, String(m.todays));
     ok('today wears the calendar\'s own orange fall (the #815a42 gradient)', /129,\s*90,\s*66/.test(m.todayBg.replace(/\s+/g, ' ')) || /129, 90, 66/.test(m.todayBg), m.todayBg);
     ok('the current week\'s band is one row of 7 contiguous cells', m.nWk === 7 && m.wkRows.length === 1 && m.contiguous, JSON.stringify(m));

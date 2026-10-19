@@ -913,8 +913,11 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('the month view lives in #cal-view below the stack; the grid is Sunday-first 7-col (issue #191)',
     /id="cal-month"/.test(html) && /calMonth: document\.getElementById\('cal-month'\)/.test(app) &&
     /#cal-month \{/.test(css) && /grid-template-columns: repeat\(7, 1fr\)/.test(css));
-  ok('a day with events wears exactly one dot — --accent-page, a shade within the palette (issue #191)',
-    /\.mo-dot \{/.test(css) && /\.mo-dot \{[^}]*background: var\(--accent-page\);/.test(css));
+  // Re-pinned deliberately for issue #484 (B179): the squares are the day's
+  // events and the only marker, so the grid draws no dot; this replaces
+  // issue #191's pin of one --accent-page dot per event-bearing day.
+  ok('the month grid draws no dots — squares are the only marker (B179)',
+    !/\.mo-dot/.test(css) && !/mo-dot/.test(app) && !/calHasEvents/.test(app));
   // --- Issue #363 (B153): the top section deleted — the day head above the
   // --- weekly stack, the day-note squares INSIDE the day cards ---
   ok('the day head reads the weekday with the date and the ordinal suffix as superscript — "Friday, October 2nd" — a real element, the title card\'s title, centred, --ink-light ink at the boards\' title-card type — 15px/600/1.3, #anchor-title\'s very format, one line, the card scaling to it (issue #382: the owner\'s chat direction; supersedes B153\'s 21px display step for this title), no add control of its own (issues #341, #343, #363, #382)',
@@ -1056,10 +1059,12 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('today keeps its old flex share verbatim; the day\'s event line wraps at two (issue #170)',
     /\.cal-day\.today \{ flex: 1\.6 1 0; max-height: calc\(21\.05% - 9px\);/.test(css) &&
     /-webkit-line-clamp: 2/.test(css));
-  ok('the rail is the mockup-6 species: vertical label, date, lit dot',
+  // Re-pinned deliberately for issue #484 (B179): the squares are the only
+  // marker, so the rail dot is never lit — no .lit rule and no toggle.
+  ok('the rail is the mockup-6 species: vertical label, date, dim dot (never lit, B179)',
     /writing-mode: vertical-rl/.test(css) && /#cal-rail \.vlabel/.test(css) &&
     /#cal-rail \.cdot/.test(css) && /#cal-rail \.cdate/.test(css) &&
-    /\.cdot\.lit/.test(css));
+    !/\.cdot\.lit/.test(css) && !/classList\.toggle\('lit'/.test(app));
   ok('the collapsed rail reserves 40px from the frame at all times on wide (B99)',
     /const CAL_RAIL_W = 40;/.test(app) &&
     /const calW = calSqueeze \? CAL_PANEL_W : CAL_RAIL_W;/.test(app));

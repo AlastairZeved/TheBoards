@@ -137,7 +137,6 @@ export const COPY = {
   calAddNote: 'Add a note',
   calPagerPrev: 'Previous ', calPagerNext: 'Next ', calPagerUnit: ' notes',
   calMonthPrev: 'Previous month', calMonthNext: 'Next month',
-  calHasEvents: ', has events',
   deleteBoard: 'Delete board',
   /* The PDF's section words (UIUX §15); a completed item keeps its place in
      the order but exports as the one line pdfCompleted (B34). */
