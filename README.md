@@ -42,6 +42,17 @@ things around. It is an external working memory. The page holds the thoughts
 so your head doesn't have to, whether you're in a hurry, just need to jot
 something down, or simply think in scattered pieces.
 
+It also doesn't assume you live one thing at a time. Most planners treat time
+as a line: do this, then this, then this. Plenty of people don't work that way.
+Many things are in motion at once, and what gets picked up next depends on
+context, not on a queue. That is sometimes called polychronic time, and it is
+why to-do lists so often fail the people who live in it. Zeved Boards doesn't
+schedule anything. The calendar holds the commitments the world puts on a
+clock, and the board holds everything else as it actually is: all of it at
+once, where you put it, as big as it matters right now. An unfinished note on
+today's To Do board hasn't failed. It carries to tomorrow's board in the same
+spot, still part of the picture.
+
 The design draws on gestalt principles (Prägnanz in particular) and on
 Miller's working-memory research: one bounded page you can see all of at
 once, rather than an infinite canvas you have to navigate.
