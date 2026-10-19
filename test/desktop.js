@@ -1518,9 +1518,9 @@ run(async () => {
   // overwritten by the file's copy, new ids are added, boards and events the
   // file never mentions survive. A v1 file's events (which v1 swept into
   // `boards`) are salvaged. A file that is not the app's shape writes nothing
-  // and says so. Since issue #484 (B179) an event is a square: the import
-  // writes each incoming event as the square it converts to, the days it lands
-  // on re-sync their boards, and importing the same file twice adds nothing.
+  // and says so. An event is a square (B179): the import writes each incoming
+  // event as the square it converts to, the days it lands on re-sync their
+  // boards, and importing the same file twice adds nothing.
   console.log('\n[D21b] JSON backup round-trip (issue #140, B92; v2 payload, B123; events arrive as squares, B179)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
@@ -1538,6 +1538,8 @@ run(async () => {
       const ev = newCalEvent('2026-09-16', 'BACKUP EVENT');
       ev.id = 'cev1';
       await idbPut(ev);
+      // A legacy event with no `createdAt` (it reads as 0, so it sorts first).
+      await idbPut({ id: 'nocr1', date: '2026-09-19', text: 'NO CREATED AT', state: 'active' });
       await idbPut({ id: 'rem-backup1', rem: 'day-note text', next: 'second line', day: '2026-09-17' });
       renderPane();
     });
@@ -1632,17 +1634,33 @@ run(async () => {
     ok('catStamp survives board import unchanged', after.overwritten.catStamp === 12345,
        String(after.overwritten && after.overwritten.catStamp));
 
-    // The same file again: the event's square has a deterministic id (the
+    // The same file again: an event's square has a deterministic id (the
     // device's own copy converted to it, the file's copy overwrote it), so a
-    // second import adds nothing.
+    // second import adds nothing. A change event needs a changed file list and
+    // the input is cleared only when the import tab is tapped (menus.js), so the
+    // test clears it as that tap would; the first import's notice is hidden
+    // first, and its coming back proves the second import ran to the end.
+    await page.evaluate(() => {
+      hideToast();
+      document.getElementById('import-file').value = '';
+    });
     await page.setInputFiles('#import-file', importPath);
     await page.waitForTimeout(500);
     const twice = await page.evaluate(async () => {
       const all = await idbGetAll();
-      return { count: all.length, evSquares: all.filter(r => r.id.endsWith('-cev1')).length };
+      const t = document.querySelector('#toast');
+      return {
+        count: all.length,
+        evSquares: all.filter(r => r.id.endsWith('-cev1')).length,
+        nocr: all.filter(r => r.id.endsWith('-nocr1')).map(r => r.id),
+        noticed: t.classList.contains('show') && /Boards imported/.test(t.textContent),
+      };
     });
+    ok('the second import ran: its notice came back after being hidden', twice.noticed);
     ok('importing the same file twice makes no duplicates: the same record count, one square for the event (B179)',
        twice.count === after.count && twice.evSquares === 1, JSON.stringify(twice) + ' vs ' + after.count);
+    ok('an event with no createdAt converts to one square with the same id on every import (B179)',
+       JSON.stringify(twice.nocr) === JSON.stringify(['rem-0000000000-nocr1']), JSON.stringify(twice.nocr));
 
     // A file that is not the app's shape writes nothing and says so.
     const badPath = path.join(os.tmpdir(), 'boards-import-bad.json');
@@ -2709,6 +2727,66 @@ run(async () => {
        got.e5.next === 'p1\np2' && got.t.calReq === 3 &&
        got.t.requirements === 'first square\np1 p2\nfrom elsewhere\nhand only EDITED',
        JSON.stringify({ e5: got.e5.next, req: got.t.requirements, calReq: got.t.calReq }));
+
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  // ---- D25e. the launch sync redraws the open board (issue #484, B179) --------
+  // The board open at boot can be today's own. The launch sync then rewrites it
+  // in place and swapBoard returns early for it, so the launch itself redraws
+  // it: the screen shows the mirror's chips, never the pre-sync text. An edit
+  // commits against the model; a stale screen would write that text through
+  // over the squares (the first square overwritten, the second deleted).
+  console.log('\n[D25e] The launch sync redraws today\'s board when boot opened it (issue #484, B179)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    // Today's linked board is the only board, so boot opens it. It last synced
+    // with an empty span (calReq 0) and holds one hand line; its date holds two
+    // squares the launch sync puts on top.
+    await page.evaluate(async () => {
+      for (const r of await idbGetAll()) await idbDelete(r.id);
+      const key = calKey(new Date());
+      const b = newBoardRecord();
+      b.title = '10/19/26 To Do'; b.cal = key; b.calReq = 0;
+      b.requirements = 'hand line';
+      await idbPut(b);
+      await idbPut({ id: 'rem-a1', rem: '', next: 'sq one', day: key });
+      await idbPut({ id: 'rem-a2', rem: '', next: 'sq two', day: key });
+    });
+    await page.reload();
+    await page.waitForFunction(() =>
+      state.current && state.current.cal === calKey(new Date()) &&
+      state.current.requirements === 'sq one\nsq two\nhand line', null, { timeout: 10000 });
+    await page.waitForTimeout(700);                   // the redraw follows the sync
+    const shown = await page.evaluate(() => {
+      const anchor = document.getElementById('anchor-requirements');
+      return {
+        chips: [...anchor.querySelectorAll('.req-square')].map(n => n.textContent),
+        hand: [...anchor.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent),
+      };
+    });
+    ok('the screen shows the synced mirror: both squares as chips, the hand line after them (B179)',
+       JSON.stringify(shown.chips) === JSON.stringify(['sq one', 'sq two']) &&
+       JSON.stringify(shown.hand) === JSON.stringify(['hand line']), JSON.stringify(shown));
+
+    // Edit what is on screen: the hand line is the last line of the editor.
+    await page.evaluate(() => document.getElementById('anchor-requirements').focus());
+    await page.evaluate(() => {
+      const anchor = document.getElementById('anchor-requirements');
+      anchor.textContent = anchor.textContent + ' edited';
+    });
+    await page.evaluate(() => document.getElementById('anchor-requirements').blur());
+    await page.waitForTimeout(800);
+    const got = await page.evaluate(async () => {
+      const all = await idbGetAll();
+      const board = all.find(r => r.cal === calKey(new Date()));
+      const text = (id) => { const r = all.find(x => x.id === id); return r && r.next; };
+      return { req: board.requirements, calReq: board.calReq, a1: text('rem-a1'), a2: text('rem-a2') };
+    });
+    ok('editing the visible hand line keeps both squares and their chips (B179)',
+       got.a1 === 'sq one' && got.a2 === 'sq two' &&
+       got.req === 'sq one\nsq two\nhand line edited' && got.calReq === 2, JSON.stringify(got));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();

@@ -944,6 +944,8 @@ async function launchTodayBoard(today) {
       if (state.current && state.current.id === board.id) persist();
       else await idbPut(board);
       await syncDateMirror(today);
+      // B179: the sync rewrote the open board in place and swapBoard skips it.
+      if (state.current && state.current.id === board.id) renderBoard();
       // Step off the calendar first (mobile pops {v:'cal'}, B9), then swap.
       if (state.calOpen) goCalBack();
       else if (state.calExpanded) collapseCalRail();

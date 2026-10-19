@@ -71,6 +71,9 @@ run(async () => {
     ok('no boards record exists for any future date (store-level, not menu-level)',
        got.futureBoards === 0, JSON.stringify(got));
     const shown = await openCalendar(page);
+    // Re-pinned deliberately for issue #484 (B179): the squares are the events,
+    // so the seeded square shows in its day card; this replaces issue #363's
+    // pins that no event line and no event text show in the weekly stack.
     ok('the square renders in its day card (B179: the squares are the events)',
        shown.squares.includes('future event line'), JSON.stringify(shown.squares));
     ok('no page errors', errors.length === 0, errors.join(' | '));
@@ -161,6 +164,9 @@ run(async () => {
        g.carriedOn === g.tk, JSON.stringify(g));
     ok('yesterday\'s board keeps only completes', !g.ybIncomplete, JSON.stringify(g));
     const shown = await openCalendar(page);
+    // Re-pinned deliberately for issue #484 (B179): the squares are the events,
+    // so the materialized day's event shows as its square in today's body; this
+    // replaces issue #363's pin that no line renders for it after the roll.
     ok('after the roll, today\'s body shows the square (B179: the squares are the events)',
        shown.today.includes('materialize me'), JSON.stringify(shown.today));
     ok('no page errors', errors.length === 0, errors.join(' | '));

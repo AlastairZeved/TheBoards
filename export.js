@@ -806,10 +806,11 @@ function normalizeImportedBoard(raw) {
 /* One imported calendar event, normalized like a board (B123): `date` must be
    calKey-form YYYY-MM-DD or the event is dropped; null if it can't survive as
    an event. It arrives as the square it converts to (squareFromEvent, B179);
-   the event record itself is never written. */
+   the event record itself is never written. A missing `createdAt` stays 0 (as
+   a stored one reads), so its square's id is the same on every import (B179). */
 function normalizeImportedEvent(raw) {
   if (!raw || typeof raw !== 'object') return null;
-  const event = makeRecord('event', raw);
+  const event = makeRecord('event', raw, { now: 0 });
   return event.date ? event : null;
 }
 
