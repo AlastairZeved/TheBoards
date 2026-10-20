@@ -918,7 +918,7 @@ Issue #384 adds ONE element to the band: the row's `+` (`#cal-band-add`,
 the `.cal-add` treatment) — today's adder, seated absolute at the bar's
 right, "to the right of today's date title card", above the card in z,
 writing the same `day`-field record (B153's binding; B153's per-card seat
-superseded for the today card — the other six day cards keep theirs).
+superseded for the today card — every other day card keeps its own, B168).
 The band's own anatomy is otherwise untouched by #384.
 
 **Today board body.** Today's date and day-note squares form a full-width deep-orange board directly below the calendar band. The title card overhangs its top by 22px; the body has a 2px `--frame` bottom border. Squares use the weekly view's size and left-to-right order, and the collapsed rail hides the band and body.

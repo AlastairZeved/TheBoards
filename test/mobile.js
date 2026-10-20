@@ -2423,13 +2423,13 @@ run(async () => {
   // dead code). The grammar itself survives on the squares: tap a .cal-note
   // -> contenteditable zones, focused, caret at the END of the tapped zone's
   // text (the issue's expected behavior), inside the tap gesture.
-  // Commit-on-blur writes the RECORD and re-syncs the store (the mirror
-  // paths are the calendar events', not the notes'); a commit leaving the
-  // visible text empty discards, whatever the hidden `rem` holds (B8,
-  // B180). Flows are separated because two taps inside the
-  // double-tap window make Chromium word-select the now-editable zone —
-  // native text behavior, not the app's — so each flow opens its editor
-  // fresh.
+  // Commit-on-blur writes the RECORD and re-syncs the store (the squares
+  // are the date's events, so the commit re-syncs its date's Requirements
+  // mirror too, B179); a commit leaving the visible text empty discards,
+  // whatever the hidden `rem` holds (B8, B180). Flows are separated because
+  // two taps inside the double-tap window make Chromium word-select the
+  // now-editable zone — native text behavior, not the app's — so each flow
+  // opens its editor fresh.
   console.log('\n[25] Calendar: tap an existing day-note square edits it in place (issue #152, B97; re-pinned by B153)');
   {
     const { ctx, page, errors } = await newMobilePage(browser);
