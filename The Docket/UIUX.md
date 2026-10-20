@@ -934,7 +934,7 @@ window; the Today control restores the rolling window.
 
 ### §3.5 Calendar day cards
 
-The day-note strip is retired; one-zone square notes render inside each day card. They use the Calendar `--note` fill, `--ink-dark`, a 2px inset `--frame` outline, 4px radius and 12px/400/1.4 type; three render per day, with `‹`/`›` paging beyond three and a two-line clamp. The `+` for each of the six future cards sits centered below its date; today's `+` sits at the right of the band. Buttons are 28px with a 2px `--frame` border.
+The day-note strip is retired; one-zone square notes render inside each day card. They use the Calendar `--note` fill, `--ink-dark`, a 2px inset `--frame` outline, 4px radius and 12px/400/1.4 type; three render per day, with `‹`/`›` paging beyond three and a two-line clamp. The `+` for each of the 30 future cards (B168) sits centered below its date; today's `+` sits at the right of the band. Buttons are 28px with a 2px `--frame` border.
 
 The squares write the record's `next` field; the `+` creates a `day` field keyed to that card's `calKey`. A square shows its `next` text as stored, a bare `YYYY-MM-DD` date included (B181); `rem` remains stored but unread, and records without `day` remain stored but unreachable. The squares are the date's events (B179): in the card's own order they are the lines of that date's linked To-Do board's Requirements mirror (§3.1), and an edit or deletion on either surface reaches the other. The month grid draws no dots (B179).
 
