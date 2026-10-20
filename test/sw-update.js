@@ -101,6 +101,19 @@ const swState = page => page.evaluate(async () => {
   return r && r.active ? 'active' : 'none';
 });
 
+/* Wait until the page-side async `check` returns true, polling every 100 ms,
+   and throw once `timeout` ms have passed. page.waitForFunction cannot do this:
+   it does not await a promise its predicate returns, and a promise is truthy, so
+   an async predicate "passes" on the first poll and the wait ends at once
+   (issue #498). Each poll awaits the check's answer through page.evaluate. */
+async function pollUntil(page, check, what, timeout = 15000) {
+  const deadline = Date.now() + timeout;
+  while (!(await page.evaluate(check))) {
+    if (Date.now() >= deadline) throw new Error(`timed out after ${timeout} ms waiting for ${what}`);
+    await page.waitForTimeout(100);
+  }
+}
+
 /* Relaunch the app until `pred` holds, up to `max` times, and report how many
    launches it took. This is the property that actually matters to someone with
    the app on their home screen — "how many times must I open it before I see
@@ -134,10 +147,10 @@ run(async () => {
         .replace(CARD_H_RE, '--band-top: 200px;'));   // a build that is not this one
     await page.goto(URL);
     await waitBoard(page);
-    await page.waitForFunction(async () => {
+    await pollUntil(page, async () => {
       const r = await navigator.serviceWorker.getRegistration();
       return !!(r && r.active);
-    }, null, { timeout: 15000 });
+    }, 'the old service worker to become active');
     await page.reload();                            // first load the SW controls
     await page.waitForTimeout(400);
     ok('service worker is active', await swState(page) === 'active');
