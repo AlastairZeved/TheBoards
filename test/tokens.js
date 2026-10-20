@@ -1149,6 +1149,14 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /squaresOf\(/.test(syncDateFn) && /squaresOf\(/.test(writeThroughFn) &&
     (calEditFn.match(/await syncDateMirror\(rec\.day\);\s*repaintVisibleBoard\(\);/g) || []).length === 2,
     [syncDateFn, writeThroughFn, calEditFn].map(f => f.slice(0, 50)).join(' | '));
+  // A square's visible text alone decides the discard: the commit never reads
+  // the hidden `rem` (B180). And a square shows its `next` as stored, a bare
+  // YYYY-MM-DD date included: squareText tests no date (B181).
+  const squareTextFn = (read('state.js').match(/export function squareText\(r\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  ok('clearing a square\u2019s visible text deletes it whatever its hidden `rem` holds (B180), and a square shows its `next` as stored, a bare date included (B181)',
+    /if \(!next\) \{/.test(calEditFn) && !/rec\.rem/.test(calEditFn) &&
+    squareTextFn.length > 0 && !/CALKEY_DATE|isDateKey/.test(squareTextFn),
+    [calEditFn, squareTextFn].map(f => f.slice(0, 50)).join(' | '));
   // The old events become squares (B179): once at the launch, and on every
   // backup import, before anything reads the mirror's squares.
   const launchFn = (app.match(/async function launchTodayBoard\(today\)\s*\{[\s\S]*?\n\}/) || [''])[0];

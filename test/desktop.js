@@ -2031,8 +2031,9 @@ run(async () => {
   // the day card: tap a .cal-note, its editor opens focused with the caret at
   // the end (B90 pattern); Enter ends the entry and commits `next` (the one
   // zone writes next; `rem` stays stored-but-unread, #323); a commit that
-  // leaves BOTH fields empty discards the record and the block (B8); a tap
-  // inside the open editor does not re-arm or steal the caret (B81).
+  // leaves the visible text empty discards the record and the block, whatever
+  // the hidden `rem` holds (B8, B180); a tap inside the open editor does not
+  // re-arm or steal the caret (B81).
   console.log('\n[D24] Calendar: tap an existing day-note square edits it in place (issue #152, B97, #363/#365)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
@@ -2119,9 +2120,9 @@ run(async () => {
     ok('the square left edit mode after the commit',
       after.editorsLeft === 0, JSON.stringify(after.editorsLeft));
 
-    // B8: an empty commit discards — but only when BOTH fields are empty. The
-    // rem-bearing square (d24b, empty `next`) survives an empty commit; the
-    // truly-empty square (d24c) is discarded.
+    // B8, B180: a commit leaving the visible text empty discards, whatever the
+    // hidden `rem` holds. The rem-bearing square (d24b, empty `next`) goes,
+    // its old title with it; the truly-empty square (d24c) goes too.
     const b2 = await page.evaluate(() => {
       const n = [...document.querySelectorAll('#cal-today-board .cal-note')]
         .find(x => x.querySelector('.cal-note-text').textContent === '');
@@ -2132,13 +2133,15 @@ run(async () => {
     await page.waitForTimeout(150);
     await page.keyboard.press('Enter');            // commit, `next` still empty
     await page.waitForTimeout(600);
-    const survived = await page.evaluate(async (id) => {
+    const remGone = await page.evaluate(async (id) => {
       const all = await idbGetAll();
-      return { recordKept: all.some(r => r.id === id),
-               remKept: (all.find(r => r.id === id) || {}).rem };
+      return { recordGone: !all.some(r => r.id === id),
+               blockGone: !document.querySelector('.cal-note[data-id="' + id + '"]') };
     }, seeded[1]);
-    ok('an empty commit on a rem-bearing square keeps the record (issue #365: `rem` stored-but-unread counts for B8)',
-      survived.recordKept && survived.remKept === 'second note', JSON.stringify(survived));
+    // Re-pinned deliberately for issue #496 (B180): the hidden `rem` no longer
+    // keeps a square whose visible text is empty; the old title is thrown away.
+    ok('an empty commit on a rem-bearing square discards the record AND the block, the hidden title with it (B8, B180)',
+      remGone.recordGone && remGone.blockGone, JSON.stringify(remGone));
 
     const b3 = await page.evaluate(() => {
       const n = [...document.querySelectorAll('#cal-today-board .cal-note')]
@@ -2467,6 +2470,21 @@ run(async () => {
        JSON.stringify(viaCalDel.chips) === JSON.stringify(['mirror one D25B', 'mirror two VIA-CAL']) &&
        viaCalDel.req === 'mirror one D25B\nmirror two VIA-CAL\nhand line' &&
        viaCalDel.calReq === 2, JSON.stringify(viaCalDel));
+
+    // Block 5: a square whose whole text is a YYYY-MM-DD date shows that text,
+    // in the calendar and as its chip on the linked board (B181).
+    await tapSquare('mirror two VIA-CAL');
+    await setEditingSquare('2026-10-25');
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    await page.waitForTimeout(800);
+    const viaCalDate = await mirrorState();
+    viaCalDate.cal = await page.evaluate(() =>
+      [...document.querySelectorAll('#cal-today-board .cal-note-text')].map(b => b.textContent));
+    ok('a square typed as a bare date shows it in the calendar and as its mirrored Requirements chip (B181)',
+       JSON.stringify(viaCalDate.cal) === JSON.stringify(['mirror one D25B', '2026-10-25']) &&
+       JSON.stringify(viaCalDate.chips) === JSON.stringify(['mirror one D25B', '2026-10-25']) &&
+       viaCalDate.req === 'mirror one D25B\n2026-10-25\nhand line' &&
+       viaCalDate.calReq === 2, JSON.stringify(viaCalDate));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();

@@ -2424,8 +2424,9 @@ run(async () => {
   // -> contenteditable zones, focused, caret at the END of the tapped zone's
   // text (the issue's expected behavior), inside the tap gesture.
   // Commit-on-blur writes the RECORD and re-syncs the store (the mirror
-  // paths are the calendar events', not the notes'); an empty commit
-  // discards (B8). Flows are separated because two taps inside the
+  // paths are the calendar events', not the notes'); a commit leaving the
+  // visible text empty discards, whatever the hidden `rem` holds (B8,
+  // B180). Flows are separated because two taps inside the
   // double-tap window make Chromium word-select the now-editable zone —
   // native text behavior, not the app's — so each flow opens its editor
   // fresh.
@@ -2526,7 +2527,8 @@ run(async () => {
         && after.day === seeded.key, JSON.stringify(after));
 
     // Flow 4: empty commit discards (B8) — seed a second record whose BOTH
-    // fields are empty, open its square, blur. Both empty = the discard.
+    // fields are empty, open its square, blur: the discard (Flow 4b covers a
+    // square whose hidden `rem` holds text, B180).
     const doomed = await page.evaluate(async () => {
       const r = { id: 'rem-25doom', rem: '', next: '', day: calKey(new Date()) };
       await idbPut(r);
@@ -2548,8 +2550,32 @@ run(async () => {
     ok('an empty commit discards the day-note record and its square (B8)',
       !gone.record, JSON.stringify(gone));
 
+    // Flow 4b: clearing the visible text deletes the square even when its
+    // hidden `rem` holds an old title (B180) — the title goes with it.
+    const doomedRem = await page.evaluate(async () => {
+      const r = { id: 'rem-25old', rem: 'OLD TITLE', next: 'gone soon', day: calKey(new Date()) };
+      await idbPut(r);
+      renderCal();
+      await new Promise(res => setTimeout(res, 300));
+      return r.id;
+    });
+    await page.waitForTimeout(200);
+    await tapZone('.cal-note-text', 'gone soon');
+    await page.waitForTimeout(80);
+    await page.keyboard.press('Control+a');
+    await page.keyboard.press('Backspace');
+    await calBlur();
+    await page.waitForTimeout(400);
+    const goneRem = await page.evaluate(async (id) => {
+      const all = await idbGetAll();
+      return { record: all.some(r => r.id === id),
+               square: [...document.querySelectorAll('.cal-note')].some(n => n.dataset.id === id) };
+    }, doomedRem);
+    ok('clearing a square\'s visible text deletes the record and its square even when its hidden `rem` holds text (B8, B180)',
+      !goneRem.record && !goneRem.square, JSON.stringify(goneRem));
+
     // Flow 5: the one zone seats the caret on a fresh tap (issue #365: the
-    // square's whole surface is the zone). Flow 4's commit re-rendered the
+    // square's whole surface is the zone). Flow 4b's commit re-rendered the
     // stack, so re-locate the square after the fresh render before tapping.
     await tapZone('.cal-note-text', 'existing note body! EDITED');
     await page.waitForTimeout(80);

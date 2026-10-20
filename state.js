@@ -356,10 +356,9 @@ export const squareOrder = (a, b) => (a.id < b.id ? -1 : 1);
 export function squaresOf(all, dateKey) {
   return all.filter((r) => isSquare(r) && r.day === dateKey).sort(squareOrder);
 }
-// A square's text: `next`, unless it is a legacy calKey date.
+// A square's text: `next` as stored, a bare YYYY-MM-DD date included (B181).
 export function squareText(r) {
-  const n = typeof r.next === 'string' ? r.next : '';
-  return CALKEY_DATE.test(n) ? '' : n;
+  return typeof r.next === 'string' ? r.next : '';
 }
 // A square is one mirror line (B179): a run of CR/LF reads as one space.
 export function mirrorLine(r) {

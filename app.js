@@ -281,7 +281,7 @@ if ('serviceWorker' in navigator) {
    worker; boards live in IndexedDB, which the handshake never opens, and
    B21's read-site defaulting renders an old record under a new build. */
 const HANDSHAKE_MS = 20000;
-const OWN_BUILD = 'v165';
+const OWN_BUILD = 'v166';
 if ('serviceWorker' in navigator && 'caches' in window) {
   const handshake = () => {
     fetch('sw.js', { cache: 'reload' }).then((res) => {

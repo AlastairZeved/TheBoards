@@ -11,8 +11,8 @@
 //   2. no label carries a " — " + weekday suffix — the appended string is
 //      absent from the render path, not stripped at render time;
 //   3. the squares render from the released day-note records: the one zone
-//      carries the stored `next` free text (a legacy calKey date renders as
-//      an empty square; `rem` stays stored-but-unread, issue #365), and
+//      carries the stored `next` free text (a bare YYYY-MM-DD date shows as
+//      stored, B181; `rem` stays stored-but-unread, issue #365), and
 //      nothing is read from a calendar event record;
 //   4. the card's "+" adds a square dated to the card (the new `day` field)
 //      in edit with the caret in the square's one zone; Enter ends the entry;
@@ -91,13 +91,12 @@ run(async () => {
     await ctx.close();
   }
 
-  console.log('\n[V2] The day-note squares render from the released day-note records — the title alone, legacy dates empty, r.next stays stored, and a record without a `day` value renders nowhere (issue #363: nothing migrated, the #323 disposition)');
+  console.log('\n[V2] The day-note squares render from the released day-note records — the zone shows `next` as stored, a bare date included (B181), `rem` stays stored unread, and a record without a `day` value renders nowhere (issue #363: nothing migrated, the #323 disposition)');
   {
     const { ctx, page, errors } = await newPage(browser);
-    // Seed one record carrying a real next-occurrence-style calKey (the stored
-    // field must survive and stay unread as body text — nothing is migrated,
-    // stripped, or rewritten) and one record with NO day field (pre-#363
-    // legacy: stored but unreachable).
+    // Seed one record whose `next` is a bare calKey date (the zone shows it as
+    // stored, B181 — nothing is migrated, stripped, or rewritten) and one
+    // record with NO day field (pre-#363 legacy: stored but unreachable).
     await page.evaluate(async () => {
       await idbPut({ id: 'rem-seed', rem: 'PAY THE RENT', next: calKey(new Date()), day: calKey(new Date()) });
       await idbPut({ id: 'rem-orphan', rem: 'ORPHAN RECORD', next: '', });
@@ -115,24 +114,26 @@ run(async () => {
     ok('the day head carries the date alone (a real date string, no add control)',
       head.text.length > 0 && head.hasButton === false, JSON.stringify(head));
 
-    // 2. The seeded record renders as a square in ITS day's card: the zone is
-    //    empty (the legacy calKey date is not user text). The orphan record
-    //    renders nowhere.
+    // 2. The seeded record renders as a square in ITS day's card: the zone
+    //    shows its date text exactly (B181). The orphan record renders
+    //    nowhere.
     const note = await page.evaluate(async () => {
       const n = [...document.querySelectorAll('#cal-today-board .cal-note')][0] || null;
       const s = n && n.querySelector('.cal-note-text');
       const orphan = [...document.querySelectorAll('.cal-note-text')].some(b => b.textContent === 'ORPHAN RECORD');
       const stored = (await idbGetAll()).find(r => r.id === 'rem-seed') || null;
       const r = n && n.getBoundingClientRect();
-      return { text: s ? s.textContent : null,
+      return { key: calKey(new Date()), text: s ? s.textContent : null,
                inCard: n ? !!n.closest('#cal-today-board') : false,
                orphanRendered: orphan,
                square: r ? (r.width / r.height) : null,
                storedRem: stored && stored.rem,
                storedNext: stored && stored.next };
     });
-    ok("the seeded block's zone is empty byte-for-byte — a legacy calKey `next` is not body text (nothing migrated)",
-      note.text === '', JSON.stringify(note));
+    // Re-pinned deliberately for issue #499 (B181): a square whose whole text
+    // is a YYYY-MM-DD date shows that text; the hide-the-date rule is gone.
+    ok("the seeded block's zone shows its bare-date `next` byte-for-byte (B181)",
+      note.text === note.key && note.storedNext === note.key, JSON.stringify(note));
     ok('the block lives INSIDE a day card (issue #363) and is square, and its stored `rem` survives unread (issue #365: stored-but-unread, #323)',
       note.inCard === true && note.square !== null && note.square >= 0.9 && note.square <= 1.15 &&
       note.storedRem === 'PAY THE RENT' && typeof note.storedNext === 'string' && note.storedNext.length === 10, JSON.stringify(note));

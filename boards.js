@@ -1157,8 +1157,9 @@ function repaintVisibleBoard() {
 }
 
 /* The commit is the blur and writes `next`; `rem` stays stored but unread.
-   A commit leaving both empty discards the record (B8). Either way the date's
-   mirror re-syncs and a board on screen repaints (B179). */
+   The visible text alone decides the discard: a commit leaving it empty
+   deletes the record, a hidden `rem` with it (B8, B180). Either way the
+   date's mirror re-syncs and a board on screen repaints (B179). */
 function startCalNoteEdit(block, rec) {
   const body = block.querySelector('.cal-note-text');
   body.setAttribute('contenteditable', CE);
@@ -1171,7 +1172,7 @@ function startCalNoteEdit(block, rec) {
     committed = true;
     body.removeAttribute('contenteditable');
     const next = body.textContent.trim();
-    if (!rec.rem && !next) {                        // B8
+    if (!next) {                                    // B8, B180
       await idbDelete(rec.id);
       block.remove();
       await syncDateMirror(rec.day);
