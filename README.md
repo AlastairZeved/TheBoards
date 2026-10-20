@@ -109,7 +109,10 @@ Boards are sorted into four groups: **To Do**, **Notes**, **Learning** and
 
 Each time the app starts, and when a new day begins, it opens today's To Do
 board and moves any unfinished notes from yesterday's To Do board onto it. A calendar sits on the right edge on
-a tablet or computer, and behind the **Calendar** tab on a phone.
+a tablet or computer, and behind the **Calendar** tab on a phone. Anything you
+add to a day in the calendar also shows up on that day's To Do board, in
+**Requirements**, and changes or deletions in either place carry over to the
+other.
 
 The rest is there to discover.
 
