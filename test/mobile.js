@@ -2640,7 +2640,7 @@ run(async () => {
       g.board >= 60 && g.others.every(h => h <= g.board), JSON.stringify(g));
     ok("the long day-note body renders inside the Today board's row, wrapped and readable, unclipped",
       g.noteInCard && g.noteH >= 30, 'inCard=' + g.noteInCard + ' h=' + g.noteH);
-    ok('the six day cards shrink to their content (the empty cards at the row\'s floor, the square-bearing card fit to its square)',
+    ok('the future day cards shrink to their content (the empty cards at the row\'s floor, the square-bearing card fit to its square)',
       // Issue #397 (B165) re-pins the empty-card floor: every card's date
       // compartment now carries the "+" beneath the date lines (28px box +
       // 4px), so the empty card's floor moved ~57 → ~65px. The card is still
