@@ -1046,7 +1046,9 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
       'CALKEY_DATE', 'BOARD_CATS', 'GRID_ORDER', 'catOf', 'splitLines', 'REF_W']
       .every((name) => new RegExp('export const ' + name + '\\b').test(read('state.js'))) &&
     /Object\.fromEntries\(BOARD_CATS\.map/.test(read('boards.js')) &&
-    /new Set\(BOARD_CATS\)/.test(read('export.js')) && /calDayName\(day\.date\)/.test(read('export.js')) &&
+    // Re-pinned deliberately for issue #490 (B124): the calendar PDF export, export.js's only
+    // calDayName caller, was dead code and is deleted; the day card in boards.js still reuses it.
+    /new Set\(BOARD_CATS\)/.test(read('export.js')) && /calDayName\(day\.date\)/.test(read('boards.js')) &&
     (app.match(/state\.current\.notes\.find/g) || []).length === 1 &&
     (app.match(/state\.current\.parkingLot\.find/g) || []).length === 1 &&
     !/const CALKEY_DATE\s*=/.test(read('boards.js')));

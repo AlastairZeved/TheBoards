@@ -10,7 +10,7 @@
    Each page opens with a y-flip; drawText cancels it per string.
    ---------------------------------------------------------------------- */
 
-import { BOARD_CATS, COPY, LOT_HEAD, LOT_MAX_FRAC, LOT_ROW, NOTE_MIN_W, REF_W, REF_H, UNDO_MS, calDayName, calEventsOf, calMD, calWindow, copyRecordFields, eventsOf, live, makeRecord, pad2, squareFromEvent, state, uuid } from './state.js';
+import { BOARD_CATS, COPY, LOT_HEAD, LOT_MAX_FRAC, LOT_ROW, NOTE_MIN_W, REF_W, REF_H, UNDO_MS, copyRecordFields, eventsOf, live, makeRecord, pad2, squareFromEvent, state, uuid } from './state.js';
 import { flushSave, idbGet, idbGetAll, idbPut } from './persistence.js';
 import { LOGICAL_H, LOGICAL_W, bandRuleYFor, noteKFor, noteMaxW } from './geometry.js';
 import { renderBoard } from './render.js';
@@ -544,13 +544,10 @@ function exportNotes(p, rec) {
 /* ---- Page 2+: the text ---------------------------------------------------
    The board as searchable prose. Completed items keep their place, not their
    words. */
-/* Page machinery for the two prose exports: opens/closes A4 text pages and
+/* Page machinery for the prose export: opens/closes A4 text pages and
    lays paragraphs under a running baseline (`y`); `cur` is the live canvas.
-
-   `overflow` is what running out of page MEANS: 'paginate' (board) opens
-   another; 'error' (calendar) throws, so the caller reports COPY.exportError
-   rather than ship a truncated file (B34: truncation is always indicated). */
-function textPager({ overflow = 'paginate' } = {}) {
+   Running out of page opens another. */
+function textPager() {
   const L = PDF_MARGIN, W = A4_W - 2 * PDF_MARGIN;
   const BOTTOM = A4_H - PDF_MARGIN;
   const streams = [];
@@ -565,7 +562,6 @@ function textPager({ overflow = 'paginate' } = {}) {
   const closePage = () => { if (p) { streams.push(p.Q().stream()); p = null; } };
   const room = (h) => {
     if (y + h <= BOTTOM) return;
-    if (overflow === 'error') throw new Error('pdf-page-overflow');
     closePage(); openPage();
   };
 
@@ -591,21 +587,17 @@ function textPager({ overflow = 'paginate' } = {}) {
 }
 
 /* One bulleted list on a pager. A completed item keeps its place but not its
-   words (as page 1's scratch-out, B34): `state` picks only the ink and text.
-   `mark: false` drops the bullet glyph but keeps the indent, for the
-   calendar's event lines under a day's own heading. */
-function pdfBullets(t, label, items, { mark = true } = {}) {
+   words (as page 1's scratch-out, B34): `state` picks only the ink and text. */
+function pdfBullets(t, label, items) {
   if (!items.length) return;
-  if (label) t.heading(label);
+  t.heading(label);
   const indent = 14;
   for (const it of items) {
     const done = it.state === 'complete';
     const color = done ? PDF_SHADE : PDF_INK;
     const lines = pdfWrap(done ? COPY.pdfCompleted : it.text, false, 10, t.W - indent);
-    if (mark) {
-      t.room(indent);                              // keep the bullet with its first line
-      t.cur.text('•', t.L, pdfBaseline(t.y, indent, 10), 10, false, color);
-    }
+    t.room(indent);                                // keep the bullet with its first line
+    t.cur.text('•', t.L, pdfBaseline(t.y, indent, 10), 10, false, color);
     for (const line of lines) {
       t.room(indent);
       if (line.length) t.cur.text(line, t.L + indent, pdfBaseline(t.y, indent, 10), 10, false, color);
@@ -635,39 +627,6 @@ function exportTextPages(rec) {
 export function buildBoardPdf(rec) {
   return pdfAssemble([exportBoardPage(rec)].concat(exportTextPages(rec)),
                      rec.title || COPY.untitled);
-}
-
-/* ---- The calendar's 7-day reference sheet ---------------------------------
-   One text page: the rolling week as it renders, today first, one line per
-   event ("— completed —" when done). Reads STORAGE (computed window, live
-   events), never the squeezed frame. */
-export async function exportCalPdf() {
-  try {
-    flushSave();
-    const all = await idbGetAll();
-    const events = eventsOf(all);
-    pdfLossy = false;                // reported as in exportBoardPdf (B34)
-    // Overflow is an error, not a page turn: this is one fixed sheet.
-    const t = textPager({ overflow: 'error' });
-    t.openPage();
-    t.para(COPY.calTitle, 18, 24, true, PDF_INK);
-    t.para(formatDate(Date.now()), 9, 13, false, PDF_SHADE);
-    t.y += 6;
-    for (const day of calWindow()) {
-      t.heading((day.today ? COPY.calToday + ' — ' : '') +
-        calDayName(day.date) + ' ' + calMD(day.date));
-      // Unmarked: the indent alone groups events under the day's heading.
-      pdfBullets(t, null, calEventsOf(events, day.key), { mark: false });
-    }
-    t.closePage();
-    const bytes = pdfAssemble(t.streams, COPY.calTitle);
-    const d = new Date();
-    downloadBlob(new Blob([bytes], { type: 'application/pdf' }),
-      'calendar-' + d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + '.pdf');
-    if (pdfLossy) showNotice(COPY.exportLossy, 'export', UNDO_MS);
-  } catch (e) {
-    showNotice(COPY.exportError, 'export', UNDO_MS);
-  }
 }
 
 /* ---- The menu action ---------------------------------------------------- */

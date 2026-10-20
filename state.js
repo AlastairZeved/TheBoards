@@ -128,9 +128,6 @@ export const COPY = {
   // `Collapse` name; only the value changed.
   calToday: 'Today', calBack: 'Go Back',
   paneCollapse: 'Go Back',   // the expanded All-Boards rail's way off (B118, B151)
-  // A day card's header: "Today" then the long date; future days read
-  // weekday + MM/DD.
-  calTitle: 'Calendar Board',
   /* Calendar aria-labels, so no surface of the calendar carries a bare string.
      The pager words keep their trailing space: the date is appended verbatim
      ("Previous 10/17 notes"). */
@@ -346,12 +343,6 @@ export function calBoardOf(all, dateKey) {
   return null;
 }
 
-/* Oldest first. */
-export function calEventsOf(events, dateKey) {
-  return events.filter(e => e.date === dateKey)
-    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0) || (a.id < b.id ? -1 : 1));
-}
-
 export const boardsOf = (all) => all.filter((record) => record.title !== undefined);
 export const eventsOf = (all) => all.filter((record) =>
   typeof record.date === 'string' && typeof record.text === 'string' && record.title === undefined);
@@ -377,9 +368,9 @@ export function mirrorLine(r) {
 /* An old event as the square it becomes (B179); null when its `date` is no
    calKey (no day card to land on). The id sorts before every app-made one
    ('rem-' + base-36 ms starts at 'm'): rem-0, the RAW createdAt in base 36
-   padded to 9 (a missing one sorts first, as calEventsOf read it), then the
-   event's id, so creation order survives and a re-conversion lands on the same
-   record. Text stays untrimmed: a converted line equals its span line. */
+   padded to 9 (a missing one sorts first), then the event's id, so creation
+   order survives and a re-conversion lands on the same record. Text stays
+   untrimmed: a converted line equals its span line. */
 export function squareFromEvent(ev) {
   if (!isDateKey(ev.date)) return null;
   return makeRecord('dayNote', {
