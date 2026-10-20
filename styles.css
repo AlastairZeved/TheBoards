@@ -1869,8 +1869,8 @@ html.desktop #board { transition: opacity var(--swap-ms) var(--ease); }
 /* --- UIUX §3.4 The month view --------------------------------------------
    The compact month grid below the day stack: display plus the
    tap-to-week-swap, palette only — the current-week band is the ink-light
-   wash at reading alpha, today wears the water fall, the event dot is
-   --accent-page. */
+   wash at reading alpha, today wears the water fall, and no day wears a dot
+   (B179). */
 #cal-month {
   flex: 0 0 auto;
   margin-top: 8px;
@@ -1927,15 +1927,6 @@ html.desktop #board { transition: opacity var(--swap-ms) var(--ease); }
   border-radius: 3px;
   font-weight: 600;
 }
-/* Exactly one dot per event-bearing day, regardless of the day's event count. */
-.mo-dot {
-  position: absolute;
-  bottom: 2px; left: 50%;
-  transform: translateX(-50%);
-  width: 4px; height: 4px;
-  border-radius: 50%;
-  background: var(--accent-page);
-}
 
 /* Wide: the calendar docks to the right edge as a real column and the board
    reflows beside it — applyLayout (geometry.js) narrows the board (B95). */
@@ -1949,7 +1940,7 @@ html.desktop #board { transition: opacity var(--swap-ms) var(--ease); }
 /* --- UIUX §3.4 The standing calendar rail (B99) ---------------------------
    On wide the calendar is standing furniture: a slim rail pinned to the
    viewport's right edge, always visible, reading "Calendar Board" vertically
-   with today's date and a lit dot. One tap expands it into the panel and the
+   with today's date and a dim dot. One tap expands it into the panel and the
    board reflows beside it; expand/collapse is in-room navigation (B81).
    Collapsed face = #cal-rail; expanded face = the band, body, stack, month
    view and exit row. Both rail faces are display:none on mobile, where the
@@ -1989,9 +1980,8 @@ html.desktop #board { transition: opacity var(--swap-ms) var(--ease); }
 #cal-rail .cdot, #pane-rail .cdot {
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--highlight);        /* the aperture: today is lit in the rail too */
-  opacity: .35;                        /* dim by default; lit when today has events */
+  opacity: .35;                        /* dim; never lit (B179) */
 }
-#cal-rail .cdot.lit, #pane-rail .cdot.lit { opacity: 1; }
 #cal-rail .cdate {
   writing-mode: vertical-rl;
   font-size: 9px; font-weight: 600;

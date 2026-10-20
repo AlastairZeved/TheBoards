@@ -228,16 +228,21 @@ lines the calendar mirror last wrote — the span distinguishing the mirror's li
 from the reader's own). Both are added at the read site, defaulted when absent
 (B21's idiom — no migration, no DB version move). Since B106 (issue #154) the
 span arbitrates a two-way mirror: a board-side edit of a span line writes through
-to the event it mirrors (span line i ↔ event i), a board-side deletion of span
-lines deletes the mirrored events, and hand lines after the span are never
-touched by either direction. Calendar events are records in the same store shaped
-`{ id, date, text, state, createdAt }`, identified by carrying `date` and no
-`title`; the 30-day window is computed from today's date at render, so no rolling
-array is stored and midnight writes nothing.
+to the square it mirrors (span line i ↔ square i), a board-side deletion of span
+lines deletes the mirrored squares, and hand lines after the span are never
+touched by either direction; a board that never synced has no span, so all its
+lines are the reader's own (B179). The 30-day window is computed from today's
+date at render, so no rolling array is stored and midnight writes nothing.
 
-Calendar day-notes are records shaped `{ id, rem, next, day }`, with ids
-prefixed `rem-` and `day` holding the date key they belong to. They are a
-separate record kind in the same store, not boards or calendar events.
+Calendar day-notes — the squares — are records shaped `{ id, rem, next, day }`,
+with ids prefixed `rem-` and `day` holding the date key they belong to. They are
+the calendar's one item kind and the mirror's source (B179): a date's squares,
+sorted by id, are its mirror's lines, one line each (`next`, its line breaks read
+as single spaces). The legacy event shape `{ id, date, text, state, createdAt }`,
+identified by carrying `date` and no `title`, is read only to convert: each stored
+or imported event becomes a square on its date with id `rem-0`, its `createdAt`
+in base 36 padded to nine characters, `-` and the event id, and the event record
+is removed (B179).
 
 `state` is `active` or `complete`. `text` is a plain string in every case.
 
@@ -584,9 +589,13 @@ Rules:
   board you are looking at, or another board from the rail, without an anchor menu.
 
 The whole-library JSON export uses payload version 2. It separates board
-records, calendar events (`calendarEvents`) and calendar day-notes (`dayNotes`)
-into their own arrays. Import recovers day-notes from older v2 JSON exports where
-they were carried inside `boards`, and restores board `catStamp` values.
+records and calendar day-notes (`dayNotes`) into their own arrays;
+`calendarEvents` carries any legacy event not yet converted (normally none).
+Import turns every incoming event — v2 `calendarEvents`, or v1 events salvaged
+from `boards` — into a day-note on its date, and re-syncs the linked boards of
+every date that received day-notes (B179). Import recovers day-notes from older
+v2 JSON exports where they were carried inside `boards`, and restores board
+`catStamp` values.
 
 > B34 marks the `EXPORT_GEO` duplication *impermanent*: the exporter restates
 > `styles.css`'s geometry by hand, and the split now lives in `export.js`

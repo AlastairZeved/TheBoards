@@ -1,11 +1,12 @@
 /* --- 11. Board list + routing -------------------------------------------- */
 import {
-  BOARD_CATS, CALKEY_DATE, CAT_SEC_GAP, CE, COPY, GRID_ORDER, GLYPH, LEAVE_MS,
+  BOARD_CATS, CAT_SEC_GAP, CE, COPY, GRID_ORDER, GLYPH, LEAVE_MS,
   LIST_CARD_COLS, LIST_CARD_H, LIST_CAT_ROW, LONGPRESS_MS, MOVE_THRESHOLD,
   PANE_CAT_HEAD, PANE_PAGER_H, PANE_ROW_GAP, SWAP_MS, boardsOf, calBoardOf,
-  calDayName, calEventsOf, calKey, calMD, calWindow, catOf, el, EMBED,
-  ensureLinkedBoard, eventsOf, histPush, live, makeDayNoteRecord, mirrorEventsOf,
-  newBoardRecord, pad2, state, syncMirror,
+  calDayName, calKey, calMD, calWindow, catOf, el, EMBED,
+  ensureLinkedBoard, eventsOf, histPush, isSquare, live, makeDayNoteRecord,
+  mirrorLine, mirrorSquaresOf, newBoardRecord, pad2, squareFromEvent, squareOrder,
+  squareText, squaresOf, state, syncMirror,
 } from './state.js';
 import { cancelPendingSave, flushSave, idbDelete, idbGet, idbGetAll, idbPut, persist, saveNow, scheduleSave } from './persistence.js';
 import { caretToEnd, hitInset, onFrameReflow, setCalSqueeze, setPaneCollapsed } from './geometry.js';
@@ -685,18 +686,14 @@ export function goCalBack() {
 /* --- The standing rail (B99) ----------------------------------------------
    Wide's calendar is furniture, not navigation: a 40px rail rendered at boot
    and on every flip to wide. Tapping expands the panel (squeezing the board);
-   Go Back (B134, B151) returns the rail. No commit (B81), no history pushed. */
+   Go Back (B134, B151) returns the rail. No commit (B81), no history pushed.
+   Its dot stays dim: the day's squares are the only marker (B179). */
 function renderCalRail() {
   if (!state.isWide) return;
   el.calView.hidden = false;
   const today = new Date();
   el.calRail.querySelector('.cdate').textContent =
     calDayName(today).slice(0, 3) + ' ' + calMD(today);
-  flushSave();
-  idbGetAll().then((all) => {
-    const lit = calEventsOf(eventsOf(all), calKey(today)).length > 0;
-    el.calRail.querySelector('.cdot').classList.toggle('lit', lit);
-  });
 }
 
 export function showCalRail() {
@@ -827,22 +824,22 @@ export function makeCalDay(day, dayNotes, board) {
   return card;
 }
 
-/* Re-sync a date's mirror after any event write (one writer). */
+/* Re-sync a date's mirror after any square write (one writer). */
 export async function syncDateMirror(dateKey) {
   const all = await idbGetAll();
   const boards = boardsOf(all);
   const board = calBoardOf(boards, dateKey);
   if (!board) return;
-  if (syncMirror(board, calEventsOf(eventsOf(all), dateKey))) await idbPut(board);
+  if (syncMirror(board, squaresOf(all, dateKey))) await idbPut(board);
 }
 
 /* The reverse mirror (B106): a Requirements commit writes through to the
-   events. In the span the BOARD wins: span line i rewrites event i
-   (mirrorEventsOf), a deleted span line deletes its event (never demotes
-   it), and hand lines after the span are never touched. Board-side additions
-   land after the span as hand lines (insertion inside it is ambiguous,
-   B106). syncMirror runs on the LIVE board object because the commit's
-   saveNow races the same record.
+   squares. In the span the BOARD wins: span line i rewrites square i
+   (mirrorSquaresOf), a deleted span line deletes its square (never demotes
+   it), and hand lines after the span are never touched; nor is a square
+   beyond the span (B179). Board-side additions land after the span as hand
+   lines (insertion inside it is ambiguous, B106). syncMirror runs on the LIVE
+   board object because the commit's saveNow races the same record.
 
    `before` is the pre-edit text (interactions.js): a prefix/suffix diff
    identifies a pure deletion, so a hand line never slides up into the span.
@@ -850,12 +847,10 @@ export async function syncDateMirror(dateKey) {
 export async function writeThroughRequirements(board, before) {
   if (!board || !board.cal) return;
   const all = await idbGetAll();
-  const mine = calEventsOf(eventsOf(all), board.cal);
   const lines = (board.requirements || '').length
     ? board.requirements.split('\n') : [];
-  const span = typeof board.calReq === 'number'
-    ? board.calReq
-    : Math.min(lines.length, mine.length);   // first sync on a legacy pair
+  const span = typeof board.calReq === 'number' ? board.calReq : 0;   // never synced: all hand
+  const mine = squaresOf(all, board.cal).slice(0, span);   // never beyond the span (B179)
   const o = (before || '').length ? before.split('\n') : [];
   let p = 0;   // common prefix — the lines both texts agree on, from the top
   while (p < o.length && p < lines.length && o[p] === lines[p]) p++;
@@ -873,14 +868,33 @@ export async function writeThroughRequirements(board, before) {
     return;
   }
   const keep = Math.min(span, lines.length);
-  for (const { event, text } of mirrorEventsOf(board, all)) {
-    if (event.text !== text) { event.text = text; await idbPut(event); }
+  for (const { square, text } of mirrorSquaresOf(board, all)) {
+    if (mirrorLine(square) !== text) { square.next = text; await idbPut(square); }
   }
   for (let i = keep; i < span && i < mine.length; i++) await idbDelete(mine[i].id);
   if (keep !== span) board.calReq = keep;    // span follows the deletion
   if (syncMirror(board, mine.slice(0, keep)) || keep !== span) {
     await idbPut(board);                     // saveNow raced the span move
   }
+}
+
+/* The event record retires (B179): each stored event becomes a square on its
+   date (squareFromEvent), then its record goes. The put comes first and the
+   id is deterministic, so an interrupted pass repeats onto the same record. An
+   event with no calKey date has no card to land on and stays stored,
+   unreachable. It runs before anything syncs a date's mirror (the launch, the
+   backup import), or the date's old event lines, still inside the span, would
+   be rewritten away. Returns the dates that gained a square. */
+export async function convertLegacyEvents() {
+  const days = new Set();
+  for (const ev of eventsOf(await idbGetAll())) {
+    const square = squareFromEvent(ev);
+    if (!square) continue;
+    await idbPut(square);
+    await idbDelete(ev.id);
+    days.add(square.day);
+  }
+  return [...days];
 }
 
 /* --- The day-roll launch (B105) + the morning lifecycle (B108) -------------
@@ -909,15 +923,12 @@ async function launchTodayBoard(today) {
       if (state.current && state.current.cal > today &&
           !(state.current.notes || []).length) state.current = null;
       flushSave();
+      await convertLegacyEvents();      // B179: before anything reads the squares
       const all = await idbGetAll();
       const boards = boardsOf(all);
       const { board } = ensureLinkedBoard(boards, today);
-      if (board.calReq === undefined) {
-        // B131: a future-dated event's board has no first sync to set the span.
-        board.calReq = calEventsOf(eventsOf(all), today).length;
-      }
       // B131 sweep: empty future-dated linked boards are derived state; the
-      // events survive.
+      // squares survive.
       for (const b of boards.slice()) {
         // No current-board guard: current may be the ghost being swept.
         if (b !== board && b.cal > today && !(b.notes || []).length) {
@@ -929,6 +940,8 @@ async function launchTodayBoard(today) {
       if (state.current && state.current.id === board.id) persist();
       else await idbPut(board);
       await syncDateMirror(today);
+      // B179: the sync rewrote the open board in place and swapBoard skips it.
+      if (state.current && state.current.id === board.id) renderBoard();
       // Step off the calendar first (mobile pops {v:'cal'}, B9), then swap.
       if (state.calOpen) goCalBack();
       else if (state.calExpanded) collapseCalRail();
@@ -975,7 +988,6 @@ function paintCal(all) {
   // The calendar is unscaled, so k is 1; +0.5 is the board row's headroom.
   el.calTop.style.setProperty('--hit', (hitInset(el.calTop, 1) + 0.5) + 'px');
   const days = calWeekAnchor ? calWeekOf(calWeekAnchor) : calWindow(CAL_FUTURE_DAYS + 1);
-  const events = eventsOf(all);      // state.js §1.7
   const notes = calNoteRecords(all);
   const today = days.find((d) => d.today);
   if (today) renderCalToday(today, notes.filter((r) => r.day === today.key));
@@ -984,7 +996,7 @@ function paintCal(all) {
     const board = calBoardOf(all, day.key);
     el.calStack.appendChild(makeCalDay(day, notes.filter((r) => r.day === day.key), board));
   }
-  renderCalMonth(new Set(events.map((e) => e.date)));
+  renderCalMonth();
   seatCalAdds();
 }
 
@@ -1000,23 +1012,17 @@ function seatCalAdds() {
 /* --- The day-note squares --------------------------------------------------
    Day-note records render as squares inside each day card, three per day with
    a pager beyond. The `day` field (the card's calKey) binds a record to a
-   card; one without it stays stored but unreachable. Calendar events are
-   never read here. */
+   card; one without it stays stored but unreachable. A square is its date's
+   event (B179): its commit syncs that date's Requirements mirror. */
 
 let calDayNotePage = {};             // day.key -> page
 
 const CAL_NOTE_PER_DAY = 3;
 const CAL_FUTURE_DAYS = 30;
 
+// Every square in id order: the day cards and the Requirements chips share it.
 function calNoteRecords(all) {
-  return all.filter((r) => typeof r.rem === 'string' && typeof r.day === 'string'
-    && CALKEY_DATE.test(r.day));
-}
-
-// The record's body text: `next`, unless it is a legacy calKey date.
-function calNoteBody(r) {
-  const n = typeof r.next === 'string' ? r.next : '';
-  return CALKEY_DATE.test(n) ? '' : n;
+  return all.filter(isSquare).sort(squareOrder);
 }
 
 function calOrdinal(n) {
@@ -1126,7 +1132,7 @@ function makeCalNote(rec) {
   block.dataset.id = rec.id;
   const body = document.createElement('div');
   body.className = 'cal-note-text';
-  body.textContent = calNoteBody(rec);
+  body.textContent = squareText(rec);
   block.append(body);
   // The deferred caretToEnd wins whichever order native caret placement fires.
   block.addEventListener('click', (e) => {
@@ -1138,8 +1144,21 @@ function makeCalNote(rec) {
   return block;
 }
 
+/* The calendar→board half of the mirror: after a square commit, a board whose
+   Requirements anchor is ON SCREEN (the wide panel leaves it beside the
+   calendar) repaints in place (B179). The guard is what is actually shown, not
+   viewport width: the mobile push covers the board, and hideCal repaints on
+   the way back. Through renderBoard(), never a direct anchor write, so the
+   B133 pinned title and the 'filled' class survive. */
+function repaintVisibleBoard() {
+  if (state.calOpen && !state.isWide) return;   // the mobile push covers the board
+  const anchor = document.getElementById('anchor-requirements');
+  if (anchor && anchor.offsetParent !== null) renderBoard();
+}
+
 /* The commit is the blur and writes `next`; `rem` stays stored but unread.
-   A commit leaving both empty discards the record (B8). */
+   A commit leaving both empty discards the record (B8). Either way the date's
+   mirror re-syncs and a board on screen repaints (B179). */
 function startCalNoteEdit(block, rec) {
   const body = block.querySelector('.cal-note-text');
   body.setAttribute('contenteditable', CE);
@@ -1155,11 +1174,15 @@ function startCalNoteEdit(block, rec) {
     if (!rec.rem && !next) {                        // B8
       await idbDelete(rec.id);
       block.remove();
+      await syncDateMirror(rec.day);
+      repaintVisibleBoard();
       renderCal();
       return;
     }
     rec.next = next;
     await idbPut(rec);
+    await syncDateMirror(rec.day);
+    repaintVisibleBoard();
     renderCal();
     scheduleSave();
   };
@@ -1175,7 +1198,8 @@ function startCalNoteEdit(block, rec) {
 /* --- The month view ---------------------------------------------------------
    A month grid at the stack's bottom; a cell tap swaps the stack to that
    date's Sunday-first week, raw (B81). Two render-time anchors, nothing
-   stored: calMonthAnchor, and calWeekAnchor (null = the rolling window). */
+   stored: calMonthAnchor, and calWeekAnchor (null = the rolling window). No
+   day is marked: the squares are the only marker (B179). */
 let calMonthAnchor = null;
 let calWeekAnchor = null;
 
@@ -1188,7 +1212,7 @@ function calWeekOf(anchor) {
   return calWindow(7, start);
 }
 
-function renderCalMonth(evDays) {
+function renderCalMonth() {
   const now = new Date();
   const a = calMonthAnchor || now;
   el.calMonth.textContent = '';
@@ -1226,20 +1250,12 @@ function renderCalMonth(evDays) {
     cell.type = 'button';
     cell.className = 'mo-cell'
       + (key === tk ? ' today' : '')
-      + (wkKeys.has(key) ? ' wk' : '')
-      + (evDays.has(key) ? ' ev' : '');
+      + (wkKeys.has(key) ? ' wk' : '');
     cell.setAttribute('aria-label',
-      date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
-      + (evDays.has(key) ? COPY.calHasEvents : ''));
+      date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' }));
     const n = document.createElement('span');
     n.textContent = d;
     cell.appendChild(n);
-    if (evDays.has(key)) {
-      const dot = document.createElement('span');
-      dot.className = 'mo-dot';
-      dot.setAttribute('aria-hidden', 'true');
-      cell.appendChild(dot);
-    }
     cell.addEventListener('click', () => {
       calWeekAnchor = date;
       renderCal();

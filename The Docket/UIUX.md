@@ -740,7 +740,9 @@ the ordinary editable title, unchanged — the placeholder, the ink and the
 
 **On the linked board the mirrored Requirements lines render in read state as
 the calendar's squares on desktop, one-line chips on the phone (B163/B164,
-issue #393).** The mirror's span — the first `calReq` lines, B106's own law —
+issue #393).** The mirror's span — the first `calReq` lines, B106's own law,
+one line per calendar square of that date in the calendar's own order, a
+square's line breaks read as single spaces (B179) —
 paints one block per line in a `.req-squares` grid beneath the band's top edge.
 **The tier splits the shape (B164):** on the **phone** tier each block is a
 *chip* — one line of the section, full-width (`grid-template-columns: 1fr`),
@@ -846,7 +848,7 @@ cell all carry the hue through `var()` (§2.2.2). Linked boards opened from a da
 keep their own category scopes — nothing inside `#cal-view` carries
 `data-cat`.
 
-The calendar is full-screen on mobile. On wide screens it is standing furniture (B99): a 40px rail at the viewport's right edge, with a vertical label, today's date and a 6px event indicator. It reserves its width at all times. One tap expands it into a 320px panel and the board reflows beside it; on collapse the board returns to its prior position. The rail commits nothing and pushes no history (B81). The Calendar tab is mobile-only; wide screens enter through the rail. The 744px tablet tier uses the same rail and panel arrangement in either orientation; wide has no All tab.
+The calendar is full-screen on mobile. On wide screens it is standing furniture (B99): a 40px rail at the viewport's right edge, with a vertical label, today's date and a 6px dot that stays dim — the squares are the only marker (B179). It reserves its width at all times. One tap expands it into a 320px panel and the board reflows beside it; on collapse the board returns to its prior position. The rail commits nothing and pushes no history (B81). The Calendar tab is mobile-only; wide screens enter through the rail. The 744px tablet tier uses the same rail and panel arrangement in either orientation; wide has no All tab.
 
 **The calendar's exit control.** One `--frame` flat tab in the row-control
 species: **`Go Back`**, text alone with no arrow glyph, anchored **left at the
@@ -934,9 +936,9 @@ window; the Today control restores the rolling window.
 
 The day-note strip is retired; one-zone square notes render inside each day card. They use the Calendar `--note` fill, `--ink-dark`, a 2px inset `--frame` outline, 4px radius and 12px/400/1.4 type; three render per day, with `‹`/`›` paging beyond three and a two-line clamp. The `+` for each of the six future cards sits centered below its date; today's `+` sits at the right of the band. Buttons are 28px with a 2px `--frame` border.
 
-The squares write the record's `next` field; the `+` creates a `day` field keyed to that card's `calKey`. Legacy `calKey` values in `next` render as empty bodies; `rem` remains stored but unread, and records without `day` remain stored but unreachable. Calendar events do not render in the weekly stack; event records and their linked To-Do mirrors are unchanged.
+The squares write the record's `next` field; the `+` creates a `day` field keyed to that card's `calKey`. Legacy `calKey` values in `next` render as empty bodies; `rem` remains stored but unread, and records without `day` remain stored but unreachable. The squares are the date's events (B179): in the card's own order they are the lines of that date's linked To-Do board's Requirements mirror (§3.1), and an edit or deletion on either surface reaches the other. The month grid draws no dots (B179).
 
-**Capture.** Tapping a card's `+` opens its square for immediate typing. Commit-on-blur writes the record; an empty commit is discarded (B8).
+**Capture.** Tapping a card's `+` opens its square for immediate typing. Commit-on-blur writes the record and re-syncs that date's linked To-Do board (B179); an empty commit is discarded (B8) and its chip goes with it.
 
 ---
 

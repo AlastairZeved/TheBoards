@@ -10,12 +10,12 @@
    Each page opens with a y-flip; drawText cancels it per string.
    ---------------------------------------------------------------------- */
 
-import { BOARD_CATS, COPY, LOT_HEAD, LOT_MAX_FRAC, LOT_ROW, NOTE_MIN_W, REF_W, REF_H, UNDO_MS, calDayName, calEventsOf, calMD, calWindow, copyRecordFields, eventsOf, live, makeRecord, pad2, state, uuid } from './state.js';
+import { BOARD_CATS, COPY, LOT_HEAD, LOT_MAX_FRAC, LOT_ROW, NOTE_MIN_W, REF_W, REF_H, UNDO_MS, calDayName, calEventsOf, calMD, calWindow, copyRecordFields, eventsOf, live, makeRecord, pad2, squareFromEvent, state, uuid } from './state.js';
 import { flushSave, idbGet, idbGetAll, idbPut } from './persistence.js';
 import { LOGICAL_H, LOGICAL_W, bandRuleYFor, noteKFor, noteMaxW } from './geometry.js';
 import { renderBoard } from './render.js';
 import { showNotice } from './interactions.js';
-import { formatDate, listOpen, renderListSurface, renderPane } from './boards.js';
+import { convertLegacyEvents, formatDate, listOpen, renderListSurface, renderPane, syncDateMirror } from './boards.js';
 
 const A4_W = 595.28, A4_H = 841.89;  // pt
 const PDF_MARGIN = 36;
@@ -805,10 +805,12 @@ function normalizeImportedBoard(raw) {
 
 /* One imported calendar event, normalized like a board (B123): `date` must be
    calKey-form YYYY-MM-DD or the event is dropped; null if it can't survive as
-   an event. */
+   an event. It arrives as the square it converts to (squareFromEvent, B179);
+   the event record itself is never written. A missing `createdAt` stays 0 (as
+   a stored one reads), so its square's id is the same on every import (B179). */
 function normalizeImportedEvent(raw) {
   if (!raw || typeof raw !== 'object') return null;
-  const event = makeRecord('event', raw);
+  const event = makeRecord('event', raw, { now: 0 });
   return event.date ? event : null;
 }
 
@@ -822,7 +824,10 @@ function normalizeImportedDayNote(raw) {
    ids are ADDED, boards the file never mentions stay. B123 extends this to
    events (overwrite by id too): v2 carries them in `calendarEvents`; a v1
    file's events sit in `boards`, where board normalization would drop them, so
-   they are salvaged through `eventsOf` BEFORE it runs. */
+   they are salvaged through `eventsOf` BEFORE it runs. Events arrive as squares
+   (B179): the device's own events convert first, so the file's copy of an event
+   overwrites its square by id; the file's events are written as the squares they
+   convert to, never as events, and each date they land on re-syncs its board. */
 export async function importBoardsJson(file) {
   let payload;
   try {
@@ -850,14 +855,15 @@ export async function importBoardsJson(file) {
   const incomingEvents = rawEvents
     .map(normalizeImportedEvent)
     .filter(Boolean);
-  const dayNotesById = new Map(rawDayNotes.map(normalizeImportedDayNote)
-    .filter(Boolean).map((note) => [note.id, note]));
-  const incomingDayNotes = [...dayNotesById.values()];
-  if (!incoming.length && !incomingEvents.length && !incomingDayNotes.length) {
+  const squaresById = new Map([...rawDayNotes.map(normalizeImportedDayNote),
+    ...incomingEvents.map(squareFromEvent)].filter(Boolean).map((square) => [square.id, square]));
+  const incomingSquares = [...squaresById.values()];
+  if (!incoming.length && !incomingEvents.length && !incomingSquares.length) {
     showNotice(COPY.importError, 'import', UNDO_MS);
     return;
   }
   flushSave();                          // the debounce must not write over the import
+  await convertLegacyEvents();          // B179: the device's events first, so the file's copy wins by id
   let overwrittenCurrent = false;
   for (const rec of incoming) {
     await idbPut(rec);
@@ -866,12 +872,13 @@ export async function importBoardsJson(file) {
       overwrittenCurrent = true;
     }
   }
-  for (const ev of incomingEvents) await idbPut(ev);
-  for (const note of incomingDayNotes) await idbPut(note);
-  if (overwrittenCurrent) {
-    state.dirty = false;                      // current was replaced wholesale, as ensureCurrentValid reads it
-    renderBoard();
-  }
+  for (const square of incomingSquares) await idbPut(square);
+  // B179: every date the file put a square on re-syncs its board (no board, nothing to do).
+  const days = new Set(incomingSquares.map((square) => square.day));
+  for (const day of days) await syncDateMirror(day);
+  if (overwrittenCurrent) state.dirty = false;   // current was replaced wholesale, as ensureCurrentValid reads it
+  // The open board repaints when the file replaced it or a sync rewrote its mirror.
+  if (overwrittenCurrent || (state.current && days.has(state.current.cal))) renderBoard();
   if (listOpen) await renderListSurface();
   else if (state.isWide) renderPane();     // the rail re-reads; the sheet is already right
   showNotice(COPY.imported, 'import', UNDO_MS);

@@ -17,7 +17,7 @@ runs.
 | `desktop.js` | Desktop grammar, rail, actions, and PDF export | Yes |
 | `embed.js` | Embed mode, persistence namespace, and history behavior | No |
 | `frame-guard.js` | Allowed and denied iframe origins; starts its own parent-page server | No |
-| `future-event.js` | Future-dated events and linked-board lifecycle | No |
+| `future-event.js` | Future-dated squares and linked-board lifecycle | No |
 | `mobile.js` | Touch capture, gesture, layout, list, and board behavior | Yes |
 | `month.js` | Calendar month grid, navigation, and week selection | Yes |
 | `morning.js` | Morning board creation, landing, and carry-forward | No |

@@ -913,8 +913,11 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('the month view lives in #cal-view below the stack; the grid is Sunday-first 7-col (issue #191)',
     /id="cal-month"/.test(html) && /calMonth: document\.getElementById\('cal-month'\)/.test(app) &&
     /#cal-month \{/.test(css) && /grid-template-columns: repeat\(7, 1fr\)/.test(css));
-  ok('a day with events wears exactly one dot — --accent-page, a shade within the palette (issue #191)',
-    /\.mo-dot \{/.test(css) && /\.mo-dot \{[^}]*background: var\(--accent-page\);/.test(css));
+  // Re-pinned deliberately for issue #484 (B179): the squares are the day's
+  // events and the only marker, so the grid draws no dot; this replaces
+  // issue #191's pin of one --accent-page dot per event-bearing day.
+  ok('the month grid draws no dots — squares are the only marker (B179)',
+    !/\.mo-dot/.test(css) && !/mo-dot/.test(app) && !/calHasEvents/.test(app));
   // --- Issue #363 (B153): the top section deleted — the day head above the
   // --- weekly stack, the day-note squares INSIDE the day cards ---
   ok('the day head reads the weekday with the date and the ordinal suffix as superscript — "Friday, October 2nd" — a real element, the title card\'s title, centred, --ink-light ink at the boards\' title-card type — 15px/600/1.3, #anchor-title\'s very format, one line, the card scaling to it (issue #382: the owner\'s chat direction; supersedes B153\'s 21px display step for this title), no add control of its own (issues #341, #343, #363, #382)',
@@ -1003,7 +1006,7 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('the per-day pager pages a day beyond three squares and the "+" sits rightmost in the row (issue #363)',
     /CAL_NOTE_PER_DAY = 3/.test(app) &&
     /cal-notes-nav/.test(css) && /calDayNotePage\[day\.key\]/.test(app));
-  ok('calendar events no longer render in the weekly stack — the line factory and the calendar-side add/edit path are gone, the sync machinery untouched (issue #363)',
+  ok('the event line factory and its add/edit path stay gone — squares are the events (B179)',
     !/function makeCalLine/.test(app) && !/function addCalEvent/.test(app) &&
     !/function startCalLineEdit/.test(app) && !/cal-lines/.test(css) &&
     /export async function syncDateMirror/.test(app));
@@ -1056,10 +1059,12 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
   ok('today keeps its old flex share verbatim; the day\'s event line wraps at two (issue #170)',
     /\.cal-day\.today \{ flex: 1\.6 1 0; max-height: calc\(21\.05% - 9px\);/.test(css) &&
     /-webkit-line-clamp: 2/.test(css));
-  ok('the rail is the mockup-6 species: vertical label, date, lit dot',
+  // Re-pinned deliberately for issue #484 (B179): the squares are the only
+  // marker, so the rail dot is never lit — no .lit rule and no toggle.
+  ok('the rail is the mockup-6 species: vertical label, date, dim dot (never lit, B179)',
     /writing-mode: vertical-rl/.test(css) && /#cal-rail \.vlabel/.test(css) &&
     /#cal-rail \.cdot/.test(css) && /#cal-rail \.cdate/.test(css) &&
-    /\.cdot\.lit/.test(css));
+    !/\.cdot\.lit/.test(css) && !/classList\.toggle\('lit'/.test(app));
   ok('the collapsed rail reserves 40px from the frame at all times on wide (B99)',
     /const CAL_RAIL_W = 40;/.test(app) &&
     /const calW = calSqueeze \? CAL_PANEL_W : CAL_RAIL_W;/.test(app));
@@ -1124,8 +1129,46 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /const CAL_FUTURE_DAYS = 30;/.test(read('boards.js')) &&
     /calWindow\(CAL_FUTURE_DAYS \+ 1\)/.test(read('boards.js')) &&
     /function calWindow\(count = 7, start = new Date\(\)\)[\s\S]*?new Date\(first\.getFullYear\(\), first\.getMonth\(\), first\.getDate\(\) \+ i\)/.test(read('state.js')));
+  // Re-pinned deliberately for issue #484 (B179): the mirror's source is the
+  // date's squares, so the writer's signature names them.
   ok('the mirror has one writer and a self-recorded span (R5\'s line identity)',
-    /function syncMirror\(board, events\)/.test(app) && /board\.calReq = mirrored\.length/.test(app));
+    /function syncMirror\(board, squares\)/.test(app) && /board\.calReq = mirrored\.length/.test(app));
+  // The squares feed the mirror both ways (B179): squaresOf is the one reader,
+  // both mirror writers call it, and a square's commit re-syncs its date and
+  // repaints a board that is on screen — on the discard path and the save path.
+  const syncDateFn = (app.match(/export async function syncDateMirror\(dateKey\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  const writeThroughFn = (app.match(/export async function writeThroughRequirements\(board, before\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  const calEditFn = (app.match(/function startCalNoteEdit\(block, rec\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  ok('the squares are the events: squaresOf is the one reader of a date\'s squares (syncDateMirror and writeThroughRequirements both call it), and a square\'s commit re-syncs its date\'s mirror then repaints the visible board, on the discard and the save path alike (B179)',
+    /export function squaresOf\(all, dateKey\)/.test(read('state.js')) &&
+    /squaresOf\(/.test(syncDateFn) && /squaresOf\(/.test(writeThroughFn) &&
+    (calEditFn.match(/await syncDateMirror\(rec\.day\);\s*repaintVisibleBoard\(\);/g) || []).length === 2,
+    [syncDateFn, writeThroughFn, calEditFn].map(f => f.slice(0, 50)).join(' | '));
+  // The old events become squares (B179): once at the launch, and on every
+  // backup import, before anything reads the mirror's squares.
+  const launchFn = (app.match(/async function launchTodayBoard\(today\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  const importFn = (app.match(/export async function importBoardsJson\(file\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  const fromEventFn = (app.match(/export function squareFromEvent\(ev\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  ok('an old event converts to a square whose id sorts before every app-made one (rem-0, the raw createdAt in base 36 padded to 9, then the event id; a missing createdAt is 0, never makeRecord\u2019s now), its text carried untrimmed, and an event with no calKey date converts to nothing (B179)',
+    /'rem-0' \+ [^;]*\.padStart\(9, '0'\) \+ '-' \+ ev\.id/.test(fromEventFn) &&
+    /Number\.isFinite\(ev\.createdAt\)/.test(fromEventFn) && !/makeRecord\('event'/.test(fromEventFn) &&
+    /if \(!isDateKey\(ev\.date\)\) return null;/.test(fromEventFn) &&
+    /next: typeof ev\.text === 'string' \? ev\.text : ''/.test(fromEventFn),
+    fromEventFn.slice(0, 80));
+  const detachAt = launchFn.indexOf('state.current = null');
+  const flushAt = launchFn.indexOf('flushSave()');
+  const convertAt = launchFn.indexOf('await convertLegacyEvents()');
+  ok('the launch converts old events AFTER the ghost detach and flushSave (B131) and BEFORE it reads the store for the linked board, and no longer seeds calReq from the events (B179)',
+    detachAt > -1 && detachAt < flushAt && flushAt < convertAt &&
+    convertAt < launchFn.indexOf('await idbGetAll()') && convertAt < launchFn.indexOf('ensureLinkedBoard(') &&
+    !/calEventsOf/.test(launchFn),
+    JSON.stringify({ detachAt, flushAt, convertAt }));
+  ok('a backup import converts the device\u2019s events before its first write, writes the file\u2019s events as squares (never as events), and re-syncs the dates they land on (B179)',
+    /await convertLegacyEvents\(\)/.test(importFn) &&
+    importFn.indexOf('await convertLegacyEvents()') < importFn.indexOf('await idbPut(') &&
+    /\.map\(squareFromEvent\)/.test(importFn) && !/idbPut\(ev\)/.test(importFn) &&
+    /await syncDateMirror\(/.test(importFn),
+    importFn.slice(0, 60));
   ok('the linked board\u2019s title seat is derived at render, pinned: "Today\u2019s To Do" + the date line off the cal key (B133, issue #273)',
     /function ensureLinkedBoard/.test(app) &&
     /const LINKED_TITLE = "Today's To Do"/.test(app) &&

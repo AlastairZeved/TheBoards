@@ -1518,8 +1518,10 @@ run(async () => {
   // overwritten by the file's copy, new ids are added, boards and events the
   // file never mentions survive. A v1 file's events (which v1 swept into
   // `boards`) are salvaged. A file that is not the app's shape writes nothing
-  // and says so.
-  console.log('\n[D21b] JSON backup round-trip (issue #140, B92; v2 payload, B123)');
+  // and says so. An event is a square (B179): the import writes each incoming
+  // event as the square it converts to, the days it lands on re-sync their
+  // boards, and importing the same file twice adds nothing.
+  console.log('\n[D21b] JSON backup round-trip (issue #140, B92; v2 payload, B123; events arrive as squares, B179)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
     // Fixture: the open board stays as-is; a second board carries a note pair
@@ -1536,6 +1538,8 @@ run(async () => {
       const ev = newCalEvent('2026-09-16', 'BACKUP EVENT');
       ev.id = 'cev1';
       await idbPut(ev);
+      // A legacy event with no `createdAt` (it reads as 0, so it sorts first).
+      await idbPut({ id: 'nocr1', date: '2026-09-19', text: 'NO CREATED AT', state: 'active' });
       await idbPut({ id: 'rem-backup1', rem: 'day-note text', next: 'second line', day: '2026-09-17' });
       renderPane();
     });
@@ -1605,6 +1609,7 @@ run(async () => {
         overwritten: all.find(b => b.id === (all.find(x => (x.notes || []).some(n => n.id === 'bn1')) || {}).id),
         fresh: all.find(b => b.id === 'imported-board-c'),
         ev: all.find(r => r.id === 'cev1'),
+        evSquares: all.filter(r => r.id.endsWith('-cev1')),
         dayNote: all.find(r => r.id === 'rem-backup1'),
       };
     });
@@ -1616,14 +1621,46 @@ run(async () => {
        JSON.stringify(after.overwritten && after.overwritten.title));
     ok('the merge is exact: nothing lost, nothing duplicated', after.count === countBefore + 1,
        String(after.count) + ' vs ' + countBefore);
-    ok('the calendar event survived the v2 import round-trip',
-       !!after.ev && after.ev.text === 'BACKUP EVENT' && after.ev.date === '2026-09-16' &&
-       after.ev.state === 'active', JSON.stringify(after.ev || {}));
+    // Re-pinned deliberately for issue #484 (B179): the squares are the events,
+    // so the file's `cev1` lands as the square it converts to (no event record
+    // is written) and keeps its text and date.
+    ok('the calendar event survived the v2 import round-trip as a square on its date (B179)',
+       !after.ev && after.evSquares.length === 1 && after.evSquares[0].next === 'BACKUP EVENT' &&
+       after.evSquares[0].day === '2026-09-16' && after.evSquares[0].rem === '',
+       JSON.stringify(after.evSquares));
     ok('the day-note survived the v2 import round-trip', !!after.dayNote &&
        after.dayNote.rem === 'day-note text' && after.dayNote.next === 'second line' &&
        after.dayNote.day === '2026-09-17', JSON.stringify(after.dayNote || {}));
     ok('catStamp survives board import unchanged', after.overwritten.catStamp === 12345,
        String(after.overwritten && after.overwritten.catStamp));
+
+    // The same file again: an event's square has a deterministic id (the
+    // device's own copy converted to it, the file's copy overwrote it), so a
+    // second import adds nothing. A change event needs a changed file list and
+    // the input is cleared only when the import tab is tapped (menus.js), so the
+    // test clears it as that tap would; the first import's notice is hidden
+    // first, and its coming back proves the second import ran to the end.
+    await page.evaluate(() => {
+      hideToast();
+      document.getElementById('import-file').value = '';
+    });
+    await page.setInputFiles('#import-file', importPath);
+    await page.waitForTimeout(500);
+    const twice = await page.evaluate(async () => {
+      const all = await idbGetAll();
+      const t = document.querySelector('#toast');
+      return {
+        count: all.length,
+        evSquares: all.filter(r => r.id.endsWith('-cev1')).length,
+        nocr: all.filter(r => r.id.endsWith('-nocr1')).map(r => r.id),
+        noticed: t.classList.contains('show') && /Boards imported/.test(t.textContent),
+      };
+    });
+    ok('the second import ran: its notice came back after being hidden', twice.noticed);
+    ok('importing the same file twice makes no duplicates: the same record count, one square for the event (B179)',
+       twice.count === after.count && twice.evSquares === 1, JSON.stringify(twice) + ' vs ' + after.count);
+    ok('an event with no createdAt converts to one square with the same id on every import (B179)',
+       JSON.stringify(twice.nocr) === JSON.stringify(['rem-0000000000-nocr1']), JSON.stringify(twice.nocr));
 
     // A file that is not the app's shape writes nothing and says so.
     const badPath = path.join(os.tmpdir(), 'boards-import-bad.json');
@@ -1671,6 +1708,9 @@ run(async () => {
         { id: 'v1ev1', date: '2026-10-01', text: 'salvaged one', state: 'active', createdAt: 5 },
         { id: 'v1ev2', date: 'not-a-date', text: 'bad date', state: 'active', createdAt: 6 },
         { id: 'v1ev3', date: '2026-10-02', text: '  trimmed  ', state: 'complete', createdAt: 7 },
+        // Two events on one date whose ids sort AGAINST their creation order.
+        { id: 'zz-made-first', date: '2026-10-03', text: 'made first', state: 'active', createdAt: 8 },
+        { id: 'aa-made-second', date: '2026-10-03', text: 'made second', state: 'active', createdAt: 9 },
       ],
     }));
     await page.setInputFiles('#import-file', v1Path);
@@ -1681,18 +1721,53 @@ run(async () => {
     }));
     const salv = await page.evaluate(async () => {
       const all = await idbGetAll();
-      return { board: all.find(r => r.id === 'v1board'), ev1: all.find(r => r.id === 'v1ev1'),
-               ev2: all.find(r => r.id === 'v1ev2'), ev3: all.find(r => r.id === 'v1ev3') };
+      return { board: all.find(r => r.id === 'v1board'), sq1: await idbGet('rem-0000000005-v1ev1'),
+               sq2: all.filter(r => r.id.endsWith('-v1ev2')), ev2: await idbGet('v1ev2'),
+               sq3: all.find(r => r.id.endsWith('-v1ev3')),
+               order: all.filter(r => r.day === '2026-10-03').sort((a, b) => (a.id < b.id ? -1 : 1)).map(r => r.next),
+               events: all.filter(r => typeof r.date === 'string' && r.title === undefined).length };
     });
     ok('v1 salvage: the file\'s board imports as a board', !!salv.board && salv.board.title === 'V1 BOARD',
        JSON.stringify(salv.board || {}));
-    ok('v1 salvage: the event record swept into boards is restored as an event',
-       !!salv.ev1 && salv.ev1.date === '2026-10-01' && salv.ev1.text === 'salvaged one' &&
-       salv.ev1.state === 'active', JSON.stringify(salv.ev1 || {}));
-    ok('v1 salvage: an event with a non-date `date` is dropped at the door', !salv.ev2);
-    ok('v1 salvage: event fields are coerced (text trimmed, complete state kept)',
-       !!salv.ev3 && salv.ev3.text === 'trimmed' && salv.ev3.state === 'complete',
-       JSON.stringify(salv.ev3 || {}));
+    // Re-pinned deliberately for issue #484 (B179): the squares are the events,
+    // so a salvaged v1 event is restored as the square it converts to (its id
+    // carries the base-36 createdAt, 5), not as an event record.
+    ok('v1 salvage: the event record swept into boards is restored as a square on its date (B179)',
+       !!salv.sq1 && salv.sq1.next === 'salvaged one' && salv.sq1.day === '2026-10-01',
+       JSON.stringify(salv.sq1 || {}));
+    // Re-pinned deliberately for issue #484 (B179): a dropped event leaves
+    // neither an event record nor a square.
+    ok('v1 salvage: an event with a non-date `date` is dropped at the door — no square, no event (B179)',
+       salv.sq2.length === 0 && salv.ev2 === undefined, JSON.stringify(salv.sq2));
+    // Re-pinned deliberately for issue #484 (B179): squares have no done state,
+    // so a complete event comes over as an ordinary square with no `state`.
+    ok('v1 salvage: event fields are coerced (text trimmed) and the done state is not carried (B179)',
+       !!salv.sq3 && salv.sq3.next === 'trimmed' && !('state' in salv.sq3),
+       JSON.stringify(salv.sq3 || {}));
+    ok('v1 salvage: no event record is left in the store (B179)', salv.events === 0, String(salv.events));
+    // Square order is id order, so the converted ids must carry the creation
+    // order the mirror's lines had: createdAt first, the event id only as the tie-break.
+    ok('v1 salvage: events on one date keep their creation order whatever their ids (B179)',
+       JSON.stringify(salv.order) === JSON.stringify(['made first', 'made second']), JSON.stringify(salv.order));
+
+    // B179: an imported event for TODAY re-syncs today's board — it lands as a
+    // chip. Last, so no earlier count moves.
+    const todayKey = await page.evaluate(() => calKey(new Date()));
+    const todayPath = path.join(os.tmpdir(), 'boards-import-today.json');
+    fs.writeFileSync(todayPath, JSON.stringify({ app: 'the-boards', version: 2, boards: [],
+      calendarEvents: [{ id: 'todayev', date: todayKey, text: 'IMPORTED TODAY', state: 'active', createdAt: Date.now() }] }));
+    await page.setInputFiles('#import-file', todayPath);
+    await page.waitForTimeout(500);
+    const todayBoard = await page.evaluate(async () => {
+      const key = calKey(new Date());
+      return (await idbGetAll()).find(r => r.cal === key);
+    });
+    ok('an imported event for today re-syncs today\'s board: it lands as a chip (B179)',
+       !!todayBoard && todayBoard.requirements.split('\n').includes('IMPORTED TODAY') && todayBoard.calReq >= 1,
+       JSON.stringify(todayBoard && { req: todayBoard.requirements, calReq: todayBoard.calReq }));
+    ok('…and the open board repainted it in place, no reload (B179)',
+       await page.evaluate(() => [...document.querySelectorAll('#anchor-requirements .req-square')]
+         .some(n => n.textContent === 'IMPORTED TODAY')));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
@@ -2088,11 +2163,12 @@ run(async () => {
   }
 
   // ---- D25. the mirror writes through both ways (issue #154, B106) ---------
-  // Board-side: editing a span line updates the event record (issue #363:
-  // the calendar no longer renders lines, so the write-through is verified at
-  // RECORD level); deleting a span line deletes the event and resyncs; hand
-  // lines below the span are never touched; board additions stay hand lines.
-  console.log('\n[D25] Mirror: board-side Requirements edits write through (issue #154, B106)');
+  // Board-side: editing a span line updates the square record (B179: the
+  // day-note squares ARE the events, so the write-through is verified at
+  // RECORD level and on the calendar's own today body); deleting a span line
+  // deletes the square and resyncs; hand lines below the span are never
+  // touched; board additions stay hand lines.
+  console.log('\n[D25] Mirror: board-side Requirements edits write through (issue #154, B106; B179)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
     // Seed the linked pair, then reboot onto it — an empty boot made its own
@@ -2100,18 +2176,18 @@ run(async () => {
     // auto-creates today's linked To Do (B107/B108); seeding a SECOND board
     // linked to the same day made calBoardOf's pick depend on IDB key order
     // (uuid ids), so the morning lifecycle could land on the wrong board and
-    // its syncMirror could rebuild the span in random event order. Start from
-    // a clean store: exactly one linked pair, events ordered by createdAt.
+    // its syncMirror could rebuild the span in random square order. Start from
+    // a clean store: exactly one linked pair, squares ordered by id (rem-a1 <
+    // rem-a2: square order IS id order).
     await page.evaluate(async () => {
       for (const r of await idbGetAll()) await idbDelete(r.id);
       const key = calKey(new Date());
       const b = newBoardRecord();
       b.title = '09/02/26 To Do'; b.cal = key; b.calReq = 2;
       b.requirements = 'mirror one\nmirror two\nhand line';
-      const now = Date.now();
-      const ev1 = newCalEvent(key, 'mirror one'); ev1.createdAt = now - 1000;
-      const ev2 = newCalEvent(key, 'mirror two'); ev2.createdAt = now;
-      await idbPut(b); await idbPut(ev1); await idbPut(ev2);
+      await idbPut(b);
+      await idbPut({ id: 'rem-a1', rem: '', next: 'mirror one', day: key });
+      await idbPut({ id: 'rem-a2', rem: '', next: 'mirror two', day: key });
     });
     // Reboot onto the seeded store — an empty boot made its own board.
     await page.reload();
@@ -2141,31 +2217,30 @@ run(async () => {
     });
     await page.evaluate(() => document.getElementById('anchor-requirements').blur());
     await page.waitForTimeout(500);
+    // Re-pinned deliberately for issue #484 (B179): the squares are the events,
+    // so the write-through lands on the day-note records (`day`/`next`).
     const afterEdit = await page.evaluate(async () => {
       const key = calKey(new Date());
       const all = await idbGetAll();
       const board = all.find(r => r.cal === key);
-      const evs = all.filter(r => r.date === key).map(r => r.text).sort();
-      return { evs, req: board.requirements, calReq: board.calReq };
+      const sqs = all.filter(r => r.day === key).map(r => r.next).sort();
+      return { sqs, req: board.requirements, calReq: board.calReq };
     });
-    ok('board-side span edit writes through to the event record',
-       JSON.stringify(afterEdit.evs) ===
+    ok('board-side span edit writes through to the square record',
+       JSON.stringify(afterEdit.sqs) ===
        JSON.stringify(['mirror one EDITED', 'mirror two']),
        JSON.stringify(afterEdit));
     ok('hand line below the span survives the write-through',
        afterEdit.req === 'mirror one EDITED\nmirror two\nhand line' &&
        afterEdit.calReq === 2, JSON.stringify(afterEdit));
 
-    // Issue #363: nothing renders in the weekly stack — the write-through is
-    // proven at RECORD level (step 1 above). Expand the panel anyway and
-    // confirm the face carries no line and no event text anywhere.
+    // Re-pinned deliberately for issue #484 (B179): the squares ARE the events,
+    // so the calendar's own today body carries the board-side edit.
     await page.evaluate(() => { document.getElementById('cal-rail').click(); });
     await page.waitForTimeout(400);
-    ok('no event line renders in the weekly stack — the board-side edit stays record-level (issue #363)',
-       await page.evaluate(() =>
-         document.querySelectorAll('.cal-line').length === 0 &&
-         ![...document.querySelectorAll('.cal-day .cal-note-text')]
-           .some(b => b.textContent === 'mirror one EDITED')));
+    ok('the edited square shows in the calendar\'s today body (B179: squares are the events)',
+       await page.evaluate(() => [...document.querySelectorAll('#cal-today-board .cal-note-text')]
+         .map(b => b.textContent).join('|') === 'mirror one EDITED|mirror two'));
 
     // 2. Back on the board, delete the SECOND span line.
     await page.evaluate(() => { document.getElementById('cal-back').click(); });
@@ -2177,22 +2252,32 @@ run(async () => {
     });
     await page.evaluate(() => document.getElementById('anchor-requirements').blur());
     await page.waitForTimeout(500);
+    // Re-pinned deliberately for issue #484 (B179): the squares are the events,
+    // so the deletion is read off the day-note records (`day`/`next`).
     const afterDel = await page.evaluate(async () => {
       const key = calKey(new Date());
       const all = await idbGetAll();
       const board = all.find(r => r.cal === key);
-      const evs = all.filter(r => r.date === key).map(r => r.text).sort();
-      return { evs, req: board.requirements, calReq: board.calReq };
+      const sqs = all.filter(r => r.day === key).map(r => r.next).sort();
+      return { sqs, req: board.requirements, calReq: board.calReq };
     });
-    ok('board-side span deletion deletes the mirrored event and resyncs',
-       JSON.stringify(afterDel.evs) === JSON.stringify(['mirror one EDITED']),
+    ok('board-side span deletion deletes the mirrored square and resyncs',
+       JSON.stringify(afterDel.sqs) === JSON.stringify(['mirror one EDITED']),
        JSON.stringify(afterDel));
     ok('the span shrinks with the deletion; the hand line never moves',
        afterDel.req === 'mirror one EDITED\nhand line' && afterDel.calReq === 1,
        JSON.stringify(afterDel));
+    // Re-expand the panel: the deleted line's square is gone from the calendar too.
+    await page.evaluate(() => { document.getElementById('cal-rail').click(); });
+    await page.waitForTimeout(400);
+    ok('the board-side deletion took the square off the calendar (B179)',
+       await page.evaluate(() => [...document.querySelectorAll('#cal-today-board .cal-note-text')]
+         .map(b => b.textContent).join('|') === 'mirror one EDITED'));
+    await page.evaluate(() => { document.getElementById('cal-back').click(); });
+    await page.waitForTimeout(400);
 
     // 3. A board-side ADDITION lands after the span as a hand line (B106):
-    // no event is created, the span does not grow.
+    // no square is created, the span does not grow.
     await page.evaluate(() => document.getElementById('anchor-requirements').focus());
     await page.evaluate(() => {
       document.getElementById('anchor-requirements').textContent =
@@ -2200,15 +2285,18 @@ run(async () => {
     });
     await page.evaluate(() => document.getElementById('anchor-requirements').blur());
     await page.waitForTimeout(500);
+    // Re-pinned deliberately for issue #484 (B179): the squares are the events,
+    // so "no record created" counts day-note records (`day`), not event records
+    // (`date`).
     const afterAdd = await page.evaluate(async () => {
       const key = calKey(new Date());
       const all = await idbGetAll();
       const board = all.find(r => r.cal === key);
-      return { evCount: all.filter(r => r.date === key).length,
+      return { sqCount: all.filter(r => r.day === key).length,
                calReq: board.calReq, req: board.requirements };
     });
-    ok('a board-side addition is a hand line — no event, span unchanged',
-       afterAdd.evCount === 1 && afterAdd.calReq === 1 &&
+    ok('a board-side addition is a hand line — no square, span unchanged',
+       afterAdd.sqCount === 1 && afterAdd.calReq === 1 &&
        afterAdd.req === 'mirror one EDITED\nhand line\nnew hand line',
        JSON.stringify(afterAdd));
 
@@ -2223,7 +2311,7 @@ run(async () => {
   // ALREADY-VISIBLE surface updates in place, no navigation, in both
   // directions. With the repaint reverted each block FAILS on its first
   // assertion (verified on this branch).
-  console.log('\n[D25b] Sync repaints the sibling surface already on screen (issue #305)');
+  console.log('\n[D25b] Sync repaints the sibling surface already on screen (issue #305; B179)');
   {
     const { ctx, page, errors } = await newDesktopPage(browser);
     // Seed the linked pair exactly as D25 does, reboot onto it.
@@ -2233,10 +2321,9 @@ run(async () => {
       const b = newBoardRecord();
       b.title = '09/02/26 To Do'; b.cal = key; b.calReq = 2;
       b.requirements = 'mirror one\nmirror two\nhand line';
-      const now = Date.now();
-      const ev1 = newCalEvent(key, 'mirror one'); ev1.createdAt = now - 1000;
-      const ev2 = newCalEvent(key, 'mirror two'); ev2.createdAt = now;
-      await idbPut(b); await idbPut(ev1); await idbPut(ev2);
+      await idbPut(b);
+      await idbPut({ id: 'rem-a1', rem: '', next: 'mirror one', day: key });
+      await idbPut({ id: 'rem-a2', rem: '', next: 'mirror two', day: key });
     });
     await page.reload();
     // Re-pinned deliberately for issue #393 (same as D25): the anchor's read
@@ -2254,9 +2341,11 @@ run(async () => {
     await page.waitForTimeout(400);
 
     // Block 1 (board → calendar): commit a Requirements edit with the panel
-    // already showing; the EVENT RECORD must write through WITHOUT any
-    // navigation (issue #363: the record is the artifact — lines no longer
-    // render anywhere).
+    // already showing; the SQUARE RECORD must write through, and the calendar's
+    // today body must repaint it in place, WITHOUT any navigation.
+    // Re-pinned deliberately for issue #484 (B179): the squares are the events,
+    // so the write-through lands on the day-note records and the today body
+    // shows it.
     await page.evaluate(() => document.getElementById('anchor-requirements').focus());
     await page.evaluate(() => {
       document.getElementById('anchor-requirements').textContent =
@@ -2264,26 +2353,27 @@ run(async () => {
     });
     await page.evaluate(() => document.getElementById('anchor-requirements').blur());
     await page.waitForTimeout(800);
-    ok('the board-side edit writes through to the event RECORD while the panel is already open',
+    ok('the board-side edit writes through to the square RECORD while the panel is already open',
        await page.evaluate(async () => {
          const key = calKey(new Date());
          const all = await idbGetAll();
-         const evs = all.filter(r => r.date === key).map(r => r.text).sort();
-         return JSON.stringify(evs) === JSON.stringify(['mirror one D25B', 'mirror two']);
+         const sqs = all.filter(r => r.day === key).map(r => r.next).sort();
+         return JSON.stringify(sqs) === JSON.stringify(['mirror one D25B', 'mirror two']);
        }),
        'records: ' + await page.evaluate(async () =>
-         JSON.stringify((await idbGetAll()).filter(r => r.date === calKey(new Date())).map(r => r.text))));
-    ok('no event line rendered anywhere under the repaint (issue #363)',
-       await page.evaluate(() => document.querySelectorAll('.cal-line').length === 0));
+         JSON.stringify((await idbGetAll()).filter(r => r.day === calKey(new Date())).map(r => r.next))));
+    ok('the calendar\'s today body repainted the edited square in place — no navigation (B179)',
+       await page.evaluate(() => [...document.querySelectorAll('#cal-today-board .cal-note-text')]
+         .map(b => b.textContent).join('|') === 'mirror one D25B|mirror two'));
     ok('the panel did not close under the repaint (no navigation happened)',
        await page.evaluate(() =>
          document.getElementById('cal-view').classList.contains('panel') &&
          !document.getElementById('cal-rail').hidden === false));
 
-    // Block 2 (calendar → board): commit a day-note add through the card's
-    // "+" with the anchor already showing beside the panel; the new square is
-    // in the DOM immediately (paintCal is synchronous, issue #363) and the
-    // board anchor is untouched — day notes never enter the Requirements span.
+    // Block 2 (calendar → board): commit a square add through the band's "+"
+    // with the anchor already showing beside the panel; the new square is in
+    // the DOM immediately (paintCal is synchronous, issue #363) and its commit
+    // joins the visible board's mirror, repainted in place (B179).
     const plus = await page.evaluate(() => {
       const r = document.getElementById('cal-band-add').getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
@@ -2308,23 +2398,414 @@ run(async () => {
            r.day === calKey(new Date()));
        }));
     // Re-pinned deliberately for issue #393: the anchor's READ state renders
-    // the mirror's span as squares now (repainted in place after the block-1
-    // commit), so the plain textContent pin could no longer hold — pin the
-    // squares' own texts and the hand line instead (the day-note add never
-    // touched the span either way).
+    // the mirror's span as squares, so the plain textContent pin could no
+    // longer hold — pin the squares' own texts and the hand line instead.
     const anchorRead = await page.evaluate(() => {
       const anchor = document.getElementById('anchor-requirements');
       const sqs = [...anchor.querySelectorAll('.req-square')].map(n => n.textContent);
       const hand = [...anchor.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent);
       return { sqs, hand };
     });
-    ok('the day-note add never touched the requirements anchor (record-level isolation)',
-       JSON.stringify(anchorRead.sqs) === JSON.stringify(['mirror one D25B', 'mirror two']) &&
-       JSON.stringify(anchorRead.hand) === JSON.stringify(['hand line']),
-       JSON.stringify(anchorRead));
+    // Re-pinned deliberately for issue #484 (B179): a square added for today now joins the visible board's mirror
+    ok('the added square joined the visible board as a third chip, the hand line kept (B179)',
+       JSON.stringify(anchorRead.sqs) === JSON.stringify(['mirror one D25B', 'mirror two', 'D25B square']) &&
+       JSON.stringify(anchorRead.hand) === JSON.stringify(['hand line']), JSON.stringify(anchorRead));
     ok('the B133 filled class survives the repaint',
        await page.evaluate(() =>
          document.getElementById('anchor-requirements').classList.contains('filled')));
+
+    // Blocks 3 and 4 (calendar → board, edit and delete): tap a today-body
+    // square with the real mouse, change its text, blur; the visible chips and
+    // the board record follow the square, no navigation.
+    const tapSquare = async (text) => {
+      const box = await page.evaluate((t) => {
+        const n = [...document.querySelectorAll('#cal-today-board .cal-note')]
+          .find(x => x.querySelector('.cal-note-text').textContent === t);
+        const r = n.getBoundingClientRect();
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      }, text);
+      await page.mouse.click(box.x, box.y);
+      await page.waitForTimeout(150);              // the caret re-assert lands on a setTimeout(0)
+    };
+    const setEditingSquare = (text) => page.evaluate((t) => {
+      [...document.querySelectorAll('#cal-today-board .cal-note-text')]
+        .find(b => b.hasAttribute('contenteditable')).textContent = t;
+    }, text);
+    const mirrorState = () => page.evaluate(async () => {
+      const key = calKey(new Date());
+      const all = await idbGetAll();
+      const board = all.find(r => r.cal === key);
+      return {
+        chips: [...document.querySelectorAll('#anchor-requirements .req-square')].map(n => n.textContent),
+        req: board.requirements, calReq: board.calReq,
+        gone: !all.some(r => r.next === 'D25B square'),
+      };
+    });
+
+    // Block 3: edit a square.
+    await tapSquare('mirror two');
+    await setEditingSquare('mirror two VIA-CAL');
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    await page.waitForTimeout(800);
+    const viaCal = await mirrorState();
+    ok('a calendar-side square edit repaints the visible chip in place (B179)',
+       JSON.stringify(viaCal.chips) ===
+       JSON.stringify(['mirror one D25B', 'mirror two VIA-CAL', 'D25B square']),
+       JSON.stringify(viaCal));
+    ok('the calendar-side edit is on the board record too (B179)',
+       viaCal.req === 'mirror one D25B\nmirror two VIA-CAL\nD25B square\nhand line' &&
+       viaCal.calReq === 3, JSON.stringify(viaCal));
+
+    // Block 4: empty a square (B8 discards it).
+    await tapSquare('D25B square');
+    await setEditingSquare('');
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    await page.waitForTimeout(800);
+    const viaCalDel = await mirrorState();
+    ok('emptying a square in the calendar deletes it and its chip (B8, B179)',
+       viaCalDel.gone &&
+       JSON.stringify(viaCalDel.chips) === JSON.stringify(['mirror one D25B', 'mirror two VIA-CAL']) &&
+       viaCalDel.req === 'mirror one D25B\nmirror two VIA-CAL\nhand line' &&
+       viaCalDel.calReq === 2, JSON.stringify(viaCalDel));
+
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  // ---- D25c. old events become squares at boot (issue #484, B179) ------------
+  // The squares ARE the events, so a store written before the merge still holds
+  // event records the mirror no longer reads. The launch converts each one,
+  // once, into a square on its date whose id sorts ahead of every app-made
+  // square: the chips already on a board keep their places, the date's native
+  // squares join after them, hand lines stay last, and a past board is not
+  // rewritten (its NEXT write finds the chip's square). A second launch finds
+  // nothing left to convert.
+  console.log('\n[D25c] Old events become squares at boot; every chip stays put (issue #484, B179)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    // A pre-merge store, clean first (the first boot made today's own board,
+    // see D25): today's synced board and its event, a native square on the same
+    // date, yesterday's board and its event.
+    const seed = await page.evaluate(async () => {
+      for (const r of await idbGetAll()) await idbDelete(r.id);
+      const key = calKey(new Date());
+      const yd = new Date(); yd.setDate(yd.getDate() - 1);
+      const yk = calKey(yd);
+      const b = newBoardRecord();
+      b.title = '10/19/26 To Do'; b.cal = key; b.calReq = 1;
+      b.requirements = 'legacy chip\nhand line';
+      const e = newCalEvent(key, 'legacy chip'); e.createdAt = Date.now();
+      const yb = newBoardRecord();
+      yb.title = '10/18/26 To Do'; yb.cal = yk; yb.calReq = 1;
+      yb.requirements = 'old chip';
+      const ye = newCalEvent(yk, 'old chip');
+      await idbPut(b); await idbPut(e);
+      await idbPut({ id: 'rem-z-native', rem: '', next: 'native square', day: key });
+      await idbPut(yb); await idbPut(ye);
+      return { key, yk, b: b.id, yb: yb.id, e: e.id };
+    });
+    // The landed state: boot is on today's board and no event record is left.
+    // A timeout is the failure (the launch never converted), not a stale read.
+    // waitForFunction does not await a promise its predicate returns (a promise
+    // is truthy), so the store read parks its answer on the window and the
+    // predicate stays synchronous.
+    const launched = () => page.waitForFunction(() => {
+      if (!state.current || state.current.cal !== calKey(new Date())) return false;
+      idbGetAll().then((all) => {
+        window.noEventsLeft = !all.some(r => typeof r.date === 'string' && r.title === undefined);
+      });
+      return window.noEventsLeft === true;
+    }, null, { timeout: 10000, polling: 100 });
+    const read = () => page.evaluate(async (s) => {
+      const all = await idbGetAll();
+      const t = all.find(r => r.id === s.b), y = all.find(r => r.id === s.yb);
+      return {
+        events: all.filter(r => typeof r.date === 'string' && r.title === undefined).length,
+        sq: all.find(r => r.id.endsWith('-' + s.e)),
+        req: t.requirements, calReq: t.calReq,
+        yReq: y.requirements, yCalReq: y.calReq,
+        squareCount: all.filter(r => typeof r.day === 'string' && typeof r.rem === 'string').length,
+      };
+    }, seed);
+
+    await page.reload();
+    await launched();
+    await page.waitForTimeout(700);                   // the sync and the swap settle
+    const got = await read();
+    ok('no event record survives the boot conversion', got.events === 0, JSON.stringify(got));
+    ok('the event came back as a square on its date, id rem-0…-<event id>',
+       got.sq && got.sq.next === 'legacy chip' && got.sq.day === seed.key && got.sq.rem === '' &&
+       /^rem-0[0-9a-z]{9}-/.test(got.sq.id), JSON.stringify(got.sq || {}));
+    ok('today: the converted chip keeps its place, the native square joins after it, the hand line stays last',
+       got.req === 'legacy chip\nnative square\nhand line' && got.calReq === 2,
+       JSON.stringify({ req: got.req, calReq: got.calReq }));
+    ok('yesterday\'s board is byte-identical (past boards are not rewritten)',
+       got.yReq === 'old chip' && got.yCalReq === 1,
+       JSON.stringify({ yReq: got.yReq, yCalReq: got.yCalReq }));
+    await page.click('#cal-rail');
+    await page.waitForTimeout(400);
+    const todayBodyTexts = await page.evaluate(() =>
+      [...document.querySelectorAll('#cal-today-board .cal-note-text')].map(n => n.textContent).join('|'));
+    ok('the calendar shows today\'s squares in the same order',
+       todayBodyTexts === 'legacy chip|native square', todayBodyTexts);
+
+    await page.reload();
+    await launched();
+    await page.waitForTimeout(700);
+    const reloaded = await read();
+    ok('a second reload converts nothing more and moves nothing',
+       reloaded.req === got.req && reloaded.calReq === got.calReq &&
+       reloaded.yReq === got.yReq && reloaded.squareCount === got.squareCount,
+       JSON.stringify({ reloaded: { req: reloaded.req, calReq: reloaded.calReq, n: reloaded.squareCount },
+                        got: { req: got.req, calReq: got.calReq, n: got.squareCount } }));
+
+    // The point of converting: the NEXT write on a past board keeps its chip.
+    // Editing yesterday's hand lines runs the write-through, which reads the
+    // date's squares; the converted square is the span's line. Unconverted, the
+    // span line would pair with no square and the write would drop it.
+    await page.evaluate((id) => swapBoard(id), seed.yb);
+    await page.waitForTimeout(700);                   // SWAP_MS + render
+    await page.evaluate(() => document.getElementById('anchor-requirements').focus());
+    await page.evaluate(() => {
+      document.getElementById('anchor-requirements').textContent = 'old chip\nhand added';
+    });
+    await page.evaluate(() => document.getElementById('anchor-requirements').blur());
+    await page.waitForTimeout(800);
+    const edited = await read();
+    ok('the next write on a past board keeps its chip: the converted square is the span\'s line (B179)',
+       edited.yReq === 'old chip\nhand added' && edited.yCalReq === 1 &&
+       edited.squareCount === got.squareCount,
+       JSON.stringify({ yReq: edited.yReq, yCalReq: edited.yCalReq, n: edited.squareCount }));
+
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  // ---- D25d. the merged mirror's edges (issue #484, B179) --------------------
+  // The squares ARE the events; three edges of the merge:
+  //   1. a board that was never synced (no `calReq`) gets its squares ON TOP of
+  //      the lines it already holds — every one of them is the reader's hand;
+  //   2. a square added while ANOTHER board is open lands on its own date's
+  //      board record and leaves the open board alone;
+  //   3. a board-side edit never reaches a square beyond the board's own span
+  //      (a past board whose date gained a square after its last sync), and
+  //      deleting one of its hand lines never splices such a square in;
+  //   4. a square is ONE mirror line: a pasted two-line square mirrors as a
+  //      single line, however many times its date re-syncs.
+  console.log('\n[D25d] Edges of the merged mirror (issue #484, B179)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    const ids = await page.evaluate(async () => {
+      for (const r of await idbGetAll()) await idbDelete(r.id);
+      const key = calKey(new Date());
+      const yd = new Date(); yd.setDate(yd.getDate() - 1);
+      const yk = calKey(yd);
+      const t = newBoardRecord();                     // today's, never synced: no calReq
+      t.title = 'TODAY'; t.cal = key; t.requirements = 'hand only';
+      const y = newBoardRecord();                     // yesterday's, span of one
+      y.title = 'YESTERDAY'; y.cal = yk; y.calReq = 1; y.requirements = 'y one\ny hand';
+      const p = newBoardRecord();                     // plain, newest: boot opens it
+      p.title = 'PLAIN'; p.updatedAt = Date.now() + 60000;
+      await idbPut(t); await idbPut(y); await idbPut(p);
+      await idbPut({ id: 'rem-e1', rem: '', next: 'first square', day: key });
+      await idbPut({ id: 'rem-e2', rem: '', next: 'y one', day: yk });
+      await idbPut({ id: 'rem-e3', rem: '', next: 'y two', day: yk });
+      return { t: t.id, y: y.id, p: p.id, yk };
+    });
+    await page.reload();
+    await page.waitForFunction(() => state.current && state.current.cal === calKey(new Date()),
+      null, { timeout: 10000 });
+    const read = () => page.evaluate(async (i) => {
+      const all = await idbGetAll();
+      const rec = (id) => all.find(r => r.id === id);
+      return { t: rec(i.t), y: rec(i.y), e1: rec('rem-e1'), e2: rec('rem-e2'), e3: rec('rem-e3'),
+               e4: rec('rem-e4'), e5: rec('rem-e5'),
+               open: { id: state.current.id, req: state.current.requirements || '' } };
+    }, ids);
+
+    // 1. The morning sync puts the square on top and keeps the hand line.
+    let got = await read();
+    ok('a never-synced board gets its squares on top and keeps every hand line',
+       got.t.requirements === 'first square\nhand only' && got.t.calReq === 1,
+       JSON.stringify(got.t));
+
+    // 2. Add a square for today while the plain board is the open one.
+    await page.evaluate((id) => swapBoard(id), ids.p);
+    await page.waitForTimeout(700);                   // SWAP_MS + render
+    await page.click('#cal-rail');
+    await page.waitForTimeout(400);
+    const plus = await page.evaluate(() => {
+      const r = document.getElementById('cal-band-add').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await page.mouse.click(plus.x, plus.y);
+    await page.waitForTimeout(200);
+    await page.keyboard.type('from elsewhere');
+    await page.keyboard.press('Enter');
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    await page.waitForTimeout(800);
+    got = await read();
+    ok('a square added while another board is open lands on today\'s board record',
+       got.t.requirements === 'first square\nfrom elsewhere\nhand only' && got.t.calReq === 2,
+       JSON.stringify(got.t));
+    ok('…and the open board is untouched',
+       got.open.id === ids.p && got.open.req === '', JSON.stringify(got.open));
+
+    // 3. Edit yesterday's board; its date holds a second square past the span.
+    await page.evaluate(() => { document.getElementById('cal-back').click(); });
+    await page.waitForTimeout(400);
+    await page.evaluate((id) => swapBoard(id), ids.y);
+    await page.waitForTimeout(700);
+    await page.evaluate(() => document.getElementById('anchor-requirements').focus());
+    await page.evaluate(() => {
+      document.getElementById('anchor-requirements').textContent = 'y one\ny hand EDITED';
+    });
+    await page.evaluate(() => document.getElementById('anchor-requirements').blur());
+    await page.waitForTimeout(800);
+    got = await read();
+    ok('a past board\'s edit never touches squares beyond its span',
+       got.y.requirements === 'y one\ny hand EDITED' && got.y.calReq === 1 &&
+       got.e3.next === 'y two' && got.e2.next === 'y one',
+       JSON.stringify({ y: got.y.requirements, calReq: got.y.calReq, e2: got.e2.next, e3: got.e3.next }));
+
+    // 4. Delete one of yesterday's hand lines with a third square past the span:
+    // the deletion's kept-list reads the span's squares only.
+    await page.evaluate((yk) => idbPut({ id: 'rem-e4', rem: '', next: 'y three', day: yk }), ids.yk);
+    const editRequirements = async (text) => {
+      await page.evaluate(() => document.getElementById('anchor-requirements').focus());
+      await page.evaluate((t) => { document.getElementById('anchor-requirements').textContent = t; }, text);
+      await page.evaluate(() => document.getElementById('anchor-requirements').blur());
+      await page.waitForTimeout(800);
+    };
+    await editRequirements('y one\nhand a\nhand b');
+    await editRequirements('y one\nhand b');               // pure deletion of 'hand a'
+    got = await read();
+    ok('deleting a past board\'s hand line never splices a square beyond its span into the mirror',
+       got.y.requirements === 'y one\nhand b' && got.y.calReq === 1 &&
+       got.e3.next === 'y two' && got.e4.next === 'y three',
+       JSON.stringify({ y: got.y.requirements, calReq: got.y.calReq, e3: got.e3.next, e4: got.e4.next }));
+
+    // 5. A pasted two-line square is still ONE mirror line (B179). Seed one on
+    // today's date, re-sync the date twice with unchanged calendar commits: the
+    // board holds a single "p1 p2" line for it, the span counts one line per
+    // square, and the second sync changes nothing.
+    await page.evaluate(() => idbPut({ id: 'rem-e5', rem: '', next: 'p1\np2', day: calKey(new Date()) }));
+    await page.click('#cal-rail');
+    await page.waitForTimeout(400);
+    const recommit = async () => {
+      const box = await page.evaluate(() => {
+        const n = [...document.querySelectorAll('#cal-today-board .cal-note')]
+          .find(x => x.querySelector('.cal-note-text').textContent === 'first square');
+        const r = n.getBoundingClientRect();
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      });
+      await page.mouse.click(box.x, box.y);
+      await page.waitForTimeout(150);
+      await page.evaluate(() => document.activeElement && document.activeElement.blur());
+      await page.waitForTimeout(800);
+    };
+    await recommit();
+    const firstSync = (await read()).t;
+    await recommit();
+    const secondSync = (await read()).t;
+    ok('a multi-line square mirrors as ONE line, and the span counts one line per square (B179)',
+       firstSync.requirements === 'first square\np1 p2\nfrom elsewhere\nhand only' && firstSync.calReq === 3,
+       JSON.stringify({ req: firstSync.requirements, calReq: firstSync.calReq }));
+    ok('a second sync of that date changes nothing — the tail is not repeated (B179)',
+       secondSync.requirements === firstSync.requirements && secondSync.calReq === 3,
+       JSON.stringify({ req: secondSync.requirements, calReq: secondSync.calReq }));
+
+    // A board-side commit leaves the square's own two lines alone: the unchanged
+    // "p1 p2" line is the square's mirror line, not a new text for it.
+    await page.evaluate(() => { document.getElementById('cal-back').click(); });
+    await page.waitForTimeout(400);
+    await page.evaluate((id) => swapBoard(id), ids.t);
+    await page.waitForTimeout(700);
+    await editRequirements('first square\np1 p2\nfrom elsewhere\nhand only EDITED');
+    got = await read();
+    ok('a board-side commit never rewrites a square that stores newlines (B179)',
+       got.e5.next === 'p1\np2' && got.t.calReq === 3 &&
+       got.t.requirements === 'first square\np1 p2\nfrom elsewhere\nhand only EDITED',
+       JSON.stringify({ e5: got.e5.next, req: got.t.requirements, calReq: got.t.calReq }));
+
+    // 6. The squares are the only marker (B179): today holds squares, yet the
+    // rail dot stays dim. Go Back only while the panel is open (a second one
+    // would pop history); the wait lets any lighting pass of the rail's render
+    // land before the read.
+    await page.evaluate(() => { if (state.calExpanded) document.getElementById('cal-back').click(); });
+    await page.waitForTimeout(400);
+    const dot = await page.evaluate(async () => {
+      const d = document.querySelector('#cal-rail .cdot');
+      const today = calKey(new Date());
+      return {
+        railShown: !document.getElementById('cal-rail').hidden,
+        squares: (await idbGetAll()).filter(r => typeof r.rem === 'string' && r.day === today).length,
+        lit: d.classList.contains('lit'),
+        opacity: getComputedStyle(d).opacity,
+      };
+    });
+    ok('the rail dot stays dim even with squares today (B179)',
+       dot.railShown && dot.squares > 0 && !dot.lit && dot.opacity === '0.35', JSON.stringify(dot));
+
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  // ---- D25e. the launch sync redraws the open board (issue #484, B179) --------
+  // The board open at boot can be today's own. The launch sync then rewrites it
+  // in place and swapBoard returns early for it, so the launch itself redraws
+  // it: the screen shows the mirror's chips, never the pre-sync text. An edit
+  // commits against the model; a stale screen would write that text through
+  // over the squares (the first square overwritten, the second deleted).
+  console.log('\n[D25e] The launch sync redraws today\'s board when boot opened it (issue #484, B179)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    // Today's linked board is the only board, so boot opens it. It last synced
+    // with an empty span (calReq 0) and holds one hand line; its date holds two
+    // squares the launch sync puts on top.
+    await page.evaluate(async () => {
+      for (const r of await idbGetAll()) await idbDelete(r.id);
+      const key = calKey(new Date());
+      const b = newBoardRecord();
+      b.title = '10/19/26 To Do'; b.cal = key; b.calReq = 0;
+      b.requirements = 'hand line';
+      await idbPut(b);
+      await idbPut({ id: 'rem-a1', rem: '', next: 'sq one', day: key });
+      await idbPut({ id: 'rem-a2', rem: '', next: 'sq two', day: key });
+    });
+    await page.reload();
+    await page.waitForFunction(() =>
+      state.current && state.current.cal === calKey(new Date()) &&
+      state.current.requirements === 'sq one\nsq two\nhand line', null, { timeout: 10000 });
+    await page.waitForTimeout(700);                   // the redraw follows the sync
+    const shown = await page.evaluate(() => {
+      const anchor = document.getElementById('anchor-requirements');
+      return {
+        chips: [...anchor.querySelectorAll('.req-square')].map(n => n.textContent),
+        hand: [...anchor.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent),
+      };
+    });
+    ok('the screen shows the synced mirror: both squares as chips, the hand line after them (B179)',
+       JSON.stringify(shown.chips) === JSON.stringify(['sq one', 'sq two']) &&
+       JSON.stringify(shown.hand) === JSON.stringify(['hand line']), JSON.stringify(shown));
+
+    // Edit what is on screen: the hand line is the last line of the editor.
+    await page.evaluate(() => document.getElementById('anchor-requirements').focus());
+    await page.evaluate(() => {
+      const anchor = document.getElementById('anchor-requirements');
+      anchor.textContent = anchor.textContent + ' edited';
+    });
+    await page.evaluate(() => document.getElementById('anchor-requirements').blur());
+    await page.waitForTimeout(800);
+    const got = await page.evaluate(async () => {
+      const all = await idbGetAll();
+      const board = all.find(r => r.cal === calKey(new Date()));
+      const text = (id) => { const r = all.find(x => x.id === id); return r && r.next; };
+      return { req: board.requirements, calReq: board.calReq, a1: text('rem-a1'), a2: text('rem-a2') };
+    });
+    ok('editing the visible hand line keeps both squares and their chips (B179)',
+       got.a1 === 'sq one' && got.a2 === 'sq two' &&
+       got.req === 'sq one\nsq two\nhand line edited' && got.calReq === 2, JSON.stringify(got));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
