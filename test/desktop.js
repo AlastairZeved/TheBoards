@@ -2486,6 +2486,27 @@ run(async () => {
        viaCalDate.req === 'mirror one D25B\n2026-10-25\nhand line' &&
        viaCalDate.calReq === 2, JSON.stringify(viaCalDate));
 
+    // Block 6 (board → calendar): a mirrored line edited ON THE BOARD to a bare
+    // date writes that date through to its square, which shows it (B181).
+    await page.evaluate(() => document.getElementById('anchor-requirements').focus());
+    await page.evaluate(() => {
+      document.getElementById('anchor-requirements').textContent =
+        '2026-10-26\n2026-10-25\nhand line';
+    });
+    await page.evaluate(() => document.getElementById('anchor-requirements').blur());
+    await page.waitForTimeout(800);
+    const viaBoardDate = await mirrorState();
+    viaBoardDate.sq = await page.evaluate(async () =>
+      ((await idbGetAll()).find(r => r.id === 'rem-a1') || {}).next);
+    viaBoardDate.cal = await page.evaluate(() =>
+      [...document.querySelectorAll('#cal-today-board .cal-note-text')].map(b => b.textContent));
+    ok('a board line typed as a bare date writes through to its square, which shows it in the calendar and as its chip (B181)',
+       viaBoardDate.sq === '2026-10-26' &&
+       JSON.stringify(viaBoardDate.cal) === JSON.stringify(['2026-10-26', '2026-10-25']) &&
+       JSON.stringify(viaBoardDate.chips) === JSON.stringify(['2026-10-26', '2026-10-25']) &&
+       viaBoardDate.req === '2026-10-26\n2026-10-25\nhand line' &&
+       viaBoardDate.calReq === 2, JSON.stringify(viaBoardDate));
+
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
@@ -2824,6 +2845,62 @@ run(async () => {
     ok('editing the visible hand line keeps both squares and their chips (B179)',
        got.a1 === 'sq one' && got.a2 === 'sq two' &&
        got.req === 'sq one\nsq two\nhand line edited' && got.calReq === 2, JSON.stringify(got));
+
+    ok('no page errors', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  // ---- D25f. an untouched stale span line never overwrites its square (issue #499, B181)
+  // Pins the B181 transition. v165 mirrored a square whose whole text is a bare
+  // YYYY-MM-DD date as '' (its squareText hid the date), and the launch syncs
+  // today alone, so a past board still holds that '' line (D25c: a past board
+  // is not rewritten). Its next Requirements commit edits only a hand line; the
+  // untouched '' line is not an edit (B106), so it must never write over the
+  // square: the square keeps its date and the board heals from it.
+  console.log('\n[D25f] An untouched stale span line never overwrites its square (issue #499, B181)');
+  {
+    const { ctx, page, errors } = await newDesktopPage(browser);
+    // The v165 shape on YESTERDAY's date: a span of one whose line is ''.
+    const ids = await page.evaluate(async () => {
+      for (const r of await idbGetAll()) await idbDelete(r.id);
+      const yd = new Date(); yd.setDate(yd.getDate() - 1);
+      const b = newBoardRecord();
+      b.title = 'PAST'; b.cal = calKey(yd); b.calReq = 1;
+      b.requirements = '\nhand line';
+      await idbPut(b);
+      await idbPut({ id: 'rem-f1', rem: '', next: '2026-10-25', day: calKey(yd) });
+      return { b: b.id };
+    });
+    await page.reload();
+    await page.waitForFunction(() => state.current && state.current.cal === calKey(new Date()),
+      null, { timeout: 10000 });
+    await page.waitForTimeout(700);                   // the launch sync settles
+    const read = () => page.evaluate(async (i) => {
+      const all = await idbGetAll();
+      const b = all.find(r => r.id === i.b), sq = all.find(r => r.id === 'rem-f1');
+      return { req: b.requirements, calReq: b.calReq, sq: sq && sq.next,
+               chips: [...document.querySelectorAll('#anchor-requirements .req-square')].map(n => n.textContent) };
+    }, ids);
+    const seeded = await read();
+    ok('the launch leaves the past board\'s stale line as v165 wrote it',
+       seeded.req === '\nhand line' && seeded.sq === '2026-10-25', JSON.stringify(seeded));
+
+    // Edit only the hand line, as a person does: the editor shows the string.
+    await page.evaluate((id) => swapBoard(id), ids.b);
+    await page.waitForTimeout(700);                   // SWAP_MS + render
+    await page.evaluate(() => document.getElementById('anchor-requirements').focus());
+    await page.evaluate(() => {
+      const anchor = document.getElementById('anchor-requirements');
+      anchor.textContent = anchor.textContent + ' EDITED';
+    });
+    await page.evaluate(() => document.getElementById('anchor-requirements').blur());
+    await page.waitForTimeout(800);
+    const got = await read();
+    ok('editing only a hand line keeps the bare-date square\'s text (B106, B181)',
+       got.sq === '2026-10-25', JSON.stringify(got));
+    ok('…and the board heals: its first Requirements line and its chip read the date (B181)',
+       got.req === '2026-10-25\nhand line EDITED' && got.calReq === 1 &&
+       JSON.stringify(got.chips) === JSON.stringify(['2026-10-25']), JSON.stringify(got));
 
     ok('no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
