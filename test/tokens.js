@@ -1041,12 +1041,17 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /function calWeekOf\(anchor\)[\s\S]*?return calWindow\(7, start\)/.test(app) &&
     /const days = calWeekAnchor \? calWeekOf\(calWeekAnchor\) : calWindow\(CAL_FUTURE_DAYS \+ 1\);/.test(app) &&
     /anchor\.getDate\(\) - anchor\.getDay\(\)/.test(app));
+  // Re-pinned deliberately for issue #490 (B124, issue #237): the calendar PDF
+  // export, export.js's only calDayName caller, was dead code and is deleted;
+  // reuse is now proved in boards.js alone: it calls the state.js helper and
+  // defines no copy of its own.
   ok('issue #432: shared lookup, date, category and reference helpers live in state.js and are reused',
     ['noteRec', 'lotRec', 'live', 'boardsOf', 'eventsOf', 'pad2', 'calMD', 'calDayName',
       'CALKEY_DATE', 'BOARD_CATS', 'GRID_ORDER', 'catOf', 'splitLines', 'REF_W']
       .every((name) => new RegExp('export const ' + name + '\\b').test(read('state.js'))) &&
     /Object\.fromEntries\(BOARD_CATS\.map/.test(read('boards.js')) &&
-    /new Set\(BOARD_CATS\)/.test(read('export.js')) && /calDayName\(day\.date\)/.test(read('export.js')) &&
+    /new Set\(BOARD_CATS\)/.test(read('export.js')) && /calDayName\(day\.date\)/.test(read('boards.js')) &&
+    !/(?:function|const) calDayName\b/.test(read('boards.js')) &&
     (app.match(/state\.current\.notes\.find/g) || []).length === 1 &&
     (app.match(/state\.current\.parkingLot\.find/g) || []).length === 1 &&
     !/const CALKEY_DATE\s*=/.test(read('boards.js')));
@@ -1144,6 +1149,16 @@ console.log('\n[10] Self-hosted type, drawn icon, shipped cache (UIUX §13, B36,
     /squaresOf\(/.test(syncDateFn) && /squaresOf\(/.test(writeThroughFn) &&
     (calEditFn.match(/await syncDateMirror\(rec\.day\);\s*repaintVisibleBoard\(\);/g) || []).length === 2,
     [syncDateFn, writeThroughFn, calEditFn].map(f => f.slice(0, 50)).join(' | '));
+  // A square's visible text alone decides the discard: the commit never reads
+  // the hidden `rem` (B180). And a square shows its `next` as stored, a bare
+  // YYYY-MM-DD date included: squareText's whole body is that one return, so
+  // any test applied inside it fails the pin (B181).
+  const squareTextFn = (read('state.js').match(/export function squareText\(r\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  ok('clearing a square\u2019s visible text deletes it whatever its hidden `rem` holds (B180), and a square shows its `next` as stored, a bare date included (B181)',
+    /if \(!next\) \{/.test(calEditFn) && !/rec\.rem/.test(calEditFn) &&
+    /^export function squareText\(r\)\s*\{\s*return typeof r\.next === 'string' \? r\.next : '';\s*\}$/.test(squareTextFn) &&
+    !/\.test\(/.test(squareTextFn),
+    [calEditFn, squareTextFn].map(f => f.slice(0, 50)).join(' | '));
   // The old events become squares (B179): once at the launch, and on every
   // backup import, before anything reads the mirror's squares.
   const launchFn = (app.match(/async function launchTodayBoard\(today\)\s*\{[\s\S]*?\n\}/) || [''])[0];

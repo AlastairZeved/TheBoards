@@ -834,16 +834,21 @@ export async function syncDateMirror(dateKey) {
 }
 
 /* The reverse mirror (B106): a Requirements commit writes through to the
-   squares. In the span the BOARD wins: span line i rewrites square i
-   (mirrorSquaresOf), a deleted span line deletes its square (never demotes
-   it), and hand lines after the span are never touched; nor is a square
-   beyond the span (B179). Board-side additions land after the span as hand
-   lines (insertion inside it is ambiguous, B106). syncMirror runs on the LIVE
-   board object because the commit's saveNow races the same record.
+   squares. In the span the BOARD wins: span line i, when this commit changed
+   it, rewrites square i (mirrorSquaresOf), a deleted span line deletes its
+   square (never demotes it), and hand lines after the span are never
+   touched; nor is a square beyond the span (B179). An untouched span line is
+   no edit: a past board keeps the line its last sync wrote (B179), which may
+   be stale (v165 mirrored a bare-date square as '', B181), so the closing
+   syncMirror rewrites it from its square instead. Board-side additions land
+   after the span as hand lines (insertion inside it is ambiguous, B106).
+   syncMirror runs on the LIVE board object because the commit's saveNow
+   races the same record.
 
    `before` is the pre-edit text (interactions.js): a prefix/suffix diff
    identifies a pure deletion, so a hand line never slides up into the span.
-   Mixed edit/delete falls to the positional law. */
+   Mixed edit/delete falls to the positional law. With no `before` every line
+   counts as changed. */
 export async function writeThroughRequirements(board, before) {
   if (!board || !board.cal) return;
   const all = await idbGetAll();
@@ -868,7 +873,9 @@ export async function writeThroughRequirements(board, before) {
     return;
   }
   const keep = Math.min(span, lines.length);
-  for (const { square, text } of mirrorSquaresOf(board, all)) {
+  // mirrorSquaresOf keeps a prefix of the span, so its index is the line's.
+  for (const [i, { square, text }] of mirrorSquaresOf(board, all).entries()) {
+    if (o[i] === lines[i]) continue;         // untouched: not an edit (B106, B181)
     if (mirrorLine(square) !== text) { square.next = text; await idbPut(square); }
   }
   for (let i = keep; i < span && i < mine.length; i++) await idbDelete(mine[i].id);
@@ -1157,8 +1164,9 @@ function repaintVisibleBoard() {
 }
 
 /* The commit is the blur and writes `next`; `rem` stays stored but unread.
-   A commit leaving both empty discards the record (B8). Either way the date's
-   mirror re-syncs and a board on screen repaints (B179). */
+   The visible text alone decides the discard: a commit leaving it empty
+   deletes the record, a hidden `rem` with it (B8, B180). Either way the
+   date's mirror re-syncs and a board on screen repaints (B179). */
 function startCalNoteEdit(block, rec) {
   const body = block.querySelector('.cal-note-text');
   body.setAttribute('contenteditable', CE);
@@ -1171,7 +1179,7 @@ function startCalNoteEdit(block, rec) {
     committed = true;
     body.removeAttribute('contenteditable');
     const next = body.textContent.trim();
-    if (!rec.rem && !next) {                        // B8
+    if (!next) {                                    // B8, B180
       await idbDelete(rec.id);
       block.remove();
       await syncDateMirror(rec.day);

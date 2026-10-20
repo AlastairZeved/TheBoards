@@ -1,6 +1,6 @@
 /* Service worker — cache-first app shell, fully offline (PRD §3 / §6.8).
    Version-stamped cache; old caches are cleaned on activate. */
-const CACHE = 'zeved-boards-v165';       // bump when shipped app.js/styles.css or any module changes
+const CACHE = 'zeved-boards-v166';       // bump when shipped app.js/styles.css or any module changes
 const ASSETS = [
   '.',
   'index.html',

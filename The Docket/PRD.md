@@ -565,7 +565,7 @@ You can export a board as PDF or the whole library as JSON.
 **Hand-rolled, no library** (B34) — §3.3 forbids the dependency, and a
 hand-rolled writer works offline by construction.
 
-Export produces **two A4 portrait pages**:
+Export produces **two `A4` portrait pages**:
 
 1. **The reference sheet**, drawn as vectors at the fixed 900×1000 geometry —
    never the live viewport — centred with a 36pt margin (`UIUX §15`). The export
